@@ -1,0 +1,61 @@
+#
+# Copyright (c) 2023 Red Hat, Inc.
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+
+name: Build HTML preview of PR
+
+on:
+  pull_request:
+    branches: ['*']
+
+env:
+  IMAGE_VERSION: pr-${{ github.event.pull_request.number }}
+
+jobs:
+  preview-html:
+    runs-on: ubuntu-latest
+    if: ${{ github.base_ref == 'main' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build plugins ref 
+        id: adocbuild1
+        uses: tonynv/asciidoctor-action@v2
+        with:
+            program: "asciidoctor --destination-dir docs-generated/rhdh-plugins-reference --backend=html5 -o index.html rhdh-plugins-reference/master.adoc"
+      - name: Build release notes
+        id: adocbuild2
+        uses: tonynv/asciidoctor-action@v2
+        with:
+            program: "asciidoctor --destination-dir docs-generated/release-notes --backend=html5 -o index.html release-notes/master.adoc"
+
+      - name: "Use Node 18"
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: "Install dependencies"
+        run: |
+           npm i @supercharge/filesystem
+
+      - name: PR comment with doc previews
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.RHDH_BOT_TOKEN }}
+          script: |
+            const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
+            const Fs = require('@supercharge/filesystem')
+            const html1 = await Fs.readFile('./docs-generated/release-notes/index.html')
+            const html2 = await Fs.readFile('./docs-generated/rhdh-plugins-reference/index.html')
+
+            // remove unrenderable title and style tags, and everything in the <head>
+            var html1c = html1.replace(/.*?<\/head>/gms,"")
+            var html2c = html2.replace(/.*?<\/head>/gms,"")
+
+            // because the plugin ref content is LONG, render it as its own comment separate from the release notes
+            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Release Notes</summary>\n' + html1c + '</details>' });
+            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Plugins Reference</summary>\n' + html2c + '</details>' });
