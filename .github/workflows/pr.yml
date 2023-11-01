@@ -1,0 +1,50 @@
+#
+# Copyright (c) 2023 Red Hat, Inc.
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+
+name: Build HTML preview of PR
+
+on:
+  pull_request:
+    branches: ['*']
+
+env:
+  IMAGE_VERSION: pr-${{ github.event.pull_request.number }}
+
+jobs:
+
+  dash-licenses:
+    runs-on: ubuntu-latest
+    if: ${{ github.base_ref == 'main' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build plugins ref 
+        id: adocbuild1
+        uses: tonynv/asciidoctor-action@v2
+        with:
+            program: "asciidoctor --destination-dir docs-generated/rhdh-plugins-reference --backend=html5 -o index.html rhdh-plugins-reference/master.adoc"
+      - name: Build release notes
+        id: adocbuild2
+        uses: tonynv/asciidoctor-action@v2
+        with:
+            program: "asciidoctor --destination-dir docs-generated/release-notes --backend=html5 -o index.html release-notes/master.adoc"
+
+      - name: Collect HTML
+        id: adocbuildresults
+        run: |
+          echo "HTML1=$(cat docs-generated/rhdh-plugins-reference/index.hml" >> $GITHUB_ENV
+          echo "HTML2=$(cat docs-generated/release-notes/index.hml" >> $GITHUB_ENV
+      -
+        name: PR comment with doc previews
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.RHDH_BOT_TOKEN }}
+          script: |
+            const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
+            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Plugins Reference</summary>${{ env.HTML1 }}</details><br />\n<details><summary>Preview: Release Notes</summary>${{ env.HTML2 }}</details>' });
