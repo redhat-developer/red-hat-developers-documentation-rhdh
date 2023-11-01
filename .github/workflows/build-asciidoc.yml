@@ -1,0 +1,36 @@
+name: Build asciidoc 
+
+on:
+  workflow_dispatch:
+    inputs: {}
+  push:
+    branches:
+    - main
+jobs:
+  adoc_build:
+    runs-on: ubuntu-latest
+    name: asciidoctor builds
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build plugins ref 
+      id: adocbuild1
+      uses: tonynv/asciidoctor-action@master
+      with:
+          program: "asciidoctor --destination-dir rhdh-plugins-reference --backend=html5 -o index.html rhdh-plugins-reference/master.adoc"
+    - name: Build release notes
+      id: adocbuild2
+      uses: tonynv/asciidoctor-action@master
+      with:
+          program: "asciidoctor --destination-dir release-notes --backend=html5 -o index.html release-notes/master.adoc"
+
+    - name: Print execution time
+      run: echo "Time ${{ steps.adocbuild1.outputs.time }}"; echo "Time ${{ steps.adocbuild2.outputs.time }}"
+
+    - name: Deploy docs to ghpages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+        publish_branch: gh-pages
+        publish_dir: ./
