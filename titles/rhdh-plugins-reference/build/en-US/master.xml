@@ -1,0 +1,2234 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE book [
+<!ENTITY % sgml.features "IGNORE">
+<!ENTITY % xml.features "INCLUDE">
+<!ENTITY % DOCBOOK_ENTS PUBLIC "-//OASIS//ENTITIES DocBook Character Entities V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/dbcentx.mod">
+%DOCBOOK_ENTS;
+]>
+<?asciidoc-toc?><?asciidoc-numbered?><book xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0">
+<info>
+<title>Backstage Plugins for Red Hat Developer Hub 1.0</title><subtitle>Backstage Plugins for Red Hat Developer Hub provided by Red Hat</subtitle>
+
+<date>2023-11-20</date>
+<productname>Red Hat Developer Hub</productname>
+<productnumber>1.0</productnumber>
+<abstract>
+    <para>The Backstage Plugins for Red Hat Developer Hub reference describes the settings for each of the Backstage plug-ins supported by Red Hat.
+</para>
+</abstract>
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="Author_Group.xml"/>
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="Common_Content/Legal_Notice.xml"/>
+</info>
+<preface xml:id="snip-conscious-language_install-rhdh">
+<title>Making open source more inclusive</title>
+<simpara>Red Hat is committed to replacing problematic language in our code, documentation, and web properties. We are beginning with these four terms: master, slave, blacklist, and whitelist. Because of the enormity of this endeavor, these changes will be implemented gradually over several upcoming releases. For more details, see <link xlink:href="https://www.redhat.com/en/blog/making-open-source-more-inclusive-eradicating-problematic-language"><emphasis>our CTO Chris Wright’s message</emphasis></link>.</simpara>
+</preface>
+<chapter xml:id="plugins-reference" remap="_plugins-reference">
+<title>Plugins reference</title>
+<section xml:id="ansible-automation-platform-backstage-provider-plugin" remap="_ansible-automation-platform-backstage-provider-plugin">
+<title>Ansible Automation Platform Backstage provider plugin</title>
+<simpara>The Ansible Automation Platform (AAP) Backstage provider plugin synchronizes the accessible templates including job templates and workflow job templates from AAP into the <link xlink:href="https://backstage.io/">Backstage</link> catalog.</simpara>
+<section xml:id="for-administrators" remap="_for-administrators">
+<title>For administrators</title>
+<section xml:id="installing-the-configuring-the-aap-backend-plugin" remap="_installing-the-configuring-the-aap-backend-plugin">
+<title>Installing the configuring the AAP Backend plugin</title>
+<simpara>The AAP Backstage provider plugin allows the configuration of one or multiple providers using the <literal>app-config.yaml</literal> configuration file of Backstage.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have created an account in Ansible Automation Platform.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Run the following command to install the AAP Backstage provider plugin:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace backend add @redhat/backstage-plugin-aap-backend</programlisting>
+</listitem>
+<listitem>
+<simpara>Use <literal>aap</literal> marker to configure the <literal>app-config.yaml</literal> file of Backstage as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">   catalog:
+     providers:
+       aap:
+         dev:
+           baseUrl: &lt;URL&gt;
+           authorization: 'Bearer ${AAP_AUTH_TOKEN}'
+           owner: &lt;owner&gt;
+           system: &lt;system&gt;
+           schedule: # optional; same options as in TaskScheduleDefinition
+             # supports cron, ISO duration, "human duration" as used in code
+             frequency: { minutes: 1 }
+             # supports ISO duration, "human duration" as used in code
+             timeout: { minutes: 1 }</programlisting>
+</listitem>
+<listitem>
+<simpara>Configure the scheduler using one of the following options:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Add the following code to the <literal>packages/backend/src/plugins/catalog.ts</literal> file if the scheduler is configured inside the <literal>app-config.yaml</literal> file:</simpara>
+</listitem>
+</itemizedlist>
+<screen>    /* highlight-add-next-line */
+    import {
+        AapResourceEntityProvider
+    } from '@janus-idp/backstage-plugin-aap-backend';
+    export default async function createPlugin(env: PluginEnvironment, ): Promise &lt; Router &gt; {
+        const builder = await CatalogBuilder.create(env);
+        /* ... other processors and/or providers ... */
+        /* highlight-add-start */
+        builder.addEntityProvider(AapResourceEntityProvider.fromConfig(env.config, {
+            logger: env.logger,
+            scheduler: env.scheduler,
+        }), );
+        /* highlight-add-end */
+        const {
+            processingEngine,
+            router
+        } = await builder.build();
+        await processingEngine.start();
+        return router;
+    }</screen>
+<itemizedlist>
+<listitem>
+<simpara>Add a schedule directly inside the <literal>packages/backend/src/plugins/catalog.ts</literal> file as follows:</simpara>
+</listitem>
+</itemizedlist>
+<screen>    /* highlight-add-next-line */
+    import {
+        AapResourceEntityProvider
+    } from '@janus-idp/backstage-plugin-aap-backend';
+    export default async function createPlugin(env: PluginEnvironment, ): Promise &lt; Router &gt; {
+        const builder = await CatalogBuilder.create(env);
+        /* ... other processors and/or providers ... */
+        /* highlight-add-start */
+        builder.addEntityProvider(AapResourceEntityProvider.fromConfig(env.config, {
+            logger: env.logger,
+            schedule: env.scheduler.createScheduledTaskRunner({
+                frequency: {
+                    minutes: 1
+                },
+                timeout: {
+                    minutes: 1
+                },
+            }),
+        }), );
+        /* highlight-add-end */
+        const {
+            processingEngine,
+            router
+        } = await builder.build();
+        await processingEngine.start();
+        return router;
+    }</screen>
+</listitem>
+</orderedlist>
+</section>
+<section xml:id="log-lines-for-aap-backend-plugin-troubleshoot" remap="_log-lines-for-aap-backend-plugin-troubleshoot">
+<title>Log lines for AAP Backend plugin troubleshoot</title>
+<simpara>When you start your Backstage application, you can see the following log lines:</simpara>
+<programlisting language="log" linenumbering="unnumbered">[1] 2023-02-13T15:26:09.356Z catalog info Discovered ResourceEntity API type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.423Z catalog info Discovered ResourceEntity Red Hat Event (DEV, v1.2.0) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.0) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.0) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.819Z catalog info Applying the mutation with 3 entities type=plugin target=AapResourceEntityProvider:dev</programlisting>
+</section>
+</section>
+<section xml:id="for-users" remap="_for-users">
+<title>For users</title>
+<section xml:id="accessing-templates-from-ansible-automation-platform-in-backstage" remap="_accessing-templates-from-ansible-automation-platform-in-backstage">
+<title>Accessing templates from Ansible Automation Platform in Backstage</title>
+<simpara>Once the AAP Backstage provider plugin is configured successfully, it synchronizes the templates including job templates and workflow job templates from AAP and displays them on the Backstage Catalog page as Resources.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the AAP Backstage provider plugin. For installation and configuration instructions, see <xref linkend="installing-the-configuring-the-aap-backend-plugin"/>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and Go to the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>Select <emphasis role="strong">Resource</emphasis> from the <emphasis role="strong">Kind</emphasis> drop-down and <emphasis role="strong">job template</emphasis> or <emphasis role="strong">workflow job template</emphasis> from the <emphasis role="strong">Type</emphasis> drop-down on the left side of the page.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/aap-backend-plugin-user1.png"/>
+</imageobject>
+<textobject><phrase>aap-backend-plugin-backstage</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>A list of all the available templates from AAP appears on the page.</simpara>
+</listitem>
+<listitem>
+<simpara>Select a template from the list.</simpara>
+<simpara>The <emphasis role="strong">OVERVIEW</emphasis> tab appears containing different cards, such as:</simpara>
+<itemizedlist>
+<listitem>
+<simpara><emphasis role="strong">About</emphasis>: Provides detailed information about the template.</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">Relations</emphasis>: Displays the visual representation of the template and associated aspects.</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">Links</emphasis>: Contains links to the AAP dashboard and the details page of the template.</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">Has subcomponents</emphasis>: Displays a list of associated subcomponents.</simpara>
+</listitem>
+</itemizedlist>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/aap-backend-plugin-user2.png"/>
+</imageobject>
+<textobject><phrase>aap-backend-plugin-backstage-details</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="azure-container-registry-plugin-for-backstage" remap="_azure-container-registry-plugin-for-backstage">
+<title>Azure Container Registry plugin for Backstage</title>
+<simpara>The Azure Container Registry (ACR) plugin displays information about your container images available in the Azure Container Registry.</simpara>
+<section xml:id="for-administrators-2" remap="_for-administrators-2">
+<title>For administrators</title>
+<section xml:id="installing-and-configuring-the-acr-plugin" remap="_installing-and-configuring-the-acr-plugin">
+<title>Installing and configuring the ACR plugin</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Run the following command to install the ACR plugin:</simpara>
+<screen>yarn workspace app add @redhat/backstage-plugin-acr</screen>
+</listitem>
+<listitem>
+<simpara>Set the proxy to the desired ACR server in the <literal>app-config.yaml</literal> file as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">   # app-config.yaml
+   proxy:
+     '/acr/api':
+       target: 'https://mycontainerregistry.azurecr.io/acr/v1/'
+       changeOrigin: true
+       headers:
+         # If you use Bearer Token for authorization, please replace the 'Basic' with 'Bearer' in the following line.
+         Authorization: 'Basic ${ACR_AUTH_TOKEN}'
+       # Change to "false" in case of using self hosted artifactory instance with a self-signed certificate
+       secure: true</programlisting>
+</listitem>
+<listitem>
+<simpara>Set the authorization using one of the following options:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Basic authorization:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Navigate to the ACR portal and go to the <emphasis role="strong">Access Keys</emphasis> tab.</simpara>
+</listitem>
+<listitem>
+<simpara>Retrieve the username and password of the Admin user and use the <link xlink:href="https://www.debugbear.com/basic-auth-header-generator">Basic Auth Header Generator tool</link> or run <literal>echo printf '&lt;username&gt;:&lt;password&gt;' | base64</literal> in a terminal to convert the credentials to a basic token.</simpara>
+</listitem>
+<listitem>
+<simpara>Set the generated token as <literal>ACR_AUTH_TOKEN</literal> in environment variables.</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>OAuth2:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Generate bearer access token using the process described in Authenticate with an Azure Container Registry.</simpara>
+<simpara>You can generate a bearer token using your basic authorization token, for example:</simpara>
+<programlisting language="curl" linenumbering="unnumbered">curl --location 'https://&lt;yourregistry&gt;.azurecr.io/oauth2/token?scope=repository%3A*%3A*&amp;service=&lt;yourregistry&gt;.azurecr.io' \ --header 'Authorization: Basic &lt;basic_token&gt;'</programlisting>
+</listitem>
+<listitem>
+<simpara>Set the generated token as <literal>ACR_AUTH_TOKEN</literal> in environment variables. Also ensure that you replace the <literal>Basic</literal> with <literal>Bearer</literal> in the <literal>app-config.yaml</literal> file.</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>Enable an additional tab on the entity view page using the <literal>packages/app/src/components/catalog/EntityPage.tsx</literal> file as follows:</simpara>
+<screen>/* highlight-add-start */
+import { AcrPage, isAcrAvailable } from '@redhat/backstage-plugin-acr';
+
+/* highlight-add-end */
+
+const serviceEntityPage = (
+  &lt;EntityPageLayout&gt;
+    // ...
+    {/* highlight-add-start */}
+    &lt;EntityLayout.Route path="/acr" title="ACR"&gt;
+      &lt;Grid container spacing={3} alignItems="stretch"&gt;
+        &lt;EntitySwitch&gt;
+          &lt;EntitySwitch.Case if={e =&gt; Boolean(isAcrAvailable(e))}&gt;
+            &lt;Grid item sm={12}&gt;
+              &lt;AcrPage /&gt;
+            &lt;/Grid&gt;
+          &lt;/EntitySwitch.Case&gt;
+        &lt;/EntitySwitch&gt;
+      &lt;/Grid&gt;
+    &lt;/EntityLayout.Route&gt;
+    {/* highlight-add-end */}
+  &lt;/EntityPageLayout&gt;
+);</screen>
+</listitem>
+<listitem>
+<simpara>Annotate your entity using the following annotations:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">metadata:
+    annotations:
+        'azure-container-registry/repository-name': `&lt;REPOSITORY-NAME&gt;',</programlisting>
+</listitem>
+</orderedlist>
+</section>
+</section>
+<section xml:id="for-users-2" remap="_for-users-2">
+<title>For users</title>
+<section xml:id="using-the-acr-plugin-in-backstage" remap="_using-the-acr-plugin-in-backstage">
+<title>Using the ACR plugin in Backstage</title>
+<simpara>ACR is a front-end plugin that enables you to view information about the container images from your Azure Container Registry in Backstage.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the ACR plugin. For installation instructions, see <xref linkend="installing-and-configuring-the-acr-plugin"/>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and select a component from the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>Go to the <emphasis role="strong">ACR</emphasis> tab.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/acr-plugin-user1.png"/>
+</imageobject>
+<textobject><phrase>acr-tab</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>The <emphasis role="strong">ACR</emphasis> tab in the Backstage UI contains a list of container images and related information, such as <emphasis role="strong">TAG</emphasis>, <emphasis role="strong">CREATED</emphasis>, <emphasis role="strong">LAST MODIFIED</emphasis>, and <emphasis role="strong">MANIFEST</emphasis>.</simpara>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="argocd-plugin-for-backstage" remap="_argocd-plugin-for-backstage">
+<title>ArgoCD plugin for Backstage</title>
+<simpara>The ArgoCD plugin represents the current status of an application in your Backstage Catalog.</simpara>
+<section xml:id="for-administrators-3" remap="_for-administrators-3">
+<title>For administrators</title>
+<section xml:id="installation-1" remap="_installation">
+<title>Installation</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and deployed.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>In the <literal>backstage/packages/app</literal> project, add the ArgoCD plugin as a <literal>package.json</literal> dependency as follows:</simpara>
+<programlisting language="console" linenumbering="unnumbered">cd packages/app
+yarn add @redhat/backstage-plugin-argo-cd</programlisting>
+</listitem>
+<listitem>
+<simpara>In the <literal>app-config.yaml</literal> file available in the root directory, add <literal>argo-cd</literal> to the proxy object as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">proxy:
+  ...
+
+  '/argocd/api':
+    # url to the api of your hosted argoCD instance
+    target: https://159.65.209.132/api/v1/
+    changeOrigin: true
+    # this line is required if your hosted argoCD instance has self-signed certificate
+    secure: false
+    headers:
+      Cookie:
+        $env: ARGOCD_AUTH_TOKEN
+
+
+# optional: this will link to your argoCD web UI for each argoCD application
+argocd:
+  baseUrl: https://my-argocd-web-ui.com</programlisting>
+<simpara>Also, you can optionally add the base URL for your ArgoCD web UI in the previous code.</simpara>
+</listitem>
+<listitem>
+<simpara>Add the ArgoCD plugin to the list of plugins using the following code:</simpara>
+<screen>// packages/app/src/plugins.ts
+export { argocdPlugin } from '@redhat/backstage-plugin-argo-cd';</screen>
+</listitem>
+<listitem>
+<simpara>Add the ArgoCD plugin to the <literal>entitityPage.tsx</literal> file as follows:</simpara>
+<screen>// packages/app/src/components/catalog/EntityPage.tsx
+import {
+  EntityArgoCDHistoryCard,
+  isArgocdAvailable,
+} from '@redhat/backstage-plugin-argo-cd';
+
+
+const overviewContent = (
+  &lt;Grid container spacing={3} alignItems="stretch"&gt;
+    ...
+    &lt;EntitySwitch&gt;
+      &lt;EntitySwitch.Case if={e =&gt; Boolean(isArgocdAvailable(e))}&gt;
+        &lt;Grid item sm={6}&gt;
+          &lt;EntityArgoCDHistoryCard /&gt;
+        &lt;/Grid&gt;
+      &lt;/EntitySwitch.Case&gt;
+    &lt;/EntitySwitch&gt;
+    ...
+  &lt;/Grid&gt;
+);</screen>
+</listitem>
+<listitem>
+<simpara>To use the ArgoCD plugin for your component in Backstage, add an annotation to the YAML config file of a component:</simpara>
+<simpara><literal>argocd/app-name: &lt;app-name&gt;</literal></simpara>
+<simpara>To select multiple ArgoCD applications for a component, use labels as follows:</simpara>
+<simpara><literal>argocd/app-selector: &lt;app-selector&gt;</literal></simpara>
+<note>
+<simpara>You can either use annotations or labels for a component.</simpara>
+</note>
+</listitem>
+<listitem>
+<simpara>Send a GET HTTP request to ArgoCD’s <literal>/session</literal> endpoint using the username and password to acquire your authentication key.</simpara>
+</listitem>
+<listitem>
+<simpara>Add the acquired authentication key to the environment variables for your Backstage backend server as follows:</simpara>
+<simpara><literal>ARGOCD_AUTH_TOKEN="argocd.token=&lt;auth-token&gt;"</literal></simpara>
+</listitem>
+</orderedlist>
+</section>
+</section>
+<section xml:id="support-for-multiple-argocd-instances-in-backstage" remap="_support-for-multiple-argocd-instances-in-backstage">
+<title>Support for multiple ArgoCD instances in Backstage</title>
+<simpara>There are two options to support multiple ArgoCD instances in Backstage, including:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Adding proxy configuration for each ArgoCD instance</simpara>
+</listitem>
+<listitem>
+<simpara>Using the ArgoCD backend plugin</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Option 1: Adding proxy configuration for each ArgoCD instance</title>
+<listitem>
+<simpara>To create multiple components that fetch data from different ArgoCD instances, add a proxy configuration for each instance as shown in the following example:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">proxy:
+  ...
+
+  '/argocd/api':
+    target: https://&lt;someAddress&gt;/api/v1/
+    changeOrigin: true
+    secure: false
+    headers:
+      Cookie:
+        $env: ARGOCD_AUTH_TOKEN
+
+  '/argocd/api2':
+    target: https://&lt;otherAddress&gt;/api/v1/
+    changeOrigin: true
+    secure: false
+    headers:
+      Cookie:
+        $env: ARGOCD_AUTH_TOKEN2</programlisting>
+</listitem>
+<listitem>
+<simpara>Add the required authentication tokens to environment variables, such as <literal>ARGOCD_AUTH_TOKEN2</literal>.</simpara>
+<simpara>After adding the authentication tokens, add the URL to the desired proxy path in the following component definition annotations:</simpara>
+<simpara><literal>argocd/proxy-url: '/argocd/api2'</literal></simpara>
+<simpara>The <literal>argocd/proxy-url</literal> annotation defaults to <literal>'/argocd/api'</literal>. Therefore, <literal>argocd/proxy-url</literal> is not required if there is a single proxy configuration.</simpara>
+</listitem>
+</orderedlist>
+<orderedlist numeration="arabic">
+<title>Option 2: Using the ArgoCD backend plugin</title>
+<listitem>
+<simpara>To create multiple components that fetch data from different ArgoCD instances, set the ArgoCD instance URL dynamically by adding the following configuration to <literal>app-config.yaml</literal> file:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">argocd:
+  username: ${ARGOCD_USERNAME}
+  password: ${ARGOCD_PASSWORD}
+  waitCycles: 25
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+          token: ${ARGOCD_AUTH_TOKEN} # optional
+        - name: argoInstance2
+          url: https://argoInstance2.com
+          # dedicated username/password for this instance
+          username: ${ARGOCD_USERNAME_INSTANCE_2} # optional
+          password: ${ARGOCD_PASSWORD_INSTANCE_2} # optional</programlisting>
+<simpara>A loop is created between deleting ArgoCD project and application to check the deletion of application occurring before the deletion of the project. If waitCycles is set to 25, then the loop can last for 75 seconds before erroring out.</simpara>
+<simpara>With the previous configuration, the ArgoCD plugin fetches the ArgoCD instances an application is deployed to and use the ArgoCD backend plugin (<literal>backstage-plugin-argo-cd-backend</literal>) to reach out to each ArgoCD instance based on the following mapping:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Add the required authentication tokens to environment variables, such as <literal>ARGOCD_USERNAME</literal> and <literal>ARGOCD_PASSWORD</literal> inside the argocd object. These authentication tokens are used as credentials for all ArgoCD instances by default.</simpara>
+<screen>argocd:
+  username: ${ARGOCD_USERNAME}
+  password: ${ARGOCD_PASSWORD}
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+        - name: argoInstance2
+          url: https://argoInstance2.com</screen>
+</listitem>
+<listitem>
+<simpara>Define a username and password for each ArgoCD instance. This mapping has higher priority than the previous option.</simpara>
+<screen>argocd:
+  username: ${ARGOCD_USERNAME}
+  password: ${ARGOCD_PASSWORD}
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+        - name: argoInstance2
+          url: https://argoInstance2.com
+          # dedicated username/password for this instance
+          username: ${ARGOCD_USERNAME_INSTANCE_2}
+          password: ${ARGOCD_PASSWORD_INSTANCE_2}</screen>
+</listitem>
+<listitem>
+<simpara>Define a token for each instance. This mapping has higher priority than both options mentioned previously.</simpara>
+<screen>argocd:
+  username: ${ARGOCD_USERNAME}
+  password: ${ARGOCD_PASSWORD}
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+          token: ${ARGOCD_AUTH_TOKEN} # Token to use to instance 1</screen>
+</listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<section xml:id="permissions-in-argocd-plugin" remap="_permissions-in-argocd-plugin">
+<title>Permissions in ArgoCD plugin</title>
+<simpara>Setting permissions for ArgoCD user account not only reduces the scope but also reduces the functionality of the backend. If you scope the permissions for read-only, then actions including creating, deleting, and resyncing the application will not be available.</simpara>
+<simpara>The error handling in ArgoCD is designed to alert you when proper permissions are not in place.</simpara>
+</section>
+<section xml:id="self-signed-certificates-in-argocd-plugin" remap="_self-signed-certificates-in-argocd-plugin">
+<title>Self-signed certificates in ArgoCD plugin</title>
+<simpara>By default, the ArgoCD server generates a self-signed certificate. Once you install the ArgoCD plugin, the deployment of argocd-server can be patched to be insecure using the following command:</simpara>
+<programlisting language="console" linenumbering="unnumbered">kubectl patch deployment argocd-server --type "json" -p '[{"op":"add","path":"/spec/template/spec/containers/0/command/-","value":"--insecure"}]'</programlisting>
+<simpara>Also, you can use Helm to install the ArgoCD plugin and be insecure by default:</simpara>
+<programlisting language="console" linenumbering="unnumbered">helm upgrade --install argocd argo/argo-cd \
+  --version 3.33.5 \
+  --set 'server.extraArgs={--insecure}'</programlisting>
+</section>
+</section>
+<section xml:id="for-users-3" remap="_for-users-3">
+<title>For users</title>
+<section xml:id="using-argocd-plugin-in-backstage" remap="_using-argocd-plugin-in-backstage">
+<title>Using ArgoCD plugin in Backstage</title>
+<simpara>The ArgoCD plugin displays the current state of an application in Backstage Catalog.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the ArgoCD plugin. For installation steps, see <xref linkend="installation-1"/>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and go to the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>In the <emphasis role="strong">OVERVIEW</emphasis> tab, you can see the ArgoCD overview card at the bottom.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/argo-cd-plugin-overview-card.png"/>
+</imageobject>
+<textobject><phrase>ArgoCD overview card</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>The ArgoCD overview card displays application information including <emphasis role="strong">NAME</emphasis>, <emphasis role="strong">INSTANCE</emphasis>, <emphasis role="strong">SYNC STATUS</emphasis>, <emphasis role="strong">HEALTH STATUS</emphasis>, and <emphasis role="strong">LAST SYNCED</emphasis>.</simpara>
+</listitem>
+<listitem>
+<simpara>To view the detailed application information, select an application from the ArgoCD overview card.</simpara>
+<simpara>A pop-up containing detailed information about the application appears, along with a link to ArgoCD dashboard.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/argo-cd-plugin-overview-card-details.png"/>
+</imageobject>
+<textobject><phrase>ArgoCD overview card</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+<listitem>
+<simpara>To view the ArgoCD history, go to the <emphasis role="strong">CD</emphasis> tab in the Catalog.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/argo-cd-plugin-history.png"/>
+</imageobject>
+<textobject><phrase>ArgoCD overview card</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>The <emphasis role="strong">ArgoCD history</emphasis> page contains history of application instances along with other information, such as deploy details, author name, message that author added, and revision ID.</simpara>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="jfrog-artifactory-plugin-for-backstage" remap="_jfrog-artifactory-plugin-for-backstage">
+<title>Jfrog Artifactory plugin for Backstage</title>
+<simpara>The Jfrog Artifactory plugin displays information about your container images within the Jfrog Artifactory registry.</simpara>
+<section xml:id="for-administrators-4" remap="_for-administrators-4">
+<title>For administrators</title>
+<section xml:id="installing-and-configuring-the-jfrog-artifactory-plugin" remap="_installing-and-configuring-the-jfrog-artifactory-plugin">
+<title>Installing and configuring the Jfrog Artifactory plugin</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Run the following command to install the Jfrog Artifactory plugin:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace app add @redhat/backstage-plugin-jfrog-artifactory</programlisting>
+</listitem>
+<listitem>
+<simpara>Set the proxy to the desired Artifactory server in the <literal>app-config.yaml</literal> file as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">proxy:
+    '/jfrog-artifactory/api':
+    target: 'http://&lt;hostname&gt;:8082' # or https://&lt;customer&gt;.jfrog.io
+    headers:
+        # Authorization: 'Bearer &lt;YOUR TOKEN&gt;'
+        # Change to "false" in case of using self hosted artifactory instance with a self-signed certificate
+    secure: true</programlisting>
+</listitem>
+<listitem>
+<simpara>Enable the <emphasis role="strong">JFROG ARTIFACTORY</emphasis> tab on the entity view page in <literal>packages/app/src/components/catalog/EntityPage.tsx</literal> file as follows:</simpara>
+<screen>/* highlight-add-start */
+import {
+    isJfrogArtifactoryAvailable,
+    JfrogArtifactoryPage,
+} from "@redhat/backstage-plugin-jfrog-artifactory";
+
+/* highlight-add-end */
+
+const serviceEntityPage = (
+    &lt;EntityPageLayout&gt;
+        // ...
+        {/* highlight-add-start */}
+        &lt;EntityLayout.Route
+            if={isJfrogArtifactoryAvailable}
+            path="/jfrog-artifactory"
+            title="Jfrog Artifactory"
+        &gt;
+            &lt;JfrogArtifactoryPage /&gt;
+        &lt;/EntityLayout.Route&gt;
+        {/* highlight-add-end */}
+    &lt;/EntityPageLayout&gt;
+);</screen>
+</listitem>
+<listitem>
+<simpara>Annotate your entity using the following annotations:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">metadata:
+    annotations:
+        'jfrog-artifactory/image-name': '&lt;IMAGE-NAME&gt;'</programlisting>
+</listitem>
+</orderedlist>
+</section>
+</section>
+<section xml:id="for-users-4" remap="_for-users-4">
+<title>For users</title>
+<section xml:id="using-the-jfrog-artifactory-plugin-in-backstage" remap="_using-the-jfrog-artifactory-plugin-in-backstage">
+<title>Using the Jfrog Artifactory plugin in Backstage</title>
+<simpara>Jfrog Artifactory is a front-end plugin that enables you to view the information about the container images that are available in your Jfrog Artifactory registry.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the Jfrog Artifactory plugin. For installation and configuration steps, see <xref linkend="installing-and-configuring-the-jfrog-artifactory-plugin"/>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and select a component from the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>Go to the <emphasis role="strong">JFROG ARTIFACTORY</emphasis> tab.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/jfrog-plugin-user1.png"/>
+</imageobject>
+<textobject><phrase>jfrog-tab</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>The <emphasis role="strong">JFROG ARTIFACTORY</emphasis> tab contains a list of container images and related information, such as <emphasis role="strong">VERSION</emphasis>, <emphasis role="strong">REPOSITORIES</emphasis>, <emphasis role="strong">MANIFEST</emphasis>, <emphasis role="strong">MODIFIED</emphasis>, and <emphasis role="strong">SIZE</emphasis>.</simpara>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="keycloak-backend-plugin-for-backstage" remap="_keycloak-backend-plugin-for-backstage">
+<title>Keycloak backend plugin for Backstage</title>
+<simpara>The Keycloak backend plugin integrates Keycloak into Backstage.</simpara>
+<section xml:id="capabilities" remap="_capabilities">
+<title>Capabilities</title>
+<simpara>The Keycloak backend plugin has the following capabilities:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Synchronization of Keycloak users in a realm</simpara>
+</listitem>
+<listitem>
+<simpara>Synchronization of Keycloak groups and their users in a realm</simpara>
+</listitem>
+</itemizedlist>
+</section>
+<section xml:id="for-administrators-5" remap="_for-administrators-5">
+<title>For administrators</title>
+<section xml:id="installation-2" remap="_installation-2">
+<title>Installation</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<simpara>You can now install the Backstage package into the backend. When not integrating with a published package, clone the repository locally and add Backstage as follows:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace backend add @redhat/backstage-plugin-keycloak-backend</programlisting>
+</section>
+<section xml:id="configuration" remap="_configuration">
+<title>Configuration</title>
+<orderedlist numeration="arabic">
+<listitem>
+<simpara>Add the following configuration to the <literal>app-config.yaml</literal> file:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">   ```yaml title="app-config.yaml"
+   catalog:
+     providers:
+       keycloakOrg:
+         default:
+           baseUrl: https://&lt;keycloak_host&gt;/auth
+           loginRealm: ${KEYCLOAK_REALM}
+           realm: ${KEYCLOAK_REALM}
+           clientId: ${KEYCLOAK_CLIENTID}
+           clientSecret: ${KEYCLOAK_CLIENTSECRET}
+   ```</programlisting>
+</listitem>
+<listitem>
+<simpara>Register the plugin in the <literal>packages/backend/src/plugins/catalog.ts</literal> file. You can also configure a schedule in this step. However, there are possible ways of configuration, such as:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Configure a schedule inside the <literal>app-config.yaml</literal> file:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">     ```yaml title="app-config.yaml"
+     catalog:
+       providers:
+         keycloakOrg:
+           default:
+             # ...
+             # highlight-add-start
+             schedule: # optional; same options as in TaskScheduleDefinition
+               # supports cron, ISO duration, "human duration" as used in code
+               frequency: { minutes: 1 }
+               # supports ISO duration, "human duration" as used in code
+               timeout: { minutes: 1 }
+               initialDelay: { seconds: 15 }
+               # highlight-add-end
+     ```</programlisting>
+<simpara>Use the configured scheduler inside the <literal>packages/backend/src/plugins/catalog.ts</literal> as follows:</simpara>
+<screen>     ```ts title="packages/backend/src/plugins/catalog.ts"
+     /* highlight-add-start */
+     import { KeycloakOrgEntityProvider } from '@redhat/backstage-plugin-keycloak-backend';
+
+     /* highlight-add-end */
+
+     export default async function createPlugin(
+       env: PluginEnvironment,
+     ): Promise&lt;Router&gt; {
+       const builder = await CatalogBuilder.create(env);
+
+       /* ... other processors and/or providers ... */
+       /* highlight-add-start */
+       builder.addEntityProvider(
+         KeycloakOrgEntityProvider.fromConfig(env.config, {
+           id: 'development',
+           logger: env.logger,
+           scheduler: env.scheduler,
+         }),
+       );
+       /* highlight-add-end */
+
+       const { processingEngine, router } = await builder.build();
+       await processingEngine.start();
+       return router;
+     }</screen>
+</listitem>
+<listitem>
+<simpara>Add a schedule directly inside the <literal>packages/backend/src/plugins/catalog.ts</literal> file as follows:</simpara>
+<screen>     ```ts title="packages/backend/src/plugins/catalog.ts"
+     + import { KeycloakOrgEntityProvider } from '@redhat/backstage-plugin-keycloak-backend';
+
+     export default async function createPlugin(
+       env: PluginEnvironment,
+     ): Promise&lt;Router&gt; {
+       const builder = await CatalogBuilder.create(env);
+
+       /* ... other processors and/or providers ... */
+       builder.addEntityProvider(
+         KeycloakOrgEntityProvider.fromConfig(env.config, {
+           id: 'development',
+           logger: env.logger,
+           /* highlight-add-start */
+           schedule: env.scheduler.createScheduledTaskRunner({
+             frequency: { minutes: 1 },
+             timeout: { minutes: 1 },
+             initialDelay: { seconds: 15 }
+           }),
+           /* highlight-add-end */
+         }),
+       )
+
+       const { processingEngine, router } = await builder.build();
+       await processingEngine.start();
+       return router;
+     }
+     ```</screen>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>Optional: override the default Keycloak query parameters. Configure the parameters inside the <literal>app-config.yaml</literal> file:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">   ```yaml title="app-config.yaml"
+   catalog:
+     providers:
+       keycloakOrg:
+         default:
+           # ...
+           # highlight-add-start
+           userQuerySize: 500 # Optional
+           groupQuerySize: 250 # Optional
+           # highlight-add-end
+   ```</programlisting>
+<simpara>Communication between Backstage and Keycloak is enabled by using the Keycloak API. Username/password or client credentials are supported authentication methods.</simpara>
+</listitem>
+</orderedlist>
+<simpara>The following table describes the parameters that you can configure to enable the plugin under <literal>catalog.providers.keycloakOrg.&lt;ENVIRONMENT_NAME&gt;</literal> object in the <literal>app-config.yaml</literal> file:</simpara>
+<informaltable frame="all" rowsep="1" colsep="1">
+<tgroup cols="4">
+<colspec colname="col_1" colwidth="25*"/>
+<colspec colname="col_2" colwidth="25*"/>
+<colspec colname="col_3" colwidth="25*"/>
+<colspec colname="col_4" colwidth="25*"/>
+<thead>
+<row>
+<entry align="left" valign="top">Name</entry>
+<entry align="left" valign="top">Description</entry>
+<entry align="left" valign="top">Default Value</entry>
+<entry align="left" valign="top">Required</entry>
+</row>
+</thead>
+<tbody>
+<row>
+<entry align="left" valign="top"><simpara><literal>baseUrl</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Location of the Keycloak server, such as <literal><link xlink:href="https://localhost:8443/auth">https://localhost:8443/auth</link></literal>. Note that the newer versions of Keycloak omit the <literal>/auth</literal> context path.</simpara></entry>
+<entry align="left" valign="top"><simpara>""</simpara></entry>
+<entry align="left" valign="top"><simpara>Yes</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>realm</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Realm to synchronize</simpara></entry>
+<entry align="left" valign="top"><simpara><literal>master</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>No</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>loginRealm</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Realm used to authenticate</simpara></entry>
+<entry align="left" valign="top"><simpara><literal>master</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>No</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>username</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Username to authenticate</simpara></entry>
+<entry align="left" valign="top"><simpara>""</simpara></entry>
+<entry align="left" valign="top"><simpara>Yes if using password based authentication</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>password</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Password to authenticate</simpara></entry>
+<entry align="left" valign="top"><simpara>""</simpara></entry>
+<entry align="left" valign="top"><simpara>Yes if using password based authentication</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>clientId</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Client ID to authenticate</simpara></entry>
+<entry align="left" valign="top"><simpara>""</simpara></entry>
+<entry align="left" valign="top"><simpara>Yes if using client credentials based authentication</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>clientSecret</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Client Secret to authenticate</simpara></entry>
+<entry align="left" valign="top"><simpara>""</simpara></entry>
+<entry align="left" valign="top"><simpara>Yes if using client credentials based authentication</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>userQuerySize</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Number of users to query at a time</simpara></entry>
+<entry align="left" valign="top"><simpara><literal>100</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>No</simpara></entry>
+</row>
+<row>
+<entry align="left" valign="top"><simpara><literal>groupQuerySize</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>Number of groups to query at a time</simpara></entry>
+<entry align="left" valign="top"><simpara><literal>100</literal></simpara></entry>
+<entry align="left" valign="top"><simpara>No</simpara></entry>
+</row>
+</tbody>
+</tgroup>
+</informaltable>
+<simpara>When using client credentials, the access type must be set to <literal>confidential</literal> and service accounts must be enabled. You must also add the following roles from the <literal>realm-management</literal> client role:</simpara>
+<itemizedlist>
+<listitem>
+<simpara><literal>query-groups</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>query-users</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>view-users</literal></simpara>
+</listitem>
+</itemizedlist>
+</section>
+<section xml:id="limitations" remap="_limitations">
+<title>Limitations</title>
+<simpara>If you have self-signed or corporate certificate issues, you can set the following environment variable before starting Backstage:</simpara>
+<simpara><literal>NODE_TLS_REJECT_UNAUTHORIZED=0</literal></simpara>
+<note>
+<simpara>The solution of setting the environment variable is not recommended.</simpara>
+</note>
+</section>
+</section>
+<section xml:id="for-users-5" remap="_for-users-5">
+<title>For users</title>
+<section xml:id="imported-users-and-groups-in-backstage-using-keycloak-plugin" remap="_imported-users-and-groups-in-backstage-using-keycloak-plugin">
+<title>Imported users and groups in Backstage using Keycloak plugin</title>
+<simpara>After configuring the plugin successfully, the plugin imports the users and groups each time when started.</simpara>
+<simpara>After the first import is complete, you can select <emphasis role="strong">User</emphasis> to list the users from the catalog page:</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/users.jpg"/>
+</imageobject>
+<textobject><phrase>catalog-list</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>You can see the list of users on the page:</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/user-list.jpg"/>
+</imageobject>
+<textobject><phrase>user-list</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>When you select a user, you can see the information imported from Keycloak:</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/user2.jpg"/>
+</imageobject>
+<textobject><phrase>user-profile</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>You can also select a group, view the list, and select or view the information imported from Keycloak for a group:</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/group1.jpg"/>
+</imageobject>
+<textobject><phrase>group-profile</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</section>
+</section>
+</section>
+<section xml:id="nexus-repository-manager-plugin-for-backstage" remap="_nexus-repository-manager-plugin-for-backstage">
+<title>Nexus Repository Manager plugin for Backstage</title>
+<simpara>The Nexus Repository Manager plugin displays the information about your build artifacts in your Backstage application. The build artifacts are available in the Nexus Repository Manager.</simpara>
+<section xml:id="for-administrators-6" remap="_for-administrators-6">
+<title>For administrators</title>
+<section xml:id="installing-and-configuring-the-nexus-repository-manager-plugin" remap="_installing-and-configuring-the-nexus-repository-manager-plugin">
+<title>Installing and configuring the Nexus Repository Manager plugin</title>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Run the following command to install the Nexus Repository Manager plugin:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace app add @redhat/backstage-plugin-nexus-repository-manager</programlisting>
+</listitem>
+<listitem>
+<simpara>Set the proxy to the desired Nexus Repository Manager server in the <literal>app-config.yaml</literal> file as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">proxy:
+    '/nexus-repository-manager':
+    target: 'https://&lt;NEXUS_REPOSITORY_MANAGER_URL&gt;'
+    headers:
+        X-Requested-With: 'XMLHttpRequest'
+        # Uncomment the following line to access a private Nexus Repository Manager using a token
+        # Authorization: 'Bearer &lt;YOUR TOKEN&gt;'
+    changeOrigin: true
+    # Change to "false" in case of using self hosted Nexus Repository Manager instance with a self-signed certificate
+    secure: true</programlisting>
+</listitem>
+<listitem>
+<simpara>Optional: Change the base URL of Nexus Repository Manager proxy as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">nexusRepositoryManager:
+    # default path is `/nexus-repository-manager`
+    proxyPath: /custom-path</programlisting>
+</listitem>
+<listitem>
+<simpara>Optional: Enable the following experimental annotations:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">nexusRepositoryManager:
+    experimentalAnnotations: true</programlisting>
+<simpara>Replace the <literal>isNexusRepositoryManagerAvailable</literal> import with <literal>isNexusRepositoryManagerExperimentalAvailable</literal> when adding the <literal>&lt;NexusRepositoryManagerPage /&gt;</literal> component.</simpara>
+<note>
+<simpara>The annotations mentioned in this step are not thoroughly tested.</simpara>
+</note>
+</listitem>
+<listitem>
+<simpara>Enable an additional tab on the entity view page in <literal>packages/app/src/components/catalog/EntityPage.tsx</literal> file as follows:</simpara>
+<screen>/* highlight-add-next-line */
+import {
+    isNexusRepositoryManagerAvailable,
+    NexusRepositoryManagerPage,
+} from "@redhat/backstage-plugin-nexus-repository-manager";
+
+const serviceEntityPage = (
+    &lt;EntityPageLayout&gt;
+        {/* ... */}
+        {/* highlight-add-next-line */}
+        &lt;EntityLayout.Route
+            if={isNexusRepositoryManagerAvailable}
+            path="/build-artifacts"
+            title="Build Artifacts"
+        &gt;
+            &lt;NexusRepositoryManagerPage /&gt;
+        &lt;/EntityLayout.Route&gt;
+    &lt;/EntityPageLayout&gt;
+);</screen>
+</listitem>
+<listitem>
+<simpara>Annotate your entity using the following annotations:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">metadata:
+    annotations:
+    # insert the chosen annotations here
+    # example
+    nexus-repository-manager/docker.image-name: `&lt;ORGANIZATION&gt;/&lt;REPOSITORY&gt;`,</programlisting>
+</listitem>
+</orderedlist>
+</section>
+</section>
+<section xml:id="for-users-6" remap="_for-users-6">
+<title>For users</title>
+<section xml:id="using-the-nexus-repository-manager-plugin-in-backstage" remap="_using-the-nexus-repository-manager-plugin-in-backstage">
+<title>Using the Nexus Repository Manager plugin in Backstage</title>
+<simpara>The Nexus Repository Manager is a front-end plugin that enables you to view the information about build artifacts.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the Nexus Repository Manager plugin. For the installation process, see <xref linkend="installing-and-configuring-the-nexus-repository-manager-plugin"/>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and select a component from the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>Go to the <emphasis role="strong">BUILD ARTIFACTS</emphasis> tab.</simpara>
+<simpara>The <emphasis role="strong">BUILD ARTIFACTS</emphasis> tab contains a list of build artifacts and related information, such as <emphasis role="strong">VERSION</emphasis>, <emphasis role="strong">REPOSITORY</emphasis>, <emphasis role="strong">REPOSITORY TYPE</emphasis>, <emphasis role="strong">MANIFEST</emphasis>, <emphasis role="strong">MODIFIED</emphasis>, and <emphasis role="strong">SIZE</emphasis>.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/nexus-repository-manager.png"/>
+</imageobject>
+<textobject><phrase>nexus-repository-manager-tab</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="open-cluster-management-plugin-for-backstage" remap="_open-cluster-management-plugin-for-backstage">
+<title>Open Cluster Management plugin for Backstage</title>
+<simpara>The Open Cluster Management (OCM) plugin integrates your Backstage instance with the <literal>MultiClusterHub</literal> and <literal>MultiCluster</literal> engines of OCM.</simpara>
+<section xml:id="capabilities-2" remap="_capabilities-2">
+<title>Capabilities</title>
+<simpara>The OCM plugin has the following capabilities:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>All clusters represented as <literal>ManagedCluster</literal> in <literal>MultiClusterHub</literal> or MCE are discovered and imported into the Backstage catalog, such as:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Entity is defined as <literal>kind: Resource</literal> with <literal>spec.type</literal> set to <literal>kubernetes-cluster</literal>.</simpara>
+</listitem>
+<listitem>
+<simpara>Links to the OpenShift Container Platform (OCP) console, OCM console, and OpenShift Cluster Manager are provided in <literal>metadata.links</literal>.</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>Shows real-time data from OCM on the Resource entity page, including:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>Cluster current status (up or down)</simpara>
+</listitem>
+<listitem>
+<simpara>Cluster nodes status (up or down)</simpara>
+</listitem>
+<listitem>
+<simpara>Cluster details (console link, OCP, and Kubernetes version)</simpara>
+</listitem>
+<listitem>
+<simpara>Details about available compute resources on the cluster</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+</itemizedlist>
+</section>
+<section xml:id="for-administrators-7" remap="_for-administrators-7">
+<title>For administrators</title>
+<section xml:id="installation-3" remap="_installation-3">
+<title>Installation</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<simpara>Using this configuration, you can proceed with the installation of the individual packages.</simpara>
+<simpara>The OCM plugin is composed of two packages, including:</simpara>
+<itemizedlist>
+<listitem>
+<simpara><literal>@redhat/backstage-plugin-ocm-backend</literal> package connects the Backstage server to OCM. For setup process, see <xref linkend="setting-up-the-ocm-backend-package"/> section.</simpara>
+</listitem>
+<listitem>
+<simpara>The <literal>@redhat/backstage-plugin-ocm</literal> package, which contains frontend components requires the <literal>\*-backend</literal> package to be present and properly set up. For detailed instructions on setting up the backend, refer to the <xref linkend="setting-up-the-ocm-frontend-package"/> section.</simpara>
+</listitem>
+</itemizedlist>
+<note>
+<simpara>If you are interested in Resource discovery and do not want any of the front-end components, then you can install and configure the <literal>@redhat/backstage-plugin-ocm-backend</literal> package only.</simpara>
+</note>
+<section xml:id="prerequisites" remap="_prerequisites">
+<title>Prerequisites</title>
+<itemizedlist>
+<listitem>
+<simpara>OCM is deployed and configured on a Kubernetes cluster.</simpara>
+</listitem>
+<listitem>
+<simpara><link xlink:href="https://backstage.io/docs/features/kubernetes">Kubernetes plugin for Backstage</link> is installed.</simpara>
+</listitem>
+<listitem>
+<simpara>A <literal>ClusterRole</literal> is granted to <literal>ServiceAccount</literal> accessing the hub cluster as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  kind: ClusterRole
+  apiVersion: rbac.authorization.k8s.io/v1
+  metadata:
+    name: backstage-ocm-plugin
+  rules:
+    - apiGroups:
+        - cluster.open-cluster-management.io
+      resources:
+        - managedclusters
+      verbs:
+        - get
+        - watch
+        - list
+    - apiGroups:
+        - internal.open-cluster-management.io
+      resources:
+        - managedclusterinfos
+      verbs:
+        - get
+        - watch
+        - list</programlisting>
+</listitem>
+</itemizedlist>
+</section>
+<section xml:id="setting-up-the-ocm-backend-package" remap="_setting-up-the-ocm-backend-package">
+<title>Setting up the OCM backend package</title>
+<orderedlist numeration="arabic">
+<listitem>
+<simpara>Install the OCM backend plugin using the following command:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace backend add @redhat/backstage-plugin-ocm-backend</programlisting>
+</listitem>
+<listitem>
+<simpara>Configure the OCM backend plugin using one of the following configurations:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>The OCM configuration provides the information about your hub. To use the OCM configuration, add the following code to your <literal>app-config.yaml</literal> file:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">`yaml title="app-config.yaml"
+     catalog:
+       providers:
+         ocm:
+           env: # Key is reflected as provider ID. Defines and claims plugin instance ownership of entities
+             name: # Name that the hub cluster will assume in Backstage Catalog (in OCM this is always local-cluster which can be confusing)
+             url: # Url of the hub cluster API endpoint
+             serviceAccountToken: # Token used for querying data from the hub
+             skipTLSVerify: # Skip TLS certificate verification, defaults to false
+             caData: # Base64-encoded CA bundle in PEM format</programlisting>
+</listitem>
+<listitem>
+<simpara>If the Backstage Kubernetes plugin is installed and configured to connect to the hub cluster, then you can bind the both hub and Kubernetes configuration by providing the name of the hub in the <literal>app-config.yaml</literal> as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">```yaml title="app-config.yaml"
+     kubernetes:
+       serviceLocatorMethod:
+         type: 'multiTenant'
+       clusterLocatorMethods:
+         - type: 'config'
+           clusters:
+             # highlight-next-line
+             - name: &lt;cluster-name&gt;
+             # ...
+
+     catalog:
+       providers:
+         ocm:
+           env: # Key is reflected as provider ID. Defines and claims plugin instance ownership of entities
+             # highlight-next-line
+             kubernetesPluginRef: &lt;cluster-name&gt; # Match the cluster name in kubernetes plugin config</programlisting>
+<simpara>Ensure that the Backstage uses a <literal>ServiceAccount</literal> token and the required permissions are granted as mentioned previously.</simpara>
+<simpara>This is useful when you already use a Kubernetes plugin in your Backstage instance. Also, the hub cluster must be connected using the <literal>ServiceAccount</literal>.</simpara>
+<simpara>For more information about the configuration, see <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#configuring-kubernetes-clusters">Backstage Kubernetes plugin</link> documentation.</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>Create a new plugin instance in <literal>packages/backend/src/plugins/ocm.ts</literal> file as follows:</simpara>
+<screen>```ts title="packages/backend/src/plugins/ocm.ts"
+   import { Router } from 'express';
+
+   import { createRouter } from '@redhat/backstage-plugin-ocm-backend';
+
+   import { PluginEnvironment } from '../types';
+
+   export default async function createPlugin(
+     env: PluginEnvironment,
+   ): Promise&lt;Router&gt; {
+     return await createRouter({
+       logger: env.logger,
+       config: env.config,
+     });
+   }</screen>
+</listitem>
+<listitem>
+<simpara>Import and plug the new instance into <literal>packages/backend/src/index.ts</literal> file:</simpara>
+<screen>```ts title="packages/backend/src/index.ts"
+   /* highlight-add-next-line */
+   import ocm from './plugins/ocm';
+
+   async function main() {
+     // ...
+     const createEnv = makeCreateEnv(config);
+     // ...
+     /* highlight-add-next-line */
+     const ocmEnv = useHotMemoize(module, () =&gt; createEnv('ocm'));
+     // ...
+     const apiRouter = Router();
+     // ...
+     /* highlight-add-next-line */
+     apiRouter.use('/ocm', await ocm(ocmEnv));
+     // ...
+   }
+```</screen>
+</listitem>
+<listitem>
+<simpara>Import the cluster <literal>Resource</literal> entity provider into the <literal>catalog</literal> plugin in the <literal>packages/backend/src/plugins/catalog.ts</literal> file. The scheduler also needs to be configured. Two configurations are possible here:</simpara>
+<orderedlist numeration="loweralpha">
+<listitem>
+<simpara>Configure the scheduler inside the <literal>app-config.yaml</literal>:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">```yaml title="app-config.yaml"
+      catalog:
+        providers:
+          ocm:
+            env:
+              # ...
+              # highlight-add-start
+              schedule: # optional; same options as in TaskScheduleDefinition
+                # supports cron, ISO duration, "human duration" as used in code
+                frequency: { minutes: 1 }
+                # supports ISO duration, "human duration" as used in code
+                timeout: { minutes: 1 }
+              # highlight-add-end
++</programlisting>
+<simpara>and then use the configured scheduler</simpara>
+<screen>```ts title="packages/backend/src/index.ts"
+      /* highlight-add-next-line */
+      import { ManagedClusterProvider } from '@redhat/backstage-plugin-ocm-backend';
+
+      export default async function createPlugin(
+        env: PluginEnvironment,
+      ): Promise&lt;Router&gt; {
+        const builder = await CatalogBuilder.create(env);
+        // ...
+        /* highlight-add-start */
+        const ocm = ManagedClusterProvider.fromConfig(env.config, {
+          logger: env.logger,
+          scheduler: env.scheduler,
+        });
+        builder.addEntityProvider(ocm);
+        /* highlight-add-start */
+        // ...
+      }</screen>
+</listitem>
+<listitem>
+<simpara>Add a schedule directly inside the <literal>packages/backend/src/plugins/catalog.ts</literal> file</simpara>
+<screen>```ts title="packages/backend/src/index.ts"
+      /* highlight-add-next-line */
+      import { ManagedClusterProvider } from '@redhat/backstage-plugin-ocm-backend';
+
+      export default async function createPlugin(
+        env: PluginEnvironment,
+      ): Promise&lt;Router&gt; {
+        const builder = await CatalogBuilder.create(env);
+        // ...
+        /* highlight-add-start */
+        const ocm = ManagedClusterProvider.fromConfig(env.config, {
+          logger: env.logger,
+          schedule: env.scheduler.createScheduledTaskRunner({
+            frequency: { minutes: 1 },
+            timeout: { minutes: 1 },
+          }),
+        });
+        builder.addEntityProvider(ocm);
+        /* highlight-add-start */
+        // ...
+      }</screen>
+</listitem>
+</orderedlist>
+</listitem>
+<listitem>
+<simpara>Optional: Configure the default owner for the cluster entities in the catalog for a specific environment. For example, use the following code to set <literal>foo</literal> as the owner for clusters from <literal>env</literal> in the <literal>app-config.yaml</literal> catalog section:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">`yaml title="app-config.yaml"
+   catalog:
+     providers:
+       ocm:
+         env:
+           # highlight-next-line
+           owner: user:foo</programlisting>
+<simpara>For more information about the default owner configuration, see <link xlink:href="https://backstage.io/docs/features/software-catalog/references/#string-references">upstream string references documentation</link>.</simpara>
+</listitem>
+</orderedlist>
+</section>
+<section xml:id="setting-up-the-ocm-frontend-package" remap="_setting-up-the-ocm-frontend-package">
+<title>Setting up the OCM frontend package</title>
+<orderedlist numeration="arabic">
+<listitem>
+<simpara>Install the OCM frontend plugin using the following command:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace app add @redhat/backstage-plugin-ocm</programlisting>
+</listitem>
+<listitem>
+<simpara>Select the components that you want to use, such as:</simpara>
+<itemizedlist>
+<listitem>
+<simpara><literal>OcmPage</literal>: This is a standalone page or dashboard displaying all clusters as tiles. You can add <literal>OcmPage</literal> to <literal>packages/app/src/App.tsx</literal> file as follows:</simpara>
+<screen>```tsx title="packages/app/src/App.tsx"
+     /* highlight-add-next-line */
+     import { OcmPage } from '@redhat/backstage-plugin-ocm';
+
+     const routes = (
+       &lt;FlatRoutes&gt;
+         {/* ... */}
+         {/* highlight-add-next-line */}
+         &lt;Route path="/ocm" element={&lt;OcmPage logo={&lt;Logo /&gt;} /&gt;} /&gt;
+       &lt;/FlatRoutes&gt;
+     );</screen>
+<simpara>You can also update navigation in <literal>packages/app/src/components/Root/Root.tsx</literal> as follows:</simpara>
+<screen>```tsx title="packages/app/src/components/Root/Root.tsx"
+     /* highlight-add-next-line */
+     import StorageIcon from '@material-ui/icons/Storage';
+
+     export const Root = ({ children }: PropsWithChildren&lt;{}&gt;) =&gt; (
+       &lt;SidebarPage&gt;
+         &lt;Sidebar&gt;
+           &lt;SidebarGroup label="Menu" icon={&lt;MenuIcon /&gt;}&gt;
+             {/* ... */}
+             {/* highlight-add-next-line */}
+             &lt;SidebarItem icon={StorageIcon} to="ocm" text="Clusters" /&gt;
+           &lt;/SidebarGroup&gt;
+           {/* ... */}
+         &lt;/Sidebar&gt;
+         {children}
+       &lt;/SidebarPage&gt;
+     );</screen>
+</listitem>
+<listitem>
+<simpara><literal>ClusterContextProvider</literal>: This component is a React context provided for OCM data, which is related to the current entity. The <literal>ClusterContextProvider</literal> component is used to display any data on the React components mentioned in <literal>packages/app/src/components/catalog/EntityPage.tsx</literal>:</simpara>
+<screen>```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
+     /* highlight-add-start */
+     import {
+       ClusterAvailableResourceCard,
+       ClusterContextProvider,
+       ClusterInfoCard,
+     } from '@redhat/backstage-plugin-ocm';
+
+     /* highlight-add-end */
+
+     const isType = (types: string | string[]) =&gt; (entity: Entity) =&gt; {
+       if (!entity?.spec?.type) {
+         return false;
+       }
+       return typeof types === 'string'
+         ? entity?.spec?.type === types
+         : types.includes(entity.spec.type as string);
+     };
+
+     export const resourcePage = (
+       &lt;EntityLayout&gt;
+         {/* ... */}
+         {/* highlight-add-start */}
+         &lt;EntityLayout.Route path="/status" title="status"&gt;
+           &lt;EntitySwitch&gt;
+             &lt;EntitySwitch.Case if={isType('kubernetes-cluster')}&gt;
+               &lt;ClusterContextProvider&gt;
+                 &lt;Grid container direction="column" xs={6}&gt;
+                   &lt;Grid item&gt;
+                     &lt;ClusterInfoCard /&gt;
+                   &lt;/Grid&gt;
+                   &lt;Grid item&gt;
+                     &lt;ClusterAvailableResourceCard /&gt;
+                   &lt;/Grid&gt;
+                 &lt;/Grid&gt;
+               &lt;/ClusterContextProvider&gt;
+             &lt;/EntitySwitch.Case&gt;
+           &lt;/EntitySwitch&gt;
+         &lt;/EntityLayout.Route&gt;
+         {/* highlight-add-end */}
+       &lt;/EntityLayout&gt;
+     );
+
+     export const entityPage = (
+       &lt;EntitySwitch&gt;
+         {/* ... */}
+         {/* highlight-add-next-line */}
+         &lt;EntitySwitch.Case if={isKind('resource')} children={resourcePage} /&gt;
+       &lt;/EntitySwitch&gt;
+     );</screen>
+<simpara>In the previous codeblock, you can place the context provider into your <literal>Resource</literal> entity renderer, which is usually available in <literal>packages/app/src/components/catalog/EntityPage.tsx</literal> or in an imported component.</simpara>
+<itemizedlist>
+<listitem>
+<simpara><literal>&lt;ClusterInfoCard /&gt;</literal>: This is an entity component displaying details of a cluster in a table:</simpara>
+</listitem>
+<listitem>
+<simpara><literal>&lt;ClusterAvailableResourceCard /&gt;</literal>: This is an entity component displaying the available resources on a cluster. For example, see <link xlink:href="https://open-cluster-management.io/concepts/managedcluster/#cluster-heartbeats-and-status"><literal>.status.capacity</literal></link> of the <literal>ManagedCluster</literal> resource.</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="for-users-7" remap="_for-users-7">
+<title>For users</title>
+<section xml:id="using-the-ocm-plugin-in-backstage" remap="_using-the-ocm-plugin-in-backstage">
+<title>Using the OCM plugin in Backstage</title>
+<simpara>The OCM plugin integrates your Backstage instance with multi-cluster engines and displays real-time data from OCM.</simpara>
+<section xml:id="prerequisites-2" remap="_prerequisites-2">
+<title>Prerequisites</title>
+<itemizedlist>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the OCM plugin. For the installation process, see <xref linkend="installation-1"/>.</simpara>
+</listitem>
+</itemizedlist>
+</section>
+<section xml:id="procedure" remap="_procedure">
+<title>Procedure</title>
+<orderedlist numeration="arabic">
+<listitem>
+<simpara>Open your Backstage application.</simpara>
+</listitem>
+<listitem>
+<simpara>Click the <emphasis role="strong">Clusters</emphasis> tab from the left-side panel to view the <emphasis role="strong">Managed Clusters</emphasis> page.</simpara>
+<simpara>The <emphasis role="strong">Managed Clusters</emphasis> page displays the list of clusters with additional information, such as status, infrastructure provider, associated OpenShift version, and available nodes.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/ocm-plugin-user1.png"/>
+</imageobject>
+<textobject><phrase>ocm-plugin-ui</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>You can also upgrade the OpenShift version for a cluster using the <emphasis role="strong">Upgrade available</emphasis> option in the <emphasis role="strong">VERSION</emphasis> column.</simpara>
+</listitem>
+<listitem>
+<simpara>Select a cluster from the <emphasis role="strong">Managed Clusters</emphasis> to view the related cluster information.</simpara>
+<simpara>You are redirected to the cluster-specific page, which consists of:</simpara>
+<itemizedlist>
+<listitem>
+<simpara><emphasis role="strong">Cluster Information</emphasis>, such as name, status, accessed Kubernetes version, associated OpenShift ID and version, and accessed platform.</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">Available</emphasis> cluster capacity, including CPU cores, memory size, and number of pods.</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">Related Links</emphasis>, which enable you to access different consoles directly, such as OpenShift Console, OCM Console, and OpenShift Cluster Manager Console.</simpara>
+</listitem>
+<listitem>
+<simpara><emphasis role="strong">Relations</emphasis> card, which displays the visual representation of the cluster and associated dependencies.</simpara>
+</listitem>
+</itemizedlist>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/ocm-plugin-user2.png"/>
+</imageobject>
+<textobject><phrase>ocm-plugin-ui</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+</section>
+<section xml:id="quay-plugin-for-backstage" remap="_quay-plugin-for-backstage">
+<title>Quay plugin for Backstage</title>
+<simpara>The Quay plugin displays the information about your container images within the Quay registry in your Backstage application.</simpara>
+<section xml:id="for-administrators-8" remap="_for-administrators-8">
+<title>For administrators</title>
+<section xml:id="installation">
+<title>Installation</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<simpara>You can now install the Quay plugin using the following command:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace app add @redhat/backstage-plugin-quay</programlisting>
+</section>
+<section xml:id="configuration-2" remap="_configuration-2">
+<title>Configuration</title>
+<orderedlist numeration="arabic">
+<listitem>
+<simpara>Set the proxy to the desired Quay server in the <literal>app-config.yaml</literal> file as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">   ```yaml title="app-config.yaml"
+   proxy:
+     '/quay/api':
+       target: 'https://quay.io'
+       headers:
+         X-Requested-With: 'XMLHttpRequest'
+         # Uncomment the following line to access a private Quay Repository using a token
+         # Authorization: 'Bearer &lt;YOUR TOKEN&gt;'
+       changeOrigin: true
+       # Change to "false" in case of using self hosted quay instance with a self-signed certificate
+       secure: true
+
+   quay:
+     # The UI url for Quay, used to generate the link to Quay
+     uiUrl: 'https://quay.io'
+   ```</programlisting>
+</listitem>
+<listitem>
+<simpara>Enable an additional tab on the entity view page in <literal>packages/app/src/components/catalog/EntityPage.tsx</literal>:</simpara>
+<screen>   ```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
+   /* highlight-add-next-line */
+   import { isQuayAvailable, QuayPage } from '@redhat/backstage-plugin-quay';
+
+   const serviceEntityPage = (
+     &lt;EntityPageLayout&gt;
+       {/* ... */}
+       {/* highlight-add-next-line */}
+       &lt;EntityLayout.Route if={isQuayAvailable} path="/quay" title="Quay"&gt;
+         &lt;QuayPage /&gt;
+       &lt;/EntityLayout.Route&gt;
+     &lt;/EntityPageLayout&gt;
+   );
+   ```</screen>
+</listitem>
+<listitem>
+<simpara>Annotate your entity with the following annotations:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">   ```yaml title="catalog-info.yaml"
+   metadata:
+     annotations:
+       'quay.io/repository-slug': `&lt;ORGANIZATION&gt;/&lt;REPOSITORY&gt;',
+   ```</programlisting>
+</listitem>
+</orderedlist>
+</section>
+</section>
+<section xml:id="for-users-8" remap="_for-users-8">
+<title>For users</title>
+<section xml:id="using-the-quay-plugin-in-backstage" remap="_using-the-quay-plugin-in-backstage">
+<title>Using the Quay plugin in Backstage</title>
+<simpara>Quay is a front-end plugin that enables you to view the information about the container images.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the Quay plugin. For installation process, see <link linkend="installation">Installation</link>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and select a component from the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>Go to the <emphasis role="strong">Image Registry</emphasis> tab.</simpara>
+<simpara>The <emphasis role="strong">Image Registry</emphasis> tab in the Backstage UI contains a list of container images and related information, such as <emphasis role="strong">TAG</emphasis>, <emphasis role="strong">LAST MODIFIED</emphasis>, <emphasis role="strong">SECURITY SCAN</emphasis>, <emphasis role="strong">SIZE</emphasis>, <emphasis role="strong">EXPIRES</emphasis>, and <emphasis role="strong">MANIFEST</emphasis>.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/quay-plugin-backstage1.png"/>
+</imageobject>
+<textobject><phrase>quay-tab</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+<listitem>
+<simpara>If a container image does not pass the security scan, select the security scan value of the image to check the vulnerabilities.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/quay-plugin-backstage2.png"/>
+</imageobject>
+<textobject><phrase>quay-tab</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>The vulnerabilities page displays the associated advisory with a link, severity, package name, and current and fixed versions.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/quay-plugin-backstage3.png"/>
+</imageobject>
+<textobject><phrase>quay-tab-vulnerabilities</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>The advisory link redirects to the Red Hat Security Advisory page that contains detailed information about the advisory, including the solution.</simpara>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="tekton-plugin-for-backstage" remap="_tekton-plugin-for-backstage">
+<title>Tekton plugin for Backstage</title>
+<simpara>The Tekton plugin enables you to visualize the <literal>PipelineRun</literal> resources available on the Kubernetes cluster.</simpara>
+<section xml:id="for-administrators-9" remap="_for-administrators-9">
+<title>For administrators</title>
+<section xml:id="setting-tekton-plugin">
+<title>Setting up the Tekton plugin</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<simpara>Using this configuration, you can proceed with the installation of the individual packages.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>The Kubernetes plugins including <literal>@backstage/plugin-kubernetes</literal> and <literal>@backstage/plugin-kubernetes-backend</literal> are installed and configured by following the <link xlink:href="https://backstage.io/docs/features/kubernetes/installation">installation</link> and <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration">configuration</link> guides.</simpara>
+</listitem>
+<listitem>
+<simpara>The following <literal>customResources</literal> component is added in the <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#configuring-kubernetes-clusters"><literal>app-config.yaml</literal></link> file:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered"> kubernetes:
+   ...
+   customResources:
+     - group: 'tekton.dev'
+       apiVersion: 'v1beta1'
+       plural: 'pipelineruns'
+     - group: 'tekton.dev'
+       apiVersion: 'v1beta1'
+       plural: 'taskruns'</programlisting>
+</listitem>
+<listitem>
+<simpara>The Kubernetes plugin is configured and connects to the cluster using a <literal>ServiceAccount</literal>.</simpara>
+</listitem>
+<listitem>
+<simpara>The <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control"><literal>ClusterRole</literal></link> must be granted for custom resources (PipelineRuns and TaskRuns) to <literal>ServiceAccount</literal> accessing the cluster.</simpara>
+</listitem>
+<listitem>
+<simpara>To view the pog logs, you have granted the permissions for <literal>pods/log</literal>.</simpara>
+</listitem>
+<listitem>
+<simpara>If you have the Backstage Kubernetes Plugin configured, then the <literal>ClusterRole</literal> is already granted.</simpara>
+<simpara>You can use the following code to grant the <literal>ClusterRole</literal> for custom resources:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">...
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: backstage-read-only
+  rules:
+    - apiGroups:
+        - ""
+      resources:
+        - pods/log
+      verbs:
+        - get
+        - list
+        - watch
+    ...
+    - apiGroups:
+        - tekton.dev
+      resources:
+        - pipelineruns
+        - taskruns
+      verbs:
+        - get
+        - list</programlisting>
+<informalexample xml:id="TIP">
+<simpara>You can use the <link xlink:href="https://raw.githubusercontent.com/janus-idp/backstage-plugins/main/plugins/tekton/manifests/clusterrole.yaml">prepared manifest for a read-only <literal>ClusterRole</literal></link>, which provides access for both Kubernetes plugin and Tekton plugin.</simpara>
+</informalexample>
+</listitem>
+<listitem>
+<simpara>The following annotation is added to the entity’s <literal>catalog-info.yaml</literal> file to identify whether an entity contains the Kubernetes resources:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  annotations:
+    ...
+
+    backstage.io/kubernetes-id: &lt;BACKSTAGE_ENTITY_NAME&gt;</programlisting>
+<simpara>You can also add the <literal>backstage.io/kubernetes-namespace</literal> annotation to identify the Kubernetes resources using the defined namespace.</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  annotations:
+    ...
+
+    backstage.io/kubernetes-namespace: &lt;RESOURCE_NS&gt;</programlisting>
+</listitem>
+<listitem>
+<simpara>The following annotation is added to the <literal>catalog-info.yaml</literal> file of entity to view the latest <literal>PipelineRun</literal> in the CI/CD tab of the application:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  annotations:
+    ...
+
+    janus-idp.io/tekton-enabled : 'true'</programlisting>
+</listitem>
+<listitem>
+<simpara>A custom label selector can be added, which Backstage uses to find the Kubernetes resources. The label selector takes precedence over the ID annotations.</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  annotations:
+    ...
+
+    backstage.io/kubernetes-label-selector: 'app=my-app,component=front-end'</programlisting>
+</listitem>
+<listitem>
+<simpara>The following label is added to the resources so that the Kubernetes plugin gets the Kubernetes resources from the requested entity:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  labels:
+    ...
+
+    backstage.io/kubernetes-id: &lt;BACKSTAGE_ENTITY_NAME&gt;`</programlisting>
+</listitem>
+</itemizedlist>
+<note>
+<simpara>When using the label selector, the mentioned labels must be present on the resource.</simpara>
+</note>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Install the Tekton plugin using the following command:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace app add @redhat/backstage-plugin-tekton</programlisting>
+</listitem>
+<listitem>
+<simpara>Enable the <emphasis role="strong">TEKTON</emphasis> tab on the entity view page using the <literal>packages/app/src/components/catalog/EntityPage.tsx</literal> file:</simpara>
+<screen>   ```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
+   /* highlight-add-next-line */
+   import { TektonPage } from '@redhat/backstage-plugin-tekton';
+
+   const serviceEntityPage = (
+     &lt;EntityPageLayout&gt;
+       {/* ... */}
+       {/* highlight-add-start */}
+       &lt;EntityLayout.Route path="/tekton" title="Tekton"&gt;
+         &lt;TektonPage /&gt;
+       &lt;/EntityLayout.Route&gt;
+       {/* highlight-add-end */}
+     &lt;/EntityPageLayout&gt;
+   );</screen>
+</listitem>
+<listitem>
+<simpara>Enable latest PipelineRun visualization in the <emphasis role="strong">CI/CD</emphasis> tab on the entity view page. The <literal>linkTekton</literal> property is optional and takes boolean value, if not specified or set to <literal>true</literal>, then the <emphasis role="strong">GO TO TEKTON</emphasis> option is displayed.</simpara>
+<screen>   ```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
+   /* highlight-add-next-line */
+   import { LatestPipelineRun, isTektonCIAvailable } from '@redhat/backstage-plugin-tekton';
+
+   const cicdContent = (
+     &lt;EntitySwitch&gt;&gt;
+       {/* ... */}
+       {/* highlight-add-start */}
+       &lt;EntitySwitch.Case if={isTektonCIAvailable}&gt;
+         &lt;LatestPipelineRun linkTekton /&gt;
+       &lt;/EntitySwitch.Case&gt;
+       {/* highlight-add-end */}
+     &lt;/EntitySwitch&gt;
+   );
+   ```</screen>
+</listitem>
+</orderedlist>
+</section>
+</section>
+<section xml:id="for-users-9" remap="_for-users-9">
+<title>For users</title>
+<section xml:id="using-the-tekton-plugin-in-backstage" remap="_using-the-tekton-plugin-in-backstage">
+<title>Using the Tekton plugin in Backstage</title>
+<simpara>Tekton is a front-end plugin that enables you to view the <literal>PipelineRun</literal> resources.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the Tekton plugin. For the installation process, see <link linkend="setting-tekton-plugin">Setting up the Tekton plugin</link>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and select a component from the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>Go to the <emphasis role="strong">CI/CD</emphasis> tab.</simpara>
+<simpara>The <emphasis role="strong">CI/CD</emphasis> tab displays the latest <literal>PipelineRun</literal> resources associated to a Kubernetes cluster. The resources include tasks to complete. When you hover the mouse pointer on a task card, you can view the steps to complete that particular task.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/tekton-plugin-user1.png"/>
+</imageobject>
+<textobject><phrase>ci-cd-tab-tekton</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>There is also a <emphasis role="strong">GO TO TEKTON</emphasis> option at the bottom, which redirects you to the <emphasis role="strong">TEKTON</emphasis> tab.</simpara>
+</listitem>
+<listitem>
+<simpara>Click <emphasis role="strong">GO TO TEKTON</emphasis> or select the <emphasis role="strong">TEKTON</emphasis> tab in the entity view page.</simpara>
+<simpara>The <emphasis role="strong">TEKTON</emphasis> tab contains the list of pipeline runs related to a cluster. The list contains pipeline run details, such as <emphasis role="strong">NAME</emphasis>, <emphasis role="strong">STATUS</emphasis>, <emphasis role="strong">TASK STATUS</emphasis>, <emphasis role="strong">STARTED</emphasis>, and <emphasis role="strong">DURATION</emphasis>.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/tekton-plugin-user2.png"/>
+</imageobject>
+<textobject><phrase>tekton-tab</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+<listitem>
+<simpara>Click a PipelineRun name in the list to view the PipelineRun visualization.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/tekton-plugin-user3.png"/>
+</imageobject>
+<textobject><phrase>pipelinerun-page</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>To go back to the PipelineRun list, you can click the Back to PipelineRun list option.</simpara>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+<section xml:id="topology-plugin-for-backstage" remap="_topology-plugin-for-backstage">
+<title>Topology plugin for Backstage</title>
+<simpara>The Topology plugin enables you to visualize the workloads such as Deployment, Job, Daemonset, Statefulset, CronJob, and Pods powering any service on the Kubernetes cluster.</simpara>
+<section xml:id="for-administrators-10" remap="_for-administrators-10">
+<title>For administrators</title>
+<section xml:id="installation-4" remap="_installation-4">
+<title>Installation</title>
+<simpara>The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the <literal>@redhat</literal> scoped packages:</simpara>
+<screen># update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package
+yarn add @redhat/backstage-plugin-quay</screen>
+<simpara>For more information, see <link xlink:href="https://docs.npmjs.com/cli/v9/configuring-npm/npmrc">npm docs</link>.</simpara>
+<simpara>Creating a <literal>.npmrc</literal> file ensures that all the packages are scoped under <literal>@redhat</literal> and are fetched from <link xlink:href="https://npm.registry.redhat.com/">Red Hat’s NPM registry</link>, while the rest dependencies remain sourced from other <link xlink:href="registry.npmjs.org">registry</link>.</simpara>
+<simpara>Using this configuration, you can proceed with the installation of the individual packages.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>The Kubernetes plugins including <literal>@backstage/plugin-kubernetes</literal> and <literal>@backstage/plugin-kubernetes-backend</literal> are installed and configured by following the <link xlink:href="https://backstage.io/docs/features/kubernetes/installation">installation</link> and <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration">configuration</link> guides.</simpara>
+</listitem>
+<listitem>
+<simpara>The Kubernetes plugin is configured and connects to the cluster using a <literal>ServiceAccount</literal>.</simpara>
+</listitem>
+<listitem>
+<simpara>The <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control"><literal>ClusterRole</literal></link> must be granted to <literal>ServiceAccount</literal> accessing the cluster. If you have the Backstage Kubernetes plugin configured, then the <literal>ClusterRole</literal> is already granted.</simpara>
+</listitem>
+<listitem>
+<simpara>The following must be added in<literal>customResources</literal> component in the <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#configuring-kubernetes-clusters"><literal>app-config.yaml</literal></link> file to view the OpenShift route:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">   kubernetes:
+     ...
+     customResources:
+       - group: 'route.openshift.io'
+         apiVersion: 'v1'
+         plural: 'routes'</programlisting>
+<simpara>Also, ensure that the route is granted a <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control"><literal>ClusterRole</literal></link>. You can use the following code to grant the <literal>ClusterRole</literal> to the route :</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">    ...
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: backstage-read-only
+    rules:
+      ...
+      - apiGroups:
+          - route.openshift.io
+        resources:
+          - routes
+        verbs:
+          - get
+          - list</programlisting>
+</listitem>
+<listitem>
+<simpara>The following permission must be granted to the <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control"><literal>ClusterRole</literal></link> to be able to view the pod logs:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: backstage-read-only
+  rules:
+    ...
+    - apiGroups:
+        - ''
+      resources:
+        - pods
+        - pods/log
+      verbs:
+        - get
+        - list
+        - watch</programlisting>
+</listitem>
+<listitem>
+<simpara>The following code must be added in <literal>customResources</literal> component in the <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#configuring-kubernetes-clusters"><literal>app-config.yaml</literal></link> file to view the Tekton PipelineRuns list in the side panel and to view the latest PipelineRun status in the Topology node decorator:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  kubernetes:
+    ...
+    customResources:
+      - group: 'tekton.dev'
+        apiVersion: 'v1beta1'
+        plural: 'pipelines'
+      - group: 'tekton.dev'
+        apiVersion: 'v1beta1'
+        plural: 'pipelineruns'
+      - group: 'tekton.dev'
+        apiVersion: 'v1beta1'
+        plural: 'taskruns'</programlisting>
+<simpara>Also, ensure that the Pipeline, PipelineRun, and TaskRun are granted a <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control"><literal>ClusterRole</literal></link>. You can use the following code to grant the <literal>ClusterRole</literal> to Pipeline, PipelineRun, and TaskRun:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: backstage-read-only
+  rules:
+    ...
+    - apiGroups:
+        - tekton.dev
+      resources:
+        - pipelines
+        - pipelineruns
+        - taskruns
+      verbs:
+        - get
+        - list</programlisting>
+</listitem>
+<listitem>
+<simpara>The following configuration must be added in`customResources` component in the <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#configuring-kubernetes-clusters"><literal>app-config.yaml</literal></link> file to view the edit code decorator:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  kubernetes:
+    ...
+    customResources:
+      - group: 'org.eclipse.che'
+        apiVersion: 'v2'
+        plural: 'checlusters'</programlisting>
+<simpara>Also, ensure that the <literal>CheCluster</literal> is granted a <link xlink:href="https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control"><literal>ClusterRole</literal></link> as shown in the following example code:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: backstage-read-only
+  rules:
+    ...
+    - apiGroups:
+        - org.eclipse.che
+      resources:
+        - checlusters
+      verbs:
+        - get
+        - list</programlisting>
+</listitem>
+<listitem>
+<simpara>The following annotations are added to workload resources in the <literal>deployment.yaml</literal> file to navigate to the GitHub repository of the associated application using the edit code decorator:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">annotations:
+  app.openshift.io/vcs-uri: &lt;GIT_REPO_URL&gt;</programlisting>
+<simpara>You can also add the following annotation to navigate to a specific branch:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">annotations:
+  app.openshift.io/vcs-ref: &lt;GIT_REPO_BRANCH&gt;</programlisting>
+<simpara>If Red Hat OpenShift Dev Spaces (RHODS) is installed and configured and Git URL annotations are also added in the workload YAML file, then clicking on the edit code decorator redirects you to the RHODS instance. For more information about installing RHODS, see <link xlink:href="https://access.redhat.com/documentation/en-us/red_hat_openshift_dev_spaces/3.7/html/administration_guide/installing-devspaces">Administration guide</link> of RHODS.</simpara>
+<simpara>When you deploy your application using the OCP git import flow, then you do not need to add the labels as import flow to the workload YAML file. Otherwise, you would need to add the labels to the workload YAML file manually.</simpara>
+<simpara>The labels are not similar to <literal>backstage.io/edit-url</literal> annotations as the added labels point to the source file of catalog entity metadata and is applied to Backstage catalog entity metadata YAML file, but not to the Kubernetes resources.</simpara>
+<simpara>You can also add the <literal>app.openshift.io/edit-url</literal> annotation that you want to access using the decorator.</simpara>
+<tip>
+<simpara>You can use the <link xlink:href="https://raw.githubusercontent.com/janus-idp/backstage-plugins/main/plugins/topology/manifests/clusterrole.yaml">prepared manifest for a read-only <literal>ClusterRole</literal></link>, which provides access for both Kubernetes and Topology plugin.</simpara>
+</tip>
+</listitem>
+<listitem>
+<simpara>The following annotation is added to the entity’s <literal>catalog-info.yaml</literal> file to identify whether an entitiy contains the Kubernetes resources:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">annotations:
+  backstage.io/kubernetes-id: &lt;BACKSTAGE_ENTITY_NAME&gt;</programlisting>
+<simpara>The following label is added to the resources so that the Kubernetes plugin receives the Kubernetes resources from the requested entity:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">labels:
+  backstage.io/kubernetes-id: &lt;BACKSTAGE_ENTITY_NAME&gt;`</programlisting>
+<note>
+<simpara>When using the label selector, the mentioned labels must be present on the resource.</simpara>
+</note>
+</listitem>
+<listitem>
+<simpara>The <literal>backstage.io/kubernetes-namespace</literal> annotation is added as follows to identify that the Kubernetes resources are using the defined namespace:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">annotations:
+  backstage.io/kubernetes-namespace: &lt;RESOURCE_NS&gt;</programlisting>
+<simpara>If the <literal>backstage.io/kubernetes-namespace</literal> annotation is added to the <literal>catalog-info.yaml</literal> file, then the RHODS instance is not accessible using the edit code decorator.</simpara>
+<simpara>To retrieve the instance URL, CheCluster Custom Resource (CR) is required. The instance URL is not retrieved if the namespace annotation value is different from <literal>openshift-devspaces</literal> as CheCluster CR is created in <literal>openshift-devspaces</literal> namespace.</simpara>
+</listitem>
+<listitem>
+<simpara>A custom label selector is added, which Backstage uses to find the Kubernetes resources. The label selector takes precedence over the ID annotations. For example:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">annotations:
+  backstage.io/kubernetes-label-selector: 'app=my-app,component=front-end'</programlisting>
+<simpara>If you have multiple entities while RHODS is configured and want multiple entities to support the edit code decorator that redirects to the RHODS instance, you can add the <literal>backstage.io/kubernetes-label-selector</literal> annotation to the <literal>catalog-info.yaml</literal> file for each entity as follows:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">annotations:
+  backstage.io/kubernetes-label-selector: 'component in (&lt;BACKSTAGE_ENTITY_NAME&gt;,che)'</programlisting>
+<simpara>If you are using the previous custom label selector, then make sure that you add the following labels to your resources so that the Kubernetes plugin receives the Kubernetes resources from the requested entity:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">labels:
+  component: che # add this label to your che cluster instance</programlisting>
+<programlisting language="yaml" linenumbering="unnumbered">labels:
+  component: &lt;BACKSTAGE_ENTITY_NAME&gt; # add this label to the other resources associated with your entity</programlisting>
+<simpara>You can also write your own custom query for the label selector with unique labels to differentiate your entities. However, you need to ensure that you add those labels to the resources associated with your entities including your CheCluster instance.</simpara>
+</listitem>
+<listitem>
+<simpara>The following label is added to workload resources in the <literal>deployment.yaml</literal> file to display runtime icon in the topology nodes:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">labels:
+  app.openshift.io/runtime: &lt;RUNTIME_NAME&gt;</programlisting>
+<simpara>Alternatively, you can include the following label to display the runtime icon:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">labels:
+  app.kubernetes.io/name: &lt;RUNTIME_NAME&gt;</programlisting>
+<simpara>The <literal>&lt;RUNTIME_NAME&gt;</literal> parameter in the previous example label supports the following values:</simpara>
+<itemizedlist>
+<listitem>
+<simpara><literal>django</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>dotnet</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>drupal</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>go-gopher</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>golang</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>grails</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>jboss</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>jruby</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>js</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>nginx</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>nodejs</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>openjdk</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>perl</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>phalcon</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>php</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>python</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>quarkus</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>rails</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>redis</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>rh-spring-boot</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>rust</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>java</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>rh-openjdk</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>ruby</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>spring</literal></simpara>
+</listitem>
+<listitem>
+<simpara><literal>spring-boot</literal></simpara>
+</listitem>
+</itemizedlist>
+<simpara>Any other value for <literal>&lt;RUNTIME_NAME&gt;</literal> parameter results in icons not being rendered for the node.</simpara>
+</listitem>
+<listitem>
+<simpara>The following label is added to display the workload resources such as Deployments and Pods in a visual group:</simpara>
+<programlisting language="yaml" linenumbering="unnumbered">  ```yaml title="catalog-info.yaml"
+  labels:
+    app.kubernetes.io/part-of: &lt;GROUP_NAME&gt;
+  ```</programlisting>
+</listitem>
+<listitem>
+<simpara>The following annotation is added to display the workload resources such as Deployments and Pods with a visual connector:</simpara>
+<screen>  ```yaml title="catalog-info.yaml"
+  annotations:
+    app.openshift.io/connects-to: '[{"apiVersion": &lt;RESOURCE_APIVERSION&gt;,"kind": &lt;RESOURCE_KIND&gt;,"name": &lt;RESOURCE_NAME&gt;}]'
+  ```</screen>
+<simpara>For more information about the labels and annotations, see <link xlink:href="https://github.com/redhat-developer/app-labels/blob/master/labels-annotation-for-openshift.adoc">Guidelines for labels and annotations for OpenShift applications</link>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Install the Topology plugin using the following command:</simpara>
+<programlisting language="console" linenumbering="unnumbered">yarn workspace app add @redhat/backstage-plugin-topology</programlisting>
+</listitem>
+<listitem>
+<simpara>Enable <emphasis role="strong">TOPOLOGY</emphasis> tab in <literal>packages/app/src/components/catalog/EntityPage.tsx</literal>:</simpara>
+<screen>   ```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
+   /* highlight-add-next-line */
+   import { TopologyPage } from '@redhat/backstage-plugin-topology';
+
+   const serviceEntityPage = (
+     &lt;EntityPageLayout&gt;
+       {/* ... */}
+       {/* highlight-add-start */}
+       &lt;EntityLayout.Route path="/topology" title="Topology"&gt;
+         &lt;TopologyPage /&gt;
+       &lt;/EntityLayout.Route&gt;
+       {/* highlight-add-end */}
+     &lt;/EntityPageLayout&gt;
+   );
+   ```</screen>
+</listitem>
+</orderedlist>
+</section>
+</section>
+<section xml:id="for-users-10" remap="_for-users-10">
+<title>For users</title>
+<section xml:id="using-the-topology-plugin-in-backstage" remap="_using-the-topology-plugin-in-backstage">
+<title>Using the Topology plugin in Backstage</title>
+<simpara>Topology is a front-end plugin that enables you to view the workloads as nodes that power any service on the Kubernetes cluster.</simpara>
+<itemizedlist>
+<title>Prerequisites</title>
+<listitem>
+<simpara>Your Backstage application is installed and running.</simpara>
+</listitem>
+<listitem>
+<simpara>You have installed the Topology plugin. For the installation process, see <xref linkend="installation-1"/>.</simpara>
+</listitem>
+</itemizedlist>
+<orderedlist numeration="arabic">
+<title>Procedure</title>
+<listitem>
+<simpara>Open your Backstage application and select a component from the <emphasis role="strong">Catalog</emphasis> page.</simpara>
+</listitem>
+<listitem>
+<simpara>Go to the <emphasis role="strong">TOPOLOGY</emphasis> tab and you can view the workloads such as Deployments, Pods as nodes.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/topology-tab-user1.png"/>
+</imageobject>
+<textobject><phrase>topology-tab</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+<listitem>
+<simpara>Select a node and a pop-up appears on the right side, which contains two tabs: <emphasis role="strong">Details</emphasis> and <emphasis role="strong">Resources</emphasis>.</simpara>
+<simpara>The <emphasis role="strong">Details</emphasis> and <emphasis role="strong">Resources</emphasis> tab contain the associated information and resources of the node.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/topology-tab-user2.png"/>
+</imageobject>
+<textobject><phrase>topology-tab-details</phrase></textobject>
+</mediaobject>
+</informalfigure>
+</listitem>
+<listitem>
+<simpara>Click on the <emphasis role="strong">Open URL</emphasis> button on the top of a node.</simpara>
+<informalfigure>
+<mediaobject>
+<imageobject>
+<imagedata fileref="images/topology-tab-user3.png"/>
+</imageobject>
+<textobject><phrase>topology-tab-open-url</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<simpara>When you click on the open URL button, it allows you to access the associated <emphasis role="strong">Ingresses</emphasis> and runs your application in a new tab.</simpara>
+</listitem>
+</orderedlist>
+</section>
+</section>
+</section>
+</chapter>
+</book>
