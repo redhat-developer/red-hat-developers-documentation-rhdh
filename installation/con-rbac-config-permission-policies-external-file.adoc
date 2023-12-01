@@ -11,11 +11,11 @@ The following is an example of permission policies configuration:
 
 `g, user:default/<USER_TO_ROLE>, role:default/guests`
 
-If a defined permission does not contain an action associated with it, then add use as a policy. See the following example:
+If a defined permission does not contain an action associated with it, then add `use` as a policy. See the following example:
 
 `p, role:default/guests, kubernetes.proxy, use, deny`
 
-You can define the file path in the `app-config.yaml` file:
+You can define the `policy.csv` file path in the `app-config.yaml` file:
 
 [source,yaml]
 ----
@@ -24,3 +24,69 @@ permission:
   rbac:
     policies-csv-file: /some/path/rbac-policy.csv
 ----
+
+== Mounting `policy.csv` file to the Developer Hub Helm Chart
+
+When the {product} is deployed with the Helm Chart, then you must define the `policy.csv` file by mounting it to the {product-short} Helm Chart. 
+
+You can add your `policy.csv` file to the {product-short} Helm Chart by creating a `configMap` and mounting it.
+
+.Prerequisites
+
+* You are logged in to the OCP using the OpenShift web console.
+* {product} is installed and deployed using Helm Chart.
++
+For more information about installing the {product} using Helm Chart, see <link>. 
+
+.Procedure
+
+. In Red Hat OpenShift, create a `configMap` to hold the policies as shown in the following example:
++
+--
+.Example `ConfigMap`
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rbac-policy
+  namespace: rhdh
+data:
+  rbac-policy.csv: |
+    p, role:default/guests, catalog-entity, read, allow
+    p, role:default/guests, catalog.entity.create, create, allow    
+    
+    g, user:default/<YOUR_USER>, role:default/guests
+----
+--
+
+. In the {product-short} Helm Chart, go to *Root Schema -> Backstage chart schema -> Backstage parameters -> Backstage container additional volume mounts*.
+. Select *Add Backstage container additional volume mounts* and add the following values:
++
+--
+* *mountPath*: `opt/app-root/src/rbac`
+* *Name*: `rbac-policy`
+--
+
+. Add the RBAC policy to the *Backstage container additional volumes* in the {product-short} Helm Chart:
++
+--
+* *name*: `rbac-policy`
+* *configMap*
+** *defaultMode*: `420`
+** *name*: `rbac-policy`
+--
+
+. Update the policy path in the `app-config.yaml` file as follows:
++
+--
+.Example `app-config.yaml` file
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    policies-csv-file: ./rbac/rbac-policy.csv
+----
+--
+
