@@ -1,0 +1,468 @@
+[id='ref-rbac-rest-api-endpoints_{context}']
+= Supported RBAC REST API endpoints
+
+The RBAC REST API provides the following endpoints for managing permission policies and roles in the {product-short} and for retrieving information about the policies and roles.
+
+== Permission policies
+
+The RBAC REST API supports the following endpoints for managing permission policies in the {product}. 
+
+[GET] /api/permission/policies::
++
+--
+Returns permission policies list for all users.
+
+.Example response (JSON)
+[source,json]
+----
+[
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+  },
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog.entity.create",
+    "policy": "use",
+    "effect": "allow"
+  },
+]
+----
+--
+
+[GET] /api/permission/policies/{kind}/{namespace}/{name}::
++
+--
+Returns permission policies related to the specified entity reference.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`kind`
+|Kind of the entity
+|String
+|Required
+
+|`namespace`
+|Namespace of the entity
+|String
+|Required
+
+|`name`
+|Username related to the entity
+|String
+|Required
+|===
+
+.Example response (JSON)
+[source,json]
+----
+[
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+  },
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog.entity.create",
+    "policy": "use",
+    "effect": "allow"
+  }
+]
+----
+--
+
+[POST] /api/permission/policies::
++
+--
+Creates a permission policy for a specified entity.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`entityReference`
+|Reference values of an entity including namespace and name
+|String
+|Required
+
+|`permission`
+|Type of the permission
+|String
+|Required
+
+|`policy`
+|Read or write policy to the permission
+|String
+|Required
+
+|`effect`
+|Indication of allowing or not allowing the policy
+|String
+|Required
+|===
+
+.Example request body (JSON)
+[source,json]
+----
+{
+    "entityReference": "role:default/test",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+}
+----
+
+.Example response
+[source]
+----
+201 Created
+----
+--
+
+[PUT] /api/permission/policies/{kind}/{namespace}/{name}::
++
+--
+Updates a permission policy for a specified entity.
+
+.Request parameters
+The request body contains the `oldPolicy` and `newPolicy` objects:
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`permission`
+|Type of the permission
+|String
+|Required
+
+|`policy`
+|Read or write policy to the permission
+|String
+|Required
+
+|`effect`
+|Indication of allowing or not allowing the policy
+|String
+|Required
+|===
+
+.Example request body (JSON)
+[source,json]
+----
+{
+    "oldPolicy": {
+        "permission": "catalog-entity",
+        "policy": "read",
+        "effect": "deny"
+    },
+    "newPolicy": {
+        "permission": "policy-entity",
+        "policy": "read",
+        "effect": "allow"
+    }
+}
+----
+
+.Example response
+[source]
+----
+200
+----
+--
+
+[DELETE] /api/permission/policies/{kind}/{namespace}/{name}?permission={value1}&policy={value2}&effect={value3}::
++
+--
+Deletes a permission policy added to the specified entity.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`kind`
+|Kind of the entity
+|String
+|Required
+
+|`namespace`
+|Namespace of the entity
+|String
+|Required
+
+|`name`
+|Username related to the entity
+|String
+|Required
+
+|`permission`
+|Type of the permission
+|String
+|Required
+
+|`policy`
+|Read or write policy to the permission
+|String
+|Required
+
+|`effect`
+|Indication of allowing or not allowing the policy
+|String
+|Required
+|===
+
+.Example response
+[source]
+----
+204 No Content
+----
+--
+
+[GET] /api/permission/plugins/policies::
++
+--
+Returns permission policies for all static plugins.
+
+.Example response (JSON)
+[source,json]
+----
+[
+  {
+    "pluginId": "catalog",
+      "policies": [
+        {
+          "permission": "catalog-entity",
+          "policy": "read"
+        },
+        {
+          "permission": "catalog.entity.create",
+          "policy": "create"
+        },
+        {
+          "permission": "catalog-entity",
+          "policy": "delete"
+        },
+        {
+          "permission": "catalog-entity",
+          "policy": "update"
+        },
+        {
+          "permission": "catalog.location.read",
+          "policy": "read"
+        },
+        {
+          "permission": "catalog.location.create",
+          "policy": "create"
+        },
+        {
+          "permission": "catalog.location.delete",
+          "policy": "delete"
+        }
+      ]
+    },
+  ...
+]
+----
+--
+
+== Roles
+
+The RBAC REST API supports the following endpoints for managing roles in the {product}.
+
+[GET] /api/permission/roles::
++
+--
+Returns all roles in {product-short}.
+
+.Example response (JSON)
+[source,json]
+----
+[
+  {
+    "memberReferences": ["user:default/pataknight"],
+    "name": "role:default/guests"
+  },
+  {
+    "memberReferences": [
+      "group:default/janus-authors",
+      "user:default/matt"
+    ],
+    "name": "role:default/rbac_admin"
+  }
+]
+----
+--
+
+[GET] /api/permission/roles/{kind}/{namespace}/{name}::
++
+--
+Creates a role in {product-short}.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`body`
+|The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
+|Request body
+|Required
+|===
+
+.Example request body (JSON)
+[source,json]
+----
+{
+  "memberReferences": ["group:default/test"],
+  "name": "role:default/test_admin"
+}
+----
+
+.Example response
+[source]
+----
+201 Created
+----
+--
+
+[PUT] /api/permission/roles/{kind}/{namespace}/{name}::
++
+--
+Updates `memberReferences`, `kind`, `namespace`, or `name` for a role in {product-short}.
+
+.Request parameters
+The request body contains the `oldRole` and `newRole` objects:
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`body`
+|The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
+|Request body
+|Required
+|===
+
+.Example request body (JSON)
+[source,json]
+----
+{
+  "oldRole": {
+    "memberReferences": ["group:default/test"],
+    "name": "role:default/test_admin"
+  },
+  "newRole": {
+    "memberReferences": ["group:default/test", "user:default/test2"],
+    "name": "role:default/test_admin"
+  }
+}
+----
+
+.Example response
+[source]
+----
+200 OK
+----
+--
+
+[DELETE] /api/permission/roles/{kind}/{namespace}/{name}?memberReferences=<VALUE>::
++
+--
+Deletes the specified user or group from a role in {product-short}.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`kind`
+|Kind of the entity
+|String
+|Required
+
+|`namespace`
+|Namespace of the entity
+|String
+|Required
+
+|`name`
+|Username related to the entity
+|String
+|Required
+
+|`memberReferences`
+|Associated group information
+|String
+|Required
+|===
+
+.Example response
+[source]
+----
+204
+----
+--
+
+[DELETE] /api/permission/roles/{kind}/{namespace}/{name}::
++
+--
+Deletes a specified role from {product-short}.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`kind`
+|Kind of the entity
+|String
+|Required
+
+|`namespace`
+|Namespace of the entity
+|String
+|Required
+
+|`name`
+|Username related to the entity
+|String
+|Required
+|===
+
+.Example response
+[source]
+----
+204
+----
+--
