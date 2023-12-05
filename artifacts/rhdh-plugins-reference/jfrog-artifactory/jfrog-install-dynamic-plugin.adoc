@@ -1,0 +1,40 @@
+= Procedure
+RHDH dynamically installs the ACR plugin. To enable it, add the following snippet to your Helm Chart:
+
+[source,yaml]
+----
+global: 
+  dynamic: 
+    includes: 
+      - dynamic-plugins.default.yaml
+    plugins: 
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-jfrog-artifactory
+        disabled: false
+        pluginConfig: 
+          dynamicPlugins: 
+            frontend: 
+              janus-idp.backstage-plugin-jfrog-artifactory: 
+                mountPoints: 
+                  - mountPoint: entity.page.image-registry/cards
+                    importName: JfrogArtifactoryPage
+                    config: 
+                      layout: 
+                        gridColumn: 1 / -1
+                      if: 
+                        anyOf: 
+                        - isJfrogArtifactoryAvailable
+----
+
+Set the proxy to the desired Artifactory server in the app-config.yaml file as follows:
+
+[source,yaml]
+----
+proxy:
+  endpoints:
+    '/jfrog-artifactory/api':
+      target: 'http://<hostname>:8082' # or https://<customer>.jfrog.io
+      headers:
+        # Authorization: 'Bearer <YOUR TOKEN>'
+      # Change to "false" in case of using self hosted artifactory instance with a self-signed certificate
+      secure: true
+----
