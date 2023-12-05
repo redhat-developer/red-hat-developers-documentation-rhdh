@@ -1,0 +1,183 @@
+[id='proc-add-source-control-rhdh-catalog_{context}']
+= Adding source control for Catalog in {product}
+
+To populate the Catalog in {product}, you need to add software templates, and to add the templates, you must enable a source control such as GitHub, GitLab, or BitBucket.
+
+== Setting GitHub integration and authentication
+
+The GitHub integration and authentication is required to enable the GitHub plugins in {product}.
+
+.Prerequisites
+
+* You have a GitHub account.
+* You have an account in Red Hat OpenShift
+
+.Procedure
+
+. In OpenShift, click *ConfigMap*.
+. Modify your `app-config-rhdh` file to include the GitHub configuration as follows:
++
+--
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    app:
+      title: Red Hat Developer Hub
+    integrations:
+      github:
+        - host: github.com
+          apps:
+            - appId: ${GITHUB_APP_APP_ID}
+              clientId: ${GITHUB_APP_CLIENT_ID}
+              clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+              webhookUrl: ${GITHUB_APP_WEBHOOK_URL}
+              webhookSecret: ${GITHUB_APP_WEBHOOK_SECRET}
+              privateKey: |
+                ${GITHUB_APP_PRIVATE_KEY}
+    auth:
+      # see https://backstage.io/docs/auth/ to learn about auth providers
+      environment: development
+      providers:
+        github:
+          development:
+            clientId: ${GITHUB_APP_CLIENT_ID}
+            clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+----
+--
+
+. Click *Save*.
+. Create a key or value Secret file named `rhdh-secrets` using the environment variables as keys from the previous code snippet by following the steps below:
++
+--
+.. In Red Hat OpenShift, go to the *Secrets* tab and click *Create*.
+.. Enter *Secret name* as `rhdh-secrets`.
+.. Add environment variables as *Key* and *Value* and click *Create*.
+--
+
+. To log in using your GitHub application, ensure that the *Callback URL* in your GitHub application is configured as follows:
++
+--
+`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame`
+
+In the previous example of Callback URL, `OPENSHIFT_ROUTE_HOST` is the API URL added into the *Root Schema -> global -> clusterRouteBase* field.
+
+The following is an example of the Callback URL:
+
+image::rhdh/example-callback-url.png[]
+
+[NOTE]
+====
+To access the GitHub security insights widget on the Overview page in {product-short}, ensure that your GitHub application has Read-only Dependabot Alerts permissions.
+====
+--
+
+. Navigate to the *Helm* tab and select *Upgrade*.
+. Under *Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from Secrets*, add `rhdh-secrets` as value.
+. Click *Upgrade*.
+
+== Enabling GitHub discovery in {product}
+
+You can enable GitHub discoverability for your components in {product-short}, such as any repositories that contain `catalog-info.yaml` file.
+
+.Prerequisites
+
+* You have set up the GitHub integration. For more information, see <<Setting GitHub integration and authentication>>. 
+
+.Procedure
+
+. In Red Hat Openshift, go to the *Helm* tab and upgrade the _Developer Hub_ release.
+. Under *global → Dynamic plugins configuration → List of dynamic plugins that should be installed in the backstage application. → Package specification of the dynamic plugin to install. It should be usable by the `npm pack` command.*, add the following value:
++
+--
+`./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic`
+
+image::rhdh/enable-gh-discovery.png[]
+--
+
+. Click *Upgrade*.
+. Add the following code in the ConfigMap:
++
+--
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    ...
+    catalog:
+      providers:
+        github:
+          myorg:
+            organization: '${GITHUB_ORG}'
+	   schedule:
+	     # supports cron, ISO duration, "human duration" (used below)
+	     frequency: { minutes: 30}
+	     # supports ISO duration, "human duration (used below)
+	     timeout: { minutes: 3}
+	     initialDelay: { seconds: 15}
+    ...
+----
+
+In the previous code, replace `${GITHUB_ORG}` with the GitHub organization from where you want to discover the components.
+--
+
+. Click *Save*.
+
+== Enabling GitHub organization member discovery in {product}
+
+You can also enable GitHub discoverability for the members of your GitHub organization.
+
+.Prerequisites
+
+* You have set up the GitHub integration. For more information, see <<Setting GitHub integration and authentication>>. 
+
+.Procedure
+
+. In Red Hat Openshift, go to the *Helm* tab and upgrade the _Developer Hub_ release.
+. Under *global → Dynamic plugins configuration → List of dynamic plugins that should be installed in the backstage application. → Package specification of the dynamic plugin to install. It should be usable by the `npm pack` command.*, add the following value:
++
+--
+`./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic`
+
+image::rhdh/enable-gh-member-discovery.png[]
+--
+
+. Click *Upgrade*.
+. Add the following code in the ConfigMap:
++
+--
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    ...
+    catalog:
+      providers:
+        githubOrg:
+          default:
+            id: production
+            orgUrl: '${GITHUB_ORG_URL}'
+    ...
+----
+
+In the previous code, replace `${GITHUB_ORG_URL}` with the GitHub organization you want to ingest users from.
+--
+
+. Click *Save*.
+
+
+
+
+

@@ -1,0 +1,163 @@
+[id='proc-customize-rhdh-homepage_{context}']
+= Customizing the Home page in {product}
+
+In {product}, the Home page data is configurable, which can be passed into the `app-config.yaml` file as a proxy. You can provide the Home page data using the following ways:
+
+* Using JSON files that are hosted or GitHub or GitLab. To access the data from the JSON files, you can add the following code in the `app-config.yaml` file:
++
+--
+[source,yaml]
+----
+proxy:
+  endpoints:
+    # Other Proxies
+    # customize developer hub instance
+    '/developer-hub':
+      target: <DOMAIN_URL> # i.e https://raw.githubusercontent.com/
+      pathRewrite:
+        '^/api/proxy/developer-hub': <path to json file> # i.e /janus-idp/backstage-showcase/main/packages/app/public/homepage/data.json
+      changeOrigin: true
+      secure: true
+      # Change to "false" in case of using self hosted cluster with a self-signed certificate
+      headers:
+	<HEADER_KEY>: <HEADER_VALUE> # optional and can be passed as needed i.e Authorization can be passed for private GitHub repo and PRIVATE-TOKEN can be passed for private GitLab repo
+----
+--
+
+* Using a separate service that provides the Home page data in JSON format using an API.
++
+--
+[NOTE]
+====
+It is not necessary that the same service provides the Home page and Tech Radar data.
+====
+
+You can use the https://github.com/janus-idp/backstage-customization-provider[`backstage-customization-provider`] as an example service, which provides data for both Home page and Tech Radar. The `backstage-customization-provider` service provides the same data as default {product-short} data. You can fork the `backstage-customization-provider` service repository from GitHub and modify it with your own data, if required.
+--
+
+This section describes how you can deploy the `backstage-customization-provider` service onto the cluster where the {product-short} Helm chart is deployed.
+
+.Prerequisites
+
+* You have installed the {product} using Helm Chart. For more information, see xref:proc-install-rhdh-helm_{context}[].
+
+.Procedure
+
+. In Red Hat OpenShift, select *+Add* and click *Import from Git* option.
+. Add the URL of your Git repository to the *Git Repo URL* field.
++
+--
+To use the `backstage-customization-provider` service, you can add the URL of https://github.com/janus-idp/backstage-customization-provider[backstage-customization-provider] repository.
+--
+
+. In the *General* section, rename the value in the *Name* field to *rhdh-customization-provider* and click *Create*.
+. Go to the *Advanced Options* and copy the value from the *Target Port*.
++
+--
+The *Target Port* is used to automatically generate a Kubernetes or OpenShift service to communicate with.
+--
+
+. To view the service, navigate to the *OpenShift Administrator* view and go to the *Networking -> Service* section.
++
+--
+You can also view the *Service Resources* in the Topology view.
+
+If you follow this procedure with examples, then `rhdh-customization-provider` service is called and contains the 8080 port. The provided API URL for the Home page must return the data in JSON format as shown in the following example:
+
+[source,json]
+----
+[
+  {
+    "title": "Dropdown 1",
+    "isExpanded": false,
+    "links": [
+      {
+        "iconUrl": "https://imagehost.com/image.png",
+        "label": "Dropdown 1 Item 1",
+        "url": "https://example.com/"
+      },
+      {
+        "iconUrl": "https://imagehost2.org/icon.png",
+        "label": "Dropdown 1 Item 2",
+        "url": ""
+      }
+    ]
+  },
+  {
+    "title": "Dropdown 2",
+    "isExpanded": true,
+    "links": [
+      {
+        "iconUrl": "http://imagehost3.edu/img.jpg",
+        "label": "Dropdown 2 Item 1",
+        "url": "http://example.com"
+      }
+    ]
+  }
+]
+----
+
+If the request call fails or is not configured, the {product-short} instance falls back to the default local data.
+
+To access the Home page in {product}, the base URL must include the `/developer-hub` proxy.
+--
+
+. Add the following code to the `app-config-rhdh.yaml` file:
++
+--
+[source,yaml]
+----
+proxy:
+  endpoints:
+    # Other Proxies
+    # customize developer hub instance
+    '/developer-hub':
+      target: ${HOMEPAGE_DATA_URL}
+      changeOrigin: true
+      # Change to "false" in case of using self-hosted cluster with a self-signed certificate
+      secure: true
+----
+
+Ensure that the API request call returns the response in JSON format.
+--
+
+. Define the `HOMEPAGE_DATA_URL` as http://<SERVICE_NAME>:8080. For example, `http://rhdh-customization-provider:8080`.
++
+--
+You can replace the `HOMEPAGE_DATA_URL` by adding the URL to `rhdh-secrets` or directly replacing it in your custom ConfigMap.
+--
+
+. Delete the {product-short} Pod to pull in the changes.
++
+--
+If the images or icons do not load, then whitelist them by adding your image or icon host URLs to the content security policy’s (csp) `img-src` in your custom ConfigMap as follows:
+
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    app:
+      title: Red Hat Developer Hub
+    backend:
+      csp:
+        connect-src:
+          - "'self'"
+          - 'http:'
+          - 'https:'
+        img-src:
+          - "'self'"
+          - 'data:'
+          - <image host url 1>
+          - <image host url 2>
+          - <image host url 3>
+    # Other Configurations
+----
+
+After that, delete the pod to ensure that the new configurations are loaded correctly.
+--
+
+
