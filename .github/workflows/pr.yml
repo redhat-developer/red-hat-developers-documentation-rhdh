@@ -23,17 +23,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Build plugins ref 
+
+      - name: Build Admin Guide
         id: adocbuild1
         uses: tonynv/asciidoctor-action@v2
         with:
-            program: "asciidoctor --destination-dir docs-generated/rhdh-plugins-reference --backend=html5 -o index.html rhdh-plugins-reference/master.adoc"
-      - name: Build release notes
+            program: "asciidoctor --destination-dir docs-generated/admin --backend=html5 -o index.html titles/admin/master.adoc"
+      - name: Build Getting Started Guide
         id: adocbuild2
         uses: tonynv/asciidoctor-action@v2
         with:
-            program: "asciidoctor --destination-dir docs-generated/release-notes --backend=html5 -o index.html release-notes/master.adoc"
-
+            program: "asciidoctor --destination-dir docs-generated/getting-started-rhdh --backend=html5 -o index.html titles/getting-started-rhdh/master.adoc"
+      - name: Build Release Notes
+        id: adocbuild3
+        uses: tonynv/asciidoctor-action@v2
+        with:
+            program: "asciidoctor --destination-dir docs-generated/release-notes --backend=html5 -o index.html titles/release-notes/master.adoc"
       - name: "Use Node 18"
         uses: actions/setup-node@v3
         with:
@@ -49,13 +54,17 @@ jobs:
           script: |
             const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
             const Fs = require('@supercharge/filesystem')
-            const html1 = await Fs.readFile('./docs-generated/release-notes/index.html')
-            const html2 = await Fs.readFile('./docs-generated/rhdh-plugins-reference/index.html')
+            const html1 = await Fs.readFile('./docs-generated/admin/index.html')
+            const html2 = await Fs.readFile('./docs-generated/getting-started-rhdh/index.html')
+            const html3 = await Fs.readFile('./docs-generated/release-notes/index.html')
 
             // remove unrenderable title and style tags, and everything in the <head>
             var html1c = html1.replace(/.*?<\/head>/gms,"")
             var html2c = html2.replace(/.*?<\/head>/gms,"")
+            var html3c = html3.replace(/.*?<\/head>/gms,"")
 
-            // because the plugin ref content is LONG, render it as its own comment separate from the release notes
-            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Release Notes</summary>\n' + html1c + '</details>' });
-            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Plugins Reference</summary>\n' + html2c + '</details>' });
+            // render each doc as its own comment
+            // TODO once this repo is public, we can push to GH pages instead
+            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Admin Guide</summary>\n' + html1c + '</details>' });
+            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Getting Started Guide</summary>\n' + html2c + '</details>' });
+            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Release Notes</summary>\n' + html3c + '</details>' });
