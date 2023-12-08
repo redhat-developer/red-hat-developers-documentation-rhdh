@@ -1,9 +1,9 @@
 [id="rhdh-installing-dynamic-plugins"]
-= Installing a dynamic plugin package
+= Installing dynamic plugins
 The dynamic plugin support is based on the backend plugin manager package, which is a service that scans a configured root directory (dynamicPlugins.rootDirectory in the app config) for dynamic plugin packages, and loads them dynamically.
 
 == Helm deployment
-To deploy a RHDH (Red Hat Developer Hub) instance, you use a Helm Chart which is a flexible installation method.
+To deploy a {product} (RHDH) instance, you use a Helm Chart which is a flexible installation method.
 
 You can sideload dynamic plugins into your RHDH instance without having to recompile your codebase or rebuild the container.
 
@@ -65,15 +65,18 @@ global:
         disabled: false
 ----
 
-== Dynamic plugins included in the Showcase container image
+== Dynamic plugins included in {product}
 
-RHDH is pre-loaded with a selection of dynamic plugins. Most of these dynamic plugins are disabled by default due to the need for mandatory configuration. 
+{product} (RHDH) is pre-loaded with a selection of dynamic plugins. Most of these dynamic plugins are disabled by default due to the need for mandatory configuration. 
  
 For a complete list of dynamic plugins that are included in this release of RHDH, see the xref:rhdh-supported-plugins[Dynamic Plugins Matrix] 
 
 Upon application startup, for each plugin that is disabled by default, the install-dynamic-plugins init container within the RHDH pod's log will display a line similar to the following:
 
-<Content missing>
+[source,yaml]
+----
+======= Skipping disabled dynamic plugin ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
+----
 
 To activate this plugin, simply add a package with the same name and adjust the disabled field in the Helm Chart values as shown below:
 
@@ -91,7 +94,14 @@ global:
 The default configuration for a plugin is extracted from the `dynamic-plugins.default.yaml` file, however, you can use a `pluginConfig` entry to override this default configuration.
 
 == Basic configuration of dynamic plugins
-TBD
+Some dynamic plugins require environment variables to be set. If a mandatory environment variable is not set, and the plugin is enabled, then the application may fail at startup.
 
-== Advanced configuration of dynamic plugins
-TBD
+The mandatory environment variables for each plugin are listed in the Dynamic Plugins Support Matrix table. 
+
+[NOTE]
+====
+Zib-bomb detection 
+When installing some dynamic plugin containing large files, if the installation script considers the package archive to be a Zib-Bomb, the installation will fail.
+
+To increase the maximum permitted size of a file inside a package archive, you can increase the  MAX_ENTRY_SIZE environment value of the deployment install-dynamic-plugins initContainer from the default size of 20000000 bytes.
+====
