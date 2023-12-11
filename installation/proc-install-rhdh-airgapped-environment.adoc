@@ -5,62 +5,90 @@ To install the {product-short} in an air-gapped environment, you must have acces
 
 .Prerequisites
 
-* You have installed an Openshift Container Platform (OCP) 4.10 or later cluster, with an enabled baremetal cluster operator, and a provisioning network.
-* You have access to a Satellite server or any other repository used to register the overcloud nodes and install packages.
+* You have installed an Openshift Container Platform (OCP) 4.10 or later.
 * You have access to the `registry.redhat.io`.
-* You have access to a local git repository to store deployment artifacts.
+* You have access to the OpenShift image registry of your cluster. For more information about exposing the OpenShift image registry, see https://docs.openshift.com/container-platform/4.14/registry/securing-exposing-registry.html[Exposing the registry] in OpenShift documentation.
 * You have installed the `oc` command line tool on your workstation.
 * You have installed the `podman` command line tools on your workstation.
-* You you have an account in `developers.redhat.com`.
+* You you have an account in https://developers.redhat.com/[Red Hat Developer] portal.
 
 .Procedure
 
-. Log in to the OCP using the following command:
+. Log in to the OCP using `oc`:
 +
 --
 [source]
 ----
-oc login -u kubeadmin -p ***** https://api.crc.testing:6443
+oc login -u <user> -p <password> https://api.<HOSTNAME>:6443
 ----
 --
 
-. Run the following command to log in to your registry from your `podman`:
+. Log in to the OCP image registry using `podman`:
 +
 --
 [source]
 ----
-podman login -u kubeadmin -p $(oc whoami -t) default-route-openshift-image-registry.apps-crc.testing
+podman login -u kubeadmin -p $(oc whoami -t) default-route-openshift-image-registry.<HOSTNAME>
+----
+
+[NOTE]
+====
+You can use the following commands to get the full host name of the OpenShift image registry and than use the host name in a command to log in:
+
+[source]
+----
+REGISTRY_HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+
+podman login -u kubeadmin -p $(oc whoami -t) $REGISTRY_HOST
+----
+====
+--
+
+. Log in to the `registry.redhat.io` in `podman` using the following command:
++
+--
+[source]
+----
+podman login registry.redhat.io
+----
+
+For more information about registry authentication, see https://access.redhat.com/RegistryAuthentication[Red Hat Container Registry Authentication].
+--
+
+. Pull {product-short} and PostgreSQL images from https://catalog.redhat.com/software/containers/search[Red Hat Image registry] to your workstation:
++
+--
+[source]
+----
+podman pull <DEVELOPERHUBIMAGE>
+podman pull registry.redhat.io/rhel9/postgresql-15:latest
 ----
 --
 
-. Pull {product-short} images from https://quay.io/[Quay.io] to your `podman`.
-. Push the {product-short} images to the internal OCP registry.
+. Push both images to the internal OCP registry.
 +
 --
 For more information about pushing images directly to OCP registry, see https://access.redhat.com/solutions/6959306[How do I push an Image directly into the OpenShift 4 registry].
 
-[NOTE]
-====
-If you receive x509 error, then append `--tls-verify=false` to the `podman` push command.
-====
---
-
-. Log in to the `registry.redhat.io` in `podman` and pull `registry.redhat.io/rhel9/postgresql-15:latest` image.
-+
---
-In `podman`, you can use the credentials of https://developers.redhat.com/[Red Hat Developer] portal.
---
-
-. After successfully pulling the image, tag it and push the image to the internal OCP registry.
-. Append `--tls-verify=false --remove-signatures` to the `podman` push command.
-. Use to the following command to verify that both images are present in the internal OCP registry. 
-+
---
-Add correct namespace or project name in the command, such as `rhdh` in the following example command:
-
 [source]
 ----
-oc get imagestream -n rhdh
+podman push --remove-signatures registry.redhat.io/rhel9/postgresql-15:latest default-route-openshift-image-registry.<hostname>/<yourProject>/postgresql-15:latest
+----
+
+[TIP]
+====
+If an x509 error occurs, ensure you install the CA certificate used for OpenShift routes on your system. 
+
+Optionally, you can append `--tls-verify=false` to the `podman` push command, note that this approach is not recommended.
+====
+--
+
+. Use the following command to verify that both images are present in the internal OCP registry:
++
+--
+[source]
+----
+oc get imagestream -n <projectName>
 ----
 --
 
@@ -74,34 +102,30 @@ oc set image-lookup  rhdh-hub-rhel9
 ----
 --
 
-. Run the following command in your terminal, where you are logged in using `oc`, to install the {product-short}:
+. Go to *YAML view* and update the `image` section for `backstage` and `postgresql` using the following values:
 +
 --
-[source]
+.Example values for Developer Hub image
+[source,yaml]
 ----
-helm install -n rhdh --generate-name https://github.com/rhdh-bot/openshift-helm-charts/raw/developer-hub-1.0-198-CI/charts/redhat/redhat/developer-hub/1.0-198-CI/developer-hub-1.0-198-CI.tgz --values values.yaml
-----
-
-You must use the configuration values by appending the `--values` flag and including the `values.yaml` file containing the specified values in the command.
-
-Following is an example of a `values.yaml` file content:
-[source]
-----
-global:
-  clusterRouterBase: crc.testing
 upstream:
   backstage:
     image:
       registry: ""
       repository: rhdh-hub-rhel9
-      tag: 1.0-198      
-      pullSecrets: []
+      tag: latest
+----
+
+.Example values for PostgreSQL image
+[source,yaml]
+----
+upstream:
   postgresql:
     image:
       registry: ""
       repository: postgresql-15
       tag: latest
 ----
-
-Ensure that you are using the correct base URL and adding null (`[]`) to the `pullSecrets` in the `values.yaml` file. 
 --
+
+. Install the {product} using Helm Chart. For more information about installing {product-short}, see xref:proc-install-rhdh-helm_admin-rhdh[].
