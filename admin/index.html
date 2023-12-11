@@ -544,10 +544,10 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <p>Click <strong>Create</strong>.</p>
 </li>
 <li>
-<p>Copy the OpenShift router host to <strong>Root Schema</strong> &#8594; <strong>global</strong> &#8594; <strong>Shorthand for users who do not want to specify a custom HOSTNAME. Used ONLY with the DEFAULT upstream.backstage.appConfig value and with OCP Route enabled.</strong>, and adjust the other values if needed.</p>
+<p>Copy the OpenShift router host (for example: <code>apps.&lt;clusterName&gt;.com</code>) to <strong>Root Schema</strong> &#8594; <strong>global</strong> &#8594; <strong>Shorthand for users who do not want to specify a custom HOSTNAME. Used ONLY with the DEFAULT upstream.backstage.appConfig value and with OCP Route enabled.</strong>, and adjust the other values if needed.</p>
 </li>
 <li>
-<p>Alternatively, copy the OpenShift router host to <code>global.clusterRouterBase</code>, and adjust other values if needed, such as <code>global.clusterRouterBase: apps.example.com</code>.</p>
+<p>Alternatively, copy the OpenShift router host (for example: <code>apps.&lt;clusterName&gt;.com</code>) to <code>global.clusterRouterBase</code>, and adjust other values if needed, such as <code>global.clusterRouterBase: apps.example.com</code>.</p>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
@@ -617,16 +617,13 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have installed an Openshift Container Platform (OCP) 4.10 or later cluster, with an enabled baremetal cluster operator, and a provisioning network.</p>
-</li>
-<li>
-<p>You have access to a Satellite server or any other repository used to register the overcloud nodes and install packages.</p>
+<p>You have installed an Openshift Container Platform (OCP) 4.10 or later.</p>
 </li>
 <li>
 <p>You have access to the <code>registry.redhat.io</code>.</p>
 </li>
 <li>
-<p>You have access to a local git repository to store deployment artifacts.</p>
+<p>You have access to the OpenShift image registry of your cluster. For more information about exposing the OpenShift image registry, see <a href="https://docs.openshift.com/container-platform/4.14/registry/securing-exposing-registry.html">Exposing the registry</a> in OpenShift documentation.</p>
 </li>
 <li>
 <p>You have installed the <code>oc</code> command line tool on your workstation.</p>
@@ -635,7 +632,7 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <p>You have installed the <code>podman</code> command line tools on your workstation.</p>
 </li>
 <li>
-<p>You you have an account in <code>developers.redhat.com</code>.</p>
+<p>You you have an account in <a href="https://developers.redhat.com/">Red Hat Developer</a> portal.</p>
 </li>
 </ul>
 </div>
@@ -643,38 +640,25 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>Log in to the OCP using the following command:</p>
+<p>Log in to the OCP using <code>oc</code>:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code>oc login -u kubeadmin -p ***** https://api.crc.testing:6443</code></pre>
+<pre class="highlight"><code>oc login -u &lt;user&gt; -p &lt;password&gt; https://api.&lt;HOSTNAME&gt;:6443</code></pre>
 </div>
 </div>
 </div>
 </div>
 </li>
 <li>
-<p>Run the following command to log in to your registry from your <code>podman</code>:</p>
+<p>Log in to the OCP image registry using <code>podman</code>:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code>podman login -u kubeadmin -p $(oc whoami -t) default-route-openshift-image-registry.apps-crc.testing</code></pre>
+<pre class="highlight"><code>podman login -u kubeadmin -p $(oc whoami -t) default-route-openshift-image-registry.&lt;HOSTNAME&gt;</code></pre>
 </div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Pull Developer Hub images from <a href="https://quay.io/">Quay.io</a> to your <code>podman</code>.</p>
-</li>
-<li>
-<p>Push the Developer Hub images to the internal OCP registry.</p>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p>For more information about pushing images directly to OCP registry, see <a href="https://access.redhat.com/solutions/6959306">How do I push an Image directly into the OpenShift 4 registry</a>.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -684,7 +668,14 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 </td>
 <td class="content">
 <div class="paragraph">
-<p>If you receive x509 error, then append <code>--tls-verify=false</code> to the <code>podman</code> push command.</p>
+<p>You can use the following commands to get the full host name of the OpenShift image registry and than use the host name in a command to log in:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>REGISTRY_HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+
+podman login -u kubeadmin -p $(oc whoami -t) $REGISTRY_HOST</code></pre>
+</div>
 </div>
 </td>
 </tr>
@@ -694,31 +685,72 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 </div>
 </li>
 <li>
-<p>Log in to the <code>registry.redhat.io</code> in <code>podman</code> and pull <code>registry.redhat.io/rhel9/postgresql-15:latest</code> image.</p>
+<p>Log in to the <code>registry.redhat.io</code> in <code>podman</code> using the following command:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>podman login registry.redhat.io</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For more information about registry authentication, see <a href="https://access.redhat.com/RegistryAuthentication">Red Hat Container Registry Authentication</a>.</p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Pull Developer Hub and PostgreSQL images from <a href="https://catalog.redhat.com/software/containers/search">Red Hat Image registry</a> to your workstation:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>podman pull &lt;DEVELOPERHUBIMAGE&gt;
+podman pull registry.redhat.io/rhel9/postgresql-15:latest</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Push both images to the internal OCP registry.</p>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>In <code>podman</code>, you can use the credentials of <a href="https://developers.redhat.com/">Red Hat Developer</a> portal.</p>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>After successfully pulling the image, tag it and push the image to the internal OCP registry.</p>
-</li>
-<li>
-<p>Append <code>--tls-verify=false --remove-signatures</code> to the <code>podman</code> push command.</p>
-</li>
-<li>
-<p>Use to the following command to verify that both images are present in the internal OCP registry.</p>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p>Add correct namespace or project name in the command, such as <code>rhdh</code> in the following example command:</p>
+<p>For more information about pushing images directly to OCP registry, see <a href="https://access.redhat.com/solutions/6959306">How do I push an Image directly into the OpenShift 4 registry</a>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code>oc get imagestream -n rhdh</code></pre>
+<pre class="highlight"><code>podman push --remove-signatures registry.redhat.io/rhel9/postgresql-15:latest default-route-openshift-image-registry.&lt;hostname&gt;/&lt;yourProject&gt;/postgresql-15:latest</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If an x509 error occurs, ensure you install the CA certificate used for OpenShift routes on your system.</p>
+</div>
+<div class="paragraph">
+<p>Optionally, you can append <code>--tls-verify=false</code> to the <code>podman</code> push command, note that this approach is not recommended.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Use the following command to verify that both images are present in the internal OCP registry:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>oc get imagestream -n &lt;projectName&gt;</code></pre>
 </div>
 </div>
 </div>
@@ -738,31 +770,24 @@ oc set image-lookup  rhdh-hub-rhel9</code></pre>
 </div>
 </li>
 <li>
-<p>Run the following command in your terminal, where you are logged in using <code>oc</code>, to install the Developer Hub:</p>
+<p>Go to <strong>YAML view</strong> and update the <code>image</code> section for <code>backstage</code> and <code>postgresql</code> using the following values:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
+<div class="title">Example values for Developer Hub image</div>
 <div class="content">
-<pre class="highlight"><code>helm install -n rhdh --generate-name https://github.com/rhdh-bot/openshift-helm-charts/raw/developer-hub-1.0-198-CI/charts/redhat/redhat/developer-hub/1.0-198-CI/developer-hub-1.0-198-CI.tgz --values values.yaml</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>You must use the configuration values by appending the <code>--values</code> flag and including the <code>values.yaml</code> file containing the specified values in the command.</p>
-</div>
-<div class="paragraph">
-<p>Following is an example of a <code>values.yaml</code> file content:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code>global:
-  clusterRouterBase: crc.testing
-upstream:
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">upstream:
   backstage:
     image:
       registry: ""
       repository: rhdh-hub-rhel9
-      tag: 1.0-198
-      pullSecrets: []
+      tag: latest</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example values for PostgreSQL image</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">upstream:
   postgresql:
     image:
       registry: ""
@@ -770,11 +795,11 @@ upstream:
       tag: latest</code></pre>
 </div>
 </div>
-<div class="paragraph">
-<p>Ensure that you are using the correct base URL and adding null (<code>[]</code>) to the <code>pullSecrets</code> in the <code>values.yaml</code> file.</p>
 </div>
 </div>
-</div>
+</li>
+<li>
+<p>Install the Red Hat Developer Hub using Helm Chart. For more information about installing Developer Hub, see <a href="#proc-install-rhdh-helm_admin-rhdh">Installing Red Hat Developer Hub using Helm Chart</a>.</p>
 </li>
 </ol>
 </div>
@@ -1842,7 +1867,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2023-12-08 12:33:05 UTC
+Last updated 2023-12-11 11:43:32 UTC
 </div>
 </div>
 </body>
