@@ -1,20 +1,23 @@
 [id="rhdh-installing-dynamic-plugins"]
-= Installing a dynamic plugin package
+= Installing dynamic plugins
 The dynamic plugin support is based on the backend plugin manager package, which is a service that scans a configured root directory (dynamicPlugins.rootDirectory in the app config) for dynamic plugin packages, and loads them dynamically.
 
 == Helm deployment
+To deploy a {product} (RHDH) instance, you use a Helm Chart which is a flexible installation method.
 
-Since version 2.10.1, the Helm Chart for deploying the showcase application introduces new values.
+You can sideload dynamic plugins into your {product-short} instance without having to recompile your code or rebuild the container.
 
-The updated Helm values introduce a new global.dynamic parameter, comprising two fields:
+To install dynamic plugins, you use the following `global.dynamic` parameters in your Helm Chart:  
 
 * `plugins`: This field encompasses the list of dynamic plugins slated for installation. By default, it is an empty list. A package can be specified either as a local relative path (starting with ./) to the dynamic plugin's folder or as a package specification in an NPM repository.
 
-* `includes`: This field contains a roster of YAML files utilizing the same syntax. The plugins list from these files will be incorporated, and potentially overridden, by the plugins list in the primary Helm values. The default configuration includes the `dynamic-plugins.default.yaml` file, which encompasses all the dynamic plugins included in the showcase application container image, whether enabled or disabled by default.
+* `includes`: This field contains a roster of YAML files utilizing the same syntax. The `plugins` list from these files will be incorporated, and potentially overridden, by the plugins list in the primary helm values. The default configuration includes the `dynamic-plugins.default.yaml` file, which encompasses all the dynamic plugins included in {product-short}, whether enabled or disabled by default.
 
-== Installing a dynamic plugin using the Helm Chart
+== Dynamic plugin installation using the Helm Chart
 
-To include a dynamic plugin in the showcase, you can achieve this by appending an entry to the `global.dynamic.plugins` list. Each entry should contain the following fields:
+You can include a dynamic plugin in RHDH by appending an entry to the `global.dynamic.plugins` list in your Helm Chart.
+
+Each entry must contain the following fields:
 
 * `package`: a package specification of the dynamic plugin package to be installed (can be from a local path or an NPM repository)
 
@@ -62,15 +65,18 @@ global:
         disabled: false
 ----
 
-== Dynamic plugins included in the Showcase container image
+== Dynamic plugins included in {product}
 
-The showcase docker image comes pre-loaded with a selection of dynamic plugins, with most being initially deactivated due to the need for mandatory configuration. 
+{product} ({product-short}) is pre-loaded with a selection of dynamic plugins. Most of these dynamic plugins are disabled by default due to the need for mandatory configuration. 
+ 
+For a complete list of dynamic plugins that are included in this release of RHDH, see the xref:rhdh-supported-plugins[dynamic plugins matrix] table.
 
-The complete list of these plugins is detailed in the xref:rhdh-supported-plugins[Dynamic Plugins Matrix] 
+Upon application startup, for each plugin that is disabled by default, the `install-dynamic-plugins init container` within the {product-short} pod's log displays a line similar to the following:
 
-Upon application startup, for each plugin that is disabled by default, the install-dynamic-plugins init container within the backstage Pod's log will display a line similar to the following:
-
-<Content missing>
+[source,yaml]
+----
+======= Skipping disabled dynamic plugin ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
+----
 
 To activate this plugin, simply add a package with the same name and adjust the disabled field in the Helm Chart values as shown below:
 
@@ -84,5 +90,18 @@ global:
       - package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
         disabled: false
 ----
+[NOTE]
+The default configuration for a plugin is extracted from the `dynamic-plugins.default.yaml` file, however, you can use a `pluginConfig` entry to override this default configuration.
 
-While the plugin's default configuration is extracted from the dynamic-plugins.default.yaml file, you still have the option to override it by incorporating a pluginConfig entry into the plugin configuration.
+== Basic configuration of dynamic plugins
+Some dynamic plugins require environment variables to be set. If a mandatory environment variable is not set, and the plugin is enabled, then the application might fail at startup.
+
+The mandatory environment variables for each plugin are listed in the xref:rhdh-supported-plugins[dynamic plugins matrix] table. 
+
+[NOTE]
+====
+Zib-bomb detection 
+When installing some dynamic plugin containing large files, if the installation script considers the package archive to be a Zib-Bomb, the installation fails.
+
+To increase the maximum permitted size of a file inside a package archive, you can increase the  `MAX_ENTRY_SIZE` environment value of the deployment `install-dynamic-plugins initContainer` from the default size of `20000000` bytes.
+====
