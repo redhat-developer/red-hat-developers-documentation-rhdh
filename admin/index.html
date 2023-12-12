@@ -1864,10 +1864,928 @@ data:
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="rhdh-installing-dynamic-plugins">Installing dynamic plugins</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The dynamic plugin support is based on the backend plugin manager package, which is a service that scans a configured root directory (dynamicPlugins.rootDirectory in the app config) for dynamic plugin packages, and loads them dynamically.</p>
+</div>
+<div class="sect2">
+<h3 id="_helm-deployment">Helm deployment</h3>
+<div class="paragraph">
+<p>To deploy a Red Hat Developer Hub (RHDH) instance, you use a Helm Chart which is a flexible installation method.</p>
+</div>
+<div class="paragraph">
+<p>You can sideload dynamic plugins into your Developer Hub instance without having to recompile your code or rebuild the container.</p>
+</div>
+<div class="paragraph">
+<p>To install dynamic plugins, you use the following <code>global.dynamic</code> parameters in your Helm Chart:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>plugins</code>: This field encompasses the list of dynamic plugins slated for installation. By default, it is an empty list. A package can be specified either as a local relative path (starting with ./) to the dynamic plugin&#8217;s folder or as a package specification in an NPM repository.</p>
+</li>
+<li>
+<p><code>includes</code>: This field contains a roster of YAML files utilizing the same syntax. The <code>plugins</code> list from these files will be incorporated, and potentially overridden, by the plugins list in the primary helm values. The default configuration includes the <code>dynamic-plugins.default.yaml</code> file, which encompasses all the dynamic plugins included in Developer Hub, whether enabled or disabled by default.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_dynamic-plugin-installation-using-the-helm-chart">Dynamic plugin installation using the Helm Chart</h3>
+<div class="paragraph">
+<p>You can include a dynamic plugin in RHDH by appending an entry to the <code>global.dynamic.plugins</code> list in your Helm Chart.</p>
+</div>
+<div class="paragraph">
+<p>Each entry must contain the following fields:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>package</code>: a package specification of the dynamic plugin package to be installed (can be from a local path or an NPM repository)</p>
+</li>
+<li>
+<p><code>integrity</code>: (optional for local packages) An integrity checksum in the form of &lt;alg&gt;-&lt;digest&gt; for the specific package. Supported algorithms include <code>sha256</code>, <code>sha384</code> and <code>sha512</code>.</p>
+</li>
+<li>
+<p><code>pluginConfig</code>: an optional plugin-specific app-config yaml fragment. See plugin configuration for more details.</p>
+</li>
+<li>
+<p><code>disabled</code>: disables the dynamic plugin if set to <code>true</code>. Default: <code>false</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_examples">Examples</h3>
+<div class="listingblock">
+<div class="title">Example 1: Enabling two plugins from a local and remote source, one requiring a specific app-config</div>
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">global:
+  dynamic:
+    plugins:
+      - package: &lt;a local package-spec used by npm pack&gt;
+      - package: &lt;a remote package-spec used by npm pack&gt;
+        integrity: sha512-&lt;some hash&gt;
+        pluginConfig: ...</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example 2: Disabling a plugin from an included file</div>
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: &lt;some imported plugins listed in dynamic-plugins.default.yaml&gt;
+        disabled: true</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example 3: Enabling a plugin from an included file</div>
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: &lt;some imported plugins listed in dynamic-plugins.custom.yaml&gt;
+        disabled: false</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_dynamic-plugins-included-in-red-hat-developer-hub">Dynamic plugins included in Red Hat Developer Hub</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub (Developer Hub) is pre-loaded with a selection of dynamic plugins. Most of these dynamic plugins are disabled by default due to the need for mandatory configuration.</p>
+</div>
+<div class="paragraph">
+<p>For a complete list of dynamic plugins that are included in this release of RHDH, see the <a href="#rhdh-supported-plugins">dynamic plugins matrix</a> table.</p>
+</div>
+<div class="paragraph">
+<p>Upon application startup, for each plugin that is disabled by default, the <code>install-dynamic-plugins init container</code> within the Developer Hub pod&#8217;s log displays a line similar to the following:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">======= Skipping disabled dynamic plugin ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To activate this plugin, simply add a package with the same name and adjust the disabled field in the Helm Chart values as shown below:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
+        disabled: false</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+The default configuration for a plugin is extracted from the <code>dynamic-plugins.default.yaml</code> file, however, you can use a <code>pluginConfig</code> entry to override this default configuration.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_basic-configuration-of-dynamic-plugins">Basic configuration of dynamic plugins</h3>
+<div class="paragraph">
+<p>Some dynamic plugins require environment variables to be set. If a mandatory environment variable is not set, and the plugin is enabled, then the application might fail at startup.</p>
+</div>
+<div class="paragraph">
+<p>The mandatory environment variables for each plugin are listed in the <a href="#rhdh-supported-plugins">dynamic plugins matrix</a> table.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Zib-bomb detection
+When installing some dynamic plugin containing large files, if the installation script considers the package archive to be a Zib-Bomb, the installation fails.</p>
+</div>
+<div class="paragraph">
+<p>To increase the maximum permitted size of a file inside a package archive, you can increase the  <code>MAX_ENTRY_SIZE</code> environment value of the deployment <code>install-dynamic-plugins initContainer</code> from the default size of <code>20000000</code> bytes.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="rhdh-supported-plugins">Dynamic plugins included in Red Hat Developer Hub</h3>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.</p>
+</div>
+<div class="paragraph">
+<p>For more information on Red Hat Technology Preview features, see <a href="https://access.redhat.com/support/offerings/techpreview/">Technology Preview Features Scope</a>.</p>
+</div>
+<div class="paragraph">
+<p>Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the <a href="https://access.redhat.com/policy/developerhub-support-policy">Red Hat Developer Support Policy</a> page.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>There are 47 plugins.</p>
+</div>
+<table id="dynamic-plugins-matrix" class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 7. Dynamic plugins support matrix</caption>
+<colgroup>
+<col style="width: 11.1111%;">
+<col style="width: 11.1111%;">
+<col style="width: 11.1111%;">
+<col style="width: 11.1111%;">
+<col style="width: 11.1111%;">
+<col style="width: 11.1111%;">
+<col style="width: 11.1111%;">
+<col style="width: 11.1111%;">
+<col style="width: 11.1112%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"><strong>Name</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Role</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Plugin</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Description</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Version</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Support Level</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Path</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Required Variables</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Default</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3scale</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-3scale-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The 3scale
+Backstage provider plugin synchronizes the 3scale content into the
+Backstage catalog.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.3.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Red Hat Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-3scale-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>3SCALE_BASE_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>3SCALE_ACCESS_TOKEN</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AAP</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-aap-backend</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.4.5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Red Hat Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-aap-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>AAP_BASE_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>AAP_AUTH_TOKEN</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ACR</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-acr</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2.4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Red Hat Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-acr</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Analytics Provider Segment</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-analytics-provider-segment</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This plugin
+provides an implementation of the Backstage Analytics API for Segment.
+Once installed and configured, analytics events will be sent to Segment
+as your users navigate and use your Backstage instance.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>SEGMENT_WRITE_KEY</code></p>
+</div>
+<div class="paragraph">
+<p><code>SEGMENT_MASK_IP</code></p>
+</div>
+<div class="paragraph">
+<p><code>SEGMENT_TEST_MODE</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Argo CD</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-argo-cd</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage plugin
+to view and interact with Argo CD.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.3.5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Argo CD</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-argo-cd-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage
+plugin Argo CD backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.11.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>ARGOCD_USERNAME</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_PASSWORD</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_INSTANCE1_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_AUTH_TOKEN</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_INSTANCE2_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_AUTH_TOKEN2</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Argo CD</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/scaffolder-backend-argocd</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.1.17</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>ARGOCD_USERNAME</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_PASSWORD</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_INSTANCE1_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_AUTH_TOKEN</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_INSTANCE2_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>ARGOCD_AUTH_TOKEN2</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Azure Devops</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-azure-devops</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.3.7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-azure-devops</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Azure Devops</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-azure-devops-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Azure
+DevOps backend plugin that contains the API for retrieving builds, pull
+requests, etc. which is used by the Azure DevOps frontend plugin.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.4.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-azure-devops-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>AZURE_TOKEN</code></p>
+</div>
+<div class="paragraph">
+<p><code>AZURE_ORG</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Datadog</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-datadog</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Embed Datadog
+graphs and dashboards into Backstage.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-datadog</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Dynatrace</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-dynatrace</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin
+that integrates towards Dynatrace.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7.0.5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-dynatrace</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-catalog-backend-module-github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A
+Backstage catalog backend module that helps integrate towards Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.4.4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>GITHUB_ORG</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-catalog-backend-module-github-org</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The github-org backend module for the catalog plugin.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.1.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>GITHUB_ORG_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-github-actions</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin
+that integrates towards GitHub Actions</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.6.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-github-actions</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-github-issues</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin
+that integrates towards GitHub Issues</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.2.14</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-github-issues</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-github-insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage
+plugin to provide Readmes, Top Contributors and other widgets.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.3.21</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-github-insights</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-github-pull-requests</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage plugin to view and interact with GitHub pull requests.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.5.18</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-github-pull-requests</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-security-insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage plugin to add security insights for GitHub repos.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.3.9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-security-insights</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-catalog-backend-module-gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extracts repositories out of an GitLab instance.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.3.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-gitlab-dynamic</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-scaffolder-backend-module-gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A
+module for the scaffolder backend that lets you interact with gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.2.9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-gitlab-dynamic</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@immobiliarelabs/backstage-plugin-gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage
+plugin to interact with GitLab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6.2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/immobiliarelabs-backstage-plugin-gitlab</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gitlab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@immobiliarelabs/backstage-plugin-gitlab-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage plugin to interact with GitLab</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6.2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/immobiliarelabs-backstage-plugin-gitlab-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>GITLAB_HOST</code></p>
+</div>
+<div class="paragraph">
+<p><code>GITLAB_TOKEN</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Jenkins</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-jenkins</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin that
+integrates towards Jenkins</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.9.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-jenkins</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Jenkins</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-jenkins-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage
+backend plugin that integrates towards Jenkins</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.3.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-jenkins-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>JENKINS_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>JENKINS_USERNAME</code></p>
+</div>
+<div class="paragraph">
+<p><code>JENKINS_TOKEN</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Jfrog Artifactory</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-jfrog-artifactory</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Jfrog Artifactory
+plugin displays information about your container images within the Jfrog
+Artifactory registry.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2.4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Red Hat Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-jfrog-artifactory</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Jira</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-jira</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backstage plugin to
+view and interact with Jira</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.4.11</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-jira</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Keycloak</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-keycloak-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The
+Keycloak backend plugin integrates Keycloak into Backstage.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.7.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-keycloak-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>KEYCLOAK_BASE_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>KEYCLOAK_LOGIN_REALM</code></p>
+</div>
+<div class="paragraph">
+<p><code>KEYCLOAK_REALM</code></p>
+</div>
+<div class="paragraph">
+<p><code>KEYCLOAK_CLIENT_ID</code></p>
+</div>
+<div class="paragraph">
+<p><code>KEYCLOAK_CLIENT_SECRET</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin
+that integrates towards Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.11.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-kubernetes</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-kubernetes-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage
+backend plugin that integrates towards Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.13.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-kubernetes-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>K8S_CLUSTER_NAME</code></p>
+</div>
+<div class="paragraph">
+<p><code>K8S_CLUSTER_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>K8S_CLUSTER_TOKEN</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-topology</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The
+Topology plugin enables you to visualize the workloads such as
+Deployment, Job, Daemonset, Statefulset, CronJob, and Pods powering any
+service on the Kubernetes cluster.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.16.4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-topology</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lighthouse</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-lighthouse</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin
+that integrates towards Lighthouse</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.4.10</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-lighthouse</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Nexus Repository Manager</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-nexus-repository-manager</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Nexus
+Repository Manager plugin displays the information about your build
+artifacts that are available in the Nexus Repository Manager in your
+Backstage application.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.4.4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Red Hat Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-nexus-repository-manager</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OCM</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-ocm</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Open Cluster
+Management (OCM) plugin integrates your Backstage instance with the
+<code>MultiClusterHub</code> and <code>MultiCluster</code> engines of OCM.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-ocm</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OCM</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-ocm-backend</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3.4.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-ocm-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>OCM_HUB_NAME</code></p>
+</div>
+<div class="paragraph">
+<p><code>OCM_HUB_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>moc_infra_token</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Pagerduty</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-pagerduty</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin
+that integrates towards PagerDuty</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.6.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-pagerduty</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Quay</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-quay</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Quay plugin
+displays the information about your container images within the Quay
+registry in your Backstage application.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.4.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-quay</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Quay</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-scaffolder-backend-module-quay</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This module provides Backstage template actions for Quay.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2.1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-scaffolder-backend-module-quay-dynamic</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Regex</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-scaffolder-backend-module-regex</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This plugin provides Backstage template actions for RegExp.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2.1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-scaffolder-backend-module-regex-dynamic</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Scaffolder</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/scaffolder-backend-module-utils</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This
+contains a collection of actions to use in scaffolder templates.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.10.4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-scaffolder-backend-module-utils-dynamic</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ServiceNow</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-scaffolder-backend-module-servicenow</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This plugin
+provides Backstage template actions for ServiceNow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Red Hat Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-scaffolder-backend-module-servicenow-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>SERVICENOW_BASE_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>SERVICENOW_USERNAME</code></p>
+</div>
+<div class="paragraph">
+<p><code>SERVICENOW_PASSWORD</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SonarQube</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-sonarqube</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin to
+display SonarQube code quality and security results.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.7.7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-sonarqube</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SonarQube</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-sonarqube-backend</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.2.8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-sonarqube-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>SONARQUBE_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>SONARQUBE_TOKEN</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SonarQube</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-scaffolder-backend-module-sonarqube</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This module
+provides Backstage template actions for SonarQube.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.2.1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Red Hat Tech Preview</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-scaffolder-backend-module-sonarqube-dynamic</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tech Radar</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-tech-radar</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage plugin
+that lets you display a Tech Radar for your organization</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.6.9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-tech-radar</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Techdocs</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-techdocs</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Backstage plugin
+that renders technical documentation for your components</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.8.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-techdocs</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Techdocs</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@backstage/plugin-techdocs-backend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Backstage
+backend plugin that renders technical documentation for your components</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.8.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-techdocs-backend-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>TECHDOCS_BUILDER_TYPE</code></p>
+</div>
+<div class="paragraph">
+<p><code>TECHDOCS_GENERATOR_TYPE</code></p>
+</div>
+<div class="paragraph">
+<p><code>TECHDOCS_PUBLISHER_TYPE</code></p>
+</div>
+<div class="paragraph">
+<p><code>BUCKET_NAME</code></p>
+</div>
+<div class="paragraph">
+<p><code>BUCKET_REGION_VAULT</code></p>
+</div>
+<div class="paragraph">
+<p><code>BUCKET_URL</code></p>
+</div>
+<div class="paragraph">
+<p><code>AWS_ACCESS_KEY_ID</code></p>
+</div>
+<div class="paragraph">
+<p><code>AWS_SECRET_ACCESS_KEY</code></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tekton</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-tekton</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Tekton plugin
+enables you to visualize the PipelineRun resources available on the
+Kubernetes cluster.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3.1.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-tekton</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2023-12-12 09:49:04 UTC
+Last updated 2023-12-12 12:48:59 UTC
 </div>
 </div>
 </body>
