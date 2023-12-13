@@ -4,18 +4,40 @@
 This section lists known issues with {product} {product-version}:
 
 RBAC: CSV repopulates database whenever there is a server restart link:https://issues.redhat.com/browse/RHIDP-850[[RHIDP-850]]::
-
++
+--
 The `policy.csv file` is used to load permissions into {product-short}. There may be instances of overlapping permissions, and the permissions can be reloaded into the database.
 
+*Workaround*: Remove the permission policies and roles in `policy.csv` file that might conflict with permissions and roles that are defined using the RBAC REST API. This ensures that permissions and roles are not repopulated to the RBAC plugin when server restarts.
+
+If permission policies are not applied or removed permissions reappear in the RBAC plugin, use REST API to remove the conflicting or duplicate permission policies and roles. 
+
+You can also use the REST API endpoints to to list all the existing permission policies and roles and then you can address the issues either by removing or updating the permission policies and roles.
+--
+
 Validation is not working for create role API link:https://issues.redhat.com/browse/RHIDP-852[[RHIDP-852]]::
++
+--
 
 The validation process in the create role API is currently ineffective, allowing the creation of roles that are invalid. This results in input errors when attempting to update or delete these roles.
 
-RBAC backend plugin - policy change requires server restart link:https://issues.redhat.com/browse/RHIDP-853[[RHIDP-853]]::
+*Workaround*: Ensure that the following format is applied when you create or update a role for the RBAC plugin to consume:
 
-Manually manipulating the database leads to inconsistent behavior, causing the manipulated permission or role to not apply correctly within the RBAC plugin.
+`<user/group>:<NAMESPACE>/<USERNAME>, role:<NAMESPACE>/<ROLE_NAME>`
+--
+
+RBAC backend plugin - policy change requires server restart link:https://issues.redhat.com/browse/RHIDP-853[[RHIDP-853]]::
++
+--
+Manually manipulating the `policy.csv` file leads to inconsistent behavior, causing the manipulated permission or role to not apply correctly within the RBAC plugin.
+
+*Workaround*: To avoid unnecessary server restarts, use the RBAC REST API for handling permissions and roles. If you update the `policy.csv` file, a restart of the {product-short} is necessary to ensure that RBAC properly includes the permissions and roles defined in the `policy.csv` file.
+
+Moreover, any modifications or removals of permissions and roles in the `policy.csv` file necessitate subsequent requests to the REST API to prevent conflicts with database entries.
+--
 
 Third-party, user-added plugin compatibility link:link:https://issues.redhat.com/browse/RHIDP-447[[RHIDP-447]]::
-
++
+--
 A third-party, user-added plugin added to {product-short} can be updated without a necessary update to your {product-short} instance which may cause a compatibility issue. Similarly, your {product-short} instance can be updated which may also cause a compatibility issue with an existing third-party, user-added plugin.
-
+--
