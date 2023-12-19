@@ -1,72 +1,46 @@
-= Keycloak backend 
+[id="rhdh-keycloak_{context}"]
+= Installation and configuration of Keycloak 
 
-The Keycloak backend plugin integrates Keycloak into {product-short}.
+The Keycloak backend plugin, which integrates Keycloak into {product-short}, has the following capabilities:
 
-== Capabilities
-
-The Keycloak backend plugin has the following capabilities:
-
-* Synchronization of Keycloak users in a realm
-* Synchronization of Keycloak groups and their users in a realm
+* Synchronization of Keycloak users in a realm.
+* Synchronization of Keycloak groups and their users in a realm.
 
 == For administrators
 
-=== Installing and configuring the Keycloak backend plugin
+=== Installation
 
-ifeval::[{doc-show-dynamic-content} == true]
-include::../../../artifacts/rhdh-plugins-reference/keycloak/keycloak-install-dynamic-plugin.adoc[leveloffset=+2]
-endif::[]
+The Keycloak plugin is pre-loaded in {product-short} with basic configuration properties. To enable it, set the `disabled` property to `false` as follows:
 
-ifeval::[{doc-show-dynamic-content} == false]
-
-The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the `@redhat` scoped packages:
-
-[source]
-----
-# update your .npmrc or .yarnrc file
-yarn config set "@redhat:registry" https://npm.registry.redhat.com
-# then pull a package 
-yarn add @redhat/backstage-plugin-quay
-----
-
-For more information, see link:https://docs.npmjs.com/cli/v9/configuring-npm/npmrc[npm docs]. 
-
-Creating a `.npmrc` file ensures that all the packages are scoped under `@redhat` and are fetched from link:https://npm.registry.redhat.com/[Red Hat's NPM registry], while the rest dependencies remain sourced from other link:registry.npmjs.org[registry]. 
-
-You can now install the Backstage package into the backend. When not integrating with a published package, clone the repository locally and add Backstage as follows:
-
-[source,console]
-----
-yarn workspace backend add @redhat/backstage-plugin-keycloak-backend
-----
-
-=== Configuration
-
-. Add the following configuration to the `app-config.yaml` file:
-+
---
 [source,yaml]
 ----
-   ```yaml title="app-config.yaml"
-   catalog:
-     providers:
-       keycloakOrg:
-         default:
-           baseUrl: https://<keycloak_host>/auth
-           loginRealm: ${KEYCLOAK_REALM}
-           realm: ${KEYCLOAK_REALM}
-           clientId: ${KEYCLOAK_CLIENTID}
-           clientSecret: ${KEYCLOAK_CLIENTSECRET}
-   ```
+global: 
+  dynamic: 
+    includes: 
+      - dynamic-plugins.default.yaml
+    plugins: 
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-keycloak-backend-dynamic
+        disabled: false
 ----
---
 
+=== Basic configuration
+To enable the Keycloak plugin, you must set the following environment variables:
 
-. Register the plugin in the `packages/backend/src/plugins/catalog.ts` file. You can also configure a schedule in this step. However, there are possible ways of configuration, such as:
-endif::[]
+* `KEYCLOAK_BASE_URL`
 
-* Configure a schedule inside the `app-config.yaml` file:
-+
+* `KEYCLOAK_LOGIN_REALM`
+
+* `KEYCLOAK_REALM`
+
+* `KEYCLOAK_CLIENT_ID`
+
+* `KEYCLOAK_CLIENT_SECRET`
+
+=== Advanced configuration
+
+.Schedule configuration
+You can configure a schedule in the `app-config.yaml` file, as follows:
+
 [source,yaml]
 ----
      catalog:
@@ -83,80 +57,16 @@ endif::[]
                initialDelay: { seconds: 15 }
                # highlight-add-end
 ----
-ifeval::[{doc-show-dynamic-content} == false]
-Use the configured scheduler inside the `packages/backend/src/plugins/catalog.ts` as follows:
-
-[source]
-----
-     /* highlight-add-start */
-     import { KeycloakOrgEntityProvider } from '@redhat/backstage-plugin-keycloak-backend';
-
-     /* highlight-add-end */
-
-     export default async function createPlugin(
-       env: PluginEnvironment,
-     ): Promise<Router> {
-       const builder = await CatalogBuilder.create(env);
-
-       /* ... other processors and/or providers ... */
-       /* highlight-add-start */
-       builder.addEntityProvider(
-         KeycloakOrgEntityProvider.fromConfig(env.config, {
-           id: 'development',
-           logger: env.logger,
-           scheduler: env.scheduler,
-         }),
-       );
-       /* highlight-add-end */
-
-       const { processingEngine, router } = await builder.build();
-       await processingEngine.start();
-       return router;
-     }
-----
-
-** Add a schedule directly inside the `packages/backend/src/plugins/catalog.ts` file as follows:
-+
-[source]
-----
-
-     + import { KeycloakOrgEntityProvider } from '@redhat/backstage-plugin-keycloak-backend';
-
-     export default async function createPlugin(
-       env: PluginEnvironment,
-     ): Promise<Router> {
-       const builder = await CatalogBuilder.create(env);
-
-       /* ... other processors and/or providers ... */
-       builder.addEntityProvider(
-         KeycloakOrgEntityProvider.fromConfig(env.config, {
-           id: 'development',
-           logger: env.logger,
-           /* highlight-add-start */
-           schedule: env.scheduler.createScheduledTaskRunner({
-             frequency: { minutes: 1 },
-             timeout: { minutes: 1 },
-             initialDelay: { seconds: 15 }
-           }),
-           /* highlight-add-end */
-         }),
-       )
-
-       const { processingEngine, router } = await builder.build();
-       await processingEngine.start();
-       return router;
-     }
-----
-
-endif::[]
 
 [NOTE]
 ====
 If you have made any changes to the schedule in the `app-config.yaml` file, then restart to apply the changes.
 ====
 
-* Optional: override the default Keycloak query parameters. Configure the parameters inside the `app-config.yaml` file:
-+
+.Keycloak query parameters
+
+You can override the default Keycloak query parameters in the `app-config.yaml` file, as follows:
+
 [source,yaml]
 ----
    catalog:
@@ -170,7 +80,7 @@ If you have made any changes to the schedule in the `app-config.yaml` file, then
            # highlight-add-end
 ----
 
-Communication between {product-short} and Keycloak is enabled by using the Keycloak API. Username/password or client credentials are supported authentication methods.
+Communication between {product-short} and Keycloak is enabled by using the Keycloak API. Username and password, or client credentials are supported authentication methods.
 
 
 The following table describes the parameters that you can configure to enable the plugin under `catalog.providers.keycloakOrg.<ENVIRONMENT_NAME>` object in the `app-config.yaml` file:
@@ -244,9 +154,14 @@ The solution of setting the environment variable is not recommended.
 
 == For users
 
-=== Imported users and groups in {product-short} using Keycloak plugin
+=== Import of users and groups in {product-short} using the Keycloak plugin
 
 After configuring the plugin successfully, the plugin imports the users and groups each time when started.
+
+[NOTE]
+====
+If you set up a schedule, users and groups will also be imported.
+====
 
 After the first import is complete, you can select *User* to list the users from the catalog page:
 
