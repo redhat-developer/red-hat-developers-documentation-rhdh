@@ -98,28 +98,53 @@ oc get imagestream -n <projectName>
 [source]
 ----
 oc set image-lookup postgresql-15
-oc set image-lookup  rhdh-hub-rhel9
+oc set image-lookup rhdh-hub-rhel9
 ----
 --
 
-. Go to *YAML view* and update the `image` section for `backstage` and `postgresql` using the following values:
+. Install the {product} using Helm Chart. You won't be able to use GUI as described in xref:proc-install-rhdh-helm_admin-rhdh[]. Instead you need to use CLI.
++ 
+- Add the dafault registry to `helm`:
 +
 --
-.Example values for Developer Hub image
+[source]
+----
+helm repo add openshift-helm-charts https://charts.openshift.io/
+----
+--
++
+- Create the Helm Release
++
+--
+[source]
+----
+helm install developer-hub openshift-helm-charts/redhat-developer-hub
+----
+--
+
+. You also need to use CLI for changing the values in the Helm Release using the `upgrade.yaml` file:
++
+--
+[source]
+----
+helm upgrade developer-hub openshift-helm-charts/redhat-developer-hub --reuse-values --values upgrade.yaml
+----
+--
++
+You need to update the `image` section for `backstage` and `postgresql` as well as hostname using the following values:
++
+--
+.Example values for `upgrade.yaml`
 [source,yaml]
 ----
+global:
+  clusterRouterBase: <hostname>
 upstream:
   backstage:
     image:
       registry: ""
       repository: rhdh-hub-rhel9
       tag: latest
-----
-
-.Example values for PostgreSQL image
-[source,yaml]
-----
-upstream:
   postgresql:
     image:
       registry: ""
@@ -127,5 +152,5 @@ upstream:
       tag: latest
 ----
 --
-
-. Install the {product} using Helm Chart. For more information about installing {product-short}, see xref:proc-install-rhdh-helm_admin-rhdh[].
++ 
+All the other configuration has to be done the same way using the CLI.
