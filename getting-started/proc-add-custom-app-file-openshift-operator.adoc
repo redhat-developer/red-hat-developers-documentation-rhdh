@@ -1,0 +1,110 @@
+[id='proc-add-custom-app-file-openshift-operator_{context}']
+= Adding a custom application configuration file to Red Hat OpenShift
+
+To access the {product}, you must add a custom application configuration file to OpenShift. In OpenShift, you can use the following content as a base template to create ConfigMap named `app-config-rhdh`:
+
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    app:
+      title: Red Hat Developer Hub
+
+    backend:
+      auth:
+        keys:
+        - secret: “${BACKEND_SECRET}”
+       baseUrl: https://backstage-<CUSTOM_RESOURCE_NAME>-<NAMESPACE_NAME>.<OPENSHIFT_INGRESS_DOMAIN>
+       cors:
+         origin: https://backstage-<CUSTOM_RESOURCE_NAME>-<NAMESPACE_NAME>.<OPENSHIFT_INGRESS_DOMAIN>
+----
+
+.Example
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://backstage-backstage-sample-my-ns.apps.ci-ln-vtkzr22-72292.origin-ci-int-gce.dev.rhcloud.com
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://backstage-backstage-sample-my-ns.apps.ci-ln-vtkzr22-72292.origin-ci-int-gce.dev.rhcloud.com
+      cors:
+        origin: https://backstage-backstage-sample-my-ns.apps.ci-ln-vtkzr22-72292.origin-ci-int-gce.dev.rhcloud.com
+----
+
+[NOTE]
+====
+* There is a mandatory Backend Auth Key for {product-short}. This will reference an environment variable backed by an OpenShift Secret.
+* You need to know the external URL of your {product-short} instance and set it in the `app.baseUrl, backend.baseUrl` and `backend.cors.origin` fields of the application configuration. By default, this will be named as follows: `https://backstage-<CUSTOM_RESOURCE_NAME>-<NAMESPACE_NAME>.<OPENSHIFT_INGRESS_DOMAIN>`. You can use the `oc get ingresses.config/cluster -o jsonpath='{.spec.domain}'` command to display your ingress domain. If you are using a different host or sub-domain, which is customizable in the `Custom Resource spec.application.route field`, you must adjust the application configuration accordingly.
+====
+
+.Prerequisites
+
+* You have created an account in Red Hat OpenShift.
+
+.Procedure
+
+. Navigate to OpenShift and select the *ConfigMaps* tab.
+. Click *Create ConfigMap*.
++
+*Create ConfigMap* page appears.
+. Select the *YAML view* option in *Configure via* and make the changes to the file, if needed.
+. Click *Create*.
+
+. Select the *Secrets* tab.
+. Click *Create Key/Value Secret*.
+. Name the secret `secrets-rhdh`.
+. Add a key named `BACKEND_SECRET` and add any random string as value. It is recommended to use a unique value per {product-short} instance.
+. Click *Create*.
+. Select the *Topology* tab.
+. Click on the three dots of a {product-short} instance and select *Edit Backstage*.
++
+image::rhdh/rhdh-operator-edit.png[]
+. This will load the YAML view of the {product-short} instance. Add the `spec.application.appConfig.configMaps` and `spec.application.extraEnvs.secrets` fields to the Custom Resource.
++
+image::rhdh/rhdh-operator-edit-instance.png[]
+. Click *Save*.
+. Navigate back to the Topology View and delete the Backstage Deployment, so that the Operator can recreate it with the new changes to the CR.
++
+[NOTE] 
+====
+This is a manual step but the operator will manage this process in a future release.
+====
++
+image::rhdh/rhdh-operator-pod-restart.png[]
+. Wait for the Red Hat Developer Hub Pod to start.
+. Click the Open URL option to start using the Red Hat Developer Hub platform with the new configuration changes.
+
+
+
+
+// . Go to the *Helm* tab.
+// +
+// The list of Helm Releases appears on the page.
+// . Click the three dots of a Helm release and select *Upgrade*.
+// . Add the following values in *Root Schema -> Backstage Chart Schema ->  Backstage Parameters -> Extra App Configuration files to inline into command arguments*:
+// +
+// --
+// * *ConfigMapRef*: `app-config-rhdh`
+// * *filename*: `app-config-rhdh.yaml`
+// --
+// . Click *Upgrade*.
+
+// . Alternatively, go to the YAML view for the helm values and set the value of `upstream.backstage.command` to `[]`.
+// . Click *Upgrade*.
+
+
+
+
