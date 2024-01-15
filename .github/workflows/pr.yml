@@ -13,58 +13,58 @@ on:
   pull_request:
     branches: ['*']
 
-env:
-  IMAGE_VERSION: pr-${{ github.event.pull_request.number }}
-
 jobs:
-  preview-html:
+  adoc_build:
+    name: Asciidoctor Build For PR branch preview
     runs-on: ubuntu-latest
-    if: ${{ github.base_ref == 'main' }}
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Build Admin Guide
-        id: adocbuild1
-        uses: tonynv/asciidoctor-action@v2
-        with:
-            program: "asciidoctor --destination-dir docs-generated/admin --backend=html5 -o index.html titles/admin/master.adoc"
-      - name: Build Getting Started Guide
-        id: adocbuild2
-        uses: tonynv/asciidoctor-action@v2
-        with:
-            program: "asciidoctor --destination-dir docs-generated/getting-started-rhdh --backend=html5 -o index.html titles/getting-started-rhdh/master.adoc"
-      - name: Build Release Notes
-        id: adocbuild3
-        uses: tonynv/asciidoctor-action@v2
-        with:
-            program: "asciidoctor --destination-dir docs-generated/release-notes --backend=html5 -o index.html titles/release-notes/master.adoc"
-      - name: "Use Node 18"
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - name: "Install dependencies"
-        run: |
-           npm i @supercharge/filesystem
+    - name: Setup environment
+      run: |
+        # update
+        sudo apt-get update -y || true
+        # install 
+        sudo apt-get -y -q install asciidoctor && asciidoctor --version
 
-      - name: PR comment with doc previews
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.RHDH_BOT_TOKEN }}
-          script: |
-            const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
-            const Fs = require('@supercharge/filesystem')
-            const html1 = await Fs.readFile('./docs-generated/admin/index.html')
-            const html2 = await Fs.readFile('./docs-generated/getting-started-rhdh/index.html')
-            const html3 = await Fs.readFile('./docs-generated/release-notes/index.html')
+    - name: Build guides and index
+      run: |
+        mkdir -p titles-generated/; 
+        echo "<html><head><title>Red Hat Developer Hub Documentation Preview</title></head><body><ul>" > titles-generated/index.html;
+        for t in $(find titles -name master.adoc | sort -uV); do
+          d=${t%/*}; d=${d/titles/titles-generated}; 
+          echo "Building $t into $d ..."; 
+          asciidoctor --destination-dir $d --backend=html5 -o index.html $t; ls -la $d;
+          echo "<li><a href=${d/titles-generated/.}>${d/titles-generated\//}</a></li>" >> titles-generated/index.html;
+        done
+        echo "</ul></body></html>" >> titles-generated/index.html
 
-            // remove unrenderable title and style tags, and everything in the <head>
-            var html1c = html1.replace(/.*?<\/head>/gms,"")
-            var html2c = html2.replace(/.*?<\/head>/gms,"")
-            var html3c = html3.replace(/.*?<\/head>/gms,"")
+    # repo must be public for this to work
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      # if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.RHDH_BOT_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: ./titles-generated
+        # this should put index.html content into a subfolder for each PR
+        destination_dir: ./pr-${{ github.event.pull_request.number }}
 
-            // render each doc as its own comment
-            // TODO once this repo is public, we can push to GH pages instead
-            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Admin Guide</summary>\n' + html1c + '</details>' });
-            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Getting Started Guide</summary>\n' + html2c + '</details>' });
-            github.rest.issues.createComment({ issue_number, owner, repo, body: '<details><summary>Preview: Release Notes</summary>\n' + html3c + '</details>' });
+    - name: PR comment with doc preview
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.RHDH_BOT_TOKEN }}
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: 'PR Preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${{ github.event.pull_request.number }}/' 
+          });
