@@ -7,14 +7,14 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-name: Build + publish asciidoc to gh-pages branch
+name: GitHub Pages
 
 on:
-  workflow_dispatch:
-    inputs: {}
   push:
     branches:
     - main
+  # pull_request:
+
 jobs:
   adoc_build:
     name: Asciidoctor Build For GH Pages
@@ -26,23 +26,30 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-    - name: Build guides
+    - name: Setup environment
       run: |
         # update
         sudo apt-get update -y || true
         # install 
         sudo apt-get -y -q install asciidoctor && asciidoctor --version
+
+    - name: Build guides
+      run: |
         for t in $(find titles -name master.adoc); do
           d=${t%/*}; d=${d/titles/titles-generated}; 
           echo "Building $t into $d ..."; 
-          asciidoctor --destination-dir $d --backend=html5 -o index.html $t;
+          asciidoctor --destination-dir $d --backend=html5 -o index.html $t; ls -la $d;
         done
 
     # repo must be public for this to work
-    - name: Deploy docs to ghpages
+    - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
+      # if: github.ref == 'refs/heads/main'
       with:
-        personal_token: ${{ secrets.RHDH_BOT_TOKEN }}
-        # publish_branch: gh-pages
-        publish_dir: ./titles-generated/
+        github_token: ${{ secrets.RHDH_BOT_TOKEN }}
+        # personal_token: ${{ secrets.RHDH_BOT_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: ./titles-generated
