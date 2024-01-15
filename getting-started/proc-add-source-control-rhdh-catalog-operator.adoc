@@ -1,0 +1,74 @@
+[id='proc-add-source-control-rhdh-catalog-operator_{context}']
+= Adding source control for Catalog in {product}
+
+To populate the Catalog in {product}, you need to add software templates, and to add the templates, you must enable a source control such as GitHub, GitLab, or BitBucket.
+
+== Setting GitHub integration and authentication
+
+The GitHub integration and authentication is required to enable the GitHub plugins in {product}.
+
+.Prerequisites
+
+* You have a GitHub account.
+* You have an account in Red Hat OpenShift
+
+.Procedure
+
+. In OpenShift, click *ConfigMap*.
+. Modify your `app-config-rhdh` file to include the GitHub configuration as follows:
++
+--
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    app:
+      title: Red Hat Developer Hub
+    integrations:
+      github:
+        - host: github.com
+          apps:
+            - appId: ${GITHUB_APP_APP_ID}
+              clientId: ${GITHUB_APP_CLIENT_ID}
+              clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+              webhookUrl: ${GITHUB_APP_WEBHOOK_URL}
+              webhookSecret: ${GITHUB_APP_WEBHOOK_SECRET}
+              privateKey: |
+                ${GITHUB_APP_PRIVATE_KEY}
+    auth:
+      # see https://backstage.io/docs/auth/ to learn about auth providers
+      environment: development
+      providers:
+        github:
+          development:
+            clientId: ${GITHUB_APP_CLIENT_ID}
+            clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+----
+--
+
+. Click *Save*.
+. Modify your `rhdh-secrets` secret using the environment variables as keys from the previous code snippet.
+//. Navigate to the *Topology* view and delete the {product} deployment, to have it recreated by the Operator with the new configuration changes.
+. To log in using your GitHub application, ensure that the *Callback URL* in your GitHub application is configured as follows:
++
+--
+`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame`
+
+In the previous example of Callback URL, `OPENSHIFT_ROUTE_HOST` is the API URL added into the *Root Schema -> global -> clusterRouteBase* field.
+
+The following is an example of the Callback URL:
+
+image::rhdh/example-callback-url.png[]
+
+[NOTE]
+====
+To access the GitHub security insights widget on the Overview page in {product-short}, ensure that your GitHub application has Read-only Dependabot Alerts permissions.
+====
+--
+
+. Navigate to the *Topology* view and delete the {product-short} Deployment. This will force it to be recreated with the updated configuration changes. Note that we are working on the Operator to automatically handle such restarts upon configuration changes.
+

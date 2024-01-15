@@ -1,0 +1,43 @@
+[id='proc-using-external-database-operator_{context}']
+//= Using an external database with the Operator
+.Procedure
+. Modify your `rhdh-secrets` secret using the environment variables as keys from the list above
+. Go to the *Topology* tab.
+. Click on the three dots of a {product-short} instance and select *Edit Backstage*.
++
+image::rhdh/rhdh-operator-edit.png[]
++
+This will load the YAML view of the {product-short} instance . 
+. Set the *spec.database.enableLocalDb* field to false and edit the *spec.database.authSecretName field*.
++
+image::rhdh/rhdh-operator-database-example.png[]
+. Click *Save*.
+. Navigate back to the *Topology View* and delete both the {product-short} Deployment and PostgreSQL StatefulSet, so that the Operator can recreate the resources with the new changes to the CR. 
++
+[NOTE] 
+====
+This is a manual step but the operator will manage this process in a future release.
+====
++
+image::rhdh/rhdh-operator-database-restart.png[]
+. Wait for the {product} pod to start. 
++
+image::rhdh/rhdh-operator-no-database.png[]
++
+The database resource should not be created.
+
+. Click the *Open URL* option to start using the {product-short} platform with the new configuration changes.
+
+[NOTE]
+====
+If your `developer-hub` pod is stuck in a `CrashLoopBackOff` and you see the following logs:
+
+[source,log]
+----
+Loaded config from app-config-from-configmap.yaml, env
+...
+Backend failed to start up Error: Failed to connect to the database to make sure that 'backstage_plugin_auth' exists
+----
+
+Then, verify the connection information to the external database and make sure the external database is correctly configured. The credentials might not be valid or the external database might not be configured to accept connections from this instance.
+====
