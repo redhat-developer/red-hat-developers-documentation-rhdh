@@ -58,13 +58,10 @@ data:
 
 . Navigate to OpenShift and select the *ConfigMaps* tab.
 . Click *Create ConfigMap*.
-+
-*Create ConfigMap* page appears.
 . Select the *YAML view* option in *Configure via* and make the changes to the file, if needed.
 . Click *Create*.
-
 . Select the *Secrets* tab.
-. Click *Create Key/Value Secret*.
+. Click *Create Key/value Secret*.
 . Name the secret `secrets-rhdh`.
 . Add a key named `BACKEND_SECRET` and add any random string as value. It is recommended to use a unique value per {product-short} instance.
 . Click *Create*.
@@ -72,38 +69,32 @@ data:
 . Click on the three dots of a {product-short} instance and select *Edit Backstage*.
 +
 image::rhdh/rhdh-operator-edit.png[]
-. This will load the YAML view of the {product-short} instance. Add the `spec.application.appConfig.configMaps` and `spec.application.extraEnvs.secrets` fields to the Custom Resource.
+. This will load the YAML view of the {product-short} instance. Add the `spec.application.appConfig.configMaps` and `spec.application.extraEnvs.secrets` fields to the Custom Resource, as follows:
 +
-image::rhdh/rhdh-operator-edit-instance.png[]
+[source]
+----
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config-rhdh
+    extraEnvs:
+      secrets:
+         - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt-/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true
+----
+// +
+// image::rhdh/rhdh-operator-edit-instance.png[]
 . Click *Save*.
-. Navigate back to the Topology View and delete the Backstage Deployment, so that the Operator can recreate it with the new changes to the CR.
-+
-[NOTE] 
-====
-This is a manual step but the operator will manage this process in a future release.
-====
-+
-image::rhdh/rhdh-operator-pod-restart.png[]
-. Wait for the Red Hat Developer Hub Pod to start.
-. Click the Open URL option to start using the Red Hat Developer Hub platform with the new configuration changes.
-
-
-
-
-// . Go to the *Helm* tab.
-// +
-// The list of Helm Releases appears on the page.
-// . Click the three dots of a Helm release and select *Upgrade*.
-// . Add the following values in *Root Schema -> Backstage Chart Schema ->  Backstage Parameters -> Extra App Configuration files to inline into command arguments*:
-// +
-// --
-// * *ConfigMapRef*: `app-config-rhdh`
-// * *filename*: `app-config-rhdh.yaml`
-// --
-// . Click *Upgrade*.
-
-// . Alternatively, go to the YAML view for the helm values and set the value of `upstream.backstage.command` to `[]`.
-// . Click *Upgrade*.
+. Navigate back to the *Topology* view and wait for the {product} pod to start.
+. Click the *Open URL* option to start using the {product} platform with the new configuration changes.
 
 
 
