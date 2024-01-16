@@ -1,30 +1,53 @@
 [id='proc-using-external-database-operator_{context}']
 //= Using an external database with the Operator
 .Procedure
-. Modify your `rhdh-secrets` secret using the environment variables as keys from the list above
+. Select the *Secrets* tab.
+
+. Click *Create* then *Key/value* secret.
+
+. Name the Secret `secrets-db-rhdh`.
+
+. Add the `POSTGRES_*` keys from the list above, along with their values.
+
+. Click Create.
 . Go to the *Topology* tab.
 . Click on the three dots of a {product-short} instance and select *Edit Backstage*.
 +
 image::rhdh/rhdh-operator-edit.png[]
 +
 This will load the YAML view of the {product-short} instance . 
-. Set the *spec.database.enableLocalDb* field to false and edit the *spec.database.authSecretName field*.
+. Set the *spec.database.enableLocalDb* field to false and edit the *spec.database.authSecretName field* as follows:
 +
-image::rhdh/rhdh-operator-database-example.png[]
+[source]
+----
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config-rhdh
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+      secrets:
+         - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt-/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: false
+    authSecretName: secrets-db-rhdh
+----
+// +
+// image::rhdh/rhdh-operator-database-example.png[]
+
 . Click *Save*.
-. Navigate back to the *Topology View* and delete both the {product-short} Deployment and PostgreSQL StatefulSet, so that the Operator can recreate the resources with the new changes to the CR. 
-+
-[NOTE] 
-====
-This is a manual step but the operator will manage this process in a future release.
-====
-+
-image::rhdh/rhdh-operator-database-restart.png[]
-. Wait for the {product} pod to start. 
+. Navigate back to the *Topology View* and Wait for the {product} pod to start. 
 +
 image::rhdh/rhdh-operator-no-database.png[]
 +
-The database resource should not be created.
+The Postgres pod should not be created.
 
 . Click the *Open URL* option to start using the {product-short} platform with the new configuration changes.
 
