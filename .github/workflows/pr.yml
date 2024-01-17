@@ -36,8 +36,27 @@ jobs:
         echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
         echo "Building branch ${{ env.GIT_BRANCH }}"
 
+    - name: Check branch name
+      run: |
+        echo "Building branch ${{ env.GIT_BRANCH }}"
+
+    - name: remove merged PR branches 
+      run: |
+        git config user.name "rhdh-bot service account"
+        git config user.email "rhdh-bot@redhat.com"
+
+        git checkout gh-pages
+        for d in $(find . -maxdepth 1 -name "pr-*" -type d); do 
+          echo -n "Check merge status of PR ${d/pr-/} ... "
+          curl -sSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.RHDH_BOT_TOKEN }}" ${{ GITHUB_API_URL }}/repos/${{ GITHUB_REPOSITORY }}/pulls/$PR | grep merged\"
+        done
+        # git commit -s -m "remove merged PR branches" .
+        # git push origin gh-pages
+        git checkout ${{ env.GIT_BRANCH }}
+
     - name: Build guides and indexes
       run: |
+        echo "Building branch ${{ env.GIT_BRANCH }}"
         build/scripts/build.sh -b "pr-${{ github.event.pull_request.number }}"
 
     # repo must be public for this to work
