@@ -34,18 +34,12 @@ jobs:
         sudo apt-get update -y || true
         # install 
         sudo apt-get -y -q install asciidoctor && asciidoctor --version
+        echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+        echo "Building branch ${{ env.GIT_BRANCH }}"
 
-    - name: Build guides and index
+    - name: Build guides and indexes
       run: |
-        mkdir -p titles-generated/; 
-        echo "<html><head><title>Red Hat Developer Hub Documentation Preview</title></head><body><ul>" > titles-generated/index.html;
-        for t in $(find titles -name master.adoc | sort -uV); do
-          d=${t%/*}; d=${d/titles/titles-generated}; 
-          echo "Building $t into $d ..."; 
-          asciidoctor --destination-dir $d --backend=html5 -o index.html $t; ls -la $d;
-          echo "<li><a href=${d/titles-generated/.}>${d/titles-generated\//}</a></li>" >> titles-generated/index.html;
-        done
-        echo "</ul></body></html>" >> titles-generated/index.html
+        build/scripts/build.sh -b main
 
     # repo must be public for this to work
     - name: Deploy
@@ -55,3 +49,6 @@ jobs:
         github_token: ${{ secrets.RHDH_BOT_TOKEN }}
         publish_branch: gh-pages
         publish_dir: ./titles-generated
+        # TODO might need to put each branch in its own subfolder to avoid collding with PR branches
+        # then need to regenerate the root index.html with links to branches/PRs?
+        # destination_dir: ./${{ env.GIT_BRANCH }}
