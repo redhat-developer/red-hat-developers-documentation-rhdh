@@ -30,8 +30,10 @@ echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}
 # shellcheck disable=SC2044,SC2013
 for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
     d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}}; 
+    CMD="asciidoctor --backend=html5 -o index.html --section-numbers --failure-level ERROR --trace --warnings --destination-dir $d $t"; 
     echo "Building $t into $d ..."; 
-    asciidoctor --destination-dir "$d" --backend=html5 -o index.html "$t"; 
+    echo "  $CMD"
+    $CMD
     for im in $(grep images/ "$d/index.html" | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do 
         # echo "  Copy $im ..."; 
         IMDIR="$d/${im%/*}/"
@@ -46,14 +48,14 @@ echo "</ul></body></html>" >> titles-generated/"${BRANCH}"/index.html
 if [[ $BRANCH == "pr-"* ]]; then
   # fetch the existing https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html to add prs and branches
   curl -sSL https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pulls.html -o titles-generated/pulls.html
-  if [[ ! $(grep -q "./${BRANCH}/index.html" titles-generated/pulls.html) ]]; then
+  if [[ -z $(grep "./${BRANCH}/index.html" titles-generated/pulls.html) ]]; then
       echo "Building root index for $BRANCH in titles-generated/pulls.html ..."; 
       echo "<li><a href=./${BRANCH}/index.html>${BRANCH}</a></li>" >> titles-generated/pulls.html
   fi
 else 
   # fetch the existing https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html to add prs and branches
   curl -sSL https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html -o titles-generated/index.html
-  if [[ ! $(grep -q "./${BRANCH}/index.html" titles-generated/index.html) ]]; then
+  if [[ -z $(grep "./${BRANCH}/index.html" titles-generated/index.html) ]]; then
       echo "Building root index for $BRANCH in titles-generated/index.html ..."; 
       echo "<li><a href=./${BRANCH}/index.html>${BRANCH}</a></li>" >> titles-generated/index.html
   fi
