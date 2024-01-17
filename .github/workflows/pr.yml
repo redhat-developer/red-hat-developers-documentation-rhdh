@@ -33,18 +33,12 @@ jobs:
         sudo apt-get update -y || true
         # install 
         sudo apt-get -y -q install asciidoctor && asciidoctor --version
+        echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+        echo "Building branch ${{ env.GIT_BRANCH }}"
 
-    - name: Build guides and index
+    - name: Build guides and indexes
       run: |
-        mkdir -p titles-generated/; 
-        echo "<html><head><title>Red Hat Developer Hub Documentation Preview</title></head><body><ul>" > titles-generated/index.html;
-        for t in $(find titles -name master.adoc | sort -uV); do
-          d=${t%/*}; d=${d/titles/titles-generated}; 
-          echo "Building $t into $d ..."; 
-          asciidoctor --destination-dir $d --backend=html5 -o index.html $t; ls -la $d;
-          echo "<li><a href=${d/titles-generated/.}>${d/titles-generated\//}</a></li>" >> titles-generated/index.html;
-        done
-        echo "</ul></body></html>" >> titles-generated/index.html
+        build/scripts/build.sh -b "pr-${{ github.event.pull_request.number }}"
 
     # repo must be public for this to work
     - name: Deploy
@@ -53,9 +47,9 @@ jobs:
       with:
         github_token: ${{ secrets.RHDH_BOT_TOKEN }}
         publish_branch: gh-pages
-        publish_dir: ./titles-generated
-        # this should put index.html content into a subfolder for each PR
-        destination_dir: ./pr-${{ github.event.pull_request.number }}
+        keep_files: true
+        publish_dir: ./titles-generated # /pr-${{ github.event.pull_request.number }}
+        # destination_dir: ./pr-${{ github.event.pull_request.number }}
 
     - name: PR comment with doc preview
       uses: actions/github-script@v7
