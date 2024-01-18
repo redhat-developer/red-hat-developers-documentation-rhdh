@@ -1,0 +1,66 @@
+[id='proc-using-external-database-operator_{context}']
+//= Using an external database with the Operator
+.Procedure
+. Select the *Secrets* tab.
+
+. Click *Create* then *Key/value* secret.
+
+. Name the Secret `secrets-db-rhdh`.
+
+. Add the `POSTGRES_*` keys from the list above, along with their values.
+
+. Click Create.
+. Go to the *Topology* tab.
+. Click on the three dots of a {product-short} instance and select *Edit Backstage*.
++
+image::rhdh/rhdh-operator-edit.png[]
++
+This will load the YAML view of the {product-short} instance . 
+. Set the *spec.database.enableLocalDb* field to false and edit the *spec.database.authSecretName field* as follows:
++
+[source]
+----
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config-rhdh
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+      secrets:
+         - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt-/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: false
+    authSecretName: secrets-db-rhdh
+----
+// +
+// image::rhdh/rhdh-operator-database-example.png[]
+
+. Click *Save*.
+. Navigate back to the *Topology View* and Wait for the {product} pod to start. 
++
+image::rhdh/rhdh-operator-no-database.png[]
++
+The Postgres pod should not be created.
+
+. Click the *Open URL* option to start using the {product-short} platform with the new configuration changes.
+
+[NOTE]
+====
+If your `developer-hub` pod is stuck in a `CrashLoopBackOff` and you see the following logs:
+
+[source,log]
+----
+Loaded config from app-config-from-configmap.yaml, env
+...
+Backend failed to start up Error: Failed to connect to the database to make sure that 'backstage_plugin_auth' exists
+----
+
+Then, verify the connection information to the external database and make sure the external database is correctly configured. The credentials might not be valid or the external database might not be configured to accept connections from this instance.
+====
