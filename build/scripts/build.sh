@@ -30,7 +30,7 @@ echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}
 # shellcheck disable=SC2044,SC2013
 for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
     d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}}; 
-    CMD="asciidoctor --backend=html5 -o index.html --section-numbers --failure-level ERROR --trace --warnings --destination-dir $d $t"; 
+    CMD="asciidoctor --backend=html5 -o index.html --section-numbers -a toc --failure-level ERROR --trace --warnings --destination-dir $d $t"; 
     echo "Building $t into $d ..."; 
     echo "  $CMD"
     $CMD
