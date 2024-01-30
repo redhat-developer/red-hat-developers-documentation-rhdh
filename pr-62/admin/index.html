@@ -446,26 +446,27 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#snip-customer-support-info_admin-rhdh">Red Hat Developer Hub support</a></li>
 <li><a href="#con-rhdh-overview_admin-rhdh">1. Overview of Red Hat Developer Hub</a></li>
 <li><a href="#proc-install-rhdh-helm_admin-rhdh">2. Installing Red Hat Developer Hub using Helm Chart</a></li>
-<li><a href="#con-airgapped-environment_admin-rhdh">3. Air-gapped environment</a>
+<li><a href="#proc-install-rhdh-operator_admin-rhdh">3. Installing Red Hat Developer Hub using the Operator</a></li>
+<li><a href="#con-airgapped-environment_admin-rhdh">4. Air-gapped environment</a>
 <ul class="sectlevel2">
-<li><a href="#proc-install-rhdh-airgapped-environment_admin-rhdh">3.1. Installing Red Hat Developer Hub in an air-gapped environment</a></li>
+<li><a href="#proc-install-rhdh-airgapped-environment_admin-rhdh">4.1. Installing Red Hat Developer Hub in an air-gapped environment</a></li>
 </ul>
 </li>
-<li><a href="#con-rbac-overview_admin-rhdh">4. Role-Based Access Control (RBAC) in Red Hat Developer Hub</a>
+<li><a href="#con-rbac-overview_admin-rhdh">5. Role-Based Access Control (RBAC) in Red Hat Developer Hub</a>
 <ul class="sectlevel2">
-<li><a href="#con-rbac-config-permission-policies_admin-rhdh">4.1. Permission policies configuration</a></li>
-<li><a href="#con-rbac-rest-api_admin-rhdh">4.2. Role-based Access Control (RBAC) REST API</a></li>
+<li><a href="#con-rbac-config-permission-policies_admin-rhdh">5.1. Permission policies configuration</a></li>
+<li><a href="#con-rbac-rest-api_admin-rhdh">5.2. Role-based Access Control (RBAC) REST API</a></li>
 </ul>
 </li>
-<li><a href="#rhdh-installing-dynamic-plugins">5. Installing dynamic plugins</a>
+<li><a href="#rhdh-installing-dynamic-plugins">6. Installing dynamic plugins</a>
 <ul class="sectlevel2">
-<li><a href="#_helm-deployment">5.1. Helm deployment</a></li>
-<li><a href="#_dynamic-plugin-installation-using-the-helm-chart">5.2. Dynamic plugin installation using the Helm Chart</a></li>
-<li><a href="#_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">5.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</a></li>
-<li><a href="#_basic-configuration-of-dynamic-plugins">5.4. Basic configuration of dynamic plugins</a></li>
-<li><a href="#rhdh-supported-plugins">5.5. Dynamic plugins included in Red Hat Developer Hub</a></li>
-<li><a href="#rhdh-aap">5.6. Installation and configuration of Ansible Automation Platform</a></li>
-<li><a href="#rhdh-keycloak_admin-rhdh">5.7. Installation and configuration of Keycloak</a></li>
+<li><a href="#_helm-deployment">6.1. Helm deployment</a></li>
+<li><a href="#_dynamic-plugin-installation-using-the-helm-chart">6.2. Dynamic plugin installation using the Helm Chart</a></li>
+<li><a href="#_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">6.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</a></li>
+<li><a href="#_basic-configuration-of-dynamic-plugins">6.4. Basic configuration of dynamic plugins</a></li>
+<li><a href="#rhdh-supported-plugins">6.5. Dynamic plugins included in Red Hat Developer Hub</a></li>
+<li><a href="#rhdh-aap">6.6. Installation and configuration of Ansible Automation Platform</a></li>
+<li><a href="#rhdh-keycloak_admin-rhdh">6.7. Installation and configuration of Keycloak</a></li>
 </ul>
 </li>
 </ul>
@@ -634,7 +635,119 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 </div>
 </div>
 <div class="sect1">
-<h2 id="con-airgapped-environment_admin-rhdh">3. Air-gapped environment</h2>
+<h2 id="proc-install-rhdh-operator_admin-rhdh">3. Installing Red Hat Developer Hub using the Operator</h2>
+<div class="sectionbody">
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The Red Hat Developer Hub Operator is a Technology Preview feature only.</p>
+</div>
+<div class="paragraph">
+<p>Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.</p>
+</div>
+<div class="paragraph">
+<p>For more information on Red Hat Technology Preview features, see <a href="https://access.redhat.com/support/offerings/techpreview/">Technology Preview Features Scope</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This section describes the installation procedure for installing Red Hat Developer Hub on your OpenShift Container Platform using the Operator.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You are logged in as an administrator on the OpenShift web console.</p>
+</li>
+<li>
+<p>You have configured the appropriate roles and permissions within your project to create an application. See the <a href="https://docs.openshift.com/container-platform/4.14/applications/index.html">Red Hat OpenShift documentation on Building applications</a> for more details.</p>
+</li>
+<li>
+<p>If installing a CI build from quay.io/rhdh, make sure that:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>you have been granted permission to pull images from the <code>rhdh</code> organization on quay.io, and</p>
+</li>
+<li>
+<p>you have added your Quay token to the cluster global pull secret (<a href="https://docs.openshift.com/container-platform/4.14/openshift_images/managing_images/using-image-pull-secrets.html#images-update-global-pull-secret_using-image-pull-secrets">link</a>):</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>oc get secret/pull-secret -n openshift-config --template='{{index .data ".dockerconfigjson" | base64decode}}' &gt; /tmp/my-global-pull-secret.yaml
+
+oc registry login --registry="quay.io" --auth-basic="&lt;user&gt;:&lt;token&gt;" --to=/tmp/my-global-pull-secret.yaml
+
+oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=/tmp/my-global-pull-secret.yaml
+
+rm -f /tmp/my-global-pull-secret.yaml</pre>
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>you have added a <a href="https://gist.github.com/nickboldt/d54ba9d7264a5480d14eea6c3bd2ecdf">RHDH Operator Catalog Source</a>:</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>curl -L https://gist.githubusercontent.com/nickboldt/d54ba9d7264a5480d14eea6c3bd2ecdf/raw/76a7f166a17f86ae8e766241b9d648c9821898bb/install-rhdh-next-build.sh | bash</pre>
+</div>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In the <strong>Administrator</strong> perspective of the OpenShift web console, go to <strong>Operators</strong> → <strong>OperatorHub</strong>, search for Red Hat Developer Hub, and install the Red Hat Developer Hub Operator. For more info, see <a href="https://docs.openshift.com/container-platform/4.14/operators/admin/olm-adding-operators-to-cluster.html#olm-installing-from-operatorhub-using-web-console_olm-adding-operators-to-a-cluster">Installing from OperatorHub using the web console</a>.</p>
+</li>
+<li>
+<p>Create an OpenShift project to be used by your Backstage instance. For more information about creating a project in OpenShift, see the <a href="https://docs.openshift.com/container-platform/4.14/applications/projects/working-with-projects.html#creating-a-project-using-the-web-console_projects">Red Hat OpenShift documentation</a>.</p>
+</li>
+<li>
+<p>Administrative and non-administrative users can now use the <strong>Developer</strong> perspective in the Red Hat OpenShift web console. Switch to that perspective now.</p>
+</li>
+<li>
+<p>Click <strong>+Add</strong>.</p>
+</li>
+<li>
+<p>From the <strong>Developer Catalog</strong> panel, click <strong>Operator Backed</strong>.</p>
+</li>
+<li>
+<p>Search for <em>Backstage</em> in the search bar and select the <strong>Backstage</strong> card.</p>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Click <strong>Create</strong> and wait for the database and Red Hat Developer Hub to start.</p>
+</li>
+<li>
+<p>Click the <strong>Open URL</strong> option to start using the Red Hat Developer Hub platform.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/rhdh-operator-topology.png" alt="rhdh operator topology">
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="con-airgapped-environment_admin-rhdh">4. Air-gapped environment</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>An air-gapped environment, also known as an air-gapped network or isolated network, ensures security by physically segregating the system or network. This isolation is established to prevent unauthorized access, data transfer, or communication between the air-gapped system and external sources.</p>
@@ -643,7 +756,7 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <p>You can install the Red Hat Developer Hub in an air-gapped environment to ensure security and meet specific regulatory requirements.</p>
 </div>
 <div class="sect2">
-<h3 id="proc-install-rhdh-airgapped-environment_admin-rhdh">3.1. Installing Red Hat Developer Hub in an air-gapped environment</h3>
+<h3 id="proc-install-rhdh-airgapped-environment_admin-rhdh">4.1. Installing Red Hat Developer Hub in an air-gapped environment</h3>
 <div class="paragraph">
 <p>To install the Developer Hub in an air-gapped environment, you must have access to the <code>registry.redhat.io</code> and the registry for the air-gapped environment.</p>
 </div>
@@ -841,7 +954,7 @@ oc set image-lookup  rhdh-hub-rhel9</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="con-rbac-overview_admin-rhdh">4. Role-Based Access Control (RBAC) in Red Hat Developer Hub</h2>
+<h2 id="con-rbac-overview_admin-rhdh">5. Role-Based Access Control (RBAC) in Red Hat Developer Hub</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Role-Based Access Control is a security paradigm that restricts access to authorized users. This feature includes defining roles with specific permissions and then assigning those roles to the users.</p>
@@ -850,7 +963,7 @@ oc set image-lookup  rhdh-hub-rhel9</code></pre>
 <p>The Red Hat Developer Hub uses RBAC to improve the permission system within the platform. The RBAC feature in Developer Hub introduces an administrator role and leverages the organizational structure including teams, groups, and users by facilitating efficient access control.</p>
 </div>
 <div class="sect2">
-<h3 id="con-rbac-config-permission-policies_admin-rhdh">4.1. Permission policies configuration</h3>
+<h3 id="con-rbac-config-permission-policies_admin-rhdh">5.1. Permission policies configuration</h3>
 <div class="paragraph">
 <p>There are two approaches to configure the permission policies in Red Hat Developer Hub, including:</p>
 </div>
@@ -865,7 +978,7 @@ oc set image-lookup  rhdh-hub-rhel9</code></pre>
 </ul>
 </div>
 <div class="sect3">
-<h4 id="con-rbac-config-permission-policies-admin_admin-rhdh">4.1.1. Configuration of permission policies administrators</h4>
+<h4 id="con-rbac-config-permission-policies-admin_admin-rhdh">5.1.1. Configuration of permission policies administrators</h4>
 <div class="paragraph">
 <p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
 </div>
@@ -884,7 +997,7 @@ oc set image-lookup  rhdh-hub-rhel9</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="con-rbac-config-permission-policies-external-file_admin-rhdh">4.1.2. Configuration of permission policies defined in an external file</h4>
+<h4 id="con-rbac-config-permission-policies-external-file_admin-rhdh">5.1.2. Configuration of permission policies defined in an external file</h4>
 <div class="paragraph">
 <p>You can follow this approach of configuring the permission policies before starting the Red Hat Developer Hub. If permission policies are defined in an external file, then you can import the same file in the Developer Hub. The permission policies need to be defined in Casbin rules format. For information about the Casbin rules format, see <a href="https://casbin.org/docs/category/the-basics">Basics of Casbin rules</a>.</p>
 </div>
@@ -1034,7 +1147,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="con-rbac-rest-api_admin-rhdh">4.2. Role-based Access Control (RBAC) REST API</h3>
+<h3 id="con-rbac-rest-api_admin-rhdh">5.2. Role-based Access Control (RBAC) REST API</h3>
 <div class="paragraph">
 <p>Red Hat Developer Hub provides RBAC REST API that you can use to manage the permissions and roles in the Developer Hub. This API supports you to facilitate and automate the maintenance of Developer Hub permission policies and roles.</p>
 </div>
@@ -1178,7 +1291,7 @@ data:
 </ul>
 </div>
 <div class="sect3">
-<h4 id="proc-rbac-send-request-rbac-rest-api_admin-rhdh">4.2.1. Sending requests with the RBAC REST API using a REST client or curl utility</h4>
+<h4 id="proc-rbac-send-request-rbac-rest-api_admin-rhdh">5.2.1. Sending requests with the RBAC REST API using a REST client or curl utility</h4>
 <div class="paragraph">
 <p>The RBAC REST API enables you to interact with the permission policies and roles in Developer Hub without using the user interface. You can send RBAC REST API requests using any REST client or curl utility.</p>
 </div>
@@ -1261,7 +1374,7 @@ data:
 </div>
 </div>
 <div class="sect3">
-<h4 id="ref-rbac-rest-api-endpoints_admin-rhdh">4.2.2. Supported RBAC REST API endpoints</h4>
+<h4 id="ref-rbac-rest-api-endpoints_admin-rhdh">5.2.2. Supported RBAC REST API endpoints</h4>
 <div class="paragraph">
 <p>The RBAC REST API provides the following endpoints for managing permission policies and roles in the Developer Hub and for retrieving information about the policies and roles.</p>
 </div>
@@ -1899,13 +2012,13 @@ data:
 </div>
 </div>
 <div class="sect1">
-<h2 id="rhdh-installing-dynamic-plugins">5. Installing dynamic plugins</h2>
+<h2 id="rhdh-installing-dynamic-plugins">6. Installing dynamic plugins</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The dynamic plugin support is based on the backend plugin manager package, which is a service that scans a configured root directory (dynamicPlugins.rootDirectory in the app config) for dynamic plugin packages, and loads them dynamically.</p>
 </div>
 <div class="sect2">
-<h3 id="_helm-deployment">5.1. Helm deployment</h3>
+<h3 id="_helm-deployment">6.1. Helm deployment</h3>
 <div class="paragraph">
 <p>To deploy a Red Hat Developer Hub (RHDH) instance, you use a Helm Chart which is a flexible installation method.</p>
 </div>
@@ -1927,7 +2040,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_dynamic-plugin-installation-using-the-helm-chart">5.2. Dynamic plugin installation using the Helm Chart</h3>
+<h3 id="_dynamic-plugin-installation-using-the-helm-chart">6.2. Dynamic plugin installation using the Helm Chart</h3>
 <div class="paragraph">
 <p>You can include a dynamic plugin in RHDH by appending an entry to the <code>global.dynamic.plugins</code> list in your Helm Chart.</p>
 </div>
@@ -1951,7 +2064,7 @@ data:
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_examples">5.2.1. Examples</h4>
+<h4 id="_examples">6.2.1. Examples</h4>
 <div class="listingblock">
 <div class="title">Example 1: Enabling two plugins from a local and remote source, one requiring a specific app-config</div>
 <div class="content">
@@ -1991,7 +2104,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">5.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</h3>
+<h3 id="_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">6.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</h3>
 <div class="paragraph">
 <p>Red Hat Developer Hub (Developer Hub) is pre-loaded with a selection of dynamic plugins. Most of these dynamic plugins are disabled by default due to the need for mandatory configuration.</p>
 </div>
@@ -2034,7 +2147,7 @@ The default configuration for a plugin is extracted from the <code>dynamic-plugi
 </div>
 </div>
 <div class="sect2">
-<h3 id="_basic-configuration-of-dynamic-plugins">5.4. Basic configuration of dynamic plugins</h3>
+<h3 id="_basic-configuration-of-dynamic-plugins">6.4. Basic configuration of dynamic plugins</h3>
 <div class="paragraph">
 <p>Some dynamic plugins require environment variables to be set. If a mandatory environment variable is not set, and the plugin is enabled, then the application might fail at startup.</p>
 </div>
@@ -2061,7 +2174,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-supported-plugins">5.5. Dynamic plugins included in Red Hat Developer Hub</h3>
+<h3 id="rhdh-supported-plugins">6.5. Dynamic plugins included in Red Hat Developer Hub</h3>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -2815,7 +2928,7 @@ Kubernetes cluster.</p></td>
 </table>
 </div>
 <div class="sect2">
-<h3 id="rhdh-aap">5.6. Installation and configuration of Ansible Automation Platform</h3>
+<h3 id="rhdh-aap">6.6. Installation and configuration of Ansible Automation Platform</h3>
 <div class="paragraph">
 <p>The Ansible Automation Platform (AAP) plugin synchronizes the accessible templates including job templates and workflow job templates from AAP into your Developer Hub catalog.</p>
 </div>
@@ -2843,7 +2956,7 @@ Kubernetes cluster.</p></td>
 </table>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators">5.6.1. For administrators</h4>
+<h4 id="_for-administrators">6.6.1. For administrators</h4>
 <div class="sect4">
 <h5 id="_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</h5>
 <div class="paragraph">
@@ -2936,7 +3049,7 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users">5.6.2. For users</h4>
+<h4 id="_for-users">6.6.2. For users</h4>
 <div class="sect4">
 <h5 id="_accessing-templates-from-aap-in-developer-hub">Accessing templates from AAP in Developer Hub</h5>
 <div class="paragraph">
@@ -3011,7 +3124,7 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-keycloak_admin-rhdh">5.7. Installation and configuration of Keycloak</h3>
+<h3 id="rhdh-keycloak_admin-rhdh">6.7. Installation and configuration of Keycloak</h3>
 <div class="paragraph">
 <p>The Keycloak backend plugin, which integrates Keycloak into Developer Hub, has the following capabilities:</p>
 </div>
@@ -3026,7 +3139,7 @@ Kubernetes cluster.</p></td>
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators-2">5.7.1. For administrators</h4>
+<h4 id="_for-administrators-2">6.7.1. For administrators</h4>
 <div class="sect4">
 <h5 id="_installation">Installation</h5>
 <div class="paragraph">
@@ -3243,7 +3356,7 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users-2">5.7.2. For users</h4>
+<h4 id="_for-users-2">6.7.2. For users</h4>
 <div class="sect4">
 <h5 id="_import-of-users-and-groups-in-developer-hub-using-the-keycloak-plugin">Import of users and groups in Developer Hub using the Keycloak plugin</h5>
 <div class="paragraph">
@@ -3303,7 +3416,7 @@ Kubernetes cluster.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-01-30 13:34:45 UTC
+Last updated 2024-01-30 13:36:36 UTC
 </div>
 </div>
 </body>
