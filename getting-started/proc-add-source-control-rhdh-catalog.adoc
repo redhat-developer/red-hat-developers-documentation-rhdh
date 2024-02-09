@@ -3,19 +3,137 @@
 
 To populate the Catalog in {product}, you need to add software templates, and to add the templates, you must enable a source control such as GitHub, GitLab, or BitBucket.
 
-== Setting GitHub integration and authentication
-
-The GitHub integration and authentication is required to enable the GitHub plugins in {product}.
-
 .Prerequisites
 
 * You have a GitHub account.
-* You have an account in Red Hat OpenShift
+* You have an account on a Red Hat OpenShift cluster.
+* You have completed the *Installing Red Hat Developer Hub using Helm Chart* section, especially steps 7 and 8, or the GitHub login will fail.
+
+== Configuring GitHub authentication
+
+This configuration is required to enable GitHub OAuth login in {product}.
 
 .Procedure
 
-. In OpenShift, click *ConfigMap*.
-. Modify your `app-config-rhdh` file to include the GitHub configuration as follows:
+. Visit the main page of the GitHub Organization that you want to create the OAuth application under.
+. Click on *Settings* -> *<> Developer Settings* -> *OAuth Apps* -> *Register an application*
+. Application name should be `Developer Hub`
+. `Homepage URL` should be as follows:
+`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/`
+. `Authorization callback URL` should be as follows:
+`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame`
+
+. `Enable Device Flow` should be un-checked.
+. Click `Register application` to create your OAuth application.
+. Once the application has been created, you will need to click on `Generate a new client secret` and
+make sure to copy the client secret as it will not be shown again!
+. In OpenShift, click *ConfigMaps*.
+
+. Create a key/value secret named `github-secrets` using the following environment variables as keys and the values that you created for your GitHub OAuth application.
++
+--
+.. In Red Hat OpenShift, go to the *Secrets* tab and click *Create*.
+.. Select *Key/value secret*.
+.. Enter *Secret name* as `github-secrets`.
+.. Add environment variables as *Key* and *Value* and click *Create*.
+--
++
+--
+[cols="1,1"]
+|===
+|Key |Value 
+
+|GITHUB_APP_CLIENT_ID
+|Client ID from OAuth application
+
+|GITHUB_APP_CLIENT_SECRET
+|Client Secret from OAuth application
+
+|===
+--
+. Modify your `app-config-rhdh` ConfigMap to include the GitHub authorization configuration as follows:
++
+--
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    app:
+      title: Red Hat Developer Hub
+    auth:
+      # see https://backstage.io/docs/auth/ to learn about auth providers
+      environment: development
+      providers:
+        github:
+          development:
+            clientId: ${GITHUB_APP_CLIENT_ID}
+            clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+----
+--
+
+. Click *Save*.
+. Navigate to the *Helm* tab and select *Upgrade*.
+. Under *Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from existing Secrets*, input `github-secrets` as the value.
+. Click *Upgrade*.
+
+== Configuring GitHub integration
+
+This configuration is required to enable the GitHub plugins in {product}.
+
+.Procedure
+
+. Visit the main page of the GitHub Organization that you want to create the OAuth application under.
+. Click on *Settings* -> *<> Developer Settings* -> *GitHub Apps* -> *New GitHub App*
+. Application name should be `Developer Hub`
+. `Homepage URL` should be as follows:
+`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/`
+. `Authorization callback URL` should be as follows:
+`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame`
+. Deselect *Webhook URL* -> *Active*
+. Under the *Where can this GitHub App be installed?* section, ensure that *Only on this account* is selected.
+. Once the application has been created, you will need to click on `Generate a new client secret` and
+make sure to copy the client secret as it will not be shown again!
+. Scroll to the bottom of the page and click *Generate a private key* and download the file that is generated.
+. In OpenShift, click *ConfigMaps*.
+
+. Create (or edit) a key/value secret named `github-secrets` using the following environment variables as keys and the values that you created for your GitHub OAuth application.
++
+--
+.. In Red Hat OpenShift, go to the *Secrets* tab and click *Create*.
+.. Select *Key/value secret*.
+.. Enter *Secret name* as `github-secrets`.
+.. Add environment variables as *Key* and *Value* and click *Create*.
+--
++
+--
+[cols="1,1"]
+|===
+|Key |Value 
+
+|GITHUB_APP_APP_ID
+|App ID from GitHub application
+
+|GITHUB_APP_CLIENT_ID
+|Client ID from GitHub application
+
+|GITHUB_APP_CLIENT_SECRET
+|Client Secret from GitHub application
+
+|GITHUB_APP_WEBHOOK_URL
+|Enter "none"
+
+|GITHUB_APP_WEBHOOK_SECRET
+|Enter "none"
+
+|GITHUB_APP_PRIVATE_KEY
+|Upload the private key that was downloaded
+|===
+--
+. Modify your `app-config-rhdh` ConfigMap to include the GitHub integration configuration as follows:
 +
 --
 [source]
@@ -39,46 +157,10 @@ data:
               webhookSecret: ${GITHUB_APP_WEBHOOK_SECRET}
               privateKey: |
                 ${GITHUB_APP_PRIVATE_KEY}
-    auth:
-      # see https://backstage.io/docs/auth/ to learn about auth providers
-      environment: development
-      providers:
-        github:
-          development:
-            clientId: ${GITHUB_APP_CLIENT_ID}
-            clientSecret: ${GITHUB_APP_CLIENT_SECRET}
 ----
+
 --
-
-. Click *Save*.
-. Create a key or value Secret file named `rhdh-secrets` using the environment variables as keys from the previous code snippet by following the steps below:
-+
---
-.. In Red Hat OpenShift, go to the *Secrets* tab and click *Create*.
-.. Enter *Secret name* as `rhdh-secrets`.
-.. Add environment variables as *Key* and *Value* and click *Create*.
---
-
-. To log in using your GitHub application, ensure that the *Callback URL* in your GitHub application is configured as follows:
-+
---
-`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame`
-
-In the previous example of Callback URL, `OPENSHIFT_ROUTE_HOST` is the API URL added into the *Root Schema -> global -> clusterRouteBase* field.
-
-The following is an example of the Callback URL:
-
-image::rhdh/example-callback-url.png[]
-
-[NOTE]
-====
-To access the GitHub security insights widget on the Overview page in {product-short}, ensure that your GitHub application has Read-only Dependabot Alerts permissions.
-====
---
-
-. Navigate to the *Helm* tab and select *Upgrade*.
-. Under *Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from Secrets*, add `rhdh-secrets` as value.
-. Click *Upgrade*.
+. Click on *Toplogy* -> *developer hub* -> *Actions* (dropdown) -> *Restart rollout*
 
 == Enabling GitHub discovery in {product}
 
