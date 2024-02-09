@@ -646,7 +646,7 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <div class="sect2">
 <h3 id="proc-add-custom-app-file-openshift_rhdh-getting-started">3.1. Adding a custom application configuration file to Red Hat OpenShift</h3>
 <div class="paragraph">
-<p>To access the Red Hat Developer Hub, you must add a custom application configuration file to OpenShift. In OpenShift, you can use the following content as a base template to create ConfigMap named <code>app-config-rhdh</code>:</p>
+<p>To access the Red Hat Developer Hub, you must add a custom application configuration file to OpenShift. In OpenShift, you can use the following content as a base template to create a ConfigMap named <code>app-config-rhdh</code>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -909,22 +909,46 @@ metadata:
 data:
   app-config-rhdh.yaml: |
     ...
-    catalog:
-      providers:
-        github:
-          myorg:
-            organization: '${GITHUB_ORG}'
-	   schedule:
-	     # supports cron, ISO duration, "human duration" (used below)
-	     frequency: { minutes: 30}
-	     # supports ISO duration, "human duration (used below)
-	     timeout: { minutes: 3}
-	     initialDelay: { seconds: 15}
+      catalog:
+        providers:
+          github:
+            providerId:
+              organization: '${GITHUB_ORG}'
+            schedule:
+              frequency:
+                minutes: 30
+              initialDelay:
+                seconds: 15
+              timeout:
+                minutes: 3
     ...</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>In the previous code, replace <code>${GITHUB_ORG}</code> with the GitHub organization from where you want to discover the components.</p>
+<p>In the previous code, replace <code>${GITHUB_ORG}</code> with the GitHub organization from where you want to discover the components. Also, if there is a single provider, then following code can be added in the ConfigMap:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    ...
+    catalog:
+      providers:
+        github:
+          organization: ${GITHUB_ORG}
+          schedule:
+            frequency: { minutes: 1 }
+            timeout: { minutes: 1 }
+            initialDelay: { seconds: 100 }
+    ...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>providerId</code> in the previous code is required to identify the provider when there is a list of them.</p>
 </div>
 </div>
 </div>
@@ -2279,7 +2303,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-01-25 11:47:23 UTC
+Last updated 2024-02-09 07:57:29 UTC
 </div>
 </div>
 </body>
