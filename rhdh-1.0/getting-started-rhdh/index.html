@@ -510,7 +510,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </ul>
 </div>
 <div class="paragraph">
-<p>The Red Hat Developer Hub Helm chart is available in the Helm catalog in Red Hat OpenShift Dedicated, OpenShift Container Platform (OCP) or on ArtifactHUB.</p>
+<p>The Red Hat Developer Hub Helm Chart is available in the Helm catalog in Red Hat OpenShift Dedicated and OpenShift Container Platform (OCP).</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -529,7 +529,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li>
 <p>Create a project in the OpenShift, if not present.</p>
 <div class="paragraph">
-<p>For more information about creating a project in OpenShift, see link: <a href="https://docs.openshift.com/container-platform/3.11/dev_guide/projects.html#create-a-project">Red Hat OpenShift documentation</a>.</p>
+<p>For more information about creating a project in OpenShift, see <a href="https://docs.openshift.com/container-platform/4.14/applications/projects/working-with-projects.html#odc-creating-projects-using-developer-perspective_projects">Red Hat OpenShift documentation</a>.</p>
 </div>
 </li>
 <li>
@@ -558,7 +558,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <p>In the previous steps, the information about the host is copied, which is accessed by the Developer Hub backend.</p>
 </div>
 <div class="paragraph">
-<p>When an OCP route is generated automatically, the host value for the route is inferred and the same host information is sent to the Developer Hub Also, if the Developer Hub is present on a custom domain by setting the host manually using values, the custom host takes precedence.</p>
+<p>When an OCP route is generated automatically, the host value for the route is inferred and the same host information is sent to the Developer Hub. Also, if the Developer Hub is present on a custom domain by setting the host manually using values, the custom host takes precedence.</p>
 </div>
 </div>
 </div>
@@ -622,7 +622,7 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <div class="sect2">
 <h3 id="proc-add-custom-app-file-openshift_rhdh-getting-started">3.1. Adding a custom application configuration file to Red Hat OpenShift</h3>
 <div class="paragraph">
-<p>To access the Red Hat Developer Hub, you must a custom application configuration file to OpenShift. In OpenShift, you can use the following content as a base template to create ConfigMap named <code>app-config-rhdh</code>:</p>
+<p>To access the Red Hat Developer Hub, you must add a custom application configuration file to OpenShift. In OpenShift, you can use the following content as a base template to create a ConfigMap named <code>app-config-rhdh</code>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -827,7 +827,7 @@ data:
 <p>Navigate to the <strong>Helm</strong> tab and select <strong>Upgrade</strong>.</p>
 </li>
 <li>
-<p>Under <strong>Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from Secrets</strong>, add <code>rhdh-secrets</code> as value.</p>
+<p>Under <strong>Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from existing Secrets</strong>, add <code>rhdh-secrets</code> as value.</p>
 </li>
 <li>
 <p>Click <strong>Upgrade</strong>.</p>
@@ -885,22 +885,46 @@ metadata:
 data:
   app-config-rhdh.yaml: |
     ...
-    catalog:
-      providers:
-        github:
-          myorg:
-            organization: '${GITHUB_ORG}'
-	   schedule:
-	     # supports cron, ISO duration, "human duration" (used below)
-	     frequency: { minutes: 30}
-	     # supports ISO duration, "human duration (used below)
-	     timeout: { minutes: 3}
-	     initialDelay: { seconds: 15}
+      catalog:
+        providers:
+          github:
+            providerId:
+              organization: '${GITHUB_ORG}'
+            schedule:
+              frequency:
+                minutes: 30
+              initialDelay:
+                seconds: 15
+              timeout:
+                minutes: 3
     ...</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>In the previous code, replace <code>${GITHUB_ORG}</code> with the GitHub organization from where you want to discover the components.</p>
+<p>In the previous code, replace <code>${GITHUB_ORG}</code> with the GitHub organization from where you want to discover the components. Also, if there is a single provider, then following code can be added in the ConfigMap:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    ...
+    catalog:
+      providers:
+        github:
+          organization: ${GITHUB_ORG}
+          schedule:
+            frequency: { minutes: 1 }
+            timeout: { minutes: 1 }
+            initialDelay: { seconds: 100 }
+    ...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>providerId</code> in the previous code is required to identify the provider when there is a list of them.</p>
 </div>
 </div>
 </div>
@@ -1044,7 +1068,7 @@ data:
 </ul>
 </div>
 <div class="paragraph">
-<p>This section describes how you can deploy the <code>backstage-customization-provider</code> service onto the cluster where the Developer Hub Helm chart is deployed.</p>
+<p>This section describes how you can deploy the <code>backstage-customization-provider</code> service onto the cluster where the Developer Hub Helm Chart is deployed.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -2255,7 +2279,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-01-18 14:06:50 UTC
+Last updated 2024-02-15 09:22:57 UTC
 </div>
 </div>
 </body>
