@@ -1,4 +1,4 @@
-= Nexus Repository Manager
+= Installation and configuration of Nexus Repository Manager
 
 The Nexus Repository Manager plugin displays the information about your build artifacts in your {product-short} application. The build artifacts are available in the Nexus Repository Manager.
 
@@ -18,19 +18,20 @@ Additional detail on how Red Hat provides support for bundled community dynamic 
 === Installing and configuring the Nexus Repository Manager plugin
 
 .Installation
-ifeval::[{doc-show-dynamic-content} == true]
-include::../../../artifacts/rhdh-plugins-reference/nexus-repository-manager/nexus-repository-manager-install-dynamic-plugin.adoc[leveloffset=+2]
-endif::[]
+The Nexus Repository Manager plugin is pre-loaded in {product-short} with basic configuration properties. To enable it, set the disabled property to `false` as follows:
 
-ifeval::[{doc-show-dynamic-content} == false]
-. Run the following command to install the Nexus Repository Manager plugin:
-+
-[source,console]
+[source,yaml]
 ----
-yarn workspace app add @redhat/backstage-plugin-nexus-repository-manager
+global: 
+  dynamic: 
+    includes: 
+      - dynamic-plugins.default.yaml
+    plugins: 
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-nexus-repository-manager
+        disabled: false
 ----
-endif::[]
 
+.Configuration
 . Set the proxy to the desired Nexus Repository Manager server in the `app-config.yaml` file as follows:
 +
 [source,yaml]
@@ -63,39 +64,6 @@ nexusRepositoryManager:
 nexusRepositoryManager:
     experimentalAnnotations: true
 ----
-ifeval::[{doc-show-dynamic-content} == false]
-Replace the `isNexusRepositoryManagerAvailable` import with `isNexusRepositoryManagerExperimentalAvailable` when adding the `<NexusRepositoryManagerPage />` component.
-
-[NOTE]
-====
-The annotations mentioned in this step are not thoroughly tested.
-====
-
-. Enable an additional tab on the entity view page in `packages/app/src/components/catalog/EntityPage.tsx` file as follows:
-+
-[source]
-----
-/* highlight-add-next-line */
-import {
-    isNexusRepositoryManagerAvailable,
-    NexusRepositoryManagerPage,
-} from "@redhat/backstage-plugin-nexus-repository-manager";
-
-const serviceEntityPage = (
-    <EntityPageLayout>
-        {/* ... */}
-        {/* highlight-add-next-line */}
-        <EntityLayout.Route
-            if={isNexusRepositoryManagerAvailable}
-            path="/build-artifacts"
-            title="Build Artifacts"
-        >
-            <NexusRepositoryManagerPage />
-        </EntityLayout.Route>
-    </EntityPageLayout>
-);
-----
-endif::[]
 
 . Annotate your entity using the following annotations:
 +
@@ -107,6 +75,9 @@ metadata:
     # example
     nexus-repository-manager/docker.image-name: `<ORGANIZATION>/<REPOSITORY>`,
 ----
+
+For additional information about installing and configuring dynamic plugins, see the xref:rhdh-installing-dynamic-plugins[Installing dynamic plugins] section.
+
 
 == For users
 
@@ -127,5 +98,5 @@ The Nexus Repository Manager is a front-end plugin that enables you to view the 
 --
 The *BUILD ARTIFACTS* tab contains a list of build artifacts and related information, such as *VERSION*, *REPOSITORY*, *REPOSITORY TYPE*, *MANIFEST*, *MODIFIED*, and *SIZE*.
 
-image::nexus-repository-manager.png[nexus-repository-manager-tab]
+image::rhdh-plugins-reference/nexus-repository-manager.png[nexus-repository-manager-tab]
 --
