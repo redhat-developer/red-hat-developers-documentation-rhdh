@@ -553,11 +553,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li>
 <p>Create a project in the OpenShift, if not present.</p>
 <div class="paragraph">
-<p>For more information about creating a project in OpenShift, see <a href="https://docs.openshift.com/container-platform/4.14/applications/projects/working-with-projects.html#odc-creating-projects-using-developer-perspective_projects">Red Hat OpenShift documentation</a>.</p>
+<p>For more information about creating a project in OpenShift, see link: <a href="https://docs.openshift.com/container-platform/3.11/dev_guide/projects.html#create-a-project">Red Hat OpenShift documentation</a>.</p>
 </div>
 </li>
 <li>
-<p>Switch to <strong>Developer</strong> mode on your Red Hat OpenShift web console.</p>
+<p>Switch to <strong>Developer</strong> perspective on your Red Hat OpenShift web console.</p>
 </li>
 <li>
 <p>Click <strong>+Add</strong>.</p>
@@ -715,12 +715,6 @@ data:
 <li>
 <p>Click <strong>Upgrade</strong>.</p>
 </li>
-<li>
-<p>Alternatively, go to the YAML view for the helm values and set the value of <code>upstream.backstage.command</code> to <code>[]</code>.</p>
-</li>
-<li>
-<p>Click <strong>Upgrade</strong>.</p>
-</li>
 </ol>
 </div>
 </div>
@@ -729,11 +723,6 @@ data:
 <div class="paragraph">
 <p>To populate the Catalog in Red Hat Developer Hub, you need to add software templates, and to add the templates, you must enable a source control such as GitHub, GitLab, or BitBucket.</p>
 </div>
-<div class="sect3">
-<h4 id="_setting-github-integration-and-authentication">3.2.1. Setting GitHub integration and authentication</h4>
-<div class="paragraph">
-<p>The GitHub integration and authentication is required to enable the GitHub plugins in Red Hat Developer Hub.</p>
-</div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
 <ul>
@@ -741,18 +730,269 @@ data:
 <p>You have a GitHub account.</p>
 </li>
 <li>
-<p>You have an account in Red Hat OpenShift</p>
+<p>You have an account on the Red Hat OpenShift cluster.</p>
+</li>
+<li>
+<p>You have installed the Developer Hub, otherwise the GitHub login fails. For more information about installation, see <a href="#proc-install-rhdh-helm_rhdh-getting-started">Installing Red Hat Developer Hub using Helm Chart</a>.</p>
 </li>
 </ul>
+</div>
+<div class="sect3">
+<h4 id="_configuring-github-authentication">3.2.1. Configuring GitHub authentication</h4>
+<div class="paragraph">
+<p>The configuration of GitHub authentication is required to enable the GitHub OAuth login in Developer Hub.</p>
 </div>
 <div class="olist arabic">
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>In OpenShift, click <strong>ConfigMap</strong>.</p>
+<p>In the Red Hat OpenShift cluster, navigate to the main page of the GitHub organization where you want to create the OAuth application.</p>
 </li>
 <li>
-<p>Modify your <code>app-config-rhdh</code> file to include the GitHub configuration as follows:</p>
+<p>Click <strong>Settings</strong> &#8594; <strong>&lt;&gt; Developer Settings</strong> &#8594; <strong>OAuth Apps</strong> &#8594; <strong>Register an application</strong></p>
+</li>
+<li>
+<p>Enter the application name as <code>Developer Hub</code>.</p>
+</li>
+<li>
+<p>Add the following URL as the <strong>Homepage URL</strong>:</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p><code><a href="https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/" class="bare">https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/</a></code></p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Add the following URL as <strong>Authorization callback URL</strong>:</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p><code><a href="https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/api/auth/github/handler/frame" class="bare">https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/api/auth/github/handler/frame</a></code></p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Uncheck the <strong>Enable Device Flow</strong> checkbox.</p>
+</li>
+<li>
+<p>Click <strong>Register application</strong> to create your OAuth application.</p>
+</li>
+<li>
+<p>After creating the application, click <strong>Generate a new client secret</strong> and copy the generated client secret.</p>
+</li>
+<li>
+<p>In OpenShift, click <strong>ConfigMaps</strong>.</p>
+</li>
+<li>
+<p>Generate a key/value secret named 'github-secrets' using the provided environment variables as keys, and input the values you generated for your GitHub OAuth application:</p>
+<div class="openblock">
+<div class="content">
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>In Red Hat OpenShift, go to the <strong>Secrets</strong> tab and click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Select <strong>Key/value secret</strong>.</p>
+</li>
+<li>
+<p>Enter <strong>Secret name</strong> as <code>github-secrets</code>.</p>
+</li>
+<li>
+<p>Add environment variables as <strong>Key</strong> and <strong>Value</strong> and click <strong>Create</strong>.</p>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 1. Environment variables</caption>
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Key</th>
+<th class="tableblock halign-left valign-top">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_CLIENT_ID</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Client ID from OAuth application</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_CLIENT_SECRET</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Client Secret from OAuth application</p></td>
+</tr>
+</tbody>
+</table>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Modify your <code>app-config-rhdh</code> ConfigMap to include the GitHub authentication configuration as follows:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    app:
+      title: Red Hat Developer Hub
+    auth:
+      # see https://backstage.io/docs/auth/ to learn about auth providers
+      environment: development
+      providers:
+        github:
+          development:
+            clientId: ${GITHUB_APP_CLIENT_ID}
+            clientSecret: ${GITHUB_APP_CLIENT_SECRET}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Save</strong>.</p>
+</li>
+<li>
+<p>Navigate to the <strong>Helm</strong> tab and select <strong>Upgrade</strong>.</p>
+</li>
+<li>
+<p>Under <strong>Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from existing Secrets</strong>, enter <code>github-secrets</code> as the value.</p>
+</li>
+<li>
+<p>Click <strong>Upgrade</strong>.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_configuring-github-integration">3.2.2. Configuring GitHub integration</h4>
+<div class="paragraph">
+<p>The configuration of GitHub is required to enable the GitHub plugins in Developer Hub.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In the Red Hat OpenShift cluster, navigate to the main page of the GitHub organization where you want to create the OAuth application.</p>
+</li>
+<li>
+<p>Click <strong>Settings</strong> &#8594; <strong>&lt;&gt; Developer Settings</strong> &#8594; <strong>GitHub Apps</strong> &#8594; <strong>New GitHub App</strong>.</p>
+</li>
+<li>
+<p>Enter the application name as <code>Developer Hub</code>.</p>
+</li>
+<li>
+<p>Add the following URL as the <strong>Homepage URL</strong>:</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p><code><a href="https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/" class="bare">https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/</a></code></p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Add the following URL as <strong>Authorization callback URL</strong>:</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p><code><a href="https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/api/auth/github/handler/frame" class="bare">https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/api/auth/github/handler/frame</a></code></p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Deselect <strong>Webhook URL</strong> &#8594; <strong>Active</strong>.</p>
+</li>
+<li>
+<p>Under the <strong>Where can this GitHub App be installed?</strong> section, ensure that <strong>Only on this account</strong> is selected.</p>
+</li>
+<li>
+<p>Click <strong>Register application</strong>.</p>
+</li>
+<li>
+<p>After creating the application, click <strong>Generate a new client secret</strong> and copy the generated client secret.</p>
+</li>
+<li>
+<p>Click <strong>Generate a private key</strong> at the bottom of the page and download the generated file.</p>
+</li>
+<li>
+<p>In OpenShift, click <strong>ConfigMaps</strong>.</p>
+</li>
+<li>
+<p>Generate a key/value secret named 'github-secrets' using the provided environment variables as keys, and input the values you generated for your GitHub OAuth application:</p>
+<div class="openblock">
+<div class="content">
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>In Red Hat OpenShift, go to the <strong>Secrets</strong> tab and click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Select <strong>Key/value secret</strong>.</p>
+</li>
+<li>
+<p>Enter <strong>Secret name</strong> as <code>github-secrets</code>.</p>
+</li>
+<li>
+<p>Add environment variables as <strong>Key</strong> and <strong>Value</strong> and click <strong>Create</strong>.</p>
+</li>
+</ol>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 2. Environment variables</caption>
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Key</th>
+<th class="tableblock halign-left valign-top">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_APP_ID</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">App ID from GitHub application</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_CLIENT_ID</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Client ID from GitHub application</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_CLIENT_SECRET</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Client Secret from GitHub application</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_WEBHOOK_URL</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enter "none"</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_WEBHOOK_SECRET</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enter "none"</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GITHUB_APP_PRIVATE_KEY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Upload the private key that was downloaded</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</li>
+<li>
+<p>Modify your <code>app-config-rhdh</code> ConfigMap to include the GitHub integration configuration as follows:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
@@ -775,92 +1015,20 @@ data:
               webhookUrl: ${GITHUB_APP_WEBHOOK_URL}
               webhookSecret: ${GITHUB_APP_WEBHOOK_SECRET}
               privateKey: |
-                ${GITHUB_APP_PRIVATE_KEY}
-    auth:
-      # see https://backstage.io/docs/auth/ to learn about auth providers
-      environment: development
-      providers:
-        github:
-          development:
-            clientId: ${GITHUB_APP_CLIENT_ID}
-            clientSecret: ${GITHUB_APP_CLIENT_SECRET}</code></pre>
+                ${GITHUB_APP_PRIVATE_KEY}</code></pre>
 </div>
 </div>
 </div>
 </div>
 </li>
 <li>
-<p>Click <strong>Save</strong>.</p>
-</li>
-<li>
-<p>Create a key or value Secret file named <code>rhdh-secrets</code> using the environment variables as keys from the previous code snippet by following the steps below:</p>
-<div class="openblock">
-<div class="content">
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>In Red Hat OpenShift, go to the <strong>Secrets</strong> tab and click <strong>Create</strong>.</p>
-</li>
-<li>
-<p>Enter <strong>Secret name</strong> as <code>rhdh-secrets</code>.</p>
-</li>
-<li>
-<p>Add environment variables as <strong>Key</strong> and <strong>Value</strong> and click <strong>Create</strong>.</p>
-</li>
-</ol>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>To log in using your GitHub application, ensure that the <strong>Callback URL</strong> in your GitHub application is configured as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p><code><a href="https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/api/auth/github/handler/frame" class="bare">https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_ROUTE_HOST&gt;/api/auth/github/handler/frame</a></code></p>
-</div>
-<div class="paragraph">
-<p>In the previous example of Callback URL, <code>OPENSHIFT_ROUTE_HOST</code> is the API URL added into the <strong>Root Schema &#8594; global &#8594; clusterRouteBase</strong> field.</p>
-</div>
-<div class="paragraph">
-<p>The following is an example of the Callback URL:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh/example-callback-url.png" alt="example callback url">
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>To access the GitHub security insights widget on the Overview page in Developer Hub, ensure that your GitHub application has Read-only Dependabot Alerts permissions.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Navigate to the <strong>Helm</strong> tab and select <strong>Upgrade</strong>.</p>
-</li>
-<li>
-<p>Under <strong>Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from existing Secrets</strong>, add <code>rhdh-secrets</code> as value.</p>
-</li>
-<li>
-<p>Click <strong>Upgrade</strong>.</p>
+<p>Click <strong>Toplogy</strong> &#8594; <strong>developer hub</strong> &#8594; <strong>Actions</strong> (drop-down) &#8594; <strong>Restart rollout</strong>.</p>
 </li>
 </ol>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_enabling-github-discovery-in-red-hat-developer-hub">3.2.2. Enabling GitHub discovery in Red Hat Developer Hub</h4>
+<h4 id="_enabling-github-discovery-in-red-hat-developer-hub">3.2.3. Enabling GitHub discovery in Red Hat Developer Hub</h4>
 <div class="paragraph">
 <p>You can enable GitHub discoverability for your components in Developer Hub, such as any repositories that contain <code>catalog-info.yaml</code> file.</p>
 </div>
@@ -868,7 +1036,7 @@ data:
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have set up the GitHub integration. For more information, see <a href="#_setting-github-integration-and-authentication">Setting GitHub integration and authentication</a>.</p>
+<p>You have set up the GitHub integration. For more information, see <a href="#Setting GitHub integration and authentication">[Setting GitHub integration and authentication]</a>.</p>
 </li>
 </ul>
 </div>
@@ -960,7 +1128,7 @@ data:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_enabling-github-organization-member-discovery-in-red-hat-developer-hub">3.2.3. Enabling GitHub organization member discovery in Red Hat Developer Hub</h4>
+<h4 id="_enabling-github-organization-member-discovery-in-red-hat-developer-hub">3.2.4. Enabling GitHub organization member discovery in Red Hat Developer Hub</h4>
 <div class="paragraph">
 <p>You can also enable GitHub discoverability for the members of your GitHub organization.</p>
 </div>
@@ -968,7 +1136,7 @@ data:
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have set up the GitHub integration. For more information, see <a href="#_setting-github-integration-and-authentication">Setting GitHub integration and authentication</a>.</p>
+<p>You have set up the GitHub integration. For more information, see <a href="#Setting GitHub integration and authentication">[Setting GitHub integration and authentication]</a>.</p>
 </li>
 </ul>
 </div>
@@ -1724,7 +1892,7 @@ data:
 <p>Retrieves information of a specified record from a table in the Developer Hub.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 1. Input parameters</caption>
+<caption class="title">Table 3. Input parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 25%;">
@@ -1785,7 +1953,7 @@ data:
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 2. Output parameters</caption>
+<caption class="title">Table 4. Output parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 35%;">
@@ -1817,7 +1985,7 @@ data:
 <p>Retrieves information about multiple records from a table in the Developer Hub.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 3. Input parameters</caption>
+<caption class="title">Table 5. Input parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 25%;">
@@ -1902,7 +2070,7 @@ data:
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 4. Output parameters</caption>
+<caption class="title">Table 6. Output parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 35%;">
@@ -1934,7 +2102,7 @@ data:
 <p>Creates a record in a table in the Developer Hub.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 5. Input parameters</caption>
+<caption class="title">Table 7. Input parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 25%;">
@@ -2001,7 +2169,7 @@ data:
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 6. Output parameters</caption>
+<caption class="title">Table 8. Output parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 35%;">
@@ -2033,7 +2201,7 @@ data:
 <p>Modifies a record in a table in the Developer Hub.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 7. Input parameters</caption>
+<caption class="title">Table 9. Input parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 25%;">
@@ -2112,7 +2280,7 @@ data:
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 8. Output parameters</caption>
+<caption class="title">Table 10. Output parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 35%;">
@@ -2144,7 +2312,7 @@ data:
 <p>Updates a record in a table in the Developer Hub.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 9. Input parameters</caption>
+<caption class="title">Table 11. Input parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 25%;">
@@ -2223,7 +2391,7 @@ data:
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 10. Output parameters</caption>
+<caption class="title">Table 12. Output parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 35%;">
@@ -2255,7 +2423,7 @@ data:
 <p>Deletes a record from a table in the Developer Hub.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 11. Input parameters</caption>
+<caption class="title">Table 13. Input parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 25%;">
@@ -2303,7 +2471,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-02-26 14:27:31 UTC
+Last updated 2024-03-04 15:40:02 UTC
 </div>
 </div>
 </body>
