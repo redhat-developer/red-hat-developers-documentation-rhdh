@@ -466,6 +466,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#rhdh-supported-plugins">5.5. Dynamic plugins included in Red Hat Developer Hub</a></li>
 <li><a href="#rhdh-aap">5.6. Installation and configuration of Ansible Automation Platform</a></li>
 <li><a href="#rhdh-keycloak_admin-rhdh">5.7. Installation and configuration of Keycloak</a></li>
+<li><a href="#rhdh-nexus">5.8. Installation and configuration of Nexus Repository Manager</a></li>
 </ul>
 </li>
 </ul>
@@ -3298,12 +3299,161 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="rhdh-nexus">5.8. Installation and configuration of Nexus Repository Manager</h3>
+<div class="paragraph">
+<p>The Nexus Repository Manager plugin displays the information about your build artifacts in your Developer Hub application. The build artifacts are available in the Nexus Repository Manager.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The Nexus Repository Manager plugin is a Technology Preview feature only.</p>
+</div>
+<div class="paragraph">
+<p>Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.</p>
+</div>
+<div class="paragraph">
+<p>For more information on Red Hat Technology Preview features, see <a href="https://access.redhat.com/support/offerings/techpreview/">Technology Preview Features Scope</a>.</p>
+</div>
+<div class="paragraph">
+<p>Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the <a href="https://access.redhat.com/policy/developerhub-support-policy">Red Hat Developer Support Policy</a> page.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_for-administrators-3">5.8.1. For administrators</h4>
+<div class="sect4">
+<h5 id="_installing-and-configuring-the-nexus-repository-manager-plugin">Installing and configuring the Nexus Repository Manager plugin</h5>
+<div class="paragraph">
+<div class="title">Installation</div>
+<p>The Nexus Repository Manager plugin is pre-loaded in Developer Hub with basic configuration properties. To enable it, set the disabled property to <code>false</code> as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-nexus-repository-manager
+        disabled: false</code></pre>
+</div>
+</div>
+<div class="olist arabic">
+<div class="title">Configuration</div>
+<ol class="arabic">
+<li>
+<p>Set the proxy to the desired Nexus Repository Manager server in the <code>app-config.yaml</code> file as follows:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">proxy:
+    '/nexus-repository-manager':
+    target: 'https://&lt;NEXUS_REPOSITORY_MANAGER_URL&gt;'
+    headers:
+        X-Requested-With: 'XMLHttpRequest'
+        # Uncomment the following line to access a private Nexus Repository Manager using a token
+        # Authorization: 'Bearer &lt;YOUR TOKEN&gt;'
+    changeOrigin: true
+    # Change to "false" in case of using self hosted Nexus Repository Manager instance with a self-signed certificate
+    secure: true</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Optional: Change the base URL of Nexus Repository Manager proxy as follows:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">nexusRepositoryManager:
+    # default path is `/nexus-repository-manager`
+    proxyPath: /custom-path</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Optional: Enable the following experimental annotations:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">nexusRepositoryManager:
+    experimentalAnnotations: true</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Annotate your entity using the following annotations:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">metadata:
+    annotations:
+    # insert the chosen annotations here
+    # example
+    nexus-repository-manager/docker.image-name: `&lt;ORGANIZATION&gt;/&lt;REPOSITORY&gt;`,</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>For additional information about installing and configuring dynamic plugins, see the <a href="#rhdh-installing-dynamic-plugins">Installing dynamic plugins</a> section.</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_for-users-3">5.8.2. For users</h4>
+<div class="sect4">
+<h5 id="_using-the-nexus-repository-manager-plugin-in-developer-hub">Using the Nexus Repository Manager plugin in Developer Hub</h5>
+<div class="paragraph">
+<p>The Nexus Repository Manager is a front-end plugin that enables you to view the information about build artifacts.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>Your Developer Hub application is installed and running.</p>
+</li>
+<li>
+<p>You have installed the Nexus Repository Manager plugin. For the installation process, see <a href="#_installing-and-configuring-the-nexus-repository-manager-plugin">Installing and configuring the Nexus Repository Manager plugin</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Open your Developer Hub application and select a component from the <strong>Catalog</strong> page.</p>
+</li>
+<li>
+<p>Go to the <strong>BUILD ARTIFACTS</strong> tab.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>The <strong>BUILD ARTIFACTS</strong> tab contains a list of build artifacts and related information, such as <strong>VERSION</strong>, <strong>REPOSITORY</strong>, <strong>REPOSITORY TYPE</strong>, <strong>MANIFEST</strong>, <strong>MODIFIED</strong>, and <strong>SIZE</strong>.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/nexus-repository-manager.png" alt="nexus-repository-manager-tab">
+</div>
+</div>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-02-27 06:05:26 UTC
+Last updated 2024-03-04 15:41:11 UTC
 </div>
 </div>
 </body>
