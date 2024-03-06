@@ -451,15 +451,22 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#proc-install-rhdh-airgapped-environment_admin-rhdh">3.1. Installing Red Hat Developer Hub in an air-gapped environment</a></li>
 </ul>
 </li>
-<li><a href="#rhdh-installing-dynamic-plugins">4. Installing dynamic plugins</a>
+<li><a href="#con-rbac-overview_admin-rhdh">4. Role-Based Access Control (RBAC) in Red Hat Developer Hub</a>
 <ul class="sectlevel2">
-<li><a href="#_helm-deployment">4.1. Helm deployment</a></li>
-<li><a href="#_dynamic-plugin-installation-using-the-helm-chart">4.2. Dynamic plugin installation using the Helm Chart</a></li>
-<li><a href="#_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">4.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</a></li>
-<li><a href="#_basic-configuration-of-dynamic-plugins">4.4. Basic configuration of dynamic plugins</a></li>
-<li><a href="#rhdh-supported-plugins">4.5. Dynamic plugins included in Red Hat Developer Hub</a></li>
-<li><a href="#rhdh-aap">4.6. Installation and configuration of Ansible Automation Platform</a></li>
-<li><a href="#rhdh-keycloak_admin-rhdh">4.7. Installation and configuration of Keycloak</a></li>
+<li><a href="#con-rbac-config-permission-policies_admin-rhdh">4.1. Permission policies configuration</a></li>
+<li><a href="#proc-rbac-ui-manage-roles_admin-rhdh">4.2. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</a></li>
+<li><a href="#con-rbac-rest-api_admin-rhdh">4.3. Role-based Access Control (RBAC) REST API</a></li>
+</ul>
+</li>
+<li><a href="#rhdh-installing-dynamic-plugins">5. Installing dynamic plugins</a>
+<ul class="sectlevel2">
+<li><a href="#_helm-deployment">5.1. Helm deployment</a></li>
+<li><a href="#_dynamic-plugin-installation-using-the-helm-chart">5.2. Dynamic plugin installation using the Helm Chart</a></li>
+<li><a href="#_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">5.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</a></li>
+<li><a href="#_basic-configuration-of-dynamic-plugins">5.4. Basic configuration of dynamic plugins</a></li>
+<li><a href="#rhdh-supported-plugins">5.5. Dynamic plugins included in Red Hat Developer Hub</a></li>
+<li><a href="#rhdh-aap">5.6. Installation and configuration of Ansible Automation Platform</a></li>
+<li><a href="#rhdh-keycloak_admin-rhdh">5.7. Installation and configuration of Keycloak</a></li>
 </ul>
 </li>
 </ul>
@@ -831,30 +838,1284 @@ oc set image-lookup  rhdh-hub-rhel9</code></pre>
 </li>
 </ol>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="con-rbac-overview_admin-rhdh">4. Role-Based Access Control (RBAC) in Red Hat Developer Hub</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>Unresolved directive in title-admin.adoc - include::admin/con-rbac-overview.adoc[leveloffset=+1]
-Unresolved directive in title-admin.adoc - include::admin/con-rbac-config-permission-policies.adoc[leveloffset=+2]
-Unresolved directive in title-admin.adoc - include::admin/con-rbac-config-permission-policies-admin.adoc[leveloffset=+3]
-Unresolved directive in title-admin.adoc - include::admin/con-rbac-config-permission-policies-external-file.adoc[leveloffset=+3]
-Unresolved directive in title-admin.adoc - include::admin/proc-rbac-ui-manage-roles.adoc[leveloffset=+2]
-Unresolved directive in title-admin.adoc - include::admin/proc-rbac-ui-create-role.adoc[leveloffset=+3]
-Unresolved directive in title-admin.adoc - include::admin/proc-rbac-ui-edit-role.adoc[leveloffset=+3]
-Unresolved directive in title-admin.adoc - include::admin/proc-rbac-ui-delete-role.adoc[leveloffset=+3]
-Unresolved directive in title-admin.adoc - include::admin/con-rbac-rest-api.adoc[leveloffset=+2]
-Unresolved directive in title-admin.adoc - include::admin/proc-rbac-send-request-rbac-rest-api.adoc[leveloffset=+3]
-Unresolved directive in title-admin.adoc - include::admin/ref-rbac-rest-api-endpoints.adoc[leveloffset=+3]</p>
+<p>Role-Based Access Control is a security paradigm that restricts access to authorized users. This feature includes defining roles with specific permissions and then assigning those roles to the users.</p>
+</div>
+<div class="paragraph">
+<p>The Red Hat Developer Hub uses RBAC to improve the permission system within the platform. The RBAC feature in Developer Hub introduces an administrator role and leverages the organizational structure including teams, groups, and users by facilitating efficient access control.</p>
+</div>
+<div class="sect2">
+<h3 id="con-rbac-config-permission-policies_admin-rhdh">4.1. Permission policies configuration</h3>
+<div class="paragraph">
+<p>There are two approaches to configure the permission policies in Red Hat Developer Hub, including:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Configuration of permission policies administrators</p>
+</li>
+<li>
+<p>Configuration of permission policies defined in an external file</p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="con-rbac-config-permission-policies-admin_admin-rhdh">4.1.1. Configuration of permission policies administrators</h4>
+<div class="paragraph">
+<p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
+</div>
+<div class="paragraph">
+<p>You can set the credentials of a permission policy administrator in the <code>app-config.yaml</code> file as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/joeuser</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="con-rbac-config-permission-policies-external-file_admin-rhdh">4.1.2. Configuration of permission policies defined in an external file</h4>
+<div class="paragraph">
+<p>You can follow this approach of configuring the permission policies before starting the Red Hat Developer Hub. If permission policies are defined in an external file, then you can import the same file in the Developer Hub. The permission policies need to be defined in Casbin rules format. For information about the Casbin rules format, see <a href="https://casbin.org/docs/category/the-basics">Basics of Casbin rules</a>.</p>
+</div>
+<div class="paragraph">
+<p>The following is an example of permission policies configuration:</p>
+</div>
+<div class="paragraph">
+<p><code>p, role:default/guests, catalog-entity, read, deny</code></p>
+</div>
+<div class="paragraph">
+<p><code>p, role:default/guests, catalog.entity.create, create, deny</code></p>
+</div>
+<div class="paragraph">
+<p><code>g, user:default/&lt;USER_TO_ROLE&gt;, role:default/guests</code></p>
+</div>
+<div class="paragraph">
+<p>If a defined permission does not contain an action associated with it, then add <code>use</code> as a policy. See the following example:</p>
+</div>
+<div class="paragraph">
+<p><code>p, role:default/guests, kubernetes.proxy, use, deny</code></p>
+</div>
+<div class="paragraph">
+<p>You can define the <code>policy.csv</code> file path in the <code>app-config.yaml</code> file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    policies-csv-file: /some/path/rbac-policy.csv</code></pre>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_mounting-policy-csv-file-to-the-developer-hub-helm-chart">Mounting <code>policy.csv</code> file to the Developer Hub Helm Chart</h5>
+<div class="paragraph">
+<p>When the Red Hat Developer Hub is deployed with the Helm Chart, then you must define the <code>policy.csv</code> file by mounting it to the Developer Hub Helm Chart.</p>
+</div>
+<div class="paragraph">
+<p>You can add your <code>policy.csv</code> file to the Developer Hub Helm Chart by creating a <code>configMap</code> and mounting it.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You are logged in to the OCP using the OpenShift web console.</p>
+</li>
+<li>
+<p>Red Hat Developer Hub is installed and deployed using Helm Chart.</p>
+<div class="paragraph">
+<p>For more information about installing the Red Hat Developer Hub using Helm Chart, see <a href="#proc-install-rhdh-helm_admin-rhdh">Installing Red Hat Developer Hub using Helm Chart</a>.</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In Red Hat OpenShift, create a <code>configMap</code> to hold the policies as shown in the following example:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>ConfigMap</code></div>
+<div class="content">
+<pre class="highlight"><code>kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rbac-policy
+  namespace: rhdh
+data:
+  rbac-policy.csv: |
+    p, role:default/guests, catalog-entity, read, allow
+    p, role:default/guests, catalog.entity.create, create, allow
+
+    g, user:default/&lt;YOUR_USER&gt;, role:default/guests</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>In the Developer Hub Helm Chart, go to <strong>Root Schema &#8594; Backstage chart schema &#8594; Backstage parameters &#8594; Backstage container additional volume mounts</strong>.</p>
+</li>
+<li>
+<p>Select <strong>Add Backstage container additional volume mounts</strong> and add the following values:</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>mountPath</strong>: <code>opt/app-root/src/rbac</code></p>
+</li>
+<li>
+<p><strong>Name</strong>: <code>rbac-policy</code></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Add the RBAC policy to the <strong>Backstage container additional volumes</strong> in the Developer Hub Helm Chart:</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>name</strong>: <code>rbac-policy</code></p>
+</li>
+<li>
+<p><strong>configMap</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>defaultMode</strong>: <code>420</code></p>
+</li>
+<li>
+<p><strong>name</strong>: <code>rbac-policy</code></p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Update the policy path in the <code>app-config.yaml</code> file as follows:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>app-config.yaml</code> file</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    policies-csv-file: ./rbac/rbac-policy.csv</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-rbac-ui-manage-roles_admin-rhdh">4.2. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</h3>
+<div class="paragraph">
+<p>Administrators can use the Developer Hub web interface (Web UI) to allocate specific roles and permissions to individual users or groups. Allocating roles ensures that access to resources and functionalities is regulated across the Developer Hub.</p>
+</div>
+<div class="paragraph">
+<p>With the administrator role in Developer Hub, you can assign permissions to users and groups, which allow users or groups to view, create, modify, and delete the roles using the Developer Hub Web UI.</p>
+</div>
+<div class="paragraph">
+<p>To access the RBAC features in the Web UI, you must install and configure the <code>@janus-idp/backstage-plugin-rbac</code> plugin as a dynamic plugin. For more information about installing a dynamic plugin, see <a href="#rhdh-installing-dynamic-plugins_admin-rhdh">[rhdh-installing-dynamic-plugins_admin-rhdh]</a>.</p>
+</div>
+<div class="paragraph">
+<p>After you install the <code>@janus-idp/backstage-plugin-rbac</code> plugin, the <strong>Administration</strong> option appears at the bottom of the sidebar. When you can click <strong>Administration</strong>, the RBAC tab appears by default, displaying all of the existing roles created in the Developer Hub. In the RBAC tab, you can also view the total number of users, groups, and the total number of permission policies associated with a role. You can also edit or delete a role using the <strong>Actions</strong> column.</p>
+</div>
+<div class="sect3">
+<h4 id="proc-rbac-ui-create-role_admin-rhdh">4.2.1. Creating a role in the Red Hat Developer Hub Web UI</h4>
+<div class="paragraph">
+<p>You can create a role in the Red Hat Developer Hub using the Web UI.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an administrator role in the Developer Hub.</p>
+</li>
+<li>
+<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub. For more information, see <a href="#rhdh-installing-dynamic-plugins_admin-rhdh">[rhdh-installing-dynamic-plugins_admin-rhdh]</a>.</p>
+</li>
+<li>
+<p>You have configured the required permission policies. For more information, see <a href="#con-rbac-permission-policies_admin-rhdh">[con-rbac-permission-policies_admin-rhdh]</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Go to <strong>Administration</strong> at the bottom of the sidebar in the Developer Hub.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>The <strong>RBAC</strong> tab appears, displaying all the created roles in the Developer Hub.</p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>(Optional) Click any role to view the role information on the <strong>OVERVIEW</strong> page.</p>
+</li>
+<li>
+<p>Click <strong>CREATE</strong> to create a role.</p>
+</li>
+<li>
+<p>Enter the name and description of the role in the given fields and click <strong>NEXT</strong>.</p>
+</li>
+<li>
+<p>Add users and groups using the search field, and click <strong>NEXT</strong>.</p>
+</li>
+<li>
+<p>Select <strong>Plugin</strong> and <strong>Permission</strong> from the drop-downs in the <strong>Add permission policies</strong> section.</p>
+</li>
+<li>
+<p>Select or clear the <strong>Policy</strong> that you want to set in the <strong>Add permission policies</strong> section, and click <strong>NEXT</strong>.</p>
+</li>
+<li>
+<p>Review the added information in the <strong>Review and create</strong> section.</p>
+</li>
+<li>
+<p>Click <strong>CREATE</strong>.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<div class="title">Verification</div>
+<p>The created role appears in the list available in the <strong>RBAC</strong> tab.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-rbac-ui-edit-role_admin-rhdh">4.2.2. Editing a role in the Red Hat Developer Hub Web UI</h4>
+<div class="paragraph">
+<p>You can edit a role in the Red Hat Developer Hub using the Web UI.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The policies generated from a <code>policy.csv</code> or ConfigMap file cannot be edited or deleted using the Developer Hub Web UI.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an administrator role in the Developer Hub.</p>
+</li>
+<li>
+<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub. For more information, see <a href="#rhdh-installing-dynamic-plugins_admin-rhdh">[rhdh-installing-dynamic-plugins_admin-rhdh]</a>.</p>
+</li>
+<li>
+<p>You have configured the required permission policies. For more information, see <a href="#con-rbac-permission-policies_admin-rhdh">[con-rbac-permission-policies_admin-rhdh]</a>.</p>
+</li>
+<li>
+<p>The role that you want to edit is created in the Developer Hub.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Go to <strong>Administration</strong> at the bottom of the sidebar in the Developer Hub.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>The <strong>RBAC</strong> tab appears, displaying all the created roles in the Developer Hub.</p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>(Optional) Click any role to view the role information on the <strong>OVERVIEW</strong> page.</p>
+</li>
+<li>
+<p>Select the edit icon for the role that you want to edit.</p>
+</li>
+<li>
+<p>Edit the details of the role, such as name, description, users and groups, and permission policies, and click <strong>NEXT</strong>.</p>
+</li>
+<li>
+<p>Review the edited details of the role and click <strong>SAVE</strong>.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>After editing a role, you can view the edited details of a role on the <strong>OVERVIEW</strong> page of a role. You can also edit a role’s users and groups or permissions by using the edit icon on the respective cards on the <strong>OVERVIEW</strong> page.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-rbac-ui-delete-role_admin-rhdh">4.2.3. Deleting a role in the Red Hat Developer Hub Web UI</h4>
+<div class="paragraph">
+<p>You can delete a role in the Red Hat Developer Hub using the Web UI.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The policies generated from a <code>policy.csv</code> or ConfigMap file cannot be edited or deleted using the Developer Hub Web UI.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an administrator role in the Developer Hub.</p>
+</li>
+<li>
+<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub. For more information, see <a href="#rhdh-installing-dynamic-plugins_admin-rhdh">[rhdh-installing-dynamic-plugins_admin-rhdh]</a>.</p>
+</li>
+<li>
+<p>You have configured the required permission policies. For more information, see <a href="#con-rbac-permission-policies_admin-rhdh">[con-rbac-permission-policies_admin-rhdh]</a>.</p>
+</li>
+<li>
+<p>The role that you want to delete is created in the Developer Hub.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Go to <strong>Administration</strong> at the bottom of the sidebar in the Developer Hub.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>The <strong>RBAC</strong> tab appears, displaying all the created roles in the Developer Hub.</p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>(Optional) Click any role to view the role information on the <strong>OVERVIEW</strong> page.</p>
+</li>
+<li>
+<p>Select the delete icon from the <strong>Actions</strong> column for the role that you want to delete.</p>
+<div class="paragraph">
+<p><strong>Delete this role?</strong> pop-up appears on the screen.</p>
+</div>
+</li>
+<li>
+<p>Click <strong>DELETE</strong>.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="con-rbac-rest-api_admin-rhdh">4.3. Role-based Access Control (RBAC) REST API</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub provides RBAC REST API that you can use to manage the permissions and roles in the Developer Hub. This API supports you to facilitate and automate the maintenance of Developer Hub permission policies and roles.</p>
+</div>
+<div class="paragraph">
+<p>Using the RBAC REST API, you can perform the following actions:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Retrieve information about all permission policies or specific permission policies, or roles</p>
+</li>
+<li>
+<p>Create, update, or delete a permission policy or a role</p>
+</li>
+<li>
+<p>Retrieve permission policy information about static plugins</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The RBAC REST API requires the following components:</p>
+</div>
+<div class="paragraph">
+<p><strong>Authorization</strong></p>
+</div>
+<div class="paragraph">
+<p>The RBAC REST API requires Bearer token authorization for the permitted user role. For development purposes, you can access a web console in a browser. When you refresh a token request in the list of network requests, you find the token in the response JSON.</p>
+</div>
+<div class="paragraph">
+<p><code>Authorization: Bearer $token</code></p>
+</div>
+<div class="paragraph">
+<p>For example, on the <strong>Homepage</strong> of the Developer Hub, you can navigate to the <strong>Network</strong> tab and search for the <code>query?term=</code> network call. Alternatively, you can go to the <strong>Catalog</strong> page and select any network call with <code>entity-facets</code> to acquire the Bearer token.</p>
+</div>
+<div class="paragraph">
+<p><strong>HTTP methods</strong></p>
+</div>
+<div class="paragraph">
+<p>The RBAC REST API supports the following HTTP methods for API requests:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>GET</code>: Retrieves specified information from a specified resource endpoint</p>
+</li>
+<li>
+<p><code>POST</code>: Creates or updates a resource</p>
+</li>
+<li>
+<p><code>PUT</code>: Updates a resource</p>
+</li>
+<li>
+<p><code>DELETE</code>: Deletes a resource</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Base URL</strong></p>
+</div>
+<div class="paragraph">
+<p>The base URL for RBAC REST API requests is <code><a href="http://SERVER:PORT/api/permission/policies" class="bare">http://SERVER:PORT/api/permission/policies</a></code>, such as <code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code>.</p>
+</div>
+<div class="paragraph">
+<p><strong>Endpoints</strong></p>
+</div>
+<div class="paragraph">
+<p>RBAC REST API endpoints, such as <code>/api/permission/policies/[kind]/[namespace]/[name]</code> for specified kind, namespace, and username, are the URI that you append to the base URL to access the corresponding resource.</p>
+</div>
+<div class="paragraph">
+<p>Example request URL for <code>/api/permission/policies/[kind]/[namespace]/[name]</code> endpoint is:</p>
+</div>
+<div class="paragraph">
+<p><code><a href="http://localhost:7007/api/permission/policies/user/default/johndoe" class="bare">http://localhost:7007/api/permission/policies/user/default/johndoe</a></code></p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If at least one permission is assigned to <code>user:default/johndoe</code>, then the example request URL mentioned previously returns a result if sent in a <code>GET</code> response with a valid authorization token. However, if permission is only assigned to roles, then the example request URL does not return an output.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><strong>Request data</strong></p>
+</div>
+<div class="paragraph">
+<p>HTTP <code>POST</code> requests in the RBAC REST API may require a JSON request body with data to accompany the request.</p>
+</div>
+<div class="paragraph">
+<p>Example <code>POST</code> request URL and JSON request body data for
+<code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+    "entityReference": "role:default/test",
+    "permission": "catalog-entity",
+    "policy": "delete",
+    "effect": "allow"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>HTTP status codes</strong></p>
+</div>
+<div class="paragraph">
+<p>The RBAC REST API supports the following HTTP status codes to return as responses:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>200</code> OK: The request was successful.</p>
+</li>
+<li>
+<p><code>201</code> Created: The request resulted in a new resource being successfully created.</p>
+</li>
+<li>
+<p><code>204</code> No Content: The request was successful, but there is no additional content to send in the response payload.</p>
+</li>
+<li>
+<p><code>400</code> Bad Request: input error with the request</p>
+</li>
+<li>
+<p><code>401</code> Unauthorized: lacks valid authentication for the requested resource</p>
+</li>
+<li>
+<p><code>403</code> Forbidden: refusal to authorize request</p>
+</li>
+<li>
+<p><code>404</code> Not Found: could not find requested resource</p>
+</li>
+<li>
+<p><code>409</code> Conflict: request conflict with the current state and the target resource</p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="proc-rbac-send-request-rbac-rest-api_admin-rhdh">4.3.1. Sending requests with the RBAC REST API using a REST client or curl utility</h4>
+<div class="paragraph">
+<p>The RBAC REST API enables you to interact with the permission policies and roles in Developer Hub without using the user interface. You can send RBAC REST API requests using any REST client or curl utility.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>Red Hat Developer Hub is installed and running. For more information about installing Red Hat Developer Hub, see <a href="#proc-install-rhdh-helm_admin-rhdh">Installing Red Hat Developer Hub using Helm Chart</a>. .</p>
+</li>
+<li>
+<p>You have access to the Developer Hub.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Identify a relevant API endpoint to which you want to send a request, such as <code>POST /api/permission/policies</code>. Adjust any request details according to your use case.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p><strong>For REST client</strong>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Authorization: Enter the generated token from the web console.</p>
+</li>
+<li>
+<p>HTTP method: Set to <code>POST</code>.</p>
+</li>
+<li>
+<p>URL: Enter the RBAC REST API base URL and endpoint such as
+<code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>For curl utility</strong>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>-X</code>: Set to <code>POST</code></p>
+</li>
+<li>
+<p><code>-H</code>: Set the following header:</p>
+<div class="paragraph">
+<p><code>Content-type: application/json</code></p>
+</div>
+<div class="paragraph">
+<p><code>Authorization: Bearer $token</code></p>
+</div>
+<div class="paragraph">
+<p><code>$token</code> is the requested token from the web console in a browser.</p>
+</div>
+</li>
+<li>
+<p>URL: Enter the following RBAC REST API base URL endpoint, such as <code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code></p>
+</li>
+<li>
+<p><code>-d</code>: Add a request JSON body</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>Example request</strong>:</p>
+</div>
+<div class="paragraph">
+<p><code>curl -X POST "http://localhost:7007/api/permission/policies" -d '{"entityReference":"role:default/test", "permission": "catalog-entity", "policy": "read", "effect":"allow"}' -H "Content-Type: application/json" -H "Authorization: Bearer $token" -v</code></p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Execute the request and review the response.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="ref-rbac-rest-api-endpoints_admin-rhdh">4.3.2. Supported RBAC REST API endpoints</h4>
+<div class="paragraph">
+<p>The RBAC REST API provides the following endpoints for managing permission policies and roles in the Developer Hub and for retrieving information about the policies and roles.</p>
+</div>
+<div class="sect4">
+<h5 id="_permission-policies">Permission policies</h5>
+<div class="paragraph">
+<p>The RBAC REST API supports the following endpoints for managing permission policies in the Red Hat Developer Hub.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">[GET] /api/permission/policies</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns permission policies list for all users.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+  },
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog.entity.create",
+    "policy": "use",
+    "effect": "allow"
+  },
+]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[GET] /api/permission/policies/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns permission policies related to the specified entity reference.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 1. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+  },
+  {
+    "entityReference": "role:default/test",
+    "permission": "catalog.entity.create",
+    "policy": "use",
+    "effect": "allow"
+  }
+]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[POST] /api/permission/policies</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Creates a permission policy for a specified entity.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 2. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>entityReference</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Reference values of an entity including namespace and name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>permission</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Type of the permission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>policy</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Read or write policy to the permission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>effect</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Indication of allowing or not allowing the policy</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example request body (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+    "entityReference": "role:default/test",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>201 Created</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[PUT] /api/permission/policies/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Updates a permission policy for a specified entity.</p>
+</div>
+<div class="paragraph">
+<div class="title">Request parameters</div>
+<p>The request body contains the <code>oldPolicy</code> and <code>newPolicy</code> objects:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>permission</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Type of the permission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>policy</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Read or write policy to the permission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>effect</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Indication of allowing or not allowing the policy</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example request body (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+    "oldPolicy": {
+        "permission": "catalog-entity",
+        "policy": "read",
+        "effect": "deny"
+    },
+    "newPolicy": {
+        "permission": "policy-entity",
+        "policy": "read",
+        "effect": "allow"
+    }
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>200</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[DELETE] /api/permission/policies/{kind}/{namespace}/{name}?permission={value1}&amp;policy={value2}&amp;effect={value3}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Deletes a permission policy added to the specified entity.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 3. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>permission</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Type of the permission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>policy</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Read or write policy to the permission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>effect</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Indication of allowing or not allowing the policy</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>204 No Content</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[GET] /api/permission/plugins/policies</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns permission policies for all static plugins.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "pluginId": "catalog",
+      "policies": [
+        {
+          "permission": "catalog-entity",
+          "policy": "read"
+        },
+        {
+          "permission": "catalog.entity.create",
+          "policy": "create"
+        },
+        {
+          "permission": "catalog-entity",
+          "policy": "delete"
+        },
+        {
+          "permission": "catalog-entity",
+          "policy": "update"
+        },
+        {
+          "permission": "catalog.location.read",
+          "policy": "read"
+        },
+        {
+          "permission": "catalog.location.create",
+          "policy": "create"
+        },
+        {
+          "permission": "catalog.location.delete",
+          "policy": "delete"
+        }
+      ]
+    },
+  ...
+]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_roles">Roles</h5>
+<div class="paragraph">
+<p>The RBAC REST API supports the following endpoints for managing roles in the Red Hat Developer Hub.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">[GET] /api/permission/roles</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns all roles in Developer Hub.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "memberReferences": ["user:default/pataknight"],
+    "name": "role:default/guests"
+  },
+  {
+    "memberReferences": [
+      "group:default/janus-authors",
+      "user:default/matt"
+    ],
+    "name": "role:default/rbac_admin"
+  }
+]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[GET] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Creates a role in Developer Hub.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 4. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>body</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The <code>memberReferences</code>, <code>group</code>, <code>namespace</code>, and <code>name</code> the new role to be created.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request body</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example request body (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "memberReferences": ["group:default/test"],
+  "name": "role:default/test_admin"
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>201 Created</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[PUT] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Updates <code>memberReferences</code>, <code>kind</code>, <code>namespace</code>, or <code>name</code> for a role in Developer Hub.</p>
+</div>
+<div class="paragraph">
+<div class="title">Request parameters</div>
+<p>The request body contains the <code>oldRole</code> and <code>newRole</code> objects:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>body</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The <code>memberReferences</code>, <code>group</code>, <code>namespace</code>, and <code>name</code> the new role to be created.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request body</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example request body (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "oldRole": {
+    "memberReferences": ["group:default/test"],
+    "name": "role:default/test_admin"
+  },
+  "newRole": {
+    "memberReferences": ["group:default/test", "user:default/test2"],
+    "name": "role:default/test_admin"
+  }
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>200 OK</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}?memberReferences=&lt;VALUE&gt;</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Deletes the specified user or group from a role in Developer Hub.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 5. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>memberReferences</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Associated group information</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>204</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Deletes a specified role from Developer Hub.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 6. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>204</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="rhdh-installing-dynamic-plugins">4. Installing dynamic plugins</h2>
+<h2 id="rhdh-installing-dynamic-plugins">5. Installing dynamic plugins</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The dynamic plugin support is based on the backend plugin manager package, which is a service that scans a configured root directory (dynamicPlugins.rootDirectory in the app config) for dynamic plugin packages, and loads them dynamically.</p>
 </div>
 <div class="sect2">
-<h3 id="_helm-deployment">4.1. Helm deployment</h3>
+<h3 id="_helm-deployment">5.1. Helm deployment</h3>
 <div class="paragraph">
 <p>To deploy a Red Hat Developer Hub (RHDH) instance, you use a Helm Chart which is a flexible installation method.</p>
 </div>
@@ -876,7 +2137,7 @@ Unresolved directive in title-admin.adoc - include::admin/ref-rbac-rest-api-endp
 </div>
 </div>
 <div class="sect2">
-<h3 id="_dynamic-plugin-installation-using-the-helm-chart">4.2. Dynamic plugin installation using the Helm Chart</h3>
+<h3 id="_dynamic-plugin-installation-using-the-helm-chart">5.2. Dynamic plugin installation using the Helm Chart</h3>
 <div class="paragraph">
 <p>You can include a dynamic plugin in RHDH by appending an entry to the <code>global.dynamic.plugins</code> list in your Helm Chart.</p>
 </div>
@@ -900,7 +2161,7 @@ Unresolved directive in title-admin.adoc - include::admin/ref-rbac-rest-api-endp
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_examples">4.2.1. Examples</h4>
+<h4 id="_examples">5.2.1. Examples</h4>
 <div class="listingblock">
 <div class="title">Example 1: Enabling two plugins from a local and remote source, one requiring a specific app-config</div>
 <div class="content">
@@ -940,7 +2201,7 @@ Unresolved directive in title-admin.adoc - include::admin/ref-rbac-rest-api-endp
 </div>
 </div>
 <div class="sect2">
-<h3 id="_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">4.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</h3>
+<h3 id="_dynamic-plugins-pre-loaded-in-red-hat-developer-hub">5.3. Dynamic plugins pre-loaded in Red Hat Developer Hub</h3>
 <div class="paragraph">
 <p>Red Hat Developer Hub (Developer Hub) is pre-loaded with a selection of dynamic plugins. Most of these dynamic plugins are disabled by default due to the need for mandatory configuration.</p>
 </div>
@@ -983,7 +2244,7 @@ The default configuration for a plugin is extracted from the <code>dynamic-plugi
 </div>
 </div>
 <div class="sect2">
-<h3 id="_basic-configuration-of-dynamic-plugins">4.4. Basic configuration of dynamic plugins</h3>
+<h3 id="_basic-configuration-of-dynamic-plugins">5.4. Basic configuration of dynamic plugins</h3>
 <div class="paragraph">
 <p>Some dynamic plugins require environment variables to be set. If a mandatory environment variable is not set, and the plugin is enabled, then the application might fail at startup.</p>
 </div>
@@ -1010,7 +2271,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-supported-plugins">4.5. Dynamic plugins included in Red Hat Developer Hub</h3>
+<h3 id="rhdh-supported-plugins">5.5. Dynamic plugins included in Red Hat Developer Hub</h3>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -1035,7 +2296,7 @@ When installing some dynamic plugin containing large files, if the installation 
 <p>There are 47 plugins.</p>
 </div>
 <table id="dynamic-plugins-matrix" class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 1. Dynamic plugins support matrix</caption>
+<caption class="title">Table 7. Dynamic plugins support matrix</caption>
 <colgroup>
 <col style="width: 11.1111%;">
 <col style="width: 11.1111%;">
@@ -1764,7 +3025,7 @@ Kubernetes cluster.</p></td>
 </table>
 </div>
 <div class="sect2">
-<h3 id="rhdh-aap">4.6. Installation and configuration of Ansible Automation Platform</h3>
+<h3 id="rhdh-aap">5.6. Installation and configuration of Ansible Automation Platform</h3>
 <div class="paragraph">
 <p>The Ansible Automation Platform (AAP) plugin synchronizes the accessible templates including job templates and workflow job templates from AAP into your Developer Hub catalog.</p>
 </div>
@@ -1792,7 +3053,7 @@ Kubernetes cluster.</p></td>
 </table>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators">4.6.1. For administrators</h4>
+<h4 id="_for-administrators">5.6.1. For administrators</h4>
 <div class="sect4">
 <h5 id="_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</h5>
 <div class="paragraph">
@@ -1885,7 +3146,7 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users">4.6.2. For users</h4>
+<h4 id="_for-users">5.6.2. For users</h4>
 <div class="sect4">
 <h5 id="_accessing-templates-from-aap-in-developer-hub">Accessing templates from AAP in Developer Hub</h5>
 <div class="paragraph">
@@ -1960,7 +3221,7 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-keycloak_admin-rhdh">4.7. Installation and configuration of Keycloak</h3>
+<h3 id="rhdh-keycloak_admin-rhdh">5.7. Installation and configuration of Keycloak</h3>
 <div class="paragraph">
 <p>The Keycloak backend plugin, which integrates Keycloak into Developer Hub, has the following capabilities:</p>
 </div>
@@ -1975,7 +3236,7 @@ Kubernetes cluster.</p></td>
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators-2">4.7.1. For administrators</h4>
+<h4 id="_for-administrators-2">5.7.1. For administrators</h4>
 <div class="sect4">
 <h5 id="_installation">Installation</h5>
 <div class="paragraph">
@@ -2192,7 +3453,7 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users-2">4.7.2. For users</h4>
+<h4 id="_for-users-2">5.7.2. For users</h4>
 <div class="sect4">
 <h5 id="_import-of-users-and-groups-in-developer-hub-using-the-keycloak-plugin">Import of users and groups in Developer Hub using the Keycloak plugin</h5>
 <div class="paragraph">
@@ -2252,7 +3513,7 @@ Kubernetes cluster.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-06 13:02:50 UTC
+Last updated 2024-03-06 13:10:55 UTC
 </div>
 </div>
 </body>
