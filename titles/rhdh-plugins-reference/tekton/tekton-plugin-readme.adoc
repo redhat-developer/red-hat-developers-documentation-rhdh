@@ -1,11 +1,130 @@
-= Tekton plugin for Backstage
+[[installation-and-configuration-tekton]]
+= Installation and configuration of Tekton
 
-The Tekton plugin enables you to visualize the `PipelineRun` resources available on the Kubernetes cluster.
+You can use the Tekton plugin to visualize the results of CI/CD pipeline runs on your Kubernetes or OpenShift clusters. The plugin allows users to visually see high level status of all associated tasks in the pipeline for their applications.
 
 == For administrators
 
-[[setting-tekton-plugin]]
-=== Setting up the Tekton plugin
+[[installing-tekton-plugin]]
+=== Installation
+
+.Prerequsites
+* You have installed and configured the `@backstage/plugin-kubernetes` and `@backstage/plugin-kubernetes-backend` dynamic plugins. For more information about installing dynamic plugins, see xref:rhdh-installing-dynamic-plugins[Installing dynamic plugins].
+
+* The Kubernetes plugin is configured and connects to the cluster using a `ServiceAccount`. 
+
+* The `ClusterRole` must be granted for custom resources (PipelineRuns and TaskRuns) to the `ServiceAccount` accessing the cluster.
+
+* To view the pod logs, you have granted permissions for `pods/log`.
+
+* If you have the RHDH Kubernetes Plugin configured, then the `ClusterRole` is already granted.
+
+* You can use the following code to grant the `ClusterRole` for custom resources and pod logs:
++
+--
+[source,yaml]
+----
+kubernetes:
+   ...
+   customResources:
+     - group: 'tekton.dev'
+       apiVersion: 'v1'
+       plural: 'pipelineruns'
+     - group: 'tekton.dev'
+       apiVersion: 'v1'
+
+
+ ...
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: backstage-read-only
+  rules:
+    - apiGroups:
+        - ""
+        - pods/log
+
+      resources:      verbs:
+        - get
+        - list
+        - watch
+    ...
+    - apiGroups:
+        - tekton.dev
+      resources:
+        - pipelineruns
+        - taskruns
+      verbs:
+        - get
+        - list
+----
+--
++
+You can use the prepared manifest for a read-only `ClusterRole`, which provides access for both Kubernetes plugin and Tekton plugin.
+
+The following annotation is added to the entity's `catalog-info.yaml` file to identify whether an entity contains the Kubernetes resources:
++
+--
+[source,yaml]
+----
+annotations:
+  ...
+
+  backstage.io/kubernetes-id: <BACKSTAGE_ENTITY_NAME>
+----
+--
+
+* You can also add the `backstage.io/kubernetes-namespace` annotation to identify the Kubernetes resources using the defined namespace.
++
+--
+[source,yaml]
+----
+annotations:
+  ...
+
+  backstage.io/kubernetes-namespace: <RESOURCE_NS>
+----
+--
+
+* The following annotation is added to the `catalog-info.yaml` file of the entity to enable the Tekton related features in RHDH. The value of the annotation identifies the name of the RHDH entity:
++
+--
+[source,yaml]
+----
+annotations:
+  ...
+
+  janus-idp.io/tekton : <BACKSTAGE_ENTITY_NAME>
+----
+--
+
+* A custom label selector can be added, which RHDH uses to find the Kubernetes resources. The label selector takes precedence over the ID annotations.
++
+--
+[source,yaml]
+----
+annotations:
+  ...
+
+  backstage.io/kubernetes-label-selector: 'app=my-app,component=front-end'
+----
+--
+
+* The following label is added to the resources so that the Kubernetes plugin gets the Kubernetes resources from the requested entity:
++
+--
+[source,yaml]
+----
+labels:
+  ...
+
+  backstage.io/kubernetes-id: <BACKSTAGE_ENTITY_NAME>
+----
+--
++
+[NOTE]
+When using the label selector, the mentioned labels must be present on the resource.
+
 
 The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the `@redhat` scoped packages:
 
@@ -144,103 +263,43 @@ You can also add the `backstage.io/kubernetes-namespace` annotation to identify 
 
 [NOTE]
 ====
-
 When using the label selector, the mentioned labels must be present on the resource.
 ====
 
-
 .Procedure
-
-. Install the Tekton plugin using the following command:
+* The Tekton plugin is pre-loaded in RHDH with basic configuration properties. To enable it, set the disabled property to false as follows:
 +
 --
-[source,console]
+[source,yaml]
 ----
-yarn workspace app add @redhat/backstage-plugin-tekton
-----
---
-
-. Enable the *TEKTON* tab on the entity view page using the `packages/app/src/components/catalog/EntityPage.tsx` file:
-+
---
-[source]
-----
-   ```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
-   /* highlight-add-next-line */
-   import { TektonPage } from '@redhat/backstage-plugin-tekton';
-
-   const serviceEntityPage = (
-     <EntityPageLayout>
-       {/* ... */}
-       {/* highlight-add-start */}
-       <EntityLayout.Route path="/tekton" title="Tekton">
-         <TektonPage />
-       </EntityLayout.Route>
-       {/* highlight-add-end */}
-     </EntityPageLayout>
-   );
-----
---
-
-. Enable latest PipelineRun visualization in the *CI/CD* tab on the entity view page. The `linkTekton` property is optional and takes boolean value, if not specified or set to `true`, then the *GO TO TEKTON* option is displayed.
-+
---
-[source]
-----
-   ```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
-   /* highlight-add-next-line */
-   import { LatestPipelineRun, isTektonCIAvailable } from '@redhat/backstage-plugin-tekton';
-
-   const cicdContent = (
-     <EntitySwitch>>
-       {/* ... */}
-       {/* highlight-add-start */}
-       <EntitySwitch.Case if={isTektonCIAvailable}>
-         <LatestPipelineRun linkTekton />
-       </EntitySwitch.Case>
-       {/* highlight-add-end */}
-     </EntitySwitch>
-   );
-   ```
+global: 
+  dynamic: 
+    includes: 
+      - dynamic-plugins.default.yaml
+    plugins: 
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-tekton       
+        disabled: false
 ----
 --
 
 == For users
 
-=== Using the Tekton plugin in Backstage
-
-Tekton is a front-end plugin that enables you to view the `PipelineRun` resources.
+[[using-tekton-plugin]]
+=== Using the Tekton plugin in RHDH
+Tekton is a front-end plugin that enables you to view the `PipelineRun` resources. 
 
 .Prerequisites
-
-* Your Backstage application is installed and running.
-* You have installed the Tekton plugin. For the installation process, see <<setting-tekton-plugin, Setting up the Tekton plugin>>.
+* Your RHDH application is installed and running. 							
+* You have installed the Tekton plugin. For the installation process, see xref:installation-and-configuration-tekton[Installing and configuring the Tekton plugin].
 
 .Procedure
-
-. Open your Backstage application and select a component from the *Catalog* page.
-. Go to the *CI/CD* tab.
+* Open your RHDH application and select a component from the *Catalog* page. 							
+* Go to the *CI* tab. 	
++						
+The *CI* tab displays the list of PipelineRun resources associated with a Kubernetes cluster. The list contains pipeline run details, such as *NAME*, *STATUS*, *TASK STATUS*, *STARTED*, and *DURATION*.
 +
---
-The *CI/CD* tab displays the latest `PipelineRun` resources associated to a Kubernetes cluster. The resources include tasks to complete. When you hover the mouse pointer on a task card, you can view the steps to complete that particular task.
+image::tekton-plugin-pipeline.png[ci-cd-tab-tekton]
 
-image::tekton-plugin-user1.png[ci-cd-tab-tekton]
-
-There is also a *GO TO TEKTON* option at the bottom, which redirects you to the *TEKTON* tab.
---
-
-. Click *GO TO TEKTON* or select the *TEKTON* tab in the entity view page.
+* Click on the expand row button besides PipelineRun name in the list to view the PipelineRun visualization. The pipeline run resource includes tasks to complete. When you hover the mouse pointer on a task card, you can view the steps to complete that particular task. 
 +
---
-The *TEKTON* tab contains the list of pipeline runs related to a cluster. The list contains pipeline run details, such as *NAME*, *STATUS*, *TASK STATUS*, *STARTED*, and *DURATION*.
-
-image::tekton-plugin-user2.png[tekton-tab]
---
-
-. Click a PipelineRun name in the list to view the PipelineRun visualization.
-+
---
-image::tekton-plugin-user3.png[pipelinerun-page]
-
-To go back to the PipelineRun list, you can click the Back to PipelineRun list option.
---
+image::tekton-plugin-pipeline-expand.png[ci-cd-tab-tekton]
