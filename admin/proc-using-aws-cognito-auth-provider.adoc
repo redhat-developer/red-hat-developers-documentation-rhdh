@@ -1,0 +1,203 @@
+[id='proc-using-aws-cognito-auth-provider_{context}']
+= Using Amazon Cognito as an authentication provider in {product}
+
+In this section, Amazon Cognito is an AWS service for adding an authentication layer into {product-short}. You can sign in directly to the {product-short} using a user pool or fedarate through a third-party identity provider.
+
+Although Amazon Cognito is not part of the core authentication providers for the Developer Hub, it can be integrated using the generic OpenID Connect (OIDC) provider.
+
+You can configure your {product-short} in both deployments Helm Chart and Operator-backed.
+
+.Prerequisites
+
+* You have a User Pool or you have created a new one. For more information about user pools, see https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html?icmpid=docs_cognito_console_help_panel[Amazon Cognito user pools] documentation.
++
+[NOTE]
+====
+Ensure that you have note the AWS region where the user pool is located and the user pool ID.
+====
+
+* You have created an App Client within your user pool for integrating the hosted UI. For more information, see https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-app-integration.html#cognito-user-pools-create-an-app-integration[Setting up the hosted UI with the Amazon Cognito console].
+
+Helm deployment::
++
+--
+.Procedure
+
+. Edit or create your custom `app-config-rhdh` ConfigMap as follows:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    # --- Truncated ---
+    app:
+      title: Red Hat Developer Hub
+
+    signInPage: oidc
+    auth:
+      environment: production
+      session:
+        secret: ${AUTH_SESSION_SECRET}
+      providers:
+        oidc:
+          production:
+            clientId: ${AWS_COGNITO_APP_CLIENT_ID}
+            clientSecret: ${AWS_COGNITO_APP_CLIENT_SECRET}
+            metadataUrl: ${AWS_COGNITO_APP_METADATA_URL}
+            callbackUrl: ${AWS_COGNITO_APP_CALLBACK_URL}
+            scope: 'openid profile email'
+            prompt: auto
+----
+
+. Edit or create your custom `secrets-rhdh` Secret as follows:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets-rhdh
+stringData:
+  AUTH_SESSION_SECRET: "my super auth session secret - change me!!!"
+  AWS_COGNITO_APP_CLIENT_ID: "my-aws-cognito-app-client-id"
+  AWS_COGNITO_APP_CLIENT_SECRET: "my-aws-cognito-app-client-secret"
+  AWS_COGNITO_APP_METADATA_URL: "https://cognito-idp.[region].amazonaws.com/[userPoolId]/.well-known/openid-configuration"
+  AWS_COGNITO_APP_CALLBACK_URL: "https://[rhdh_dns]/api/auth/oidc/handler/frame"
+----
+
+. Add references of both the ConfigMap and Secret resources in your `values.yaml` file:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    podSecurityContext:
+      fsGroup: 2000
+    extraAppConfig:
+      - filename: app-config-rhdh.yaml
+        configMapRef: app-config-rhdh
+    extraEnvVarsSecrets:
+      - secrets-rhdh
+----
+
+. Upgrade the Helm deployment:
++
+[source]
+----
+helm upgrade rhdh \
+  openshift-helm-charts/redhat-developer-hub \
+  --version 1.0.0-1 \
+  --values /path/to/values.yaml
+----
+--
+
+Operator-backed deployment::
++
+--
+. Add the following code to your `app-config-rhdh` ConfigMap:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    # --- Truncated ---
+
+    signInPage: oidc
+    auth:
+      # Production to disable guest user login
+      environment: production
+      # Providing an auth.session.secret is needed because the oidc provider requires session support.
+      session:
+        secret: ${AUTH_SESSION_SECRET}
+      providers:
+        oidc:
+          production:
+            # See https://github.com/backstage/backstage/blob/master/plugins/auth-backend-module-oidc-provider/config.d.ts
+            clientId: ${AWS_COGNITO_APP_CLIENT_ID}
+            clientSecret: ${AWS_COGNITO_APP_CLIENT_SECRET}
+            metadataUrl: ${AWS_COGNITO_APP_METADATA_URL}
+            callbackUrl: ${AWS_COGNITO_APP_CALLBACK_URL}
+            # Minimal set of scopes needed. Feel free to add more if needed.
+            scope: 'openid profile email'
+
+            # Note that by default, this provider will use the 'none' prompt which assumes that your are already logged on in the IDP.
+            # You should set prompt to:
+            # - auto: will let the IDP decide if you need to log on or if you can skip login when you have an active SSO session
+            # - login: will force the IDP to always present a login form to the user
+            prompt: auto
+----
+
+. Add the following code to your `secrets-rhdh` Secret:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets-rhdh
+stringData:
+  # --- Truncated ---
+
+  # TODO: Change auth session secret.
+  AUTH_SESSION_SECRET: "my super auth session secret - change me!!!"
+
+  # TODO: user pool app client ID
+  AWS_COGNITO_APP_CLIENT_ID: "my-aws-cognito-app-client-id"
+  
+  # TODO: user pool app client Secret
+  AWS_COGNITO_APP_CLIENT_SECRET: "my-aws-cognito-app-client-secret"
+
+  # TODO: Replace region and user pool ID
+  AWS_COGNITO_APP_METADATA_URL: "https://cognito-idp.[region].amazonaws.com/[userPoolId]/.well-known/openid-configuration"
+
+  # TODO: Replace <rhdh_dns>
+  AWS_COGNITO_APP_CALLBACK_URL: "https://[rhdh_dns]/api/auth/oidc/handler/frame"
+----
+
+. Ensure your Custom Resource contains references of both the `app-config-rhdh` ConfigMap and `secrets-rhdh` Secret:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+ # TODO: this the name of your RHDH instance
+  name: my-rhdh
+spec:
+  application:
+    imagePullSecrets:
+    - "rhdh-pull-secret"
+    route:
+      enabled: false
+    appConfig:
+      configMaps:
+        - name: "app-config-rhdh"
+    extraEnvs:
+      secrets:
+        - name: "secrets-rhdh"
+----
+
+. (Optional) If you have an existing {product-short} instance backed by the Custom Resource and didn't edit it, manually delete the {product-short} deployment to recreate it using the operator. Run the following to delete the {product-short} deployment:
++
+[source,bash]
+----
+$ kubectl delete deployment -l app.kubernetes.io/instance=<CR_NAME>
+----
+--
+
+.Verification
+
+Navigate to your {product-short} web URL and sign in using OIDC authentication, which prompts you to authenticate through the configured AWS Cognito user pool.
+
+Once logged in, access *Settings* and verify user details.

@@ -1,0 +1,524 @@
+[id='proc-rhdh-deploy-eks-using-helm_{context}']
+= Deploying {product} on Elastic Kubernetes Services (EKS) using Operator
+
+You can deploy the {product-short} on EKS using the Operator with or without https://olm.operatorframework.io[Operator Lifecycle Manager (OLM) framework].
+
+== Installing the Operator with OLM framework
+
+.Prerequisites
+* You have set the context to the EKS cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon EKS cluster].
+* You have installed `kubectl`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Installing or updating kubectl].
+* You have subscribed to the registry.redhat.io. For more information, see https://access.redhat.com/RegistryAuthentication[Red Hat Container Registry Authentication].
+* You have installed the Operator Lifecycle Manager (OLM). For more information about installation and troubleshooting, see https://operatorhub.io/how-to-install-an-operator#How-do-I-get-Operator-Lifecycle-Manager?[How do I get Operator Lifecycle Manager?]
+
+.Procedure
+
+. Run the following command in your terminal to create the `rhdh-operator` namespace where the Operator is installed:
++
+--
+[source]
+----
+$ kubectl create namespace rhdh-operator
+----
+--
+
+. Create a pull secret using the following command:
++
+--
+[source]
+----
+$ kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<user_name> \
+    --docker-password=<password> \
+    --docker-email=<email>
+----
+
+The created pull secret is used to pull the {product-short} images from the Red Hat Ecosystem. Also, add your username, password, and email address to the previous command.
+--
+
+. Create a `CatalogSource` resource that contains the Operators from the Red Hat Ecosystem:
++
+--
+[source]
+----
+$ cat <<EOF | kubectl -n rhdh-operator apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: redhat-catalog
+spec:
+  sourceType: grpc
+  image: registry.redhat.io/redhat/redhat-operator-index:v4.14
+  secrets:
+  - "rhdh-pull-secret"
+  displayName: Red Hat Operators
+EOF
+----
+--
+
+. Create an `OperatorGroup` resource as follows:
++
+--
+[source]
+----
+$ cat <<EOF | kubectl apply -n rhdh-operator -f -                                                                                                                                              
+apiVersion: operators.coreos.com/v1      
+kind: OperatorGroup                      
+metadata:         
+  name: rhdh-operator-group
+EOF
+----
+--
+
+. Create a `Subscription` resource using the following code:
++
+--
+[source]
+----
+$ cat <<EOF | kubectl apply -n rhdh-operator -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: rhdh
+  namespace: rhdh-operator
+spec:
+  channel: fast
+  installPlanApproval: Automatic
+  name: rhdh
+  source: redhat-catalog
+  sourceNamespace: rhdh-operator
+  startingCSV: rhdh-operator.v1.1.0
+EOF
+----
+--
+
+. Run the following command to verify that the created Operator is running:
++
+--
+[source]
+----
+$ kubectl -n rhdh-operator get pods -w
+----
+
+If the status of the operator pod shows `ImagePullBackOff`, you might need permissions to pull the image directly within the operator Deployment's manifest.
+
+You can include the required secret name in the `deployment.spec.template.spec.imagePullSecrets` list and verify the deployment name using `kubectl get deployment -n rhdh-operator` command.
+--
+
+. Update the default configuration of the operator to ensure that {product-short} resources can start correctly in EKS using the following steps:
+.. Edit the `backstage-default-config` ConfigMap in the `rhdh-operator` namespace using the following command:
++
+--
+[source]
+----
+$ kubectl -n rhdh-operator edit configmap backstage-default-config
+----
+--
+
+.. Locate the `db-statefulset.yaml` string and add the `fsGroup` to its `spec.template.spec.securityContext` as shown in the following example:
++
+--
+[source]
+----
+  db-statefulset.yaml: |
+    apiVersion: apps/v1
+    kind: StatefulSet
+--- TRUNCATED ---
+    spec:
+    --- TRUNCATED ---
+    restartPolicy: Always
+        securityContext:
+      # You can assign any random value as fsGroup 
+             fsGroup: 2000
+         serviceAccount: default
+         serviceAccountName: default
+--- TRUNCATED ---
+----
+--
+
+.. Locate the `deployment.yaml` string and add the `fsGroup` to its specification as shown in the following example:
++
+--
+[source]
+----
+  deployment.yaml: |
+    apiVersion: apps/v1
+    kind: Deployment
+--- TRUNCATED ---
+    spec:
+        securityContext:
+     # You can assign any random value as fsGroup 
+           fsGroup: 3000
+         automountServiceAccountToken: false
+--- TRUNCATED ---
+----
+--
+
+.. Locate the `service.yaml` string and change the `type` to `NodePort` as follows:
++
+--
+[source]
+----
+  service.yaml: |
+    apiVersion: v1
+    kind: Service
+    spec:
+     # NodePort is required for the ALB to route to the Service
+          type: NodePort
+--- TRUNCATED ---
+----
+--
+
+.. Save and exit.
+.. Wait for a few minutes until the changes are automatically applied to the operator pods.
+
+== Installing the Operator without OLM framework
+
+.Prerequisites
+* You have installed the following commands:
+** `git`
+** `make`
+** `sed`
+
+.Procedure
+
+. Clone the Operator repository to your local machine using the following command:
++
+--
+[source]
+----
+$ git clone --depth=1 https://github.com/janus-idp/operator.git rhdh-operator && cd rhdh-operator
+----
+--
+
+. Run the following command and generate the deployment manifest:
++
+--
+[source]
+----
+$ make deployment-manifest
+----
+
+The previous command generates a file named `rhdh-operator-<VERSION>.yaml`, which is updated manually.
+--
+
+. Run the following command to apply replacements in the generated deployment manifest:
++
+--
+[source]
+----
+$ sed -i "s/backstage-operator/rhdh-operator/g" rhdh-operator-*.yaml
+$ sed -i "s/backstage-system/rhdh-operator/g" rhdh-operator-*.yaml
+$ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operator-*.yaml
+----
+--
+
+. Open the generated deployment manifest file in an editor and perform the following steps:
+.. Locate the `db-statefulset.yaml` string and add the `fsGroup` to its `spec.template.spec.securityContext` as shown in the following example:
++
+--
+[source]
+----
+   db-statefulset.yaml: |
+    apiVersion: apps/v1
+    kind: StatefulSet
+--- TRUNCATED ---
+    spec:
+    --- TRUNCATED ---
+    restartPolicy: Always
+        securityContext:
+      # You can assign any random value as fsGroup 
+             fsGroup: 2000
+         serviceAccount: default
+         serviceAccountName: default
+--- TRUNCATED ---
+----
+--
+
+.. Locate the `deployment.yaml` string and add the `fsGroup` to its specification as shown in the following example:
++
+--
+[source]
+----
+  deployment.yaml: |
+    apiVersion: apps/v1
+    kind: Deployment
+--- TRUNCATED ---
+    spec:
+        securityContext:
+     # You can assign any random value as fsGroup 
+           fsGroup: 3000
+         automountServiceAccountToken: false
+--- TRUNCATED ---
+----
+--
+
+.. Locate the `service.yaml` string and change the `type` to `NodePort` as follows:
++
+--
+[source]
+----
+  service.yaml: |
+    apiVersion: v1
+    kind: Service
+    spec:
+     # NodePort is required for the ALB to route to the Service
+          type: NodePort
+--- TRUNCATED ---
+----
+--
+
+.. Replace the default images with the images that are pulled from the Red Hat Ecosystem:
++
+--
+[source]
+----
+$ sed -i "s#gcr.io/kubebuilder/kube-rbac-proxy:.*#registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.15#g" rhdh-operator-*.yaml
+
+$ sed -i "s#quay.io/janus-idp/operator:.*#registry.redhat.io/rhdh/rhdh-rhel9-operator:1.1#g" rhdh-operator-*.yaml
+
+$ sed -i "s#quay.io/janus-idp/backstage-showcase:.*#registry.redhat.io/rhdh/rhdh-hub-rhel9:1.1#g" rhdh-operator-*.yaml
+
+$ sed -i "s#quay.io/fedora/postgresql-15:.*#registry.redhat.io/rhel9/postgresql-15:latest#g" rhdh-operator-*.yaml
+----
+--
+
+. Add the image pull secret to the manifest in the Deployment resource as follows:
++
+--
+[source,yaml]
+----
+--- TRUNCATED ---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: rhdh-operator
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: rhdh-operator
+    control-plane: controller-manager
+  name: rhdh-controller-manager
+  namespace: rhdh-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      imagePullSecrets:
+        - name: rhdh-pull-secret
+--- TRUNCATED ---
+----
+--
+
+. Apply the manifest to deploy the operator using the following command:
++
+--
+[source]
+----
+$ kubectl apply -f rhdh-operator-VERSION.yaml
+----
+--
+
+. Run the following command to verify that the Operator is running:
++
+--
+[source]
+----
+$ kubectl -n rhdh-operator get pods -w
+----
+--
+
+== Installing the Developer Hub instance in EKS
+
+Once the Operator is installed and running, you can create a {product-short} instance in EKS.
+
+.Prerequisites
+
+* Your {product-short} application is running on EKS. For more information about using the AWS Application Load Balancer (ALB), see https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html[Application load balancing on Amazon EKS].
+* The ALB add-on is installed in the EKS cluster. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html[Installing the AWS Load Balancer Controller add-on].
+
+.Procedure
+
+. Create custom resource file using the following template:
++
+--
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+ # TODO: this the name of your RHDH instance
+  name: my-rhdh
+spec:
+  application:
+  imagePullSecrets:
+    - "rhdh-pull-secret"
+    route:
+      enabled: false
+----
+--
+
+. To pull the PostgreSQL image from the Red Hat Ecosystem Catalog, add the image pull secret to the default service account in the namespace where the {product-short} instance is created:
++
+--
+[source]
+----
+$ kubectl patch serviceaccount default \
+    -p '{"imagePullSecrets": [{"name": "rhdh-pull-secret"}]}' \
+    -n <your_namespace>
+----
+--
+
+. Create the Ingress resource using the following template:
++
+--
+[source,yaml]
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+ # TODO: this the name of your RHDH instance
+  name: my-rhdh
+  annotations:
+    # Below annotation is to specify if the loadbalancer is "internal" or "internet-facing"	   
+    alb.ingress.kubernetes.io/scheme: internet-facing
+
+    alb.ingress.kubernetes.io/target-type: ip
+
+    # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxx:certificate/xxxxxx
+
+    # TODO: The HTTPS listener below requires setting the certificate ARN above. Remove it if you plan to expose your RHDH differently, for example via a CloudFront distribution.
+     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+
+
+      # TODO: if needed, set HTTP to HTTPS redirects. Every HTTP listener configured will be redirected to below mentioned port over HTTPS.
+      # alb.ingress.kubernetes.io/ssl-redirect: '443'
+
+spec:
+  # alb because we are using ALB.
+  # But adjust if using a different Ingress Controller
+  # and remove the 'alb.*' annotations accordingly.
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              # TODO: my-rhdh is the name of your Backstage Custom Resource.
+              # Adjust if you changed it!
+              name: backstage-my-rhdh
+              port:
+                name: http-backend
+
+----
+
+[NOTE]
+====
+Configuring the HTTPS listener with Application Load Balancer (ALB) requires a certificate for your custom domain. In case, the custom domain or certificate is not available, then you can set the `alb.ingress.kubernetes.io/listen-ports` annotation to `[{"HTTP": 80}]` and create a CloudFront distribution using the ALB endpoint as the content origin. Using this approach, you can access the {product-short} using the CloudFront domain name. For more information about creating a CloudFront distribution, see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-creating.html[Steps for creating a distribution].
+====
+--
+
+. (Optional) If an ALB or another ingress controller is used to expose your {product-short} instance and you are unaware of the DNS hostname, then identify the provisioned DNS name and update the {product-short} configuration using the following steps:
+
+.. Run the following command to find the ingress hostname:
++
+--
+[source]
+----
+$ kubectl get ingress rhdh-developer-hub   
+
+NAME                    CLASS    HOSTS                                                                 ADDRESS                                                               PORTS   AGE
+rhdh-developer-hub   <none>   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   80      51m
+----
+--
+
+.. Create a ConfigMap named `app-config-rhdh` using the following template:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://<rhdh_dns_name>
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://<rhdh_dns_name>
+      cors:
+        origin: https://<rhdh_dns_name>
+----
+
+In the previous template, replace `<rhdh_dns_name>` with the value of {product-short} DNS name, such as `k8s-rhdhoper-myrhdh-f9ec8d3481-1192320380.eu-north-1.elb.amazonaws.com` or with the value of CloudFront DNS name, such as `d376s7j9emms3n.cloudfront.net` if CloudFront is used.
+--
+
+.. Create a Secret named `secrets-rhdh` and add a `BACKEND_SECRET` key with a `Base64-encoded` string as value:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets-rhdh
+stringData:
+  # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup:
+  # node -p 'require("crypto").randomBytes(24).toString("base64")'
+  BACKEND_SECRET: "R2FxRVNrcmwzYzhhN3l0V1VRcnQ3L1pLT09WaVhDNUEK"
+----
+Ensure that you use a unique name for each {product-short} instance.
+
+You can also use the following command to generate a key from the terminal:
+
+`node-p'require("crypto").randomBytes(24).toString("base64")'`
+--
+
+.. Update your custom resource created previously:
++
+--
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+ # TODO: this the name of your RHDH instance
+  name: my-rhdh
+spec:
+  application:
+    imagePullSecrets:
+    - "rhdh-pull-secret"
+    route:
+      enabled: false
+    appConfig:
+      configMaps:
+        - name: "app-config-rhdh"
+    extraEnvs:
+      secrets:
+        - name: "secrets-rhdh"
+----
+--
+
+.Verification
+
+Wait until the DNS name is responsive, indicating that your Developer Hub instance is ready for use.

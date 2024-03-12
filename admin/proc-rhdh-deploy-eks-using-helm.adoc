@@ -1,0 +1,177 @@
+[id='proc-rhdh-deploy-eks-using-helm_{context}']
+= Deploying {product} in Elastic Kubernetes Services (EKS) using Helm Chart
+
+When you deploy {product-short} in Elastic Kubernetes Services (EKS) using Helm Chart, orchestrates a robust development environment within the AWS ecosystem.
+
+.Prerequisites
+
+* You have set the context to the EKS cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon EKS cluster].
+* You have installed `kubectl`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Installing or updating kubectl].
+* You have installed Helm 3 or latest. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/helm.html[Using Helm with Amazon EKS].
+* Your {product-short} application is running on EKS. For more information about using the AWS Application Load Balancer (ALB), see https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html[Application load balancing on Amazon EKS].
+* The ALB add-on is installed in the EKS cluster. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html[Installing the AWS Load Balancer Controller add-on].
+* You have subscribed to the registry.redhat.io. For more information, see https://access.redhat.com/RegistryAuthentication[Red Hat Container Registry Authentication].
+
+.Procedure 
+
+. Go to your terminal and run the following command to add the Helm chart repository containing the {product-short} chart to your local Helm registry:
++
+--
+[source]
+----
+$ helm repo add openshift-helm-charts https://charts.openshift.io/
+----
+--
+
+. Create a pull secret using the following command:
++
+--
+[source]
+----
+$ kubectl create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<user_name> \
+    --docker-password=<password> \
+    --docker-email=<email>
+----
+
+The created pull secret is used to pull the {product-short} images from the Red Hat Ecosystem. Also, add your username, password, and email address to the previous command.
+--
+
+. Create a file named `values.yaml` using the following template:
++
+--
+[source,yaml]
+----
+global:
+  # TODO Adjust this value if you know the DNS name under which
+  # your RHDH instance will be exposed.
+  # If using ALB with dynamic load balancer DNS, we'll be 
+  # able to adjust this value only after the ALB is provisioned.
+  host: rhdh.acme.com
+
+
+route:
+  enabled: false
+
+
+upstream:
+  service:
+    # NodePort is required for the ALB to route to the Service
+    type: NodePort
+
+
+  ingress:
+    enabled: true
+    annotations:
+      # alb because we are using ALB.
+      # But adjust if using a different Ingress Controller
+      # and remove the 'alb.*' annotations accordingly.
+      kubernetes.io/ingress.class: alb
+
+
+      # Below annotation is to specify if the loadbalancer is "internal" or "internet-facing"	   
+      alb.ingress.kubernetes.io/scheme: internet-facing
+
+
+      # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
+      # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxx:certificate/xxxxxx
+
+
+	# TODO: The HTTPS listener below requires setting the certificate ARN above. Remove it if you plan to expose your RHDH differently, for example via a CloudFront distribution.
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+
+
+      # TODO: if needed, set HTTP to HTTPS redirects. Every HTTP listener configured will be redirected to below mentioned port over HTTPS.
+      # alb.ingress.kubernetes.io/ssl-redirect: '443'
+
+
+
+
+  backstage:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    podSecurityContext:
+      # you can assign any random value as fsGroup
+      fsGroup: 2000
+  postgresql:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        # you can assign any random value as fsGroup
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
+----
+If you already have the DNS name for your {product-short} instance, specify the value for the `global.host` field in the previous template.
+
+[NOTE]
+====
+Configuring the HTTPS listener with Application Load Balancer (ALB) requires a certificate for your custom domain. In case, the custom domain or certificate is not available, then you can set the `alb.ingress.kubernetes.io/listen-ports` annotation to `[{"HTTP": 80}]` and create a CloudFront distribution using the ALB endpoint as the content origin. Using this approach, you can access the {product-short} using the CloudFront domain name. For more information about creating a CloudFront distribution, see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-creating.html[Steps for creating a distribution].
+====
+--
+
+. Run the following command in your terminal to deploy {product-short} using the latest version of Helm Chart and using the values.yaml file created in the previous step:
++
+--
+[source]
+----
+helm install rhdh \
+  openshift-helm-charts/redhat-developer-hub \
+  --version 1.0.0-1 \
+  --values /path/to/values.yaml
+----
+In the previous example, `version 1.0.0-1` is used as the latest version of the Helm Chart.
+--
+
+. (Optional) If an ALB or another ingress controller is used to expose your {product-short} instance and you are unaware of the DNS hostname, then identify the provisioned DNS name and update the {product-short} configuration using the following steps:
+
+.. Run the following command to find the ingress hostname:
++
+--
+[source]
+----
+$ kubectl get ingress rhdh-developer-hub   
+
+NAME                    CLASS    HOSTS                                                                 ADDRESS                                                               PORTS   AGE
+rhdh-developer-hub   <none>   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   80      51m
+----
+--
+
+.. Update your `values.yaml` file as follows:
++
+--
+[source,yaml]
+----
+global:
+  host: <rhdh_dns_name>
+
+# --- TRUNCATED ---
+----
+
+Replace `<rhdh_dns_name>` with the value of the {product-short} DNS name, such as `k8s-rhdhoper-myrhdh-f9ec8d3481-1192320380.eu-north-1.elb.amazonaws.com` or with a CloudFront DNS name if you used CloudFront, such as `376s7j9emms3n.cloudfront.net`.
+--
+
+.. Run the following command and upgrade your Helm deployment:
++
+--
+[source]
+----
+helm upgrade rhdh \
+  openshift-helm-charts/redhat-developer-hub \
+  --version 1.0.0-1 \
+  --values /path/to/values.yaml
+----
+--
+
+.Verification
+
+Wait until the DNS name is responsive, indicating that your Developer Hub instance is ready for use.
+
+
+
+
