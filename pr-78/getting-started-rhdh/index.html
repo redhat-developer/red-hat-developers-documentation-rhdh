@@ -450,6 +450,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#proc-add-custom-app-file-openshift_rhdh-getting-started">3.1. Adding a custom application configuration file to Red Hat OpenShift</a></li>
 <li><a href="#proc-add-source-control-rhdh-catalog_rhdh-getting-started">3.2. Adding source control for Catalog in Red Hat Developer Hub</a></li>
+<li><a href="#proc-adding-gitlab-oauth-as-an-authentication-provider_rhdh-getting-started">3.3. Adding GitLab OAuth as an authentication provider in Red Hat Developer Hub</a></li>
 </ul>
 </li>
 <li><a href="#proc-customize-rhdh-homepage_rhdh-getting-started">4. Customizing the Home page in Red Hat Developer Hub</a></li>
@@ -1197,9 +1198,204 @@ data:
 </li>
 </ol>
 </div>
-<div class="paragraph">
-<p>Unresolved directive in title-getting-started.adoc - include::modules/auth/proc-adding-gitlab-oauth-as-an-authentication-provider.adoc[leveloffset=+2]</p>
 </div>
+</div>
+<div class="sect2">
+<h3 id="proc-adding-gitlab-oauth-as-an-authentication-provider_rhdh-getting-started">3.3. Adding GitLab OAuth as an authentication provider in Red Hat Developer Hub</h3>
+<div class="paragraph">
+<p>The Red Hat Developer Hub <code>core-plugin-api</code> package includes a GitLab authentication provider that can authenticate users by using GitLab OAuth.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>To set up in Gitlab the secrets that Red Hat Developer Hub required to communicate with Gitlab, create an OAuth Application.</p>
+<div class="paragraph">
+<p>Go to <a href="https://gitlab.com/-/profile/applications">GitLab User settings &gt; Applications</a>,
+and click the <strong>Add new application</strong> button.</p>
+</div>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>In the <strong>Name</strong> field, enter your application name, such as <code>Red Hat Developer Hub</code>.</p>
+</li>
+<li>
+<p>In the <strong>Redirect URI</strong> field, enter the backend authentication URI set in Red Hat Developer Hub:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>For local development: <code>http://localhost:7007/api/auth/gitlab/handler/frame</code></p>
+</li>
+<li>
+<p>For a non-local deployment: <code>http://{APP_FQDN}:{APP_BACKEND_PORT}/api/auth/gitlab/handler/frame</code></p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Select the following <strong>Scopes</strong> from the list, and validate:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>read_user</code></dt>
+<dd>
+<p>Grants read-only access to the authenticated user&#8217;s profile through the /user API endpoint, which includes username, public email, and full name. Also grants access to read-only API endpoints under /users.</p>
+</dd>
+<dt class="hdlist1"><code>read_repository</code></dt>
+<dd>
+<p>Grants read-only access to the authenticated user&#8217;s profile through the /user API endpoint, which includes username, public email, and full name. Also grants access to read-only API endpoints under /users.</p>
+</dd>
+<dt class="hdlist1"><code>write_repository</code></dt>
+<dd>
+<p>Grants read/write access to repositories on private projects using Git-over-HTTP (not using the API).</p>
+</dd>
+<dt class="hdlist1"><code>openid</code></dt>
+<dd>
+<p>Grants permission to authenticate with GitLab using OpenID Connect. Also gives read-only access to the user&#8217;s profile and group memberships.</p>
+</dd>
+<dt class="hdlist1"><code>profile</code></dt>
+<dd>
+<p>Grants read-only access to the user&#8217;s profile data using OpenID Connect.</p>
+</dd>
+<dt class="hdlist1"><code>email</code></dt>
+<dd>
+<p>Grants read-only access to the user&#8217;s primary email address using OpenID Connect.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Save the <strong>Application ID</strong> and <strong>Secret</strong> for the next step.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set up the Gitlab authentication provider in the Red Hat Developer Hub backend (<code>app-config.yaml</code>).</p>
+<div class="paragraph">
+<p>Add the <code>gitlab</code> provider configuration to your <code>app-config.yaml</code> under the root <code>auth</code> configuration:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: development
+  providers:
+    gitlab:
+      development:
+        clientId: ${AUTH_GITLAB_CLIENT_ID}
+        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
+        ## uncomment if using self-hosted GitLab
+        # audience: https://gitlab.company.com
+        ## uncomment if using a custom redirect URI
+        # callbackUrl: https://${BASE_URL}/api/auth/gitlab/handler/frame</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The GitLab provider is a structure with these configuration keys:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>clientId</code></dt>
+<dd>
+<p>The <strong>Application ID</strong> that you generated on GitLab, such as
+<code>4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9</code>.</p>
+</dd>
+<dt class="hdlist1"><code>clientSecret</code></dt>
+<dd>
+<p>The <strong>Secret</strong> that you generated on Gitlab, such as <code>gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475</code>.</p>
+</dd>
+<dt class="hdlist1"><code>audience</code> (optional)</dt>
+<dd>
+<p>The base URL for the self-hosted GitLab instance, such as
+<code>https://gitlab.company.com</code>.</p>
+</dd>
+<dt class="hdlist1"><code>callbackUrl</code> (optional)</dt>
+<dd>
+<p>The URL matching the <strong>Redirect URI</strong> registered when creating your GitLab OAuth App, such as:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>For local development: <code>http://localhost:7007/api/auth/gitlab/handler/frame</code></p>
+</li>
+<li>
+<p>For a non-local deployment: <code>http://{APP_FQDN}:{APP_BACKEND_PORT}/api/auth/gitlab/handler/frame</code></p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>(Optionally) To enable the Gitlab provider for sign-in,
+set up the provider in the Red Hat Developer Hub front-end (<code>packages/app/src/App.tsx</code>).</p>
+<div class="paragraph">
+<p>To add the provider to the front-end, add the <code>gitlabAuthApi</code> reference and
+<code>SignInPage</code> component to the sign-in page.</p>
+</div>
+<div class="paragraph">
+<p>To configure sign-in, provide a custom <code>SignInPage</code> app component.
+The app renders this component before any other routes.
+The component provides the identity of the current user.
+The <code>SignInPage</code> can render any amount of pages and components, or just blank space with logic running in the background.
+In the end however it must provide a valid Red Hat Developer Hub user identity through the onSignInSuccess callback prop, at which point the rest of the app is rendered.</p>
+</div>
+<div class="paragraph">
+<p>If you want to, you can use the <code>SignInPage</code> component provided by <code>@backstage/core-components</code>, which takes either a provider or providers (array) prop of <code>SignInProviderConfig</code> definitions.</p>
+</div>
+<div class="paragraph">
+<p>The following example for Gitlab shows the additions needed to <code>packages/app/src/App.tsx</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title"><code>packages/app/src/App.tsx</code></div>
+<div class="content">
+<pre class="highlight"><code class="language-javascript" data-lang="javascript">import { gitlabAuthApiRef } from '@backstage/core-plugin-api';
+import { SignInPage } from '@backstage/core-components';
+
+const app = createApp({
+  components: {
+    SignInPage: props =&gt; (
+      &lt;SignInPage
+        {...props}
+        auto
+        provider={{
+          id: 'gitlab-auth-provider',
+          title: 'GitLab',
+          message: 'Sign in using GitLab',
+          apiRef: gitlabAuthApiRef,
+        }}
+      /&gt;
+    ),
+  },
+  // ..
+});</code></pre>
+</div>
+</div>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -2474,7 +2670,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-13 16:57:13 UTC
+Last updated 2024-03-13 17:04:26 UTC
 </div>
 </div>
 </body>
