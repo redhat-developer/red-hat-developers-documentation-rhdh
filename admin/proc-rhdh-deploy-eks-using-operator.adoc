@@ -346,8 +346,12 @@ Once the Operator is installed and running, you can create a {product-short} ins
 
 .Prerequisites
 
-* Your {product-short} application is running on EKS. For more information about using the AWS Application Load Balancer (ALB), see https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html[Application load balancing on Amazon EKS].
-* The ALB add-on is installed in the EKS cluster. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html[Installing the AWS Load Balancer Controller add-on].
+* You have an EKS cluster with AWS Application Load Balancer (ALB) add-on installed. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html[Application load balancing on Amazon EKS] and https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html[Installing the AWS Load Balancer Controller add-on].
+* You have configured a domain name for your {product-short} instance. The domain name can be a hosted zone entry in Route 53 or managed outside of AWS. For more information, see https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html[Configuring Amazon Route 53 as your DNS service] documentation.
+* You have an entry in the AWS Certificate Manager (ACM) for your preferred domain name. Make sure to keep a record of your Certificate ARN.
+* You have subscribed to the registry.redhat.io. For more information, see https://access.redhat.com/RegistryAuthentication[Red Hat Container Registry Authentication].
+* You have set the context to the EKS cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon EKS cluster].
+* You have installed `kubectl`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Installing or updating kubectl].
 
 .Procedure
 
@@ -413,109 +417,17 @@ spec:
   # and remove the 'alb.*' annotations accordingly.
   ingressClassName: alb
   rules:
-    - http:
+    - host: <your.desired.domain.com>
+      http:
         paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              # TODO: my-rhdh is the name of your Backstage Custom Resource.
-              # Adjust if you changed it!
-              name: backstage-my-rhdh
-              port:
-                name: http-backend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backstage-my-rhdh
+                port:
+                  name: http-backend
 
-----
-
-[NOTE]
-====
-Configuring the HTTPS listener with Application Load Balancer (ALB) requires a certificate for your custom domain. In case, the custom domain or certificate is not available, then you can set the `alb.ingress.kubernetes.io/listen-ports` annotation to `[{"HTTP": 80}]` and create a CloudFront distribution using the ALB endpoint as the content origin. Using this approach, you can access the {product-short} using the CloudFront domain name. For more information about creating a CloudFront distribution, see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-creating.html[Steps for creating a distribution].
-====
---
-
-. (Optional) If an ALB or another ingress controller is used to expose your {product-short} instance and you are unaware of the DNS hostname, then identify the provisioned DNS name and update the {product-short} configuration using the following steps:
-
-.. Run the following command to find the ingress hostname:
-+
---
-[source]
-----
-$ kubectl get ingress rhdh-developer-hub   
-
-NAME                    CLASS    HOSTS                                                                 ADDRESS                                                               PORTS   AGE
-rhdh-developer-hub   <none>   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   80      51m
-----
---
-
-.. Create a ConfigMap named `app-config-rhdh` using the following template:
-+
---
-[source,yaml]
-----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config-rhdh
-data:
-  "app-config-rhdh.yaml": |
-    app:
-      title: Red Hat Developer Hub
-      baseUrl: https://<rhdh_dns_name>
-    backend:
-      auth:
-        keys:
-          - secret: "${BACKEND_SECRET}"
-      baseUrl: https://<rhdh_dns_name>
-      cors:
-        origin: https://<rhdh_dns_name>
-----
-
-In the previous template, replace `<rhdh_dns_name>` with the value of {product-short} DNS name, such as `k8s-rhdhoper-myrhdh-f9ec8d3481-1192320380.eu-north-1.elb.amazonaws.com` or with the value of CloudFront DNS name, such as `d376s7j9emms3n.cloudfront.net` if CloudFront is used.
---
-
-.. Create a Secret named `secrets-rhdh` and add a `BACKEND_SECRET` key with a `Base64-encoded` string as value:
-+
---
-[source,yaml]
-----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: secrets-rhdh
-stringData:
-  # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup:
-  # node -p 'require("crypto").randomBytes(24).toString("base64")'
-  BACKEND_SECRET: "R2FxRVNrcmwzYzhhN3l0V1VRcnQ3L1pLT09WaVhDNUEK"
-----
-Ensure that you use a unique name for each {product-short} instance.
-
-You can also use the following command to generate a key from the terminal:
-
-`node-p'require("crypto").randomBytes(24).toString("base64")'`
---
-
-.. Update your custom resource created previously:
-+
---
-[source,yaml]
-----
-apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
-metadata:
- # TODO: this the name of your RHDH instance
-  name: my-rhdh
-spec:
-  application:
-    imagePullSecrets:
-    - "rhdh-pull-secret"
-    route:
-      enabled: false
-    appConfig:
-      configMaps:
-        - name: "app-config-rhdh"
-    extraEnvs:
-      secrets:
-        - name: "secrets-rhdh"
 ----
 --
 
