@@ -103,7 +103,14 @@ $ kubectl -n rhdh-operator get pods -w
 
 If the status of the operator pod shows `ImagePullBackOff`, you might need permissions to pull the image directly within the operator Deployment's manifest.
 
-You can include the required secret name in the `deployment.spec.template.spec.imagePullSecrets` list and verify the deployment name using `kubectl get deployment -n rhdh-operator` command.
+You can include the required secret name in the `deployment.spec.template.spec.imagePullSecrets` list and verify the deployment name using `kubectl get deployment -n rhdh-operator` command:
+
+[source]
+----
+$ kubectl -n rhdh-operator patch deployment \
+    rhdh.fast --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
+    --type=merge
+----
 --
 
 . Update the default configuration of the operator to ensure that {product-short} resources can start correctly in EKS using the following steps:
@@ -127,12 +134,12 @@ $ kubectl -n rhdh-operator edit configmap backstage-default-config
 --- TRUNCATED ---
     spec:
     --- TRUNCATED ---
-    restartPolicy: Always
-        securityContext:
+      restartPolicy: Always
+      securityContext:
       # You can assign any random value as fsGroup 
-             fsGroup: 2000
-         serviceAccount: default
-         serviceAccountName: default
+        fsGroup: 2000
+      serviceAccount: default
+      serviceAccountName: default
 --- TRUNCATED ---
 ----
 --
@@ -147,10 +154,10 @@ $ kubectl -n rhdh-operator edit configmap backstage-default-config
     kind: Deployment
 --- TRUNCATED ---
     spec:
-        securityContext:
-     # You can assign any random value as fsGroup 
-           fsGroup: 3000
-         automountServiceAccountToken: false
+      securityContext:
+        # You can assign any random value as fsGroup 
+        fsGroup: 3000
+      automountServiceAccountToken: false
 --- TRUNCATED ---
 ----
 --
@@ -165,7 +172,7 @@ $ kubectl -n rhdh-operator edit configmap backstage-default-config
     kind: Service
     spec:
      # NodePort is required for the ALB to route to the Service
-          type: NodePort
+      type: NodePort
 --- TRUNCATED ---
 ----
 --
@@ -226,12 +233,12 @@ $ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operato
 --- TRUNCATED ---
     spec:
     --- TRUNCATED ---
-    restartPolicy: Always
-        securityContext:
-      # You can assign any random value as fsGroup 
-             fsGroup: 2000
-         serviceAccount: default
-         serviceAccountName: default
+      restartPolicy: Always
+      securityContext:
+        # You can assign any random value as fsGroup 
+        fsGroup: 2000
+      serviceAccount: default
+      serviceAccountName: default
 --- TRUNCATED ---
 ----
 --
@@ -246,10 +253,10 @@ $ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operato
     kind: Deployment
 --- TRUNCATED ---
     spec:
-        securityContext:
-     # You can assign any random value as fsGroup 
-           fsGroup: 3000
-         automountServiceAccountToken: false
+      securityContext:
+        # You can assign any random value as fsGroup 
+        fsGroup: 3000
+      automountServiceAccountToken: false
 --- TRUNCATED ---
 ----
 --
@@ -263,8 +270,8 @@ $ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operato
     apiVersion: v1
     kind: Service
     spec:
-     # NodePort is required for the ALB to route to the Service
-          type: NodePort
+      # NodePort is required for the ALB to route to the Service
+      type: NodePort
 --- TRUNCATED ---
 ----
 --
@@ -355,7 +362,69 @@ Once the Operator is installed and running, you can create a {product-short} ins
 
 .Procedure
 
-. Create custom resource file using the following template:
+. Create a ConfigMap named `app-config-rhdh` containing the {product-short} configuration using the following template:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://<rhdh_dns_name>
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://<rhdh_dns_name>
+      cors:
+        origin: https://<rhdh_dns_name>
+----
+--
+
+. Create a Secret named `secrets-rhdh` and add a key named `BACKEND_SECRET` with a `Base64-encoded` string as value:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets-rhdh
+stringData:
+  # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup
+  BACKEND_SECRET: "xxx" 
+----
+
+[IMPORTANT]
+====
+Ensure that you use a unique value of `BACKEND_SECRET` for each {product-short} instance.
+====
+
+You can use the following command to generate a key:
+
+[source]
+----
+node-p'require("crypto").randomBytes(24).toString("base64")'
+----
+--
+
+. To enable pulling the PostgreSQL image from the Red Hat Ecosystem Catalog, add the image pull secret in the default service account within the namespace where the {product-short} instance is being deployed:
++
+--
+[source]
+----
+$ kubectl patch serviceaccount default \
+    -p '{"imagePullSecrets": [{"name": "rhdh-pull-secret"}]}' \
+    -n <your_namespace>
+----
+--
+
+. Create a Custom Resource file using the following template:
 +
 --
 [source,yaml]
@@ -367,25 +436,20 @@ metadata:
   name: my-rhdh
 spec:
   application:
-  imagePullSecrets:
+    imagePullSecrets:
     - "rhdh-pull-secret"
     route:
       enabled: false
+    appConfig:
+      configMaps:
+        - name: "app-config-rhdh"
+    extraEnvs:
+      secrets:
+        - name: "secrets-rhdh"
 ----
 --
 
-. To pull the PostgreSQL image from the Red Hat Ecosystem Catalog, add the image pull secret to the default service account in the namespace where the {product-short} instance is created:
-+
---
-[source]
-----
-$ kubectl patch serviceaccount default \
-    -p '{"imagePullSecrets": [{"name": "rhdh-pull-secret"}]}' \
-    -n <your_namespace>
-----
---
-
-. Create the Ingress resource using the following template:
+. Create an Ingress resource using the following template, ensuring to customize the names as needed:
 +
 --
 [source,yaml]
@@ -393,42 +457,42 @@ $ kubectl patch serviceaccount default \
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
- # TODO: this the name of your RHDH instance
+  # TODO: this the name of your RHDH Ingress
   name: my-rhdh
-  annotations:
-    # Below annotation is to specify if the loadbalancer is "internal" or "internet-facing"	   
+  annotations:	   
     alb.ingress.kubernetes.io/scheme: internet-facing
 
     alb.ingress.kubernetes.io/target-type: ip
 
     # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
-    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxx:certificate/xxxxxx
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-xxx:xxxx:certificate/xxxxxx
 
-    # TODO: The HTTPS listener below requires setting the certificate ARN above. Remove it if you plan to expose your RHDH differently, for example via a CloudFront distribution.
      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
 
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
 
-      # TODO: if needed, set HTTP to HTTPS redirects. Every HTTP listener configured will be redirected to below mentioned port over HTTPS.
-      # alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # TODO: Set your application domain name.
+    external-dns.alpha.kubernetes.io/hostname: <rhdh_dns_name>
 
 spec:
-  # alb because we are using ALB.
-  # But adjust if using a different Ingress Controller
-  # and remove the 'alb.*' annotations accordingly.
   ingressClassName: alb
   rules:
-    - host: <your.desired.domain.com>
+    # TODO: Set your application domain name.
+    - host: <rhdh_dns_name>
       http:
         paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backstage-my-rhdh
-                port:
-                  name: http-backend
-
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              # TODO: my-rhdh is the name of your Backstage Custom Resource.
+              # Adjust if you changed it!
+              name: backstage-my-rhdh
+              port:
+                name: http-backend
 ----
+
+In the previous template, replace ` <rhdh_dns_name>` with your {product-short} domain name and update the value of `alb.ingress.kubernetes.io/certificate-arn` with your certificate ARN.
 --
 
 .Verification

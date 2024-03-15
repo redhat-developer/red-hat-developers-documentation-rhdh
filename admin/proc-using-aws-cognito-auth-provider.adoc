@@ -5,7 +5,7 @@ In this section, Amazon Cognito is an AWS service for adding an authentication l
 
 Although Amazon Cognito is not part of the core authentication providers for the Developer Hub, it can be integrated using the generic OpenID Connect (OIDC) provider.
 
-You can configure your {product-short} in both deployments Helm Chart and Operator-backed.
+You can configure your {product-short} in both Helm Chart and Operator-backed deployments.
 
 .Prerequisites
 
@@ -17,6 +17,22 @@ Ensure that you have note the AWS region where the user pool is located and the 
 ====
 
 * You have created an App Client within your user pool for integrating the hosted UI. For more information, see https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-app-integration.html#cognito-user-pools-create-an-app-integration[Setting up the hosted UI with the Amazon Cognito console].
++
+--
+When setting up the hosted UI using the Amazon Cognito console, ensure to make the following adjustments:
+
+. In the *Allowed callback URL(s)* section, include the URL `https://<rhdh_url>/api/auth/oidc/handler/frame`. Ensure to replace `<rhdh_url>` with your {product-short} application's URL, such as, `my.rhdh.example.com`.
+
+. Similarly, in the *Allowed sign-out URL(s)* section, add `https://<rhdh_url>`. Replace `<rhdh_url>` with your {product-short} application's URL, such as `my.rhdh.example.com`.
+
+. Under *OAuth 2.0 grant types*, select *Authorization code grant* to return an authorization code.
+
+. Under *OpenID Connect scopes*, ensure to select at least the following scopes:
+
+** OpenID
+** Profile
+** Email
+--
 
 Helm deployment::
 +
@@ -93,7 +109,7 @@ upstream:
 ----
 helm upgrade rhdh \
   openshift-helm-charts/redhat-developer-hub \
-  --version 1.0.0-1 \
+  [--version 1.0.0-1] \
   --values /path/to/values.yaml
 ----
 --
