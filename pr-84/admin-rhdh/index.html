@@ -1425,7 +1425,7 @@ The script can take several minutes to complete as it copies multiple images to 
 <p>You can integrate your Red Hat Developer Hub application with Amazon Web Services (AWS), which can help you streamline your workflows within the AWS ecosystem. Integrating the Developer Hub resources with AWS provides access to a comprehensive suite of tools, services, and solutions.</p>
 </div>
 <div class="paragraph">
-<p>The integration with AWS requires the deployment of Developer Hub in Elastic Kubernetes Services (EKS) using Helm Chart and Operator.</p>
+<p>The integration with AWS requires the deployment of Developer Hub in Elastic Kubernetes Services (EKS) using Helm Chart or Operator.</p>
 </div>
 <div class="sect2">
 <h3 id="proc-rhdh-deploy-eks-using-helm_admin-rhdh">4.1. Deploying Red Hat Developer Hub in Elastic Kubernetes Services (EKS) using Helm Chart</h3>
@@ -1436,6 +1436,18 @@ The script can take several minutes to complete as it copies multiple images to 
 <div class="title">Prerequisites</div>
 <ul>
 <li>
+<p>You have an EKS cluster with AWS Application Load Balancer (ALB) add-on installed. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html">Application load balancing on Amazon EKS</a> and <a href="https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html">Installing the AWS Load Balancer Controller add-on</a>.</p>
+</li>
+<li>
+<p>You have configured a domain name for your Developer Hub instance. The domain name can be a hosted zone entry in Route 53 or managed outside of AWS. For more information, see <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html">Configuring Amazon Route 53 as your DNS service</a> documentation.</p>
+</li>
+<li>
+<p>You have an entry in the AWS Certificate Manager (ACM) for your preferred domain name. Make sure to keep a record of your Certificate ARN.</p>
+</li>
+<li>
+<p>You have subscribed to the registry.redhat.io. For more information, see <a href="https://access.redhat.com/RegistryAuthentication">Red Hat Container Registry Authentication</a>.</p>
+</li>
+<li>
 <p>You have set the context to the EKS cluster in your current <code>kubeconfig</code>. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html">Creating or updating a kubeconfig file for an Amazon EKS cluster</a>.</p>
 </li>
 <li>
@@ -1443,15 +1455,6 @@ The script can take several minutes to complete as it copies multiple images to 
 </li>
 <li>
 <p>You have installed Helm 3 or latest. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/helm.html">Using Helm with Amazon EKS</a>.</p>
-</li>
-<li>
-<p>Your Developer Hub application is running on EKS. For more information about using the AWS Application Load Balancer (ALB), see <a href="https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html">Application load balancing on Amazon EKS</a>.</p>
-</li>
-<li>
-<p>The ALB add-on is installed in the EKS cluster. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html">Installing the AWS Load Balancer Controller add-on</a>.</p>
-</li>
-<li>
-<p>You have subscribed to the registry.redhat.io. For more information, see <a href="https://access.redhat.com/RegistryAuthentication">Red Hat Container Registry Authentication</a>.</p>
 </li>
 </ul>
 </div>
@@ -1496,11 +1499,8 @@ The script can take several minutes to complete as it copies multiple images to 
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
-  # TODO Adjust this value if you know the DNS name under which
-  # your RHDH instance will be exposed.
-  # If using ALB with dynamic load balancer DNS, we'll be
-  # able to adjust this value only after the ALB is provisioned.
-  host: rhdh.acme.com
+  # TODO: Set your application domain name.
+  host: &lt;your rhdh domain name&gt;
 
 
 route:
@@ -1516,28 +1516,24 @@ upstream:
   ingress:
     enabled: true
     annotations:
-      # alb because we are using ALB.
-      # But adjust if using a different Ingress Controller
-      # and remove the 'alb.*' annotations accordingly.
       kubernetes.io/ingress.class: alb
 
 
-      # Below annotation is to specify if the loadbalancer is "internal" or "internet-facing"
       alb.ingress.kubernetes.io/scheme: internet-facing
 
 
       # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
-      # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxx:certificate/xxxxxx
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxx:xxxx:certificate/xxxxxx
 
 
-	# TODO: The HTTPS listener below requires setting the certificate ARN above. Remove it if you plan to expose your RHDH differently, for example via a CloudFront distribution.
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+	alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
 
 
-      # TODO: if needed, set HTTP to HTTPS redirects. Every HTTP listener configured will be redirected to below mentioned port over HTTPS.
-      # alb.ingress.kubernetes.io/ssl-redirect: '443'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
 
 
+      # TODO: Set your application domain name.
+      external-dns.alpha.kubernetes.io/hostname: &lt;your rhdh domain name&gt;
 
 
   backstage:
@@ -1560,23 +1556,6 @@ upstream:
     enabled: true</code></pre>
 </div>
 </div>
-<div class="paragraph">
-<p>If you already have the DNS name for your Developer Hub instance, specify the value for the <code>global.host</code> field in the previous template.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Configuring the HTTPS listener with Application Load Balancer (ALB) requires a certificate for your custom domain. In case, the custom domain or certificate is not available, then you can set the <code>alb.ingress.kubernetes.io/listen-ports</code> annotation to <code>[{"HTTP": 80}]</code> and create a CloudFront distribution using the ALB endpoint as the content origin. Using this approach, you can access the Developer Hub using the CloudFront domain name. For more information about creating a CloudFront distribution, see <a href="https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-creating.html">Steps for creating a distribution</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
 </div>
 </div>
 </li>
@@ -1596,61 +1575,6 @@ upstream:
 <p>In the previous example, <code>version 1.0.0-1</code> is used as the latest version of the Helm Chart.</p>
 </div>
 </div>
-</div>
-</li>
-<li>
-<p>(Optional) If an ALB or another ingress controller is used to expose your Developer Hub instance and you are unaware of the DNS hostname, then identify the provisioned DNS name and update the Developer Hub configuration using the following steps:</p>
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>Run the following command to find the ingress hostname:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code>$ kubectl get ingress rhdh-developer-hub
-
-NAME                    CLASS    HOSTS                                                                 ADDRESS                                                               PORTS   AGE
-rhdh-developer-hub   &lt;none&gt;   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   80      51m</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Update your <code>values.yaml</code> file as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
-  host: &lt;rhdh_dns_name&gt;
-
-# --- TRUNCATED ---</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Replace <code>&lt;rhdh_dns_name&gt;</code> with the value of the Developer Hub DNS name, such as <code>k8s-rhdhoper-myrhdh-f9ec8d3481-1192320380.eu-north-1.elb.amazonaws.com</code> or with a CloudFront DNS name if you used CloudFront, such as <code>376s7j9emms3n.cloudfront.net</code>.</p>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Run the following command and upgrade your Helm deployment:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code>helm upgrade rhdh \
-  openshift-helm-charts/redhat-developer-hub \
-  --version 1.0.0-1 \
-  --values /path/to/values.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
 </div>
 </li>
 </ol>
@@ -2124,10 +2048,22 @@ spec:
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>Your Developer Hub application is running on EKS. For more information about using the AWS Application Load Balancer (ALB), see <a href="https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html">Application load balancing on Amazon EKS</a>.</p>
+<p>You have an EKS cluster with AWS Application Load Balancer (ALB) add-on installed. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html">Application load balancing on Amazon EKS</a> and <a href="https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html">Installing the AWS Load Balancer Controller add-on</a>.</p>
 </li>
 <li>
-<p>The ALB add-on is installed in the EKS cluster. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html">Installing the AWS Load Balancer Controller add-on</a>.</p>
+<p>You have configured a domain name for your Developer Hub instance. The domain name can be a hosted zone entry in Route 53 or managed outside of AWS. For more information, see <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html">Configuring Amazon Route 53 as your DNS service</a> documentation.</p>
+</li>
+<li>
+<p>You have an entry in the AWS Certificate Manager (ACM) for your preferred domain name. Make sure to keep a record of your Certificate ARN.</p>
+</li>
+<li>
+<p>You have subscribed to the registry.redhat.io. For more information, see <a href="https://access.redhat.com/RegistryAuthentication">Red Hat Container Registry Authentication</a>.</p>
+</li>
+<li>
+<p>You have set the context to the EKS cluster in your current <code>kubeconfig</code>. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html">Creating or updating a kubeconfig file for an Amazon EKS cluster</a>.</p>
+</li>
+<li>
+<p>You have installed <code>kubectl</code>. For more information, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html">Installing or updating kubectl</a>.</p>
 </li>
 </ul>
 </div>
@@ -2203,142 +2139,19 @@ spec:
   # and remove the 'alb.*' annotations accordingly.
   ingressClassName: alb
   rules:
-    - http:
+    - host: &lt;your.desired.domain.com&gt;
+      http:
         paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              # TODO: my-rhdh is the name of your Backstage Custom Resource.
-              # Adjust if you changed it!
-              name: backstage-my-rhdh
-              port:
-                name: http-backend</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Configuring the HTTPS listener with Application Load Balancer (ALB) requires a certificate for your custom domain. In case, the custom domain or certificate is not available, then you can set the <code>alb.ingress.kubernetes.io/listen-ports</code> annotation to <code>[{"HTTP": 80}]</code> and create a CloudFront distribution using the ALB endpoint as the content origin. Using this approach, you can access the Developer Hub using the CloudFront domain name. For more information about creating a CloudFront distribution, see <a href="https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-creating.html">Steps for creating a distribution</a>.</p>
-</div>
-</td>
-</tr>
-</table>
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backstage-my-rhdh
+                port:
+                  name: http-backend</code></pre>
 </div>
 </div>
 </div>
-</li>
-<li>
-<p>(Optional) If an ALB or another ingress controller is used to expose your Developer Hub instance and you are unaware of the DNS hostname, then identify the provisioned DNS name and update the Developer Hub configuration using the following steps:</p>
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>Run the following command to find the ingress hostname:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code>$ kubectl get ingress rhdh-developer-hub
-
-NAME                    CLASS    HOSTS                                                                 ADDRESS                                                               PORTS   AGE
-rhdh-developer-hub   &lt;none&gt;   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   k8s-myns-rhdhde-3dec682266-491020386.eu-north-1.elb.amazonaws.com   80      51m</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a ConfigMap named <code>app-config-rhdh</code> using the following template:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config-rhdh
-data:
-  "app-config-rhdh.yaml": |
-    app:
-      title: Red Hat Developer Hub
-      baseUrl: https://&lt;rhdh_dns_name&gt;
-    backend:
-      auth:
-        keys:
-          - secret: "${BACKEND_SECRET}"
-      baseUrl: https://&lt;rhdh_dns_name&gt;
-      cors:
-        origin: https://&lt;rhdh_dns_name&gt;</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>In the previous template, replace <code>&lt;rhdh_dns_name&gt;</code> with the value of Developer Hub DNS name, such as <code>k8s-rhdhoper-myrhdh-f9ec8d3481-1192320380.eu-north-1.elb.amazonaws.com</code> or with the value of CloudFront DNS name, such as <code>d376s7j9emms3n.cloudfront.net</code> if CloudFront is used.</p>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a Secret named <code>secrets-rhdh</code> and add a <code>BACKEND_SECRET</code> key with a <code>Base64-encoded</code> string as value:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
-kind: Secret
-metadata:
-  name: secrets-rhdh
-stringData:
-  # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup:
-  # node -p 'require("crypto").randomBytes(24).toString("base64")'
-  BACKEND_SECRET: "R2FxRVNrcmwzYzhhN3l0V1VRcnQ3L1pLT09WaVhDNUEK"</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Ensure that you use a unique name for each Developer Hub instance.</p>
-</div>
-<div class="paragraph">
-<p>You can also use the following command to generate a key from the terminal:</p>
-</div>
-<div class="paragraph">
-<p><code>node-p&#8217;require("crypto").randomBytes(24).toString("base64")'</code></p>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Update your custom resource created previously:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
-metadata:
- # TODO: this the name of your RHDH instance
-  name: my-rhdh
-spec:
-  application:
-    imagePullSecrets:
-    - "rhdh-pull-secret"
-    route:
-      enabled: false
-    appConfig:
-      configMaps:
-        - name: "app-config-rhdh"
-    extraEnvs:
-      secrets:
-        - name: "secrets-rhdh"</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
 </div>
 </li>
 </ol>
@@ -2628,7 +2441,7 @@ data:
 </div>
 </li>
 <li>
-<p>Edit or create your custom <code>secrets-rhdh</code> Secret as follows:</p>
+<p>Edit or create your custom <code>secrets-rhdh</code> Secret using the following template:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
@@ -5815,7 +5628,7 @@ Kubernetes cluster.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-14 11:31:25 UTC
+Last updated 2024-03-15 08:36:29 UTC
 </div>
 </div>
 </body>
