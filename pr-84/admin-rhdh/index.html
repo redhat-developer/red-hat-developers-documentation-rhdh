@@ -1430,7 +1430,7 @@ The script can take several minutes to complete as it copies multiple images to 
 <div class="sect2">
 <h3 id="proc-rhdh-deploy-eks-using-helm_admin-rhdh">4.1. Deploying Red Hat Developer Hub in Elastic Kubernetes Services (EKS) using Helm Chart</h3>
 <div class="paragraph">
-<p>When you deploy Developer Hub in Elastic Kubernetes Services (EKS) using Helm Chart, orchestrates a robust development environment within the AWS ecosystem.</p>
+<p>When you deploy Developer Hub in Elastic Kubernetes Services (EKS) using Helm Chart, it orchestrates a robust development environment within the AWS ecosystem.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -1526,7 +1526,7 @@ upstream:
       alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxx:xxxx:certificate/xxxxxx
 
 
-	alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
 
 
       alb.ingress.kubernetes.io/ssl-redirect: '443'
@@ -1567,12 +1567,12 @@ upstream:
 <div class="content">
 <pre class="highlight"><code>helm install rhdh \
   openshift-helm-charts/redhat-developer-hub \
-  --version 1.0.0-1 \
+  [--version 1.0.0-1] \
   --values /path/to/values.yaml</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>In the previous example, <code>version 1.0.0-1</code> is used as the latest version of the Helm Chart.</p>
+<p>In the previous example, version <code>1.0.0-1</code> is used as the latest version of the Helm Chart.</p>
 </div>
 </div>
 </div>
@@ -1720,7 +1720,14 @@ EOF</code></pre>
 <p>If the status of the operator pod shows <code>ImagePullBackOff</code>, you might need permissions to pull the image directly within the operator Deployment&#8217;s manifest.</p>
 </div>
 <div class="paragraph">
-<p>You can include the required secret name in the <code>deployment.spec.template.spec.imagePullSecrets</code> list and verify the deployment name using <code>kubectl get deployment -n rhdh-operator</code> command.</p>
+<p>You can include the required secret name in the <code>deployment.spec.template.spec.imagePullSecrets</code> list and verify the deployment name using <code>kubectl get deployment -n rhdh-operator</code> command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>$ kubectl -n rhdh-operator patch deployment \
+    rhdh.fast --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
+    --type=merge</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -1753,12 +1760,12 @@ EOF</code></pre>
 --- TRUNCATED ---
     spec:
     --- TRUNCATED ---
-    restartPolicy: Always
-        securityContext:
+      restartPolicy: Always
+      securityContext:
       # You can assign any random value as fsGroup
-             fsGroup: 2000
-         serviceAccount: default
-         serviceAccountName: default
+        fsGroup: 2000
+      serviceAccount: default
+      serviceAccountName: default
 --- TRUNCATED ---</code></pre>
 </div>
 </div>
@@ -1776,10 +1783,10 @@ EOF</code></pre>
     kind: Deployment
 --- TRUNCATED ---
     spec:
-        securityContext:
-     # You can assign any random value as fsGroup
-           fsGroup: 3000
-         automountServiceAccountToken: false
+      securityContext:
+        # You can assign any random value as fsGroup
+        fsGroup: 3000
+      automountServiceAccountToken: false
 --- TRUNCATED ---</code></pre>
 </div>
 </div>
@@ -1797,7 +1804,7 @@ EOF</code></pre>
     kind: Service
     spec:
      # NodePort is required for the ALB to route to the Service
-          type: NodePort
+      type: NodePort
 --- TRUNCATED ---</code></pre>
 </div>
 </div>
@@ -1899,12 +1906,12 @@ $ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operato
 --- TRUNCATED ---
     spec:
     --- TRUNCATED ---
-    restartPolicy: Always
-        securityContext:
-      # You can assign any random value as fsGroup
-             fsGroup: 2000
-         serviceAccount: default
-         serviceAccountName: default
+      restartPolicy: Always
+      securityContext:
+        # You can assign any random value as fsGroup
+        fsGroup: 2000
+      serviceAccount: default
+      serviceAccountName: default
 --- TRUNCATED ---</code></pre>
 </div>
 </div>
@@ -1922,10 +1929,10 @@ $ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operato
     kind: Deployment
 --- TRUNCATED ---
     spec:
-        securityContext:
-     # You can assign any random value as fsGroup
-           fsGroup: 3000
-         automountServiceAccountToken: false
+      securityContext:
+        # You can assign any random value as fsGroup
+        fsGroup: 3000
+      automountServiceAccountToken: false
 --- TRUNCATED ---</code></pre>
 </div>
 </div>
@@ -1942,8 +1949,8 @@ $ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operato
     apiVersion: v1
     kind: Service
     spec:
-     # NodePort is required for the ALB to route to the Service
-          type: NodePort
+      # NodePort is required for the ALB to route to the Service
+      type: NodePort
 --- TRUNCATED ---</code></pre>
 </div>
 </div>
@@ -2071,29 +2078,74 @@ spec:
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>Create custom resource file using the following template:</p>
+<p>Create a ConfigMap named <code>app-config-rhdh</code> containing the Developer Hub configuration using the following template:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
+kind: ConfigMap
 metadata:
- # TODO: this the name of your RHDH instance
-  name: my-rhdh
-spec:
-  application:
-  imagePullSecrets:
-    - "rhdh-pull-secret"
-    route:
-      enabled: false</code></pre>
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://&lt;rhdh_dns_name&gt;
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://&lt;rhdh_dns_name&gt;
+      cors:
+        origin: https://&lt;rhdh_dns_name&gt;</code></pre>
 </div>
 </div>
 </div>
 </div>
 </li>
 <li>
-<p>To pull the PostgreSQL image from the Red Hat Ecosystem Catalog, add the image pull secret to the default service account in the namespace where the Developer Hub instance is created:</p>
+<p>Create a Secret named <code>secrets-rhdh</code> and add a key named <code>BACKEND_SECRET</code> with a <code>Base64-encoded</code> string as value:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets-rhdh
+stringData:
+  # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup
+  BACKEND_SECRET: "xxx"</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Ensure that you use a unique value of <code>BACKEND_SECRET</code> for each Developer Hub instance.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>You can use the following command to generate a key:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>node-p'require("crypto").randomBytes(24).toString("base64")'</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>To enable pulling the PostgreSQL image from the Red Hat Ecosystem Catalog, add the image pull secret in the default service account within the namespace where the Developer Hub instance is being deployed:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
@@ -2107,7 +2159,35 @@ spec:
 </div>
 </li>
 <li>
-<p>Create the Ingress resource using the following template:</p>
+<p>Create a Custom Resource file using the following template:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+ # TODO: this the name of your RHDH instance
+  name: my-rhdh
+spec:
+  application:
+    imagePullSecrets:
+    - "rhdh-pull-secret"
+    route:
+      enabled: false
+    appConfig:
+      configMaps:
+        - name: "app-config-rhdh"
+    extraEnvs:
+      secrets:
+        - name: "secrets-rhdh"</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Create an Ingress resource using the following template, ensuring to customize the names as needed:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
@@ -2115,41 +2195,43 @@ spec:
 <pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
- # TODO: this the name of your RHDH instance
+  # TODO: this the name of your RHDH Ingress
   name: my-rhdh
   annotations:
-    # Below annotation is to specify if the loadbalancer is "internal" or "internet-facing"
     alb.ingress.kubernetes.io/scheme: internet-facing
 
     alb.ingress.kubernetes.io/target-type: ip
 
     # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
-    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxx:certificate/xxxxxx
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-xxx:xxxx:certificate/xxxxxx
 
-    # TODO: The HTTPS listener below requires setting the certificate ARN above. Remove it if you plan to expose your RHDH differently, for example via a CloudFront distribution.
      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
 
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
 
-      # TODO: if needed, set HTTP to HTTPS redirects. Every HTTP listener configured will be redirected to below mentioned port over HTTPS.
-      # alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # TODO: Set your application domain name.
+    external-dns.alpha.kubernetes.io/hostname: &lt;rhdh_dns_name&gt;
 
 spec:
-  # alb because we are using ALB.
-  # But adjust if using a different Ingress Controller
-  # and remove the 'alb.*' annotations accordingly.
   ingressClassName: alb
   rules:
-    - host: &lt;your.desired.domain.com&gt;
+    # TODO: Set your application domain name.
+    - host: &lt;rhdh_dns_name&gt;
       http:
         paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backstage-my-rhdh
-                port:
-                  name: http-backend</code></pre>
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              # TODO: my-rhdh is the name of your Backstage Custom Resource.
+              # Adjust if you changed it!
+              name: backstage-my-rhdh
+              port:
+                name: http-backend</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>In the previous template, replace ` &lt;rhdh_dns_name&gt;` with your Developer Hub domain name and update the value of <code>alb.ingress.kubernetes.io/certificate-arn</code> with your certificate ARN.</p>
 </div>
 </div>
 </div>
@@ -2376,7 +2458,7 @@ $ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"</code></pr
 <p>Although Amazon Cognito is not part of the core authentication providers for the Developer Hub, it can be integrated using the generic OpenID Connect (OIDC) provider.</p>
 </div>
 <div class="paragraph">
-<p>You can configure your Developer Hub in both deployments Helm Chart and Operator-backed.</p>
+<p>You can configure your Developer Hub in both Helm Chart and Operator-backed deployments.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -2400,6 +2482,42 @@ $ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"</code></pr
 </li>
 <li>
 <p>You have created an App Client within your user pool for integrating the hosted UI. For more information, see <a href="https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-app-integration.html#cognito-user-pools-create-an-app-integration">Setting up the hosted UI with the Amazon Cognito console</a>.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>When setting up the hosted UI using the Amazon Cognito console, ensure to make the following adjustments:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>In the <strong>Allowed callback URL(s)</strong> section, include the URL <code><a href="https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame" class="bare">https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame</a></code>. Ensure to replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application&#8217;s URL, such as, <code>my.rhdh.example.com</code>.</p>
+</li>
+<li>
+<p>Similarly, in the <strong>Allowed sign-out URL(s)</strong> section, add <code><a href="https://&lt;rhdh_url&gt" class="bare">https://&lt;rhdh_url&gt</a>;</code>. Replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application&#8217;s URL, such as <code>my.rhdh.example.com</code>.</p>
+</li>
+<li>
+<p>Under <strong>OAuth 2.0 grant types</strong>, select <strong>Authorization code grant</strong> to return an authorization code.</p>
+</li>
+<li>
+<p>Under <strong>OpenID Connect scopes</strong>, ensure to select at least the following scopes:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>OpenID</p>
+</li>
+<li>
+<p>Profile</p>
+</li>
+<li>
+<p>Email</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
 <div class="dlist">
 <dl>
 <dt class="hdlist1">Helm deployment</dt>
@@ -2482,7 +2600,7 @@ stringData:
 <div class="content">
 <pre class="highlight"><code>helm upgrade rhdh \
   openshift-helm-charts/redhat-developer-hub \
-  --version 1.0.0-1 \
+  [--version 1.0.0-1] \
   --values /path/to/values.yaml</code></pre>
 </div>
 </div>
@@ -5628,7 +5746,7 @@ Kubernetes cluster.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-15 08:36:29 UTC
+Last updated 2024-03-15 13:39:25 UTC
 </div>
 </div>
 </body>
