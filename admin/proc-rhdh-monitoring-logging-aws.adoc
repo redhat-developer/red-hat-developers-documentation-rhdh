@@ -1,0 +1,149 @@
+[id='proc-rhdh-monitoring-logging-aws_{context}']
+= Monitoring and logging with Amazon Web Services (AWS) in {product}
+
+In the {product}, monitoring and logging are facilitated through Amazon Web Services (AWS) integration. With features like Amazon CloudWatch for real-time monitoring and Amazon Prometheus for comprehensive logging, you can ensure the reliability, scalability, and compliance of your {product-short} application hosted on AWS infrastructure. 
+
+This integration enables you to oversee, diagnose, and refine your applications in the Red Hat ecosystem, leading to an improved development and operational journey.
+
+== Monitoring with Amazon Prometheus
+
+{product} provides Prometheus metrics related to the running application. For more information about enabling or deploying Prometheus for EKS clusters, see https://docs.aws.amazon.com/eks/latest/userguide/prometheus.html[Prometheus metrics] in the Amazon documentation.
+
+To monitor {product-short} using https://aws.amazon.com/prometheus/[Amazon Prometheus], you need to create an Amazon managed service for the Prometheus workspace and configure the ingestion of the Developer Hub Prometheus metrics. For more information, see https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-onboard-create-workspace.html[Create a workspace] and https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-onboard-ingest-metrics.html[Ingest Prometheus metrics to the workspace] sections in the Amazon documentation.
+
+After ingesting Prometheus metrics into the created workspace, you can configure the metrics scraping to extract data from pods based on specific pod annotations.
+
+=== Configuring annotations for monitoring
+
+You can configure the annotations for monitoring in both Helm deployment and Operator-backed deployment.
+
+Helm deployment::
++
+--
+To annotate the backstage pod for monitoring, update your `values.yaml` file as follows:
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    # --- TRUNCATED ---
+    podAnnotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: '/metrics'
+      prometheus.io/port: '7007'
+      prometheus.io/scheme: 'http'
+----
+--
+
+Operator-backed deployment::
++
+--
+.Procedure
+
+. As an administrator of the operator, edit the default configuration to add Prometheus annotations as follows:
++
+[source,bash]
+----
+# Update OPERATOR_NS accordingly
+$ OPERATOR_NS=rhdh-operator
+$ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"
+----
+
+. Find the `deployment.yaml` key in the ConfigMap and add the annotations to the `spec.template.metadata.annotations` field as follows:
++
+[source,yaml]
+----
+deployment.yaml: |-
+  apiVersion: apps/v1
+  kind: Deployment
+  # --- truncated ---
+  spec:
+    template:
+      # --- truncated ---
+      metadata:
+        labels:
+         rhdh.redhat.com/app:  # placeholder for 'backstage-<cr-name>'
+        # --- truncated ---
+        annotations:
+          prometheus.io/scrape: 'true'
+          prometheus.io/path: '/metrics'
+          prometheus.io/port: '7007'
+          prometheus.io/scheme: 'http'
+  # --- truncated ---
+----
+
+. Save your changes.
+--
+
+.Verification
+
+To verify if the scraping works:
+
+. Use `kubectl` to port-forward the Prometheus console to your local machine as follows:
++
+[source,bash]
+----
+$ kubectl --namespace=prometheus port-forward deploy/prometheus-server 9090
+----
+
+. Open your web browser and navigate to `http://localhost:9090` to access the Prometheus console.
+. Monitor relevant metrics, such as `process_cpu_user_seconds_total`.
+
+== Logging with Amazon CloudWatch logs
+
+Logging within the {product} relies on the https://github.com/winstonjs/winston[winston library]. By default, logs at the debug level are not recorded. To activate debug logs, you must set the environment variable `LOG_LEVEL` to debug in your {product} instance.
+
+=== Configuring the application log level
+
+You can configure the application log level in both Helm deployment and Operator-backed deployment.
+
+Helm deployment::
++
+--
+To update the logging level, add the environment variable `LOG_LEVEL` to your Helm chart's `values.yaml` file:
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    # --- Truncated ---
+    extraEnvVars:
+      - name: LOG_LEVEL
+        value: debug
+----
+--
+
+Operator-backed deployment::
++
+--
+You can modify the logging level by including the environment variable `LOG_LEVEL` in your custom resource as follows:
+
+[source,yaml]
+----
+spec:
+  # Other fields omitted
+  application:
+    extraEnvs:
+      envs:
+        - name: LOG_LEVEL
+          value: debug
+----
+--
+
+=== Retrieving logs from Amazon CloudWatch
+
+The CloudWatch Container Insights are used to capture logs and metrics for Amazon EKS. For more information, see https://docs.aws.amazon.com/prescriptive-guidance/latest/implementing-logging-monitoring-cloudwatch/kubernetes-eks-logging.html[Logging for Amazon EKS] documentation.
+
+To capture the logs and metrics, https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Container-Insights-setup-EKS-addon.html[install the Amazon CloudWatch Observability EKS add-on] in your cluster. Following the setup of Container Insights, you can access container logs using Logs Insights or Live Tail views.
+
+CloudWatch names the log group where all container logs are consolidated in the following manner:
+
+`/aws/containerinsights/<ClusterName>/application`
+
+Following is an example query to retrieve logs from the Developer Hub instance:
+
+[source,sql]
+----
+fields @timestamp, @message, kubernetes.container_name
+| filter kubernetes.container_name in ["install-dynamic-plugins", "backstage-backend"]
+----
