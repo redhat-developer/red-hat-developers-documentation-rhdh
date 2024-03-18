@@ -486,6 +486,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#rhdh-aap">6.7. Installation and configuration of Ansible Automation Platform</a></li>
 <li><a href="#rhdh-keycloak_admin-rhdh">6.8. Installation and configuration of Keycloak</a></li>
 <li><a href="#rhdh-nexus">6.9. Installation and configuration of Nexus Repository Manager</a></li>
+<li><a href="#installation-and-configuration-tekton">6.10. Installation and configuration of Tekton</a></li>
 </ul>
 </li>
 </ul>
@@ -2406,7 +2407,7 @@ $ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"</code></pr
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>To update the logging level, add the environment variable <code>LOG_LEVEL</code> in your Helm chart&#8217;s <code>values.yaml</code> file:</p>
+<p>To update the logging level, add the environment variable <code>LOG_LEVEL</code> to your Helm chart&#8217;s <code>values.yaml</code> file:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -5792,12 +5793,257 @@ Kubernetes cluster.</p></td>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="installation-and-configuration-tekton">6.10. Installation and configuration of Tekton</h3>
+<div class="paragraph">
+<p>You can use the Tekton plugin to visualize the results of CI/CD pipeline runs on your Kubernetes or OpenShift clusters. The plugin allows users to visually see high level status of all associated tasks in the pipeline for their applications.</p>
+</div>
+<div class="sect3">
+<h4 id="_for-administrators-4">6.10.1. For administrators</h4>
+<div class="sect4">
+<h5 id="installing-tekton-plugin">Installation</h5>
+<div class="ulist">
+<div class="title">Prerequsites</div>
+<ul>
+<li>
+<p>You have installed and configured the <code>@backstage/plugin-kubernetes</code> and <code>@backstage/plugin-kubernetes-backend</code> dynamic plugins. For more information about installing dynamic plugins, see <a href="#con-rhdh-installing-dynamic-plugins_admin-rhdh">Installing dynamic plugins</a>.</p>
+</li>
+<li>
+<p>You have configured the Kubernetes plugin to connect to the cluster using a <code>ServiceAccount</code>.</p>
+</li>
+<li>
+<p>The <code>ClusterRole</code> must be granted for custom resources (PipelineRuns and TaskRuns) to the <code>ServiceAccount</code> accessing the cluster.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+If you have the RHDH Kubernetes plugin configured, then the <code>ClusterRole</code> is already granted.
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>To view the pod logs, you have granted permissions for <code>pods/log</code>.</p>
+</li>
+<li>
+<p>You can use the following code to grant the <code>ClusterRole</code> for custom resources and pod logs:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kubernetes:
+   ...
+   customResources:
+     - group: 'tekton.dev'
+       apiVersion: 'v1'
+       plural: 'pipelineruns'
+     - group: 'tekton.dev'
+       apiVersion: 'v1'
+
+
+ ...
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: backstage-read-only
+  rules:
+    - apiGroups:
+        - ""
+      resources:
+        - pods/log
+      verbs:
+        - get
+        - list
+        - watch
+    ...
+    - apiGroups:
+        - tekton.dev
+      resources:
+        - pipelineruns
+        - taskruns
+      verbs:
+        - get
+        - list</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>You can use the prepared manifest for a read-only <code>ClusterRole</code>, which provides access for both Kubernetes plugin and Tekton plugin.</p>
+</div>
+</li>
+<li>
+<p>Add the following annotation to the entity&#8217;s <code>catalog-info.yaml</code> file to identify whether an entity contains the Kubernetes resources:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">annotations:
+  ...
+
+  backstage.io/kubernetes-id: &lt;BACKSTAGE_ENTITY_NAME&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>You can also add the <code>backstage.io/kubernetes-namespace</code> annotation to identify the Kubernetes resources using the defined namespace.</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">annotations:
+  ...
+
+  backstage.io/kubernetes-namespace: &lt;RESOURCE_NS&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Add the following annotation to the <code>catalog-info.yaml</code> file of the entity to enable the Tekton related features in RHDH. The value of the annotation identifies the name of the RHDH entity:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">annotations:
+  ...
+
+  janus-idp.io/tekton : &lt;BACKSTAGE_ENTITY_NAME&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Add a custom label selector, which RHDH uses to find the Kubernetes resources. The label selector takes precedence over the ID annotations.</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">annotations:
+  ...
+
+  backstage.io/kubernetes-label-selector: 'app=my-app,component=front-end'</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Add the following label to the resources so that the Kubernetes plugin gets the Kubernetes resources from the requested entity:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">labels:
+  ...
+
+  backstage.io/kubernetes-id: &lt;BACKSTAGE_ENTITY_NAME&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+When you use the label selector, the mentioned labels must be present on the resource.
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>The Tekton plugin is pre-loaded in RHDH with basic configuration properties. To enable it, set the disabled property to false as follows:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-tekton
+        disabled: false</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_for-users-4">6.10.2. For users</h4>
+<div class="sect4">
+<h5 id="using-tekton-plugin">Using the Tekton plugin in RHDH</h5>
+<div class="paragraph">
+<p>You can use the Tekton front-end plugin to view <code>PipelineRun</code> resources.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have installed the Red Hat Developer Hub (RHDH).</p>
+</li>
+<li>
+<p>You have installed the Tekton plugin. For the installation process, see <a href="#installation-and-configuration-tekton">Installing and configuring the Tekton plugin</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Open your RHDH application and select a component from the <strong>Catalog</strong> page.</p>
+</li>
+<li>
+<p>Go to the <strong>CI</strong> tab.</p>
+<div class="paragraph">
+<p>The <strong>CI</strong> tab displays the list of PipelineRun resources associated with a Kubernetes cluster. The list contains pipeline run details, such as <strong>NAME</strong>, <strong>VULNERABILITIES</strong>, <strong>STATUS</strong>, <strong>TASK STATUS</strong>, <strong>STARTED</strong>, and <strong>DURATION</strong>.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/tekton-plugin-pipeline.png" alt="ci-cd-tab-tekton">
+</div>
+</div>
+</li>
+<li>
+<p>Click the expand row button besides PipelineRun name in the list to view the PipelineRun visualization. The pipeline run resource includes tasks to complete. When you hover the mouse pointer on a task card, you can view the steps to complete that particular task.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/tekton-plugin-pipeline-expand.png" alt="ci-cd-tab-tekton">
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-18 06:06:45 UTC
+Last updated 2024-03-18 07:47:27 UTC
 </div>
 </div>
 </body>
