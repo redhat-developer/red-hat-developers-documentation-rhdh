@@ -10,7 +10,7 @@ You can deploy your {product-short} application on Azure Kubernetes Services (AK
 --
 You can perform the following steps to configure the Resource Group and Cluster:
 
-** To access Azure, ensuring you're logged in to our designated tenant (in this case, `rhdevcloudops.onmicrosoft.com`), use the following command:
+** To access Azure, ensuring you're logged in to our designated tenant use the following command:
 +
 [source]
 ----
@@ -68,9 +68,19 @@ Comparison of AKS specifics with the base {product-short} deployment::
 az aks approuting enable --resource-group <your_ResourceGroup> --name <your_ClusterName>
 ----
 +
+[TIP]
+====
+You might need to install the Azure CLI extension `aks-preview`. If the extension is not installed automatically, you might need to install it manually using the following command:
+
+[source]
+----
+az extension add --upgrade -n aks-preview --allow-preview true
+----
+====
+
 [NOTE]
 ====
-Once you install the Ingress Controller, the 'app-routing-system' namespace with the Ingress Controller will be deployed in your cluster. Note the address of your {product-short} application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the {product-short} application.
+Once you install the Ingress Controller, the 'app-routing-system' namespace with the Ingress Controller will be deployed in your cluster. Note the address of your {product-short} application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the {product-short} application, later referenced as `<app_address>`.
 ====
 +
 [source,bash]
@@ -128,19 +138,22 @@ upstream:
     enabled: true
     className: webapprouting.kubernetes.azure.com
     host: 
-backstage:
-  image:
-    pullSecrets:
-      - rhdh-pull-secret
-  podSecurityContext:
-    fsGroup: 3000
-postgresql:
-  primary:
+  backstage:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
     podSecurityContext:
-      enabled: true
       fsGroup: 3000
-volumePermissions:
-  enabled: true
+  postgresql:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
 ----
 --
 
@@ -162,8 +175,8 @@ kubectl get deploy <your_deploy_name>-developer-hub -n <your_namespace>
 ----
 --
 
-. . Access the deployed {product-short} using the URL: `https://<app_address>`, where <app_address> is the Ingress address obtained earlier (for example, `https://108.141.70.228`).
-. Run the following command to upgrade the deployment:
+. Access the deployed {product-short} using the URL: `https://<app_address>`, where <app_address> is the Ingress address obtained earlier (for example, `https://108.141.70.228`).
+. To upgrade the deployment, run the following command:
 +
 --
 [source]
@@ -172,7 +185,7 @@ helm -n <your_namespace> upgrade -f values.yaml <your_deploy_name> openshift-hel
 ----
 --
 
-. Run the following command to delete the deployment:
+. To delete the deployment, run the following command:
 +
 --
 [source]
@@ -257,7 +270,7 @@ spec:
 ----
 --
 
-. Run the following command to deploy the created Ingress:
+. To deploy the created Ingress, run the following command:
 +
 --
 [source]
@@ -266,7 +279,7 @@ kubectl -n <your_namespace> apply -f rhdh-ingress.yaml
 ----
 --
 
-. Create a {product-short} Custom Resource (CR) manifest file named `rhdh.yaml`, including the previously created `rhdh-pull-secret`:
+. Create a Custom Resource (CR) manifest file named `rhdh.yaml`, including the previously created `rhdh-pull-secret`:
 +
 --
 [source,yaml]
@@ -292,7 +305,7 @@ kubectl -n <your_namespace> apply -f rhdh.yaml
 --
 
 . Access the deployed {product-short} using the URL: `https://<app_address>`, where <app_address> is the Ingress address obtained earlier (for example, `https://108.141.70.228`).
-. To delete the {product-short} CR, run the following command:
+. To delete the CR, run the following command:
 +
 --
 [source]
