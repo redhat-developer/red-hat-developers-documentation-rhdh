@@ -24,7 +24,7 @@ For a non-local deployment::: `pass:[http://{APP_FQDN}:{APP_BACKEND_PORT}/api/au
 `openid`:::
 `profile`:::
 `User.Read`:::
-(Optionally)::: Optional custom scopes of the Microsoft Graph API defined in the app-config.yaml file.
+(Optionally)::: Optional custom scopes of the Microsoft Graph API defined in the `app-config.yaml` file.
 
 .. (Optionally) Your company might require you to grant admin consent for these permissions.
 Even if your company does not require link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/user-admin-consent-overview[admin consent], you might do so as it means users do not need to individually consent the first time they access backstage.
@@ -35,7 +35,7 @@ Save the *Secret* for the next step.
 
 . Set up the Microsoft Azure authentication provider in the {product} backend (`app-config.yaml`).
 +
-Add the `microsoft` provider configuration to your `app-config.yaml` under the root `auth` configuration:
+Add the `microsoft` provider configuration to your `app-config.yaml` under the root `auth` configuration, and edit the configuration keys:
 +
 [source,yaml]
 ----
@@ -44,73 +44,35 @@ auth:
   providers:
     microsoft:
       development:
-        clientId: ${AZURE_CLIENT_ID}
-        clientSecret: ${AZURE_CLIENT_SECRET}
-        tenantId: ${AZURE_TENANT_ID}
-        domainHint: ${AZURE_TENANT_ID}
-        additionalScopes:
+        clientId: ${AZURE_CLIENT_ID} # <1>
+        clientSecret: ${AZURE_CLIENT_SECRET} # <2>
+        tenantId: ${AZURE_TENANT_ID} # <3>
+        domainHint: ${AZURE_TENANT_ID} # <4>
+        additionalScopes: # <5>
           - Mail.Send
+## Uncomment to use Microsoft Azyre for sign-in:
+# signInPage: microsoft # <6>
 ----
-+
-The Microsoft provider is a structure with these configuration keys:
-+
-`clientId`:: Application (client) ID, found on *App Registration > Overview*.
 
-`clientSecret`:: Secret, found on *App Registration > Certificates & secrets*
+<1> `clientId`:: Enter the application ID, found on *App Registration > Overview*.
 
-`tenantId`:: Directory (tenant) ID, found on *App Registration > Overview*
+<2> `clientSecret`:: Enter the application *Secret*, found on *App Registration > Certificates & secrets*
 
-`domainHint` (optional):: Typically, the same as `tenantId`.
+<3> `tenantId`:: Directory (tenant) ID, found on *App Registration > Overview*
+
+<4> `domainHint` (optional):: Typically, the same as `tenantId`.
 Leave blank if your app registration is multi tenant.
 When specified, this reduces login friction for users with accounts in multiple tenants by automatically filtering away accounts from other tenants.
 For more details, see link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy[Home Realm Discovery].
 
-`additionalScopes` (optional):: List of scopes for the App Registration.
+<5> `additionalScopes` (optional):: List of scopes for the App Registration.
 The default and mandatory value is `['user.read']`.
 
-. (Optionally) To enable the Microsoft provider for sign-in, add the provider to the {product} front-end (`packages/app/src/App.tsx`).
-+
-To add the provider to the front-end, add the `microsoftAuthApi` reference and
-`SignInPage` component to the sign-in page.
-+
-To configure sign-in, provide a custom `SignInPage` app component.
-The app renders this component before any other routes.
-The component provides the identity of the current user.
-The `SignInPage` can render any number of pages and components, or just blank space with logic running in the background.
-In the end however it must provide a valid {product} user identity through the `onSignInSuccess` callback prop, at which point the rest of the app is rendered.
-+
-If you want to, you can use the `SignInPage` component provided by `@backstage/core-components`, which takes either a provider or providers (array) prop of `SignInProviderConfig` definitions.
-+
-The following example for Microsoft shows the additions needed to `packages/app/src/App.tsx`:
-+
-.`packages/app/src/App.tsx`
-[source,javascript]
-----
-import { microsoftAuthApiRef } from '@backstage/core-plugin-api';
-import { SignInPage } from '@backstage/core-components';
-
-const app = createApp({
-  components: {
-    SignInPage: props => (
-      <SignInPage
-        {...props}
-        auto
-        provider={{
-          id: 'microsoft-auth-provider',
-          title: 'Microsoft',
-          message: 'Sign in using Microsoft Azure',
-          apiRef: microsoftAuthApiRef,
-        }}
-      />
-    ),
-  },
-  // ..
-});
-----
+<6> `signInPage` (optional):: Enter `microsoft` to enable the Microsoft Azure provider for sign-in.
 
 . (Optionally) If your environment has restrictions on outgoing access, for instance through firewall rules, make sure your Backstage backend has access to the following hosts:
 
 `login.microsoftonline.com`:: To get and exchange authorization codes and access tokens
+
 `graph.microsoft.com`:: To fetch user profile information (as seen in this source code).
 If this host is unreachable, users might see an _Authentication failed, failed to fetch user profile_ error when they attempt to log in.
-
