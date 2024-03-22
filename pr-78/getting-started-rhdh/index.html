@@ -463,6 +463,14 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#ref-supported-servicenow-custom-actions_rhdh-getting-started">8.2. Supported ServiceNow custom actions in Red Hat Developer Hub</a></li>
 </ul>
 </li>
+<li><a href="#assembly-auth-provider-github">9. GitHub authentication provider</a>
+<ul class="sectlevel2">
+<li><a href="#con-github-app-overview">9.1. GitHub App​ overview</a></li>
+<li><a href="#proc-registering-github-app">9.2. Registering a GitHub​ App</a></li>
+<li><a href="#proc-configuring-github-app">9.3. Configuring a GitHub App in Developer Hub</a></li>
+<li><a href="#proc-adding-github-to-frontend">9.4. Adding the GitHub provider to the Developer Hub front end​</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -478,7 +486,17 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="snip-customer-support-info_rhdh-getting-started">Red Hat Developer Hub support</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>If you experience difficulty with a procedure described in this documentation, visit the Red Hat Customer Portal at <a href="http://access.redhat.com" class="bare">http://access.redhat.com</a>. You can use the Red Hat Customer Portal to search or browse through the Red Hat Knowledgebase of technical support articles about Red Hat products. You can also create a <a href="https://access.redhat.com/support/cases/#/case/new/get-support?caseCreate=true">support case</a> for Red Hat Global Support Services (GSS). Please select "Red Hat Developer Hub" as the product and select the appropriate product version.</p>
+<p>If you experience difficulty with a procedure described in this documentation, visit the <a href="http://access.redhat.com">Red Hat Customer Portal</a>. You can use the Red Hat Customer Portal for the following purposes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>To search or browse through the Red Hat Knowledgebase of technical support articles about Red Hat products.</p>
+</li>
+<li>
+<p>To create a <a href="https://access.redhat.com/support/cases/#/case/new/get-support?caseCreate=true">support case</a> for Red Hat Global Support Services (GSS). For support case creation, select <strong>Red Hat Developer Hub</strong> as the product and select the appropriate product version.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -554,7 +572,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li>
 <p>Create a project in the OpenShift, if not present.</p>
 <div class="paragraph">
-<p>For more information about creating a project in OpenShift, see link: <a href="https://docs.openshift.com/container-platform/3.11/dev_guide/projects.html#create-a-project">Red Hat OpenShift documentation</a>.</p>
+<p>For more information about creating a project in OpenShift, see <a href="https://docs.openshift.com/container-platform/4.14/applications/projects/working-with-projects.html#odc-creating-projects-using-developer-perspective_projects">Red Hat OpenShift documentation</a>.</p>
 </div>
 </li>
 <li>
@@ -1037,7 +1055,7 @@ data:
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have set up the GitHub integration. For more information, see <a href="#Setting GitHub integration and authentication">[Setting GitHub integration and authentication]</a>.</p>
+<p>You have set up the GitHub integration. For more information, see <a href="#_configuring-github-integration">Configuring GitHub integration</a>.</p>
 </li>
 </ul>
 </div>
@@ -1137,7 +1155,7 @@ data:
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have set up the GitHub integration. For more information, see <a href="#Setting GitHub integration and authentication">[Setting GitHub integration and authentication]</a>.</p>
+<p>You have set up the GitHub integration. For more information, see <a href="#_configuring-github-integration">Configuring GitHub integration</a>.</p>
 </li>
 </ul>
 </div>
@@ -1181,14 +1199,18 @@ data:
     catalog:
       providers:
         githubOrg:
-          default:
-            id: production
-            orgUrl: '${GITHUB_ORG_URL}'
+          id: production
+          githubUrl: "${GITHUB_URL}"
+          orgs: [ "${GITHUB_ORG}" ] <b class="conum">(1)</b>
     ...</code></pre>
 </div>
 </div>
-<div class="paragraph">
-<p>In the previous code, replace <code>${GITHUB_ORG_URL}</code> with the GitHub organization you want to ingest users from.</p>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Replace <code>${GITHUB_ORG}</code> with the GitHub organization you want to ingest users from.</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -1278,6 +1300,9 @@ Also gives read-only access to the user&#8217;s profile and group memberships.</
 <dt class="hdlist1"><code>email</code></dt>
 <dd>
 <p>Grants read-only access to the user&#8217;s primary email address using OpenID Connect.</p>
+<div class="paragraph">
+<p>Save the <strong>Application ID</strong> and <strong>Secret</strong> for the next step.</p>
+</div>
 </dd>
 </dl>
 </div>
@@ -1285,55 +1310,44 @@ Also gives read-only access to the user&#8217;s profile and group memberships.</
 </dl>
 </div>
 </li>
-</ol>
-</div>
-<div class="paragraph">
-<p>Save the <strong>Application ID</strong> and <strong>Secret</strong> for the next step.</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
 <li>
-<p>Set up the Gitlab authentication provider in the Red Hat Developer Hub backend (<code>app-config.yaml</code>).</p>
+<p>Set up the Gitlab authentication provider in the Red Hat Developer Hub configuration (<code>app-config.yaml</code>).</p>
 <div class="paragraph">
-<p>Add the <code>gitlab</code> provider configuration to your <code>app-config.yaml</code> under the root <code>auth</code> configuration:</p>
+<p>Add the <code>gitlab</code> provider configuration to your <code>app-config.yaml</code> under the root <code>auth</code> configuration, and edit the configuration keys:</p>
 </div>
 <div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment</div>
 <div class="content">
 <pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
   environment: development
   providers:
     gitlab:
       development:
-        clientId: ${AUTH_GITLAB_CLIENT_ID}
-        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
-        ## uncomment if using self-hosted GitLab
-        # audience: https://gitlab.company.com
-        ## uncomment if using a custom redirect URI
-        # callbackUrl: https://${BASE_URL}/api/auth/gitlab/handler/frame</code></pre>
+        clientId: ${AUTH_GITLAB_CLIENT_ID} <b class="conum">(1)</b>
+        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET} <b class="conum">(2)</b>
+        ## Uncomment and define when using self-hosted GitLab:
+        # audience: https://gitlab.company.com <b class="conum">(3)</b>
+        ## Uncomment and define when using a custom redirect URI
+        # callbackUrl: https://${BASE_URL}/api/auth/gitlab/handler/frame <b class="conum">(3)</b>
+## Uncomment to use Gitlab for sign-in:
+# signInPage: gitlab <b class="conum">(5)</b></code></pre>
 </div>
 </div>
-<div class="paragraph">
-<p>The GitLab provider is a structure with these configuration keys:</p>
-</div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1"><code>clientId</code></dt>
-<dd>
-<p>The <strong>Application ID</strong> that you generated on GitLab, such as
+<div class="colist arabic">
+<ol>
+<li>
+<p><code>clientId</code>:: The <strong>Application ID</strong> that you generated on GitLab, such as
 <code>4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9</code>.</p>
-</dd>
-<dt class="hdlist1"><code>clientSecret</code></dt>
-<dd>
-<p>The <strong>Secret</strong> that you generated on Gitlab, such as <code>gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475</code>.</p>
-</dd>
-<dt class="hdlist1"><code>audience</code> (optional)</dt>
-<dd>
-<p>The base URL for the self-hosted GitLab instance, such as
+</li>
+<li>
+<p><code>clientSecret</code>:: The <strong>Secret</strong> that you generated on Gitlab, such as <code>gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475</code>.</p>
+</li>
+<li>
+<p><code>audience</code> (optional):: When using a self-hosted Gitlab, enter your GitLab instance base URL, such as
 <code>https://gitlab.company.com</code>.</p>
-</dd>
-<dt class="hdlist1"><code>callbackUrl</code> (optional)</dt>
-<dd>
-<p>The URL matching the <strong>Redirect URI</strong> registered when creating your GitLab OAuth App, such as:</p>
+</li>
+<li>
+<p><code>callbackUrl</code> (optional):: Enter the URL matching the <strong>Redirect URI</strong> registered when creating your GitLab OAuth App, such as:</p>
 <div class="ulist">
 <ul>
 <li>
@@ -1356,54 +1370,11 @@ Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</
 </li>
 </ul>
 </div>
-</dd>
-</dl>
-</div>
 </li>
 <li>
-<p>(Optionally) To enable the Gitlab provider for sign-in,
-add the provider to the Red Hat Developer Hub front-end (<code>packages/app/src/App.tsx</code>).</p>
-<div class="paragraph">
-<p>To add the provider to the front-end, add the <code>gitlabAuthApi</code> reference and
-<code>SignInPage</code> component to the sign-in page.</p>
-</div>
-<div class="paragraph">
-<p>To configure sign-in, provide a custom <code>SignInPage</code> app component.
-The app renders this component before any other routes.
-The component provides the identity of the current user.
-The <code>SignInPage</code> can render any number of pages and components, or just blank space with logic running in the background.
-In the end however it must provide a valid Red Hat Developer Hub user identity through the onSignInSuccess callback prop, at which point the rest of the app is rendered.</p>
-</div>
-<div class="paragraph">
-<p>If you want to, you can use the <code>SignInPage</code> component provided by <code>@backstage/core-components</code>, which takes either a provider or providers (array) prop of <code>SignInProviderConfig</code> definitions.</p>
-</div>
-<div class="paragraph">
-<p>The following example for Gitlab shows the additions needed to <code>packages/app/src/App.tsx</code>:</p>
-</div>
-<div class="listingblock">
-<div class="title"><code>packages/app/src/App.tsx</code></div>
-<div class="content">
-<pre class="highlight"><code class="language-javascript" data-lang="javascript">import { gitlabAuthApiRef } from '@backstage/core-plugin-api';
-import { SignInPage } from '@backstage/core-components';
-
-const app = createApp({
-  components: {
-    SignInPage: props =&gt; (
-      &lt;SignInPage
-        {...props}
-        auto
-        provider={{
-          id: 'gitlab-auth-provider',
-          title: 'GitLab',
-          message: 'Sign in using GitLab',
-          apiRef: gitlabAuthApiRef,
-        }}
-      /&gt;
-    ),
-  },
-  // ..
-});</code></pre>
-</div>
+<p><code>signInPage</code> (optional):: Enter <code>gitlab</code> to enable the Gitlab provider for sign-in.</p>
+</li>
+</ol>
 </div>
 </li>
 </ol>
@@ -2678,10 +2649,124 @@ data:
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="assembly-auth-provider-github">9. GitHub authentication provider</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Red Hat Developer Hub uses a built-in Github authentication provider to authenticate users in GitHub or GitHub Enterprise.</p>
+</div>
+<div class="sect2">
+<h3 id="con-github-app-overview">9.1. GitHub App​ overview</h3>
+<div class="paragraph">
+<p>GitHub Apps are generally preferred to OAuth apps because they use fine-grained permissions, give more control over which repositories the application can access, and use short-lived tokens. For more information, see <a href="https://docs.github.com/en/apps/overview">GitHub Apps overview</a> in the GitHub documentation.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-registering-github-app">9.2. Registering a GitHub​ App</h3>
+<div class="paragraph">
+<p>In a GitHub App, you configure the allowed scopes as part of that application, therefore, you must verify the scope that your plugins require. The scope information is available in the plugin README files.</p>
+</div>
+<div class="paragraph">
+<p>To add GitHub authentication, complete the steps in <a href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">Registering a GitHub App</a> on the GitHub website.</p>
+</div>
+<div class="paragraph">
+<p>Use the following examples to enter the information about your production environment into the required fields on the <strong>Register new GitHub App</strong> page:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Application name: Red Hat Developer Hub</p>
+</li>
+<li>
+<p>Homepage URL:  <code><a href="https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt" class="bare">https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt</a>;</code></p>
+</li>
+<li>
+<p>Authorization callback URL: <code><a href="https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;/api/auth/github/handler/frame" class="bare">https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;/api/auth/github/handler/frame</a></code></p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+The Homepage URL points to the Developer Hub front end, while the authorization callback URL points to the authentication provider backend.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-configuring-github-app">9.3. Configuring a GitHub App in Developer Hub</h3>
+<div class="paragraph">
+<p>To add GitHub authentication for Developer Hub, you must configure the GitHub App in your <code>app-config.yaml</code> file.</p>
+</div>
+<div class="paragraph">
+<p>The GitHub authentication provider uses the following configuration keys:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>clientId</code>: the client ID that you generated on GitHub. For example: b59241722e3c3b4816e2</p>
+</li>
+<li>
+<p><code>clientSecret</code>: the client secret tied to the generated client ID.</p>
+</li>
+<li>
+<p><code>enterpriseInstanceUrl</code> (optional): the base URL for a GitHub Enterprise instance. For example: <a href="https://ghe.&lt;company&gt;.com" class="bare">https://ghe.&lt;company&gt;.com</a>. The <code>enterpriseInstanceUrl</code> is only needed for GitHub Enterprise.</p>
+</li>
+<li>
+<p><code>callbackUrl</code> (optional): the callback URL that GitHub uses when initiating an OAuth flow. For example: <a href="https://your-intermediate-service.com/handler" class="bare">https://your-intermediate-service.com/handler</a>. The <code>callbackUrl</code> is only needed if Developer Hub is not the immediate receiver, such as in cases when you use one OAuth app for many Developer Hub instances.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>To configure the GitHub App, add the provider configuration to your <code>app-config.yaml</code> file under the root auth configuration. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+ environment: production
+ providers:
+   github:
+     production:
+       clientId: ${GITHUB_APP_CLIENT_ID}
+       clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+       ## uncomment if using GitHub Enterprise
+       # enterpriseInstanceUrl: ${GITHUB_URL}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-adding-github-to-frontend">9.4. Adding the GitHub provider to the Developer Hub front end​</h3>
+<div class="paragraph">
+<p>To add the provider to the front end, add the sign in configuration to your <code>app-config.yaml</code> file. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">signInPage: github</code></pre>
+</div>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For information about authenticating Backstage access with GitHub, see <a href="https://backstage.io/docs/integrations/github/github-apps/">GitHub Authentication Provider</a> in the community documentation.</p>
+</li>
+<li>
+<p>For information about adding the provider to the Backstage front end, see <a href="https://github.com/janus-idp/backstage-showcase/blob/main/showcase-docs/getting-started.md">Enabling authentication in Showcase</a> in the community documentation.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-21 13:27:08 UTC
+Last updated 2024-03-22 09:47:08 UTC
 </div>
 </div>
 </body>
