@@ -9,8 +9,7 @@ The {product} `core-plugin-api` package includes a Google authentication provide
 
 .. Log in to the link:https://console.cloud.google.com/[Google Console].
 .. Select or create a new project from the dropdown menu on the top bar.
-.. Go to link:https://console.cloud.google.com/apis/credentials/consent[*APIs & Services > OAuth consent screen*],
-and click *Edit app* to configure the consent screen:
+.. Go to link:https://console.cloud.google.com/apis/credentials/consent[*APIs & Services > OAuth consent screen*], and click *Edit app* to configure the consent screen:
 **Authorized domains**::
 For local development:: You do not need to enter any Authorized domain.
 For a non-local deployment::: Enter your {product} domain.
@@ -19,8 +18,7 @@ For a non-local deployment::: Enter your {product} domain.
 `auth/userinfo.email`::: See your primary Google Account email address.
 `auth/userinfo.profile`::: See your personal info, including any personal info you've made publicly available.
 *User type*:: Add yourself as a test user, if using the `External user` type.
-.. Go to to link:https://console.cloud.google.com/apis/credentials[*APIs & Services > Credentials*],
-click *Create Credentials*, choose *OAuth client ID*, and create a credential with following parameters:
+.. Go to to link:https://console.cloud.google.com/apis/credentials[*APIs & Services > Credentials*], click *Create Credentials*, choose *OAuth client ID*, and create a credential with following parameters:
 *Application type*:: Select `Web Application`.
 *Name*:: Enter your application name, such as `{product}`.
 *Authorized JavaScript origins*:: Add URI: `pass:[http://localhost:3000]`
@@ -29,9 +27,7 @@ For local development::: `pass:[http://localhost:7007/api/auth/google/handler/fr
 For a non-local deployment::: `pass:[http://{APP_FQDN}/api/auth/google/handler/frame]`
 .. Save the *Client ID* and *Client secret* for the next step.
 
-
-
-. Set up the Google authentication provider in the {product} backend (`app-config.yaml`).
+. Set up the Google authentication provider in the {product} configuration (`app-config.yaml`).
 +
 Add the `google` provider configuration to your `app-config.yaml` under the root `auth` configuration:
 +
@@ -42,52 +38,14 @@ auth:
   providers:
     google:
       development:
-        clientId: ${AUTH_GOOGLE_CLIENT_ID}
-        clientSecret: ${AUTH_GOOGLE_CLIENT_SECRET}
+        clientId: ${AUTH_GOOGLE_CLIENT_ID} # <1>
+        clientSecret: ${AUTH_GOOGLE_CLIENT_SECRET} # <2>
+## Uncomment to use Gitlab for sign-in:
+# signInPage: gitlab <3>
 ----
-+
-The Google provider is a structure with these configuration keys:
 
-`clientId`:: The client ID that you generated, such as `10023341500512-beui241gjwwkrdkr2eh7dprewj2pp1q.apps.googleusercontent.com`
-`clientSecret`:: The client secret tied to the generated client ID, such as ``.
+<1> `clientId`:: Enter the *Client ID* that you generated, such as `10023341500512-beui241gjwwkrdkr2eh7dprewj2pp1q.apps.googleusercontent.com`
 
+<2> `clientSecret`:: Enter *Client secret* that you generated.
 
-. (Optionally) To enable the Google provider for sign-in,
-add the provider to the {product} front-end (`packages/app/src/App.tsx`).
-+
-To add the provider to the front-end, add the `googleAuthApi` reference and
-`SignInPage` component to the sign-in page.
-+
-To configure sign-in, provide a custom `SignInPage` app component.
-The app renders this component before any other routes.
-The component provides the identity of the current user.
-The `SignInPage` can render any number of pages and components, or just blank space with logic running in the background.
-In the end however it must provide a valid {product} user identity through the onSignInSuccess callback prop, at which point the rest of the app is rendered.
-+
-If you want to, you can use the `SignInPage` component provided by `@backstage/core-components`, which takes either a provider or providers (array) prop of `SignInProviderConfig` definitions.
-+
-The following example for Google shows the additions needed to `packages/app/src/App.tsx`:
-+
-.`packages/app/src/App.tsx`
-[source,javascript]
-----
-import { googleAuthApiRef } from '@backstage/core-plugin-api';
-import { SignInPage } from '@backstage/core-components';
-const app = createApp({
-  components: {
-    SignInPage: props => (
-      <SignInPage
-        {...props}
-        auto
-        provider={{
-          id: 'google-auth-provider',
-          title: 'Google',
-          message: 'Sign in using Google',
-          apiRef: googleAuthApiRef,
-        }}
-      />
-    ),
-  },
-  // ..
-});
-----
+<3> `signInPage` (optional):: Enter `google` to enable the Google provider for sign-in.
