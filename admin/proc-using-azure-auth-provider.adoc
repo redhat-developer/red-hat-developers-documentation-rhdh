@@ -5,12 +5,15 @@ The `core-plugin-api` package in {product-short} comes integrated with Microsoft
 
 .Prerequisites
 * You have deployed {product-short} on AKS. For more information, see xref:proc-rhdh-deploy-aks_admin-rhdh[].
+* You have created registered your application in Azure portal. For more information, see https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app[Register an application with the Microsoft identity platform].
+
+== Using Microsoft Azure as an authentication provider in Helm deployment
+
+You can use Microsoft Azure as an authentication provider in {product}, when installed using the Helm Chart. For more information, see xref:proc-install-rhdh-helm_admin-rhdh[].
 
 .Procedure
 
-. In the Azure portal, navigate to the Microsoft Enterprise ID service and select *App Registrations*.
-. Click *New Registration* and complete the form following the provided instructions.
-. Once the application is created, note down the following:
+. After the application is registered, note down the following:
 +
 --
 ** `clientId`: Application (client) ID, found under App *Registration -> Overview*.
@@ -68,8 +71,6 @@ kubectl -n <your_namespace> apply -f <azure-secrets>.yaml
 ----
 --
 
-Helm deployment::
-
 . Ensure your `values.yaml` file references the previously created ConfigMap and Secret:
 +
 --
@@ -95,7 +96,78 @@ helm -n <your_namespace> upgrade -f <your-values.yaml> <your_deploy_name> redhat
 ----
 --
 
-Operator-backed deployment::
+. Optional: If your `rhdh.yaml` file is not changed, for example, you only updated the ConfigMap and Secret referenced from it, refresh your {product-short} deployment by removing the corresponding pods:
++
+--
+[source,bash]
+----
+kubectl -n <your_namespace> delete pods -l backstage.io/app=backstage-<your-rhdh-cr>
+----
+--
+
+== Using Microsoft Azure as an authentication provider in Operator-backed deployment
+
+You can use Microsoft Azure as an authentication provider in {product}, when installed using the Operator. For more information, see xref:proc-install-rhdh-operator_admin-rhdh[].
+
+.Procedure
+
+. After the application is registered, note down the following:
++
+--
+** `clientId`: Application (client) ID, found under App *Registration -> Overview*.
+** `clientSecret`: Secret, found under *App Registration -> Certificates & secrets (create new if needed).
+** `tenantId`: Directory (tenant) ID, found under *App Registration -> Overview*.
+--
+
+. Ensure the following fragment is included in your {product-short} ConfigMap:
++
+--
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AZURE_CLIENT_ID}
+        clientSecret: ${AZURE_CLIENT_SECRET}
+        tenantId: ${AZURE_TENANT_ID}
+        domainHint: ${AZURE_TENANT_ID}
+        additionalScopes:
+          - Mail.Send
+----
+You can either create a new file or add it to an existing one.
+--
+
+. Apply the ConfigMap to your Kubernetes cluster:
++
+--
+[source,bash]
+----
+kubectl -n <your_namespace> apply -f <app-config>.yaml
+----
+--
+
+. Create or reuse an existing Secret containing Azure credentials and add the following fragment:
++
+--
+[source,yaml]
+----
+stringData:
+  AZURE_CLIENT_ID: <value-of-clientId>
+  AZURE_CLIENT_SECRET: <value-of-clientSecret>
+  AZURE_TENANT_ID: <value-of-tenantId>
+----
+--
+
+. Apply the secret to your Kubernetes cluster:
++
+--
+[source,bash]
+----
+kubectl -n <your_namespace> apply -f <azure-secrets>.yaml
+----
+--
 
 . Ensure your Custom Resource manifest contains references to the previously created ConfigMap and Secret:
 +
@@ -129,7 +201,6 @@ spec:
 kubectl -n <your_namespace> apply -f rhdh.yaml
 ----
 --
-
 
 . Optional: If your `rhdh.yaml` file is not changed, for example, you only updated the ConfigMap and Secret referenced from it, refresh your {product-short} deployment by removing the corresponding pods:
 +
