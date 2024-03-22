@@ -26,13 +26,14 @@ Also grants access to read-only API endpoints under /users.
 Also gives read-only access to the user's profile and group memberships.
 `profile`::: Grants read-only access to the user's profile data using OpenID Connect.
 `email`::: Grants read-only access to the user's primary email address using OpenID Connect.
-
++
 Save the *Application ID* and *Secret* for the next step.
 
-. Set up the Gitlab authentication provider in the {product} backend (`app-config.yaml`).
+. Set up the Gitlab authentication provider in the {product} configuration (`app-config.yaml`).
 +
-Add the `gitlab` provider configuration to your `app-config.yaml` under the root `auth` configuration:
+Add the `gitlab` provider configuration to your `app-config.yaml` under the root `auth` configuration, and edit the configuration keys:
 +
+.`app-config.yaml` fragment
 [source,yaml]
 ----
 auth:
@@ -40,64 +41,23 @@ auth:
   providers:
     gitlab:
       development:
-        clientId: ${AUTH_GITLAB_CLIENT_ID}
-        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
-        ## uncomment if using self-hosted GitLab
-        # audience: https://gitlab.company.com
-        ## uncomment if using a custom redirect URI
-        # callbackUrl: https://${BASE_URL}/api/auth/gitlab/handler/frame
+        clientId: ${AUTH_GITLAB_CLIENT_ID} <1>
+        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET} <2>
+        ## Uncomment and define when using self-hosted GitLab:
+        # audience: https://gitlab.company.com <3>
+        ## Uncomment and define when using a custom redirect URI
+        # callbackUrl: https://${BASE_URL}/api/auth/gitlab/handler/frame <3>
+## Uncomment to use Gitlab for sign-in:
+# signInPage: gitlab <5>
 ----
-+
-The GitLab provider is a structure with these configuration keys:
-+
-`clientId`:: The *Application ID* that you generated on GitLab, such as
+<1> `clientId`:: The *Application ID* that you generated on GitLab, such as
 `4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9`.
-`clientSecret`:: The *Secret* that you generated on Gitlab, such as `gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475`.
-`audience` (optional):: The base URL for the self-hosted GitLab instance, such as
+<2> `clientSecret`:: The *Secret* that you generated on Gitlab, such as `gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475`.
+<3> `audience` (optional):: When using a self-hosted Gitlab, enter your GitLab instance base URL, such as
 `pass:[https://gitlab.company.com]`.
-`callbackUrl` (optional):: The URL matching the *Redirect URI* registered when creating your GitLab OAuth App, such as:
+<4> `callbackUrl` (optional):: Enter the URL matching the *Redirect URI* registered when creating your GitLab OAuth App, such as:
 * For local development: `pass:[http://localhost:7007/api/auth/gitlab/handler/frame]`
 * For a non-local deployment: `pass:[http://{APP_FQDN}:{APP_BACKEND_PORT}/api/auth/gitlab/handler/frame]`
 +
 NOTE: Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing `/` after 'frame'.
-
-. (Optionally) To enable the Gitlab provider for sign-in,
-add the provider to the {product} front-end (`packages/app/src/App.tsx`).
-+
-To add the provider to the front-end, add the `gitlabAuthApi` reference and
-`SignInPage` component to the sign-in page.
-+
-To configure sign-in, provide a custom `SignInPage` app component.
-The app renders this component before any other routes.
-The component provides the identity of the current user.
-The `SignInPage` can render any number of pages and components, or just blank space with logic running in the background.
-In the end however it must provide a valid {product} user identity through the onSignInSuccess callback prop, at which point the rest of the app is rendered.
-+
-If you want to, you can use the `SignInPage` component provided by `@backstage/core-components`, which takes either a provider or providers (array) prop of `SignInProviderConfig` definitions.
-+
-The following example for Gitlab shows the additions needed to `packages/app/src/App.tsx`:
-+
-.`packages/app/src/App.tsx`
-[source,javascript]
-----
-import { gitlabAuthApiRef } from '@backstage/core-plugin-api';
-import { SignInPage } from '@backstage/core-components';
-
-const app = createApp({
-  components: {
-    SignInPage: props => (
-      <SignInPage
-        {...props}
-        auto
-        provider={{
-          id: 'gitlab-auth-provider',
-          title: 'GitLab',
-          message: 'Sign in using GitLab',
-          apiRef: gitlabAuthApiRef,
-        }}
-      />
-    ),
-  },
-  // ..
-});
-----
+<5> `signInPage` (optional):: Enter `gitlab` to enable the Gitlab provider for sign-in.
