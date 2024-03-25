@@ -458,6 +458,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_configuring-dynamic-plugins-with-the-operator">3.4. Configuring dynamic plugins with the Operator</a></li>
 <li><a href="#_installing-red-hat-developer-hub-using-a-custom-backstage-image">3.5. Installing Red Hat Developer Hub using a custom Backstage image</a></li>
 <li><a href="#_installing-red-hat-developer-hub-using-the-operator-in-an-air-gapped-environment">3.6. Installing Red Hat Developer Hub using the operator in an air-gapped environment</a></li>
+<li><a href="#proc-adding-azure-as-an-authentication-provider_admin-rhdh">3.7. Enabling the Microsoft Azure authentication provider</a></li>
 </ul>
 </li>
 <li><a href="#con-rhdh-integration-aws_admin-rhdh">4. Red Hat Developer Hub integration with Amazon Web Services (AWS)</a>
@@ -1419,6 +1420,151 @@ The script can take several minutes to complete as it copies multiple images to 
 </li>
 <li>
 <p>Refer to the <a href="#proc-install-rhdh-operator_admin-rhdh">Installing Red Hat Developer Hub using the operator as an administrator</a> section to install the operator and configure your Red Hat Developer Hub instance.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-adding-azure-as-an-authentication-provider_admin-rhdh">3.7. Enabling the Microsoft Azure authentication provider</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub includes a Microsoft Azure authentication provider that can authenticate users by using OAuth.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>To allow Developer Hub to authenticate with Microsoft Azure, create an OAuth Application in Microsoft Azure.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"><strong>Azure Portal &gt; App registrations</strong></a>, and create an <strong>App Registration</strong> for Developer Hub.</p>
+</li>
+<li>
+<p>On your <strong>App registration</strong> overview page, add a new <strong>Web platform configuration</strong>, with the configuration:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Redirect URI</strong></dt>
+<dd>
+<p>Enter the backend authentication URI set in Developer Hub:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">For local development</dt>
+<dd>
+<p><code>http://localhost:7007/api/auth/microsoft/handler/frame</code></p>
+</dd>
+<dt class="hdlist1">For a non-local deployment</dt>
+<dd>
+<p><code>http://{APP_FQDN}:{APP_BACKEND_PORT}/api/auth/microsoft/handler/frame</code></p>
+</dd>
+</dl>
+</div>
+</dd>
+<dt class="hdlist1"><strong>Front-channel logout URL</strong></dt>
+<dd>
+<p>Leave blank.</p>
+</dd>
+<dt class="hdlist1"><strong>Implicit grant and hybrid flows</strong></dt>
+<dd>
+<p>All unchecked.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>On the <strong>API permissions</strong> tab, click <strong>Add Permission</strong>, then add the following <strong>Delegated permission</strong> for the
+<strong>Microsoft Graph API</strong>:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>email</code></dt>
+<dt class="hdlist1"><code>offline_access</code></dt>
+<dt class="hdlist1"><code>openid</code></dt>
+<dt class="hdlist1"><code>profile</code></dt>
+<dt class="hdlist1"><code>User.Read</code></dt>
+<dt class="hdlist1">(Optionally)</dt>
+<dd>
+<p>Optional custom scopes of the Microsoft Graph API defined in the <code>app-config.yaml</code> file.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>(Optionally) Your company might require you to grant admin consent for these permissions.
+Even if your company does not require <a href="https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/user-admin-consent-overview">admin consent</a>, you might do so as it means users do not need to individually consent the first time they access backstage.
+To grant admin consent, a directory admin must go to this page and click the <strong>Grant admin consent for COMPANY NAME</strong> button.</p>
+</li>
+<li>
+<p>Go to the <strong>Certificates &amp; Secrets</strong> page, then the <strong>Client secrets</strong> tab, and create a new client secret.
+Save the <strong>Secret</strong> for the next step.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set up the Microsoft Azure authentication provider in the Developer Hub backend (<code>app-config.yaml</code>).</p>
+<div class="paragraph">
+<p>Add the <code>microsoft</code> provider configuration to your <code>app-config.yaml</code> under the root <code>auth</code> configuration, and optionally, enable the <code>gitlab</code> provider for sign-in:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: development
+  providers:
+    microsoft:
+      development:
+        clientId: <em>&lt;AZURE_CLIENT_ID&gt;</em> # <b class="conum">(1)</b>
+        clientSecret: <em>&lt;AZURE_CLIENT_SECRET&gt;</em> # <b class="conum">(2)</b>
+        tenantId: <em>&lt;AZURE_TENANT_ID&gt;</em> # <b class="conum">(3)</b>
+        domainHint: <em>&lt;AZURE_TENANT_ID&gt;</em> # <b class="conum">(4)</b>
+        # additionalScopes: # <b class="conum">(5)</b>
+          # - Mail.Send
+# signInPage: microsoft # <b class="conum">(6)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Enter the application ID, found on <strong>App Registration &gt; Overview</strong>.</p>
+</li>
+<li>
+<p>Enter the application <strong>Secret</strong>, found on <strong>App Registration &gt; Certificates &amp; secrets</strong></p>
+</li>
+<li>
+<p>Enter the directory (tenant) ID, found on <strong>App Registration &gt; Overview</strong></p>
+</li>
+<li>
+<p>Optionally, when your application is not multi tenant,
+to reduce login friction for users with accounts in multiple tenants
+by automatically filtering away accounts from other tenants:
+uncomment, and enter the tenant id.
+Typically, the same as <code>tenantId</code>.
+Leave blank if your app registration is multi tenant.
+See <a href="https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy">Home Realm Discovery</a>.</p>
+</li>
+<li>
+<p>Optionally, to add scopes for the App Registration: uncomment and enter the scopes list.
+The default and mandatory value is <code>['user.read']</code>.</p>
+</li>
+<li>
+<p>Optionally, to enable the Microsoft Azure provider for sign-in: uncomment, and enter <code>microsoft</code>.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Optionally, when your environment has restrictions on outgoing access, for instance through firewall rules, make sure your Backstage backend has access to the following hosts:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>login.microsoftonline.com</code></dt>
+<dd>
+<p>To get and exchange authorization codes and access tokens.</p>
+</dd>
+<dt class="hdlist1"><code>graph.microsoft.com</code></dt>
+<dd>
+<p>To fetch user profile information (as seen in this source code).
+If this host is unreachable, users might see an <em>Authentication failed, failed to fetch user profile</em> error when they attempt to log in.</p>
+</dd>
+</dl>
+</div>
 </li>
 </ol>
 </div>
@@ -7174,7 +7320,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-25 14:47:33 UTC
+Last updated 2024-03-25 15:05:02 UTC
 </div>
 </div>
 </body>
