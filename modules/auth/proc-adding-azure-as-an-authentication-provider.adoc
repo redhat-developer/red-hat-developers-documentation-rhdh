@@ -1,16 +1,16 @@
 [id='proc-adding-azure-as-an-authentication-provider_{context}']
-= Adding Microsoft Azure as an authentication provider in {product}
+= Enabling the Microsoft Azure authentication provider
 
-The {product} `core-plugin-api` package includes a Microsoft Azure authentication provider that can authenticate users by using OAuth.
+{product} includes a Microsoft Azure authentication provider that can authenticate users by using OAuth.
 
 .Procedure
-. To allow {product} to authenticate with Microsoft Azure, create an OAuth Application in Microsoft Azure.
+. To allow {product-short} to authenticate with Microsoft Azure, create an OAuth Application in Microsoft Azure.
 
-.. Go to link:https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade[*Azure Portal > App registrations*], and create an *App Registration* for {product}.
+.. Go to link:https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade[*Azure Portal > App registrations*], and create an *App Registration* for {product-short}.
 
 .. On your *App registration* overview page, add a new *Web platform configuration*, with the configuration:
 
-*Redirect URI*:: Enter the backend authentication URI set in {product}:
+*Redirect URI*:: Enter the backend authentication URI set in {product-short}:
 For local development::: `pass:[http://localhost:7007/api/auth/microsoft/handler/frame]`
 For a non-local deployment::: `pass:[http://{APP_FQDN}:{APP_BACKEND_PORT}/api/auth/microsoft/handler/frame]`
 *Front-channel logout URL*:: Leave blank.
@@ -33,46 +33,43 @@ To grant admin consent, a directory admin must go to this page and click the *Gr
 .. Go to the *Certificates & Secrets* page, then the *Client secrets* tab, and create a new client secret.
 Save the *Secret* for the next step.
 
-. Set up the Microsoft Azure authentication provider in the {product} backend (`app-config.yaml`).
+. Set up the Microsoft Azure authentication provider in the {product-short} backend (`app-config.yaml`).
 +
-Add the `microsoft` provider configuration to your `app-config.yaml` under the root `auth` configuration, and edit the configuration keys:
+Add the `microsoft` provider configuration to your `app-config.yaml` under the root `auth` configuration, and optionally, enable the `gitlab` provider for sign-in:
 +
-[source,yaml]
+[source,yaml,subs="+quotes,+attributes"]
 ----
 auth:
   environment: development
   providers:
     microsoft:
       development:
-        clientId: ${AZURE_CLIENT_ID} # <1>
-        clientSecret: ${AZURE_CLIENT_SECRET} # <2>
-        tenantId: ${AZURE_TENANT_ID} # <3>
-        domainHint: ${AZURE_TENANT_ID} # <4>
-        additionalScopes: # <5>
-          - Mail.Send
-## Uncomment to use Microsoft Azyre for sign-in:
+        clientId: _<AZURE_CLIENT_ID>_ # <1>
+        clientSecret: _<AZURE_CLIENT_SECRET>_ # <2>
+        tenantId: _<AZURE_TENANT_ID>_ # <3>
+        domainHint: _<AZURE_TENANT_ID>_ # <4>
+        # additionalScopes: # <5>
+          # - Mail.Send
 # signInPage: microsoft # <6>
 ----
-
-<1> `clientId`:: Enter the application ID, found on *App Registration > Overview*.
-
-<2> `clientSecret`:: Enter the application *Secret*, found on *App Registration > Certificates & secrets*
-
-<3> `tenantId`:: Directory (tenant) ID, found on *App Registration > Overview*
-
-<4> `domainHint` (optional):: Typically, the same as `tenantId`.
++
+<1> Enter the application ID, found on *App Registration > Overview*.
+<2> Enter the application *Secret*, found on *App Registration > Certificates & secrets*
+<3> Enter the directory (tenant) ID, found on *App Registration > Overview*
+<4> Optionally, when your application is not multi tenant,
+to reduce login friction for users with accounts in multiple tenants
+by automatically filtering away accounts from other tenants:
+uncomment, and enter the tenant id.
+Typically, the same as `tenantId`.
 Leave blank if your app registration is multi tenant.
-When specified, this reduces login friction for users with accounts in multiple tenants by automatically filtering away accounts from other tenants.
-For more details, see link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy[Home Realm Discovery].
-
-<5> `additionalScopes` (optional):: List of scopes for the App Registration.
+See link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy[Home Realm Discovery].
+<5> Optionally, to add scopes for the App Registration: uncomment and enter the scopes list.
 The default and mandatory value is `['user.read']`.
+<6> Optionally, to enable the Microsoft Azure provider for sign-in: uncomment, and enter `microsoft`.
 
-<6> `signInPage` (optional):: Enter `microsoft` to enable the Microsoft Azure provider for sign-in.
+. Optionally, when your environment has restrictions on outgoing access, for instance through firewall rules, make sure your Backstage backend has access to the following hosts:
 
-. (Optionally) If your environment has restrictions on outgoing access, for instance through firewall rules, make sure your Backstage backend has access to the following hosts:
-
-`login.microsoftonline.com`:: To get and exchange authorization codes and access tokens
+`login.microsoftonline.com`:: To get and exchange authorization codes and access tokens.
 
 `graph.microsoft.com`:: To fetch user profile information (as seen in this source code).
 If this host is unreachable, users might see an _Authentication failed, failed to fetch user profile_ error when they attempt to log in.
