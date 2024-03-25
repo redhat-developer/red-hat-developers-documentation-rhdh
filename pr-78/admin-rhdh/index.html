@@ -458,6 +458,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_configuring-dynamic-plugins-with-the-operator">3.4. Configuring dynamic plugins with the Operator</a></li>
 <li><a href="#_installing-red-hat-developer-hub-using-a-custom-backstage-image">3.5. Installing Red Hat Developer Hub using a custom Backstage image</a></li>
 <li><a href="#_installing-red-hat-developer-hub-using-the-operator-in-an-air-gapped-environment">3.6. Installing Red Hat Developer Hub using the operator in an air-gapped environment</a></li>
+<li><a href="#proc-adding-gitlab-oauth-as-an-authentication-provider_admin-rhdh">3.7. Enabling the GitLab OAuth authentication provider</a></li>
 </ul>
 </li>
 <li><a href="#con-rhdh-integration-aws_admin-rhdh">4. Red Hat Developer Hub integration with Amazon Web Services (AWS)</a>
@@ -1419,6 +1420,161 @@ The script can take several minutes to complete as it copies multiple images to 
 </li>
 <li>
 <p>Refer to the <a href="#proc-install-rhdh-operator_admin-rhdh">Installing Red Hat Developer Hub using the operator as an administrator</a> section to install the operator and configure your Red Hat Developer Hub instance.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-adding-gitlab-oauth-as-an-authentication-provider_admin-rhdh">3.7. Enabling the GitLab OAuth authentication provider</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub includes a GitLab authentication provider that can authenticate users by using GitLab OAuth.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>To allow Developer Hub to authenticate with Gitlab, create an OAuth Application in Gitlab.</p>
+<div class="paragraph">
+<p>Go to <a href="https://gitlab.com/-/profile/applications">GitLab User settings &gt; Applications</a>, and click the <strong>Add new application</strong> button.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Name</strong></dt>
+<dd>
+<p>Enter your application name, such as <code>Developer Hub</code>.</p>
+</dd>
+<dt class="hdlist1"><strong>Redirect URI</strong></dt>
+<dd>
+<p>Enter the backend authentication URI set in Developer Hub:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">For local development</dt>
+<dd>
+<p><code>http://localhost:7007/api/auth/gitlab/handler/frame</code></p>
+</dd>
+<dt class="hdlist1">For a non-local deployment</dt>
+<dd>
+<p><code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code></p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.
+</td>
+</tr>
+</table>
+</div>
+</dd>
+</dl>
+</div>
+</dd>
+<dt class="hdlist1"><strong>Scopes</strong></dt>
+<dd>
+<p>Select the following scopes from the list, and validate:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>read_user</code></dt>
+<dd>
+<p>Grants read-only access to the authenticated user&#8217;s profile through the /user API endpoint, which includes username, public email, and full name.
+Also grants access to read-only API endpoints under /users.</p>
+</dd>
+<dt class="hdlist1"><code>read_repository</code></dt>
+<dd>
+<p>Grants read-only access to the authenticated user&#8217;s profile through the /user API endpoint, which includes username, public email, and full name.
+Also grants access to read-only API endpoints under /users.</p>
+</dd>
+<dt class="hdlist1"><code>write_repository</code></dt>
+<dd>
+<p>Grants read/write access to repositories on private projects using Git-over-HTTP (not using the API).</p>
+</dd>
+<dt class="hdlist1"><code>openid</code></dt>
+<dd>
+<p>Grants permission to authenticate with GitLab using OpenID Connect.
+Also gives read-only access to the user&#8217;s profile and group memberships.</p>
+</dd>
+<dt class="hdlist1"><code>profile</code></dt>
+<dd>
+<p>Grants read-only access to the user&#8217;s profile data using OpenID Connect.</p>
+</dd>
+<dt class="hdlist1"><code>email</code></dt>
+<dd>
+<p>Grants read-only access to the user&#8217;s primary email address using OpenID Connect.</p>
+<div class="paragraph">
+<p>Save the <strong>Application ID</strong> and <strong>Secret</strong> for the next step.</p>
+</div>
+</dd>
+</dl>
+</div>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Set up the Gitlab authentication provider in Developer Hub configuration (<code>app-config.yaml</code>).</p>
+<div class="paragraph">
+<p>Add the <code>gitlab</code> provider configuration to your <code>app-config.yaml</code> under the root <code>auth</code> configuration, and optionally, enable the <code>gitlab</code> provider for sign-in:</p>
+</div>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: development
+  providers:
+    gitlab:
+      development:
+        clientId: ${AUTH_GITLAB_CLIENT_ID} # <b class="conum">(1)</b>
+        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET} # <b class="conum">(2)</b>
+        # audience: https://gitlab.company.com # <b class="conum">(3)</b>
+        # callbackUrl: https://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame # <b class="conum">(4)</b>
+# signInPage: gitlab # <b class="conum">(5)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Enter the <strong>Application ID</strong> that you generated on GitLab, such as
+<code>4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9</code>.</p>
+</li>
+<li>
+<p>Enter the <strong>Secret</strong> that you generated on Gitlab, such as <code>gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475</code>.</p>
+</li>
+<li>
+<p>Optionally, when using a self-hosted Gitlab: uncomment, and enter your GitLab instance base URL, such as
+<code>https://gitlab.company.com</code>.</p>
+</li>
+<li>
+<p>Optionallly, when using a custom redirect URI: uncomment, and enter the URL matching the <strong>Redirect URI</strong> registered when creating your GitLab OAuth App, such as:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>For local development: <code>http://localhost:7007/api/auth/gitlab/handler/frame</code></p>
+</li>
+<li>
+<p>For a non-local deployment: <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code></p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Optionally, to enable the Gitlab provider for sign-in: uncomment, and enter <code>gitlab</code>.</p>
+</li>
+</ol>
+</div>
 </li>
 </ol>
 </div>
@@ -7174,7 +7330,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-22 09:54:37 UTC
+Last updated 2024-03-25 14:46:35 UTC
 </div>
 </div>
 </body>
