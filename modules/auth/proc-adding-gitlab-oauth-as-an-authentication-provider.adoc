@@ -1,17 +1,17 @@
 [id='proc-adding-gitlab-oauth-as-an-authentication-provider_{context}']
-= Adding GitLab OAuth as an authentication provider in {product}
+= Enabling the GitLab OAuth authentication provider
 
-The {product} `core-plugin-api` package includes a GitLab authentication provider that can authenticate users by using GitLab OAuth.
+{product} includes a GitLab authentication provider that can authenticate users by using GitLab OAuth.
 
 .Procedure
-. To allow {product} to authenticate with Gitlab, create an OAuth Application in Gitlab.
+. To allow {product-short} to authenticate with Gitlab, create an OAuth Application in Gitlab.
 +
 Go to https://gitlab.com/-/profile/applications[GitLab User settings > Applications], and click the *Add new application* button.
 
-*Name*:: Enter your application name, such as `{product}`.
-*Redirect URI*:: Enter the backend authentication URI set in {product}:
+*Name*:: Enter your application name, such as `{product-short}`.
+*Redirect URI*:: Enter the backend authentication URI set in {product-short}:
 For local development::: `pass:[http://localhost:7007/api/auth/gitlab/handler/frame]`
-For a non-local deployment::: `pass:[http://{APP_FQDN}/api/auth/gitlab/handler/frame]`
+For a non-local deployment::: `pass:c,a,q[http://_<APP_FQDN>_/api/auth/gitlab/handler/frame]`
 +
 NOTE: Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing `/` after 'frame'.
 *Scopes*:: Select the following scopes from the list, and validate:
@@ -29,12 +29,12 @@ Also gives read-only access to the user's profile and group memberships.
 +
 Save the *Application ID* and *Secret* for the next step.
 
-. Set up the Gitlab authentication provider in the {product} configuration (`app-config.yaml`).
+. Set up the Gitlab authentication provider in {product-short} configuration (`app-config.yaml`).
 +
-Add the `gitlab` provider configuration to your `app-config.yaml` under the root `auth` configuration, and edit the configuration keys:
+Add the `gitlab` provider configuration to your `app-config.yaml` under the root `auth` configuration, and optionally, enable the `gitlab` provider for sign-in:
 +
 .`app-config.yaml` fragment
-[source,yaml]
+[source,yaml,subs="+quotes,+attributes"]
 ----
 auth:
   environment: development
@@ -43,21 +43,19 @@ auth:
       development:
         clientId: ${AUTH_GITLAB_CLIENT_ID} # <1>
         clientSecret: ${AUTH_GITLAB_CLIENT_SECRET} # <2>
-        ## Uncomment and define when using self-hosted GitLab:
         # audience: https://gitlab.company.com # <3>
-        ## Uncomment and define when using a custom redirect URI
-        # callbackUrl: https://${BASE_URL}/api/auth/gitlab/handler/frame # <4>
-## Uncomment to use Gitlab for sign-in:
-# signInPage: gitlab <5>
+        # callbackUrl: https://_<APP_FQDN>_/api/auth/gitlab/handler/frame # <4>
+# signInPage: gitlab # <5>
 ----
-<1> `clientId`:: The *Application ID* that you generated on GitLab, such as
++
+<1> Enter the *Application ID* that you generated on GitLab, such as
 `4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9`.
-<2> `clientSecret`:: The *Secret* that you generated on Gitlab, such as `gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475`.
-<3> `audience` (optional):: When using a self-hosted Gitlab, enter your GitLab instance base URL, such as
+<2> Enter the *Secret* that you generated on Gitlab, such as `gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475`.
+<3> Optionally, when using a self-hosted Gitlab: uncomment, and enter your GitLab instance base URL, such as
 `pass:[https://gitlab.company.com]`.
-<4> `callbackUrl` (optional):: Enter the URL matching the *Redirect URI* registered when creating your GitLab OAuth App, such as:
+<4> Optionallly, when using a custom redirect URI: uncomment, and enter the URL matching the *Redirect URI* registered when creating your GitLab OAuth App, such as:
 * For local development: `pass:[http://localhost:7007/api/auth/gitlab/handler/frame]`
-* For a non-local deployment: `pass:[http://{APP_FQDN}:{APP_BACKEND_PORT}/api/auth/gitlab/handler/frame]`
+* For a non-local deployment: `pass:c,a,q[http://_<APP_FQDN>_/api/auth/gitlab/handler/frame]`
 +
 NOTE: Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing `/` after 'frame'.
-<5> `signInPage` (optional):: Enter `gitlab` to enable the Gitlab provider for sign-in.
+<5> Optionally, to enable the Gitlab provider for sign-in: uncomment, and enter `gitlab`.
