@@ -1,9 +1,82 @@
 [id='con-relnotes-fixed-issues_{context}']
 = Fixed issues
 
-This section lists fixed issues with {product} {product-version}:
+== Security issues resolved in {product} 1.1.0 and 1.1.1
 
-Fix an inability to dynamically load a number of upstream backend plugins::
+=== Security fixes in {product} 1.1.1
+
+A number of security fixes have been applied in this release, including the following:
+
+* NodeJS update for RHSA 128590, see https://errata.devel.redhat.com/advisory/128590
+* link:https://access.redhat.com/security/cve/CVE-2024-28176[CVE-2024-28176] Jose was found to have an uncontrolled resource consumption vulnerability (ocm-backend plugin).
+* link:https://access.redhat.com/security/cve/CVE-2024-28849[CVE-2024-28849] A vulnerability was found in the follow-redirects package. Follow redirects updated to 1.15.6.
+
+== Enhancements and bug fixes in {product} 1.1.0 and 1.1.1
+
+=== Enhancements and bug fixes in {product} 1.1.1
+
+ArgoCD plugin downgraded to 2.4.1 from 2.6.2::
+The EntityArgoCDHistoryCard does not work when the ArgoCD backend plugin is used. This issue has been fixed by reverting the ArgoCD plugin version to 2.4.1. For more information, see https://github.com/RoadieHQ/roadie-backstage-plugins/issues/1238 
+
+Helm Chart deployment issue::
+In {product} 1.1.0, due to the inability to get resource "ingresses" in the config.openshift.io API group, a user without cluster administrator rights was unable to deploy the {product} 1.1.0 Helm Chart in hosted OpenShift Container Platform instances. This issue has been fixed by not automatically querying the OpenShift Container Platform cluster ingress for the domain to use for the `clusterRouterBase`, as regular users do not have access to this resource, only cluster admins.
++
+As a result, when installing {product} using the 1.1.1 Helm Chart, you will need to set a `clusterRouterBase` value. For more details, see the link:{LinkAdminGuide}#proc-install-rhdh-helm_admin-rhdh[Installing {product} using Helm Chart] section of the _Administration guide for Red Hat Developer Hub_ guide for more details. 
+
+RBAC Backend cleanup::
+In {product-short} 1.1.0 when you remove all administration users from the application, administration metadata and policies are still present. This is issue is resolved in {product-short} 1.1.1 so that user data is removed correctly. For more information, see https://github.com/janus-idp/backstage-plugins/pull/1314.
+
+Tekton UI improvement::
+The Roxctl image check sometimes does not contain the response in the expected format and causes the UI to break. This issue is fixed in {product} 1.1.1. For more information, see https://issues.redhat.com/browse/RHTAPBUGS-1175 and https://github.com/janus-idp/backstage-plugins/issues/1355.
+
+Routes in the Toplogy view show an incorrect mapping::
+In {product} 1.1.1. a check is added to services and routes to match the same namespace as workloads when resources are fetched across namespaces. For more information, see https://issues.redhat.com/browse/RHTAPBUGS-1166 and https://github.com/janus-idp/backstage-plugins/pull/1389.
+
+Logout issue with OAuth2 Proxy (OIDC)::
+In {product-short} 1.1.0 there is a sign-out issue for users that use OAuth2 Proxy with Keycloak. To resolve this sign-out issue, a forked version of auth-backend-module-oidc-provider is provided in 1.1.1 which enables switching to the OIDC provider with Keycloak. For more information, see https://issues.redhat.com/browse/RHDHBUGS-11 and  https://github.com/janus-idp/backstage-showcase/pull/1072.
+
+
+Plugin changes in {product} 1.1.1::
+
+[cols="50%,25%,25%", frame="all", options="header"]
+|===
+|Plugin
+|Version in 1.1.0
+|Version in 1.1.1
+
+|@roadiehq/backstage-plugin-argo-cd
+|2.6.2
+|2.4.1
+
+|@janus-idp/backstage-plugin-keycloak-backend
+|1.8.5
+|1.8.6
+
+|@janus-idp/backstage-plugin-topology
+|1.18.7
+|1.18.8
+
+|@janus-idp/backstage-plugin-ocm-backend
+|3.5.6
+|3.5.7
+
+|@janus-idp/backstage-plugin-quay
+|1.5.9
+|1.5.10
+
+|@janus-idp/backstage-plugin-rbac
+|1.15.3
+|1.15.5
+
+|@janus-idp/backstage-plugin-tekton
+|3.5.10
+|3.5.12
+|===
+
+
+=== Enhancements and bug fixes in {product} 1.1.0
+
+Fix an inability to dynamically load several upstream backend plugins::
 +
 --
 Before this release, a whole category of upstream or third-party backstage backend plugins could not be loaded dynamically when converted to dynamic plugins. Impacted plugins were those using the `resolvePackagePath()` backstage API method. This issue impacted most of the backend plugins using the database service and providing migration scripts.
