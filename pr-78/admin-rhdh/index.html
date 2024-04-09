@@ -454,7 +454,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#_as-an-administrator">3.1. As an administrator</a></li>
 <li><a href="#_as-a-developer">3.2. As a developer</a></li>
-<li><a href="#_configuring-the-developer-hub-custom-resource">3.3. Configuring the Developer Hub Custom Resource</a></li>
+<li><a href="#configuring-the-custom-resource">3.3. Configuring the Developer Hub Custom Resource</a></li>
 <li><a href="#_configuring-dynamic-plugins-with-the-operator">3.4. Configuring dynamic plugins with the Operator</a></li>
 <li><a href="#_installing-red-hat-developer-hub-using-a-custom-backstage-image">3.5. Installing Red Hat Developer Hub using a custom Backstage image</a></li>
 <li><a href="#_installing-red-hat-developer-hub-using-the-operator-in-an-air-gapped-environment">3.6. Installing Red Hat Developer Hub using the operator in an air-gapped environment</a></li>
@@ -949,13 +949,13 @@ For enhanced security, you should deploy the Red Hat Developer Hub Operator in a
 <p>From the <strong>Developer Catalog</strong> panel, click <strong>Operator Backed</strong>.</p>
 </li>
 <li>
-<p>Search for Developer Hub or Backstage in the search bar and select the <strong>Developer Hub</strong> card.</p>
+<p>Search for <em>Developer Hub</em> in the search bar and select the <strong>Red Hat Developer Hub</strong> card.</p>
 </li>
 <li>
 <p>Click <strong>Create</strong>.</p>
 </li>
 <li>
-<p>Optionally, configure the Red Hat Developer Hub Backstage instance with non-default settings.</p>
+<p>Optionally, configure the Developer Hub instance with non-default settings.</p>
 </li>
 <li>
 <p>Click <strong>Create</strong>.</p>
@@ -975,7 +975,7 @@ For enhanced security, you should deploy the Red Hat Developer Hub Operator in a
 </div>
 </div>
 <div class="sect2">
-<h3 id="_configuring-the-developer-hub-custom-resource">3.3. Configuring the Developer Hub Custom Resource</h3>
+<h3 id="configuring-the-custom-resource">3.3. Configuring the Developer Hub Custom Resource</h3>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -1007,10 +1007,10 @@ data:
     backend:
       auth:
         keys:
-        - secret: “${BACKEND_SECRET}”
-       baseUrl: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;
-       cors:
-         origin: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;</code></pre>
+          - secret: “${BACKEND_SECRET}”
+      baseUrl: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;
+      cors:
+        origin: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;</code></pre>
 </div>
 </div>
 <div class="listingblock">
@@ -1394,14 +1394,14 @@ bash prepare-restricted-environment.sh \
    --prod_operator_index "registry.redhat.io/redhat/redhat-operator-index:v4.14" \
    --prod_operator_package_name "rhdh" \
    --prod_operator_bundle_name "rhdh-operator" \
-   --prod_operator_version "v1.1.0"
+   --prod_operator_version "v1.1.1"
 
 # or, if you already have a target mirror registry
 bash prepare-restricted-environment.sh \
    --prod_operator_index "registry.redhat.io/redhat/redhat-operator-index:v4.14" \
    --prod_operator_package_name "rhdh" \
    --prod_operator_bundle_name "rhdh-operator" \
-   --prod_operator_version "v1.1.0" \
+   --prod_operator_version "v1.1.1" \
    --use_existing_mirror_registry "my_registry"</code></pre>
 </div>
 </div>
@@ -1429,6 +1429,15 @@ The script can take several minutes to complete as it copies multiple images to 
 <div class="paragraph">
 <p>Red Hat Developer Hub includes a GitLab authentication provider that can authenticate users by using GitLab OAuth.</p>
 </div>
+<div class="ulist">
+<div class="title">Prerequistes</div>
+<ul>
+<li>
+<p>You configured Developer Hub with a custom config map and secret.
+See <a href="#configuring-the-custom-resource">Configuring the Developer Hub Custom Resource</a>.</p>
+</li>
+</ul>
+</div>
 <div class="olist arabic">
 <div class="title">Procedure</div>
 <ol class="arabic">
@@ -1445,19 +1454,8 @@ The script can take several minutes to complete as it copies multiple images to 
 </dd>
 <dt class="hdlist1"><strong>Redirect URI</strong></dt>
 <dd>
-<p>Enter the backend authentication URI set in Developer Hub, such as <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code>.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.
-</td>
-</tr>
-</table>
-</div>
+<p>Enter the backend authentication URI set in Developer Hub, such as <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code>.
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.</p>
 </dd>
 <dt class="hdlist1"><strong>Scopes</strong></dt>
 <dd>
@@ -1501,62 +1499,79 @@ Also gives read-only access to the user&#8217;s profile and group memberships.</
 </div>
 </li>
 <li>
-<p>Set up the Gitlab authentication provider in Developer Hub configuration (<code>app-config.yaml</code>).</p>
+<p>Add your Gitlab credentials in your Developer Hub secrets.</p>
 <div class="paragraph">
-<p>Add the <code>gitlab</code> provider configuration to your <code>app-config.yaml</code> under the root <code>auth</code> configuration, and optionally, enable the <code>gitlab</code> provider for sign-in:</p>
+<p>From the <strong>Developer</strong> perspective, select the <strong>Secrets</strong> tab,
+and edit your Developer Hub secrets, such as <code>secrets-rhdh</code>.
+Add the following key/value pairs:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>AUTH_GITLAB_CLIENT_ID</code></dt>
+<dd>
+<p>Enter the <strong>Application ID</strong> that you generated on GitLab, such as <code>4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9</code>.</p>
+</dd>
+<dt class="hdlist1"><code>AUTH_GITLAB_CLIENT_SECRET</code></dt>
+<dd>
+<p>Enter the <strong>Secret</strong> that you generated on Gitlab, such as <code>gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475</code>.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Set up the Gitlab authentication provider in your Developer Hub custom configuration.</p>
+<div class="paragraph">
+<p>From the <strong>Developer</strong> perspective, select the  <strong>ConfigMaps</strong> tab, and edit your custom Developer Hub config map, such as <code>app-config-rhdh</code>.
+In the <code>app-config-rhdh.yml</code> content, add the <code>gitlab</code> provider configuration under the root <code>auth</code> configuration, and optionally, enable the <code>gitlab</code> provider for sign-in:</p>
 </div>
 <div class="listingblock">
-<div class="title"><code>app-config.yaml</code> fragment</div>
+<div class="title"><code>app-config-rhdh</code> ConfigMap fragment</div>
 <div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
-  environment: production
-  providers:
-    gitlab:
-      production:
-        clientId: ${AUTH_GITLAB_CLIENT_ID} # <b class="conum">(1)</b>
-        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET} # <b class="conum">(2)</b>
-        # audience: https://gitlab.company.com # <b class="conum">(3)</b>
-        # callbackUrl: https://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame # <b class="conum">(4)</b>
-# signInPage: gitlab # <b class="conum">(5)</b></code></pre>
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    auth:
+      environment: production
+      providers:
+        gitlab:
+          production:
+            clientId: ${AUTH_GITLAB_CLIENT_ID}
+            clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
+            # audience: https://gitlab.company.com # <b class="conum">(1)</b>
+            # callbackUrl: https://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame # <b class="conum">(2)</b>
+    # signInPage: gitlab # <b class="conum">(3)</b>
+    # [...]</code></pre>
 </div>
 </div>
 <div class="colist arabic">
 <ol>
-<li>
-<p>Enter the <strong>Application ID</strong> that you generated on GitLab, such as
-<code>4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9</code>.</p>
-</li>
-<li>
-<p>Enter the <strong>Secret</strong> that you generated on Gitlab, such as <code>gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475</code>.</p>
-</li>
 <li>
 <p>Optionally, when using a self-hosted Gitlab: uncomment, and enter your GitLab instance base URL, such as
 <code>https://gitlab.company.com</code>.</p>
 </li>
 <li>
-<p>Optionally, when using a custom redirect URI: uncomment, and enter the URL matching the <strong>Redirect URI</strong> registered when creating your GitLab OAuth App, such as <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code>.</p>
+<p>Optionally, when using a custom redirect URI: uncomment, and enter the URL matching the <strong>Redirect URI</strong> registered when creating your GitLab OAuth App, such as <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code>.
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.</p>
 </li>
-</ol>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.
-</td>
-</tr>
-</table>
-</div>
-<div class="colist arabic">
-<ol>
 <li>
 <p>Optionally, to enable the Gitlab provider for sign-in: uncomment, and enter <code>gitlab</code>.</p>
 </li>
 </ol>
 </div>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>The <code>backstage-developer-hub</code> deployment starts a pod with the updated configuration.</p>
+</li>
+<li>
+<p>Your Developer Hub sign-in page displays <strong>Sign in using GitLab</strong>.</p>
 </li>
 </ol>
 </div>
@@ -1725,14 +1740,14 @@ upstream:
 <div class="content">
 <pre class="highlight"><code>helm install rhdh \
   openshift-helm-charts/redhat-developer-hub \
-  [--version 1.0.0-1] \  <b class="conum">(1)</b>
+  [--version 1.1.1] \  <b class="conum">(1)</b>
   --values /path/to/values.yaml</code></pre>
 </div>
 </div>
 <div class="colist arabic">
 <ol>
 <li>
-<p>version <code>1.0.0-1</code> is the latest version of the Helm Chart.</p>
+<p>version <code>1.1.1</code> is the latest version of the Helm Chart.</p>
 </li>
 </ol>
 </div>
@@ -1875,7 +1890,7 @@ spec:
   name: rhdh
   source: redhat-catalog
   sourceNamespace: rhdh-operator
-  startingCSV: rhdh-operator.v1.1.0
+  startingCSV: rhdh-operator.v1.1.1
 EOF</code></pre>
 </div>
 </div>
@@ -2786,7 +2801,7 @@ stringData:
 <div class="content">
 <pre class="highlight"><code>helm upgrade rhdh \
   openshift-helm-charts/redhat-developer-hub \
-  [--version 1.0.0-1] \
+  [--version 1.1.1] \
   --values /path/to/values.yaml</code></pre>
 </div>
 </div>
@@ -3176,7 +3191,7 @@ upstream:
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code>helm -n &lt;your_namespace&gt; install -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.0</code></pre>
+<pre class="highlight"><code>helm -n &lt;your_namespace&gt; install -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.1</code></pre>
 </div>
 </div>
 </div>
@@ -3204,7 +3219,7 @@ upstream:
 <div class="listingblock">
 <div class="title">Upgrade command</div>
 <div class="content">
-<pre class="highlight"><code>helm -n &lt;your_namespace&gt; upgrade -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.0</code></pre>
+<pre class="highlight"><code>helm -n &lt;your_namespace&gt; upgrade -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.1</code></pre>
 </div>
 </div>
 <div class="listingblock">
@@ -3626,7 +3641,7 @@ There must be only single pod.
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-bash" data-lang="bash">helm -n &lt;your_namespace&gt; upgrade -f &lt;your-values.yaml&gt; &lt;your_deploy_name&gt; redhat-developer/backstage --version 1.1.0</code></pre>
+<pre class="highlight"><code class="language-bash" data-lang="bash">helm -n &lt;your_namespace&gt; upgrade -f &lt;your-values.yaml&gt; &lt;your_deploy_name&gt; redhat-developer/backstage --version 1.1.1</code></pre>
 </div>
 </div>
 </div>
@@ -3826,6 +3841,9 @@ spec:
 <p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
 </div>
 <div class="paragraph">
+<p>The purpose of configuring policy administrators is to enable a specific, restricted number of authenticated users to access the RBAC REST API. The permission policies are defined in a <code>policy.csv</code> file, which is referenced in the <code>app-config-rhdh</code> ConfigMap. OpenShift platform administrators or cluster administrators can perform this task with access to the namespace where Red Hat Developer Hub is deployed.</p>
+</div>
+<div class="paragraph">
 <p>You can set the credentials of a permission policy administrator in the <code>app-config.yaml</code> file as follows:</p>
 </div>
 <div class="listingblock">
@@ -3899,7 +3917,7 @@ spec:
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>In Red Hat OpenShift, create a <code>configMap</code> to hold the policies as shown in the following example:</p>
+<p>In Red Hat OpenShift, create a ConfigMap to hold the policies as shown in the following example:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
@@ -5455,7 +5473,7 @@ as your users navigate and use your Backstage instance.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">@roadiehq/backstage-plugin-argo-cd</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Backstage plugin
 to view and interact with Argo CD.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">2.6.2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.4.1</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -5867,7 +5885,7 @@ view and interact with Jira</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#rhdh-keycloak_admin-rhdh">@janus-idp/backstage-plugin-keycloak-backend</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The
 Keycloak backend plugin integrates Keycloak into Backstage.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.8.5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.8.6</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-keycloak-backend-dynamic</p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
@@ -5927,7 +5945,7 @@ backend plugin that integrates towards Kubernetes</p></td>
 Topology plugin enables you to visualize the workloads such as
 Deployment, Job, Daemonset, Statefulset, CronJob, and Pods powering any
 service on the Kubernetes cluster.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.18.7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.18.8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-topology</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -5977,7 +5995,7 @@ Management (OCM) plugin integrates your Backstage instance with the
 <td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-ocm-backend</p></td>
 <td class="tableblock halign-left valign-top"></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.7</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-ocm-backend-dynamic</p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
@@ -6010,7 +6028,7 @@ that integrates towards PagerDuty</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The Quay plugin
 displays the information about your container images within the Quay
 registry in your Backstage application.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.5.9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.5.10</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-quay</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -6032,9 +6050,9 @@ registry in your Backstage application.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-rbac</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RBAC frontend plugin for Backstage.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.15.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.15.5</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-rbac</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-rbac</p></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
 </tr>
@@ -6187,7 +6205,7 @@ backend plugin that renders technical documentation for your components</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The Tekton plugin
 enables you to visualize the PipelineRun resources available on the
 Kubernetes cluster.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.10</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.12</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-tekton</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -6543,8 +6561,8 @@ When installing some dynamic plugin containing large files, if the installation 
 <div class="content">
 <pre class="highlight"><code class="language-log" data-lang="log">[1] 2023-02-13T15:26:09.356Z catalog info Discovered ResourceEntity API type=plugin target=AapResourceEntityProvider:dev
 [1] 2023-02-13T15:26:09.423Z catalog info Discovered ResourceEntity Red Hat Event (DEV, v1.2.0) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.0) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.0) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
 [1] 2023-02-13T15:26:09.819Z catalog info Applying the mutation with 3 entities type=plugin target=AapResourceEntityProvider:dev</code></pre>
 </div>
 </div>
@@ -7312,7 +7330,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-03-27 10:30:59 UTC
+Last updated 2024-04-09 14:23:56 UTC
 </div>
 </div>
 </body>
