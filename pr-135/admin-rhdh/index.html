@@ -669,19 +669,43 @@ For enhanced security, deploy the Red Hat Developer Hub Operator in a dedicated 
 </li>
 <li>
 <p>Select the radio button to configure the Developer Hub instance with either the form view or YAML view. The Form view is selected by default.</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Using <strong>Form view</strong></p>
 <div class="olist loweralpha">
 <ol class="loweralpha" type="a">
 <li>
 <p>To configure the instance with the Form view, go to <strong>Root Schema</strong> &#8594; <strong>global</strong> &#8594; <strong>Enable service authentication within Backstage instance</strong> and paste your OpenShift Container Platform router host into the field on the form.</p>
 </li>
-<li>
-<p>To configure the instance with the YAML view, go to <code>global</code> &gt; <code>clusterRouterBase</code> and paste your OpenShift Container Platform router host as the field value in the file.</p>
-</li>
 </ol>
 </div>
 </li>
 <li>
-<p>Adjust the other values if needed.</p>
+<p>Using <strong>YAML view</strong></p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>To configure the instance with the YAML view, paste your OpenShift Container Platform router hostname in the <code>global.clusterRouterBase</code> parameter value as shown in the following example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
+  auth:
+    backend:
+      enabled: true
+  clusterRouterBase: apps.&lt;clusterName&gt;.com
+  # other Red Hat Developer Hub Helm Chart configurations</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Edit the other values if needed.</p>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -759,7 +783,7 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <p>You have access to the <code>registry.redhat.io</code>.</p>
 </li>
 <li>
-<p>You have access to the OpenShift image registry of your cluster. For more information about exposing the OpenShift image registry, see <a href="https://docs.openshift.com/container-platform/4.14/registry/securing-exposing-registry.html">Exposing the registry</a> in OpenShift documentation.</p>
+<p>You have access to the OpenShift Container Platform image registry of your cluster. For more information about exposing the OpenShift Container Platform image registry, see <a href="https://docs.openshift.com/container-platform/4.14/registry/securing-exposing-registry.html">Exposing the registry</a> in OpenShift documentation.</p>
 </li>
 <li>
 <p>You have installed the <code>oc</code> command line tool on your workstation.</p>
@@ -849,11 +873,11 @@ podman pull registry.redhat.io/rhel9/postgresql-15:latest</code></pre>
 </div>
 </li>
 <li>
-<p>Push both images to the internal OpenShift image registry.</p>
+<p>Push both images to the internal OpenShift Container Platform image registry.</p>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>For more information about pushing images directly to the OpenShift image registry, see <a href="https://access.redhat.com/solutions/6959306">How do I push an Image directly into the OpenShift 4 registry</a>.</p>
+<p>For more information about pushing images directly to the OpenShift Container Platform image registry, see <a href="https://access.redhat.com/solutions/6959306">How do I push an Image directly into the OpenShift 4 registry</a>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1027,15 +1051,15 @@ metadata:
 data:
   app-config-rhdh.yaml: |
     app:
-      title: {product}
+      title: Red Hat Developer Hub
 
     backend:
       auth:
         keys:
-        - secret: “${BACKEND_SECRET}”
-       baseUrl: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;
-       cors:
-         origin: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;</code></pre>
+          - secret: “${BACKEND_SECRET}”
+      baseUrl: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;
+      cors:
+        origin: https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;</code></pre>
 </div>
 </div>
 <div class="listingblock">
@@ -1048,7 +1072,7 @@ metadata:
 data:
   "app-config-rhdh.yaml": |
     app:
-      title: {product}
+      title: Red Hat Developer Hub
       baseUrl: https://backstage-developer-hub-my-ns.apps.ci-ln-vtkzr22-72292.origin-ci-int-gce.dev.rhcloud.com
     backend:
       auth:
@@ -1416,14 +1440,14 @@ bash prepare-restricted-environment.sh \
    --prod_operator_index "registry.redhat.io/redhat/redhat-operator-index:v4.14" \
    --prod_operator_package_name "rhdh" \
    --prod_operator_bundle_name "rhdh-operator" \
-   --prod_operator_version "v1.1.0"
+   --prod_operator_version "v1.1.1"
 
 # or, if you already have a target mirror registry
 bash prepare-restricted-environment.sh \
    --prod_operator_index "registry.redhat.io/redhat/redhat-operator-index:v4.14" \
    --prod_operator_package_name "rhdh" \
    --prod_operator_bundle_name "rhdh-operator" \
-   --prod_operator_version "v1.1.0" \
+   --prod_operator_version "v1.1.1" \
    --use_existing_mirror_registry "my_registry"</code></pre>
 </div>
 </div>
@@ -1618,14 +1642,14 @@ upstream:
 <div class="content">
 <pre class="highlight"><code>helm install rhdh \
   openshift-helm-charts/redhat-developer-hub \
-  [--version 1.0.0-1] \  <b class="conum">(1)</b>
+  [--version 1.1.1] \  <b class="conum">(1)</b>
   --values /path/to/values.yaml</code></pre>
 </div>
 </div>
 <div class="colist arabic">
 <ol>
 <li>
-<p>version <code>1.0.0-1</code> is the latest version of the Helm Chart.</p>
+<p>version <code>1.1.1</code> is the latest version of the Helm Chart.</p>
 </li>
 </ol>
 </div>
@@ -1768,7 +1792,7 @@ spec:
   name: rhdh
   source: redhat-catalog
   sourceNamespace: rhdh-operator
-  startingCSV: rhdh-operator.v1.1.0
+  startingCSV: rhdh-operator.v1.1.1
 EOF</code></pre>
 </div>
 </div>
@@ -2246,7 +2270,7 @@ stringData:
 <pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
 kind: Backstage
 metadata:
- # TODO: this the name of your {product-short} instance
+ # TODO: this the name of your Developer Hub instance
   name: my-rhdh
 spec:
   application:
@@ -2274,7 +2298,7 @@ spec:
 <pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  # TODO: this the name of your {product-short} Ingress
+  # TODO: this the name of your Developer Hub Ingress
   name: my-rhdh
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
@@ -2679,7 +2703,7 @@ stringData:
 <div class="content">
 <pre class="highlight"><code>helm upgrade rhdh \
   openshift-helm-charts/redhat-developer-hub \
-  [--version 1.0.0-1] \
+  [--version 1.1.1] \
   --values /path/to/values.yaml</code></pre>
 </div>
 </div>
@@ -2768,7 +2792,7 @@ stringData:
 <pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
 kind: Backstage
 metadata:
- # TODO: this the name of your RHDH instance
+ # TODO: this the name of your Developer Hub instance
   name: my-rhdh
 spec:
   application:
@@ -3079,7 +3103,7 @@ upstream:
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code>helm -n &lt;your_namespace&gt; install -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.0</code></pre>
+<pre class="highlight"><code>helm -n &lt;your_namespace&gt; install -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.1</code></pre>
 </div>
 </div>
 </div>
@@ -3107,7 +3131,7 @@ upstream:
 <div class="listingblock">
 <div class="title">Upgrade command</div>
 <div class="content">
-<pre class="highlight"><code>helm -n &lt;your_namespace&gt; upgrade -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.0</code></pre>
+<pre class="highlight"><code>helm -n &lt;your_namespace&gt; upgrade -f values.yaml &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub --version 1.1.1</code></pre>
 </div>
 </div>
 <div class="listingblock">
@@ -3529,7 +3553,7 @@ There must be only single pod.
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-bash" data-lang="bash">helm -n &lt;your_namespace&gt; upgrade -f &lt;your-values.yaml&gt; &lt;your_deploy_name&gt; redhat-developer/backstage --version 1.1.0</code></pre>
+<pre class="highlight"><code class="language-bash" data-lang="bash">helm -n &lt;your_namespace&gt; upgrade -f &lt;your-values.yaml&gt; &lt;your_deploy_name&gt; redhat-developer/backstage --version 1.1.1</code></pre>
 </div>
 </div>
 </div>
@@ -3729,6 +3753,9 @@ spec:
 <p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
 </div>
 <div class="paragraph">
+<p>The purpose of configuring policy administrators is to enable a specific, restricted number of authenticated users to access the RBAC REST API. The permission policies are defined in a <code>policy.csv</code> file, which is referenced in the <code>app-config-rhdh</code> ConfigMap. OpenShift platform administrators or cluster administrators can perform this task with access to the namespace where Red Hat Developer Hub is deployed.</p>
+</div>
+<div class="paragraph">
 <p>You can set the credentials of a permission policy administrator in the <code>app-config.yaml</code> file as follows:</p>
 </div>
 <div class="listingblock">
@@ -3802,7 +3829,7 @@ spec:
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>In OpenShift Container Platform, create a <code>configMap</code> to hold the policies as shown in the following example:</p>
+<p>In OpenShift Container Platform, create a ConfigMap to hold the policies as shown in the following example:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
@@ -5770,7 +5797,7 @@ view and interact with Jira</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#rhdh-keycloak_admin-rhdh">@janus-idp/backstage-plugin-keycloak-backend</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The
 Keycloak backend plugin integrates Keycloak into Backstage.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.8.5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.8.6</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-keycloak-backend-dynamic</p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
@@ -5830,7 +5857,7 @@ backend plugin that integrates towards Kubernetes</p></td>
 Topology plugin enables you to visualize the workloads such as
 Deployment, Job, Daemonset, Statefulset, CronJob, and Pods powering any
 service on the Kubernetes cluster.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.18.7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.18.8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-topology</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -5880,7 +5907,7 @@ Management (OCM) plugin integrates your Backstage instance with the
 <td class="tableblock halign-left valign-top"><p class="tableblock">Backend</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-ocm-backend</p></td>
 <td class="tableblock halign-left valign-top"></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.7</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-ocm-backend-dynamic</p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
@@ -5913,7 +5940,7 @@ that integrates towards PagerDuty</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The Quay plugin
 displays the information about your container images within the Quay
 registry in your Backstage application.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.5.9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.5.10</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-quay</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -5935,7 +5962,7 @@ registry in your Backstage application.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Frontend</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">@janus-idp/backstage-plugin-rbac</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RBAC frontend plugin for Backstage.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.15.3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.15.5</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-rbac</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -6090,7 +6117,7 @@ backend plugin that renders technical documentation for your components</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The Tekton plugin
 enables you to visualize the PipelineRun resources available on the
 Kubernetes cluster.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.10</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3.5.12</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Production</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/janus-idp-backstage-plugin-tekton</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -6446,8 +6473,8 @@ When installing some dynamic plugin containing large files, if the installation 
 <div class="content">
 <pre class="highlight"><code class="language-log" data-lang="log">[1] 2023-02-13T15:26:09.356Z catalog info Discovered ResourceEntity API type=plugin target=AapResourceEntityProvider:dev
 [1] 2023-02-13T15:26:09.423Z catalog info Discovered ResourceEntity Red Hat Event (DEV, v1.2.0) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.0) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.0) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
 [1] 2023-02-13T15:26:09.819Z catalog info Applying the mutation with 3 entities type=plugin target=AapResourceEntityProvider:dev</code></pre>
 </div>
 </div>
@@ -7215,7 +7242,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-04-02 19:33:10 UTC
+Last updated 2024-04-10 14:02:42 UTC
 </div>
 </div>
 </body>
