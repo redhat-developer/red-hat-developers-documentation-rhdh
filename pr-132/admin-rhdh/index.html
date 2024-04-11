@@ -529,7 +529,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="con-rhdh-overview_admin-rhdh">1. Overview of Red Hat Developer Hub</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Red Hat Developer Hub (Developer Hub) serves as an open developer platform designed for building developer portals. Using Developer Hub, the engineering teams can access a unified platform that streamlines the development process and provides a variety of tools and resources to build high-quality software efficiently.</p>
+<p>Red Hat Developer Hub (Developer Hub) serves as an open developer platform designed for building developer portals and is based on the <a href="https://backstage.io/">backstage</a> project. Using Developer Hub, the engineering teams can access a unified platform that streamlines the development process and provides a variety of tools and resources to build high-quality software efficiently.</p>
 </div>
 <div class="paragraph">
 <p>The goal of Developer Hub is to address the difficulties associated with creating and sustaining developer portals using:</p>
@@ -616,23 +616,57 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <p>Click <strong>Create</strong>.</p>
 </li>
 <li>
-<p>Copy the OpenShift router host (for example: <code>apps.&lt;clusterName&gt;.com</code>) to <strong>Root Schema</strong> &#8594; <strong>global</strong> &#8594; <strong>Shorthand for users who do not want to specify a custom HOSTNAME. Used ONLY with the DEFAULT upstream.backstage.appConfig value and with OCP Route enabled.</strong>, and adjust the other values if needed.</p>
+<p>Use one of the following views to edit the Helm configuration:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Using <strong>Form view</strong></p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Copy the OpenShift router host (for example: <code>apps.&lt;clusterName&gt;.com</code>) and paste it in the <strong>Root Schema</strong> &#8594; <strong>global</strong> &#8594; <strong>Shorthand for users who do not want to specify a custom HOSTNAME. Used ONLY with the DEFAULT upstream.backstage.appConfig value and with OCP Route enabled.</strong> field, and edit the other values if needed.</p>
 </li>
 <li>
-<p>Alternatively, copy the OpenShift router host (for example: <code>apps.&lt;clusterName&gt;.com</code>) to <code>global.clusterRouterBase</code>, and adjust other values if needed, such as <code>global.clusterRouterBase: apps.example.com</code>.</p>
-<div class="openblock">
+<p>Click <strong>Create</strong> and wait for the database and Red Hat Developer Hub to start.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Using <strong>YAML view</strong></p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Copy the OpenShift router host (for example: <code>apps.&lt;clusterName&gt;.com</code>) and paste it in the <code>global.clusterRouterBase</code> parameter value as shown in the following example:</p>
+<div class="listingblock">
 <div class="content">
-<div class="paragraph">
-<p>In the previous steps, the information about the host is copied, which is accessed by the Developer Hub backend.</p>
-</div>
-<div class="paragraph">
-<p>When an OCP route is generated automatically, the host value for the route is inferred and the same host information is sent to the Developer Hub. Also, if the Developer Hub is present on a custom domain by setting the host manually using values, the custom host takes precedence.</p>
-</div>
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
+  auth:
+    backend:
+      enabled: true
+  clusterRouterBase: apps.&lt;clusterName&gt;.com
+  # other Red Hat Developer Hub Helm Chart configurations</code></pre>
 </div>
 </div>
 </li>
 <li>
 <p>Click <strong>Create</strong> and wait for the database and Red Hat Developer Hub to start.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Whether you edit the Helm configuration using the <strong>Form view</strong> or the <strong>YAML view</strong>, the copied information about the host is accessed by the Developer Hub backend.</p>
+</div>
+<div class="paragraph">
+<p>When an OpenShift Container Platform route is generated automatically, the host value for the route is inferred and the same host value is sent to the Developer Hub. Also, if you have set up the host manually to configure Developer Hub on a custom domain, the custom host value for the route takes precedence.</p>
+</div>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
 </li>
 <li>
 <p>Click the <strong>Open URL</strong> option to start using the Red Hat Developer Hub platform.</p>
@@ -1054,7 +1088,7 @@ data:
 </table>
 </div>
 <div class="paragraph">
-<p>You need to know the external URL of your Red Hat Developer Hub instance and set it in the <code>app.baseUrl</code>, <code>backend.baseUrl</code> and <code>backend.cors.origin</code> fields of the application configuration. By default, this will be named as follows: <code><a href="https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;" class="bare">https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;</a>;</code>. You can use the <code>oc get ingresses.config/cluster -o jsonpath='{.spec.domain}'</code> command to display your ingress domain. If you are using a different host or sub-domain, which is customizable in the <code>Custom Resource spec.application.route field</code>, you must adjust the application configuration accordingly.</p>
+<p>You need to know the external URL of your Red Hat Developer Hub instance and set it in the <code>app.baseUrl</code>, <code>backend.baseUrl</code> and <code>backend.cors.origin</code> fields of the application configuration. By default, this will be named as follows: <code>https://backstage-&lt;CUSTOM_RESOURCE_NAME&gt;-&lt;NAMESPACE_NAME&gt;.&lt;OPENSHIFT_INGRESS_DOMAIN&gt;;</code>. You can use the <code>oc get ingresses.config/cluster -o jsonpath='{.spec.domain}'</code> command to display your ingress domain. If you are using a different host or sub-domain, which is customizable in the <code>Custom Resource spec.application.route field</code>, you must adjust the application configuration accordingly.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -2406,7 +2440,7 @@ $ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"</code></pr
 </div>
 </li>
 <li>
-<p>Open your web browser and navigate to <code><a href="http://localhost:9090" class="bare">http://localhost:9090</a></code> to access the Prometheus console.</p>
+<p>Open your web browser and navigate to <code>http://localhost:9090</code> to access the Prometheus console.</p>
 </li>
 <li>
 <p>Monitor relevant metrics, such as <code>process_cpu_user_seconds_total</code>.</p>
@@ -2538,10 +2572,10 @@ $ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"</code></pr
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>In the <strong>Allowed callback URL(s)</strong> section, include the URL <code><a href="https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame" class="bare">https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame</a></code>. Ensure to replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application&#8217;s URL, such as, <code>my.rhdh.example.com</code>.</p>
+<p>In the <strong>Allowed callback URL(s)</strong> section, include the URL <code>https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame</code>. Ensure to replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application&#8217;s URL, such as, <code>my.rhdh.example.com</code>.</p>
 </li>
 <li>
-<p>Similarly, in the <strong>Allowed sign-out URL(s)</strong> section, add <code><a href="https://&lt;rhdh_url&gt" class="bare">https://&lt;rhdh_url&gt</a>;</code>. Replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application&#8217;s URL, such as <code>my.rhdh.example.com</code>.</p>
+<p>Similarly, in the <strong>Allowed sign-out URL(s)</strong> section, add <code>https://&lt;rhdh_url&gt;</code>. Replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application&#8217;s URL, such as <code>my.rhdh.example.com</code>.</p>
 </li>
 <li>
 <p>Under <strong>OAuth 2.0 grant types</strong>, select <strong>Authorization code grant</strong> to return an authorization code.</p>
@@ -4316,7 +4350,7 @@ data:
 <p><strong>Base URL</strong></p>
 </div>
 <div class="paragraph">
-<p>The base URL for RBAC REST API requests is <code><a href="http://SERVER:PORT/api/permission/policies" class="bare">http://SERVER:PORT/api/permission/policies</a></code>, such as <code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code>.</p>
+<p>The base URL for RBAC REST API requests is <code>http://SERVER:PORT/api/permission/policies</code>, such as <code>http://localhost:7007/api/permission/policies</code>.</p>
 </div>
 <div class="paragraph">
 <p><strong>Endpoints</strong></p>
@@ -4328,7 +4362,7 @@ data:
 <p>Example request URL for <code>/api/permission/policies/[kind]/[namespace]/[name]</code> endpoint is:</p>
 </div>
 <div class="paragraph">
-<p><code><a href="http://localhost:7007/api/permission/policies/user/default/johndoe" class="bare">http://localhost:7007/api/permission/policies/user/default/johndoe</a></code></p>
+<p><code>http://localhost:7007/api/permission/policies/user/default/johndoe</code></p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -4352,7 +4386,7 @@ data:
 </div>
 <div class="paragraph">
 <p>Example <code>POST</code> request URL and JSON request body data for
-<code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code>:</p>
+<code>http://localhost:7007/api/permission/policies</code>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -4434,7 +4468,7 @@ data:
 </li>
 <li>
 <p>URL: Enter the RBAC REST API base URL and endpoint such as
-<code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code>.</p>
+<code>http://localhost:7007/api/permission/policies</code>.</p>
 </li>
 </ul>
 </div>
@@ -4459,7 +4493,7 @@ data:
 </div>
 </li>
 <li>
-<p>URL: Enter the following RBAC REST API base URL endpoint, such as <code><a href="http://localhost:7007/api/permission/policies" class="bare">http://localhost:7007/api/permission/policies</a></code></p>
+<p>URL: Enter the following RBAC REST API base URL endpoint, such as <code>http://localhost:7007/api/permission/policies</code></p>
 </li>
 <li>
 <p><code>-d</code>: Add a request JSON body</p>
@@ -5419,7 +5453,7 @@ requests, etc. which is used by the Azure DevOps frontend plugin.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The azure module for @backstage/plugin-scaffolder-backend</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.1.5</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">dynamic-plugins/wrappers/backstage-plugin-scaffolder-backend-module-azure-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-azure-dynamic</p></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
 </tr>
@@ -5430,7 +5464,7 @@ requests, etc. which is used by the Azure DevOps frontend plugin.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage catalog backend module that helps integrate towards Bitbucket Cloud.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.1.28</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">dynamic-plugins/wrappers/backstage-plugin-catalog-backend-module-bitbucket-cloud</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-bitbucket-cloud-dynamic</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>BITBUCKET_WORKSPACE</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
 </tr>
@@ -5441,7 +5475,7 @@ requests, etc. which is used by the Azure DevOps frontend plugin.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A Backstage catalog backend module that helps integrate towards Bitbucket Server.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.1.26</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">dynamic-plugins/wrappers/backstage-plugin-catalog-backend-module-bitbucket-server</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-bitbucket-server-dynamic</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>BITBUCKET_HOST</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
 </tr>
@@ -5452,7 +5486,7 @@ requests, etc. which is used by the Azure DevOps frontend plugin.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The Bitbucket Cloud module for @backstage/plugin-scaffolder-backend</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.1.3</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">dynamic-plugins/wrappers/backstage-plugin-scaffolder-backend-module-bitbucket-cloud</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-bitbucket-cloud-dynamic</p></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
 </tr>
@@ -5463,7 +5497,7 @@ requests, etc. which is used by the Azure DevOps frontend plugin.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The Bitbucket Server module for @backstage/plugin-scaffolder-backend.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.1.3</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">dynamic-plugins/wrappers/backstage-plugin-scaffolder-backend-module-bitbucket-server</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-bitbucket-server-dynamic</p></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
 </tr>
@@ -5509,7 +5543,7 @@ that integrates towards Dynatrace.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The gerrit module for @backstage/plugin-scaffolder-backend.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.1.5</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">dynamic-plugins/wrappers/backstage-plugin-scaffolder-backend-module-gerrit-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-gerrit-dynamic</p></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
 </tr>
@@ -5572,7 +5606,7 @@ that integrates towards GitHub Issues</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The github module for @backstage/plugin-scaffolder-backend.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.2.3</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">dynamic-plugins/wrappers/backstage-plugin-scaffolder-backend-module-github-dynamic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-github-dynamic</p></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Enabled</p></td>
 </tr>
@@ -5864,7 +5898,7 @@ Management (OCM) plugin integrates your Backstage instance with the
 that integrates towards PagerDuty</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.9.3</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Community Support</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">./dynamic-plugins/wrappers/pagerduty-backstage-plugin</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">././dynamic-plugins/dist/pagerduty-backstage-plugin</p></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Disabled</p></td>
 </tr>
@@ -6627,7 +6661,7 @@ When installing some dynamic plugin containing large files, if the installation 
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>baseUrl</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Location of the Keycloak server, such as <code><a href="https://localhost:8443/auth" class="bare">https://localhost:8443/auth</a></code>. Note that the newer versions of Keycloak omit the <code>/auth</code> context path.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Location of the Keycloak server, such as <code>https://localhost:8443/auth</code>. Note that the newer versions of Keycloak omit the <code>/auth</code> context path.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">""</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
 </tr>
@@ -7177,7 +7211,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-04-09 13:10:30 UTC
+Last updated 2024-04-11 20:31:05 UTC
 </div>
 </div>
 </body>
