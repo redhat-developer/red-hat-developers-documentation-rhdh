@@ -1,63 +1,99 @@
-#
 # Copyright (c) 2023 Red Hat, Inc.
-# This program and the accompanying materials are made
-# available under the terms of the Eclipse Public License 2.0
-# which is available at https://www.eclipse.org/legal/epl-2.0/
 #
-# SPDX-License-Identifier: EPL-2.0
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 
 name: Build HTML preview of PR
 
 on:
-  pull_request:
-    branches: ['*']
+  # /!\ Warning: using the pull_request_target event to be able to read secrets. But using this event without the cautionary measures described below
+  # may allow unauthorized GitHub users to open a “pwn request” and exfiltrate secrets.
+  # As recommended in https://iterative.ai/blog/testing-external-contributions-using-github-actions-secrets,
+  # we are adding an 'authorize' job that checks if the workflow was triggered from a fork PR. In that case, the "external" environment
+  # will prevent the job from running until it's approved manually by human intervention.
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: 
+    - main
+    - rhdh-1.**
+    - 1.**.x
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.event.pull_request.head.ref }}
+  cancel-in-progress: true
 
 jobs:
+  authorize:
+    # The 'external' environment is configured with the odo-maintainers team as required reviewers.
+    # All the subsequent jobs in this workflow 'need' this job, which will require manual approval for PRs coming from external forks.
+    # see list of approvers in OWNERS file
+    environment:
+      ${{ (github.event.pull_request.head.repo.full_name == github.repository ||
+        contains(fromJSON('["gazarenkov","jianrongzhang89","kadel","nickboldt","rm3l"]'), github.actor)) && 'internal' || 'external' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: approved
+        run: |
+          echo "✓"
+
   adoc_build:
     name: Asciidoctor Build For PR branch preview
     runs-on: ubuntu-latest
+    needs: authorize
     permissions:
-      contents: write
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      contents: read
+      packages: write
+      pull-requests: write
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
-    - name: Setup environment
-      run: |
-        # update
-        sudo apt-get update -y || true
-        # install 
-        sudo apt-get -y -q install asciidoctor && asciidoctor --version
-        echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+      - name: Setup environment
+        run: |
+          # update
+          sudo apt-get update -y || true
+          # install 
+          sudo apt-get -y -q install asciidoctor && asciidoctor --version
+          echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
 
-    - name: Build guides and indexes
-      run: |
-        echo "Building PR ${{ github.event.pull_request.number }}"
-        build/scripts/build.sh -b "pr-${{ github.event.pull_request.number }}"
+      - name: Build guides and indexes
+        run: |
+          echo "Building PR ${{ github.event.pull_request.number }}"
+          build/scripts/build.sh -b "pr-${{ github.event.number }}"
 
-    # repo must be public for this to work
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
-      # if: github.ref == 'refs/heads/main'
-      with:
-        github_token: ${{ secrets.RHDH_BOT_TOKEN }}
-        publish_branch: gh-pages
-        keep_files: true
-        publish_dir: ./titles-generated
+      # repo must be public for this to work
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        # if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.RHDH_BOT_TOKEN }}
+          publish_branch: gh-pages
+          keep_files: true
+          publish_dir: ./titles-generated
 
-    - name: PR comment with doc preview
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.RHDH_BOT_TOKEN }}
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: 'PR Preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${{ github.event.pull_request.number }}/' 
-          });
+      - name: PR comment with doc preview
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.RHDH_BOT_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'PR Preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${{ github.event.number }}/' 
+            });
