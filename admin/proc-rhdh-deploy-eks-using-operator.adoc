@@ -18,7 +18,7 @@ You can deploy the {product-short} on EKS using the Operator with or without htt
 --
 [source]
 ----
-$ kubectl create namespace rhdh-operator
+kubectl create namespace rhdh-operator
 ----
 --
 
@@ -27,7 +27,7 @@ $ kubectl create namespace rhdh-operator
 --
 [source]
 ----
-$ kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
+kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
     --docker-server=registry.redhat.io \
     --docker-username=<user_name> \ <1>
     --docker-password=<password> \ <2>
@@ -46,7 +46,7 @@ The created pull secret is used to pull the {product-short} images from the Red 
 --
 [source]
 ----
-$ cat <<EOF | kubectl -n rhdh-operator apply -f -
+cat <<EOF | kubectl -n rhdh-operator apply -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
@@ -66,7 +66,7 @@ EOF
 --
 [source]
 ----
-$ cat <<EOF | kubectl apply -n rhdh-operator -f -                                                                                                                                              
+cat <<EOF | kubectl apply -n rhdh-operator -f -                                                                                                                                              
 apiVersion: operators.coreos.com/v1      
 kind: OperatorGroup                      
 metadata:         
@@ -78,9 +78,9 @@ EOF
 . Create a `Subscription` resource using the following code:
 +
 --
-[source]
+[source,subs="attributes+"]
 ----
-$ cat <<EOF | kubectl apply -n rhdh-operator -f -
+cat <<EOF | kubectl apply -n rhdh-operator -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -92,7 +92,7 @@ spec:
   name: rhdh
   source: redhat-catalog
   sourceNamespace: rhdh-operator
-  startingCSV: rhdh-operator.v1.1.0
+  startingCSV: rhdh-operator.v{product-bundle-version}
 EOF
 ----
 --
@@ -102,7 +102,7 @@ EOF
 --
 [source]
 ----
-$ kubectl -n rhdh-operator get pods -w
+kubectl -n rhdh-operator get pods -w
 ----
 
 If the operator pod shows `ImagePullBackOff` status, then you might need permissions to pull the image directly within the Operator deployment's manifest.
@@ -113,7 +113,7 @@ You can include the required secret name in the `deployment.spec.template.spec.i
 
 [source]
 ----
-$ kubectl -n rhdh-operator patch deployment \
+kubectl -n rhdh-operator patch deployment \
     rhdh.fast --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
     --type=merge
 ----
@@ -126,7 +126,7 @@ $ kubectl -n rhdh-operator patch deployment \
 --
 [source]
 ----
-$ kubectl -n rhdh-operator edit configmap backstage-default-config
+kubectl -n rhdh-operator edit configmap backstage-default-config
 ----
 --
 
@@ -203,7 +203,7 @@ Wait for a few minutes until the changes are automatically applied to the operat
 --
 [source]
 ----
-$ git clone --depth=1 https://github.com/janus-idp/operator.git rhdh-operator && cd rhdh-operator
+git clone --depth=1 https://github.com/janus-idp/operator.git rhdh-operator && cd rhdh-operator
 ----
 --
 
@@ -212,7 +212,7 @@ $ git clone --depth=1 https://github.com/janus-idp/operator.git rhdh-operator &&
 --
 [source]
 ----
-$ make deployment-manifest
+make deployment-manifest
 ----
 
 The previous command generates a file named `rhdh-operator-<VERSION>.yaml`, which is updated manually.
@@ -223,9 +223,9 @@ The previous command generates a file named `rhdh-operator-<VERSION>.yaml`, whic
 --
 [source]
 ----
-$ sed -i "s/backstage-operator/rhdh-operator/g" rhdh-operator-*.yaml
-$ sed -i "s/backstage-system/rhdh-operator/g" rhdh-operator-*.yaml
-$ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operator-*.yaml
+sed -i "s/backstage-operator/rhdh-operator/g" rhdh-operator-*.yaml
+sed -i "s/backstage-system/rhdh-operator/g" rhdh-operator-*.yaml
+sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operator-*.yaml
 ----
 --
 
@@ -289,13 +289,13 @@ $ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operato
 --
 [source]
 ----
-$ sed -i "s#gcr.io/kubebuilder/kube-rbac-proxy:.*#registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.15#g" rhdh-operator-*.yaml
+sed -i "s#gcr.io/kubebuilder/kube-rbac-proxy:.*#registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.15#g" rhdh-operator-*.yaml
 
-$ sed -i "s#quay.io/janus-idp/operator:.*#registry.redhat.io/rhdh/rhdh-rhel9-operator:1.1#g" rhdh-operator-*.yaml
+sed -i "s#quay.io/janus-idp/operator:.*#registry.redhat.io/rhdh/rhdh-rhel9-operator:1.1#g" rhdh-operator-*.yaml
 
-$ sed -i "s#quay.io/janus-idp/backstage-showcase:.*#registry.redhat.io/rhdh/rhdh-hub-rhel9:1.1#g" rhdh-operator-*.yaml
+sed -i "s#quay.io/janus-idp/backstage-showcase:.*#registry.redhat.io/rhdh/rhdh-hub-rhel9:1.1#g" rhdh-operator-*.yaml
 
-$ sed -i "s#quay.io/fedora/postgresql-15:.*#registry.redhat.io/rhel9/postgresql-15:latest#g" rhdh-operator-*.yaml
+sed -i "s#quay.io/fedora/postgresql-15:.*#registry.redhat.io/rhel9/postgresql-15:latest#g" rhdh-operator-*.yaml
 ----
 --
 
@@ -342,7 +342,7 @@ spec:
 --
 [source]
 ----
-$ kubectl apply -f rhdh-operator-VERSION.yaml
+kubectl apply -f rhdh-operator-VERSION.yaml
 ----
 --
 
@@ -351,7 +351,7 @@ $ kubectl apply -f rhdh-operator-VERSION.yaml
 --
 [source]
 ----
-$ kubectl -n rhdh-operator get pods -w
+kubectl -n rhdh-operator get pods -w
 ----
 --
 
@@ -426,7 +426,7 @@ node-p'require("crypto").randomBytes(24).toString("base64")'
 --
 [source]
 ----
-$ kubectl patch serviceaccount default \
+kubectl patch serviceaccount default \
     -p '{"imagePullSecrets": [{"name": "rhdh-pull-secret"}]}' \
     -n <your_namespace>
 ----
