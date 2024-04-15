@@ -1,0 +1,121 @@
+[id='proc-rhdh-deploy-aks-using-operator_{context}']
+
+= Deploying the {product} on {aks-name} ({aks-short}) using the Operator
+
+You can deploy your {product-short} on {aks-short} using the {product} Operator.
+
+.Procedure
+
+. Obtain the {product} Operator manifest file, named `rhdh-operator-<VERSION>.yaml`, and modify the default configuration of `db-statefulset.yaml` and `deployment.yaml` by adding the following fragment:
++
+--
+[source,yaml]
+----
+securityContext:
+  fsGroup: 300
+----
+
+Following is the specified locations in the manifests:
+
+[source]
+----
+db-statefulset.yaml: | spec.template.spec
+deployment.yaml: | spec.template.spec
+----
+--
+
+. Apply the modified Operator manifest to your Kubernetes cluster:
++
+--
+[source,bash]
+----
+kubectl apply -f rhdh-operator-<VERSION>.yaml
+----
+
+[NOTE]
+====
+Execution of the previous command is cluster-scoped and requires appropriate cluster privileges.
+====
+--
+
+. Create an `ImagePull Secret` named `rhdh-pull-secret` using your Red Hat credentials to access images from the protected `registry.redhat.io` as shown in the following example:
++
+--
+[source,bash]
+----
+kubectl -n <your_namespace> create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<redhat_user_name> \
+    --docker-password=<redhat_password> \
+    --docker-email=<email>
+----
+--
+
+. Create an Ingress manifest file, named `rhdh-ingress.yaml`, specifying your {product-short} service name as follows:
++
+--
+[source,yaml]
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rhdh-ingress
+  namespace: <your_namespace>
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backstage-<your-CR-name>
+                port:
+                  name: http-backend
+----
+--
+
+. To deploy the created Ingress, run the following command:
++
+--
+[source]
+----
+kubectl -n <your_namespace> apply -f rhdh-ingress.yaml
+----
+--
+
+. Create a Custom Resource (CR) manifest file named `rhdh.yaml` and include the previously created `rhdh-pull-secret` as follows:
++
+--
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: <your-rhdh-cr>
+spec:
+  application:
+    imagePullSecrets:
+      - rhdh-pull-secret
+----
+--
+
+. Apply the CR manifest to your namespace:
++
+--
+[source]
+----
+kubectl -n <your_namespace> apply -f rhdh.yaml
+----
+--
+
+. Access the deployed {product-short} using the URL: `https://<app_address>`, where <app_address> is the Ingress address obtained earlier (for example, `https://108.141.70.228`).
+. Optional: To delete the CR, run the following command:
++
+--
+[source]
+----
+kubectl -n <your_namespace> delete -f rhdh.yaml
+----
+--
