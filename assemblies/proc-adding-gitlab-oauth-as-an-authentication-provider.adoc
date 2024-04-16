@@ -1,0 +1,79 @@
+[id='proc-adding-gitlab-oauth-as-an-authentication-provider_{context}']
+= Enabling the GitLab OAuth authentication provider
+
+{product} includes a GitLab authentication provider that can authenticate users by using GitLab OAuth.
+
+.Prerequistes
+
+* You configured {product-short} with a custom config map and secret.
+
+.Procedure
+. To allow {product-short} to authenticate with Gitlab, create an OAuth Application in Gitlab.
++
+Go to https://gitlab.com/-/profile/applications[GitLab User settings > Applications], and click the *Add new application* button.
+
+*Name*:: Enter your application name, such as `{product-short}`.
+*Redirect URI*:: Enter the backend authentication URI set in {product-short}, such as `pass:c,a,q[http://_<APP_FQDN>_/api/auth/gitlab/handler/frame]`.
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing `/` after 'frame'.
+*Scopes*:: Select the following scopes from the list, and validate:
++
+// NOTE: including here verbatim copy from Gitlab screen.
+`read_user`::: Grants read-only access to the authenticated user's profile through the /user API endpoint, which includes username, public email, and full name.
+Also grants access to read-only API endpoints under /users.
+`read_repository`::: Grants read-only access to the authenticated user's profile through the /user API endpoint, which includes username, public email, and full name.
+Also grants access to read-only API endpoints under /users.
+`write_repository`::: Grants read/write access to repositories on private projects using Git-over-HTTP (not using the API).
+`openid`::: Grants permission to authenticate with GitLab using OpenID Connect.
+Also gives read-only access to the user's profile and group memberships.
+`profile`::: Grants read-only access to the user's profile data using OpenID Connect.
+`email`::: Grants read-only access to the user's primary email address using OpenID Connect.
++
+Save the *Application ID* and *Secret* for the next step.
+
+. Add your Gitlab credentials in your {product-short} secrets.
++
+Edit your {product-short} secrets, such as `secrets-rhdh`.
++
+Add the following key/value pairs:
++
+`AUTH_GITLAB_CLIENT_ID`:: Enter the *Application ID* that you generated on GitLab, such as `4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9`.
+`AUTH_GITLAB_CLIENT_SECRET`:: Enter the *Secret* that you generated on Gitlab, such as `gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475`.
+
+. Set up the Gitlab authentication provider in your {product-short} custom configuration.
++
+Edit your custom {product-short} config map, such as `app-config-rhdh`.
++
+In the `app-config-rhdh.yml` content, add the `gitlab` provider configuration under the root `auth` configuration, and enable the `gitlab` provider for sign-in:
++
+.`app-config-rhdh` ConfigMap fragment
+[source,yaml,subs="+quotes,+attributes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    auth:
+      environment: production
+      providers:
+        gitlab:
+          production:
+            clientId: ${AUTH_GITLAB_CLIENT_ID}
+            clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
+            # audience: https://gitlab.company.com # <1>
+            # callbackUrl: https://_<APP_FQDN>_/api/auth/gitlab/handler/frame # <2>
+    signInPage: gitlab # <3>
+    # [...]
+----
++
+<1> Optionally, when using a self-hosted Gitlab: uncomment, and enter your GitLab instance base URL, such as
+`pass:[https://gitlab.company.com]`.
+<2> Optionally, when using a custom redirect URI: uncomment, and enter the URL matching the *Redirect URI* registered when creating your GitLab OAuth App, such as `pass:c,a,q[http://_<APP_FQDN>_/api/auth/gitlab/handler/frame]`.
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing `/` after 'frame'.
+<3> To enable the Gitlab provider as default sign-in provider.
+
+.Verification
+
+. The `backstage-developer-hub` deployment starts a pod with the updated configuration.
+. Your {product-short} sign-in page displays *Sign in using GitLab*.
