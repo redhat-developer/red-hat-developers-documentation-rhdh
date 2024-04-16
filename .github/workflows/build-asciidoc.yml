@@ -67,8 +67,10 @@ jobs:
         git config user.email "rhdh-bot@redhat.com"
 
         git checkout gh-pages; git pull || true
-        for d in $(find . -maxdepth 1 -name "pr-*" -type d); do 
-          PR="${d#*pr-}"
+        dirs=$(find . -maxdepth 1 -name "pr-*" -type d | sed -r -e "s|^\./pr-||")
+        refs=$(cat pulls.html | grep pr- | sed -r -e "s|.+.html>pr-([0-9]+)</a>.+|\1|")
+        for d in $(echo -e "$dirs\n$refs" | sort -uV); do 
+          PR="${d}"
           echo -n "Check merge status of PR $PR ... "
           PR_JSON=$(curl -sSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "$PULL_URL/$PR")
           if [[ $(echo "$PR_JSON" | grep merged\") == *"merged\": true"* ]]; then
