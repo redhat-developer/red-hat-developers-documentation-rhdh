@@ -1,0 +1,49 @@
+[id='proc-adding-google-as-an-authentication-provider_{context}']
+= Enabling the Google authentication provider
+
+{product} includes a Google authentication provider that can authenticate users by using Google OAuth2.
+
+.Procedure
+. To allow {product-short} to authenticate with Google, create OAuth credentials in Google.
+.. Log in to the link:https://console.cloud.google.com/[Google Console].
+.. Select or create a new project from the dropdown menu on the top bar.
+.. Go to link:https://console.cloud.google.com/apis/credentials/consent[*APIs & Services > OAuth consent screen*], and click *Edit app* to configure the consent screen:
+**Authorized domains**::
+For local development:: You do not need to enter any Authorized domain.
+For a non-local deployment::: Enter your {product-short} domain.
+*Scopes*:: Add these scopes:
+`openid`::: Associate you with your personal info on Google.
+`auth/userinfo.email`::: See your primary Google Account email address.
+`auth/userinfo.profile`::: See your personal info, including any personal info you've made publicly available.
+*User type*:: Add yourself as a test user, if using the `External user` type.
+.. Go to to link:https://console.cloud.google.com/apis/credentials[*APIs & Services > Credentials*], click *Create Credentials*, choose *OAuth client ID*, and create a credential with following parameters:
+*Application type*:: Select `Web Application`.
+*Name*:: Enter your application name, such as `{product-short}`.
+*Authorized JavaScript origins*:: Add URI: `pass:[http://localhost:3000]`
+*Authorized redirect URIs*:: Click *Add URI* to enter the backend authentication URI set in {product-short}:
+For local development::: `pass:[http://localhost:7007/api/auth/google/handler/frame]`
+For a non-local deployment::: `pass:[http://{APP_FQDN}/api/auth/google/handler/frame]`
+.. Save the *Client ID* and *Client secret* for the next step.
+
+. Set up the Google authentication provider in the {product-short} configuration (`app-config.yaml`).
++
+Add the `google` provider configuration to your `app-config.yaml` under the root `auth` configuration, and optionally, enable the `google` provider for sign-in:
++
+.Sample `app-config.yaml` fragment:
+[source,yaml]
+----
+auth:
+  environment: development
+  providers:
+    google:
+      development:
+        clientId: ${AUTH_GOOGLE_CLIENT_ID} # <1>
+        clientSecret: ${AUTH_GOOGLE_CLIENT_SECRET} # <2>
+# signInPage: google # <3>
+----
+
+<1> `clientId`:: Enter the *Client ID* that you generated, such as `10023341500512-beui241gjwwkrdkr2eh7dprewj2pp1q.apps.googleusercontent.com`
+
+<2> `clientSecret`:: Enter *Client secret* that you generated.
+
+<3> `signInPage` (optional):: Uncomment, and enter `google` to enable the Google provider for sign-in.
