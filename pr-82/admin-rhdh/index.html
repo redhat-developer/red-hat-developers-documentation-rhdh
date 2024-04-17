@@ -1602,19 +1602,7 @@ It supports multiple authentication providers.</p>
 <dl>
 <dt class="hdlist1"><strong>Redirect URI</strong></dt>
 <dd>
-<p>Enter the backend authentication URI set in Developer Hub:</p>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">For local development</dt>
-<dd>
-<p><code>http://localhost:7007/api/auth/microsoft/handler/frame</code></p>
-</dd>
-<dt class="hdlist1">For a non-local deployment</dt>
-<dd>
-<p><code>http://{APP_FQDN}/api/auth/microsoft/handler/frame</code></p>
-</dd>
-</dl>
-</div>
+<p>Enter the backend authentication URI set in Developer Hub: <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/microsoft/handler/frame</code></p>
 </dd>
 <dt class="hdlist1"><strong>Front-channel logout URL</strong></dt>
 <dd>
@@ -1639,7 +1627,7 @@ It supports multiple authentication providers.</p>
 <dt class="hdlist1"><code>User.Read</code></dt>
 <dt class="hdlist1">(Optionally)</dt>
 <dd>
-<p>Optional custom scopes of the Microsoft Graph API defined in the <code>app-config.yaml</code> file.</p>
+<p>Optional custom scopes of the Microsoft Graph API that you define also in the Developer Hub configuration (<code>app-config-rhdh.yaml</code>).</p>
 </dd>
 </dl>
 </div>
@@ -1651,15 +1639,43 @@ To grant admin consent, a directory admin must go to this page and click the <st
 </li>
 <li>
 <p>Go to the <strong>Certificates &amp; Secrets</strong> page, then the <strong>Client secrets</strong> tab, and create a new client secret.
-Save the <strong>Secret</strong> for the next step.</p>
+Save the <strong>Client secret</strong> for the next step.</p>
 </li>
 </ol>
 </div>
 </li>
 <li>
-<p>Set up the Microsoft Azure authentication provider in the Developer Hub backend (<code>app-config.yaml</code>).</p>
+<p>Add your Gitlab credentials in your Developer Hub secrets.</p>
 <div class="paragraph">
-<p>Add the <code>microsoft</code> provider configuration to your <code>app-config.yaml</code> under the root <code>auth</code> configuration, and optionally, enable the <code>gitlab</code> provider for sign-in:</p>
+<p>Edit your Developer Hub secrets, such as <code>secrets-rhdh</code>.</p>
+</div>
+<div class="paragraph">
+<p>Add the following key/value pairs:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>AUTH_AZURE_CLIENT_ID</code></dt>
+<dd>
+<p>Enter the <strong>Application ID</strong> that you generated on Microsoft Azure.</p>
+</dd>
+<dt class="hdlist1"><code>AUTH_AZURE_CLIENT_SECRET</code></dt>
+<dd>
+<p>Enter the <strong>Client secret</strong> that you generated on Microsoft Azure.</p>
+</dd>
+<dt class="hdlist1"><code>AUTH_AZURE_TENANT_ID</code></dt>
+<dd>
+<p>Enter your <strong>Tenant ID</strong> on Microsoft Azure.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Set up the Gitlab authentication provider in your Developer Hub custom configuration.</p>
+<div class="paragraph">
+<p>Edit your custom Developer Hub config map, such as <code>app-config-rhdh</code>.</p>
+</div>
+<div class="paragraph">
+<p>In the <code>app-config-rhdh.yml</code> content, add the <code>microsoft</code> provider configuration under the root <code>auth</code> configuration, and enable the <code>microsoft</code> provider for sign-in:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1668,26 +1684,17 @@ Save the <strong>Secret</strong> for the next step.</p>
   providers:
     microsoft:
       development:
-        clientId: <em>&lt;AZURE_CLIENT_ID&gt;</em> # <b class="conum">(1)</b>
-        clientSecret: <em>&lt;AZURE_CLIENT_SECRET&gt;</em> # <b class="conum">(2)</b>
-        tenantId: <em>&lt;AZURE_TENANT_ID&gt;</em> # <b class="conum">(3)</b>
-        domainHint: <em>&lt;AZURE_TENANT_ID&gt;</em> # <b class="conum">(4)</b>
-        # additionalScopes: # <b class="conum">(5)</b>
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        domainHint: ${AUTH_AZURE_TENANT_ID} # <b class="conum">(1)</b>
+        # additionalScopes: # <b class="conum">(2)</b>
           # - Mail.Send
-# signInPage: microsoft # <b class="conum">(6)</b></code></pre>
+signInPage: microsoft # <b class="conum">(3)</b></code></pre>
 </div>
 </div>
 <div class="colist arabic">
 <ol>
-<li>
-<p>Enter the application ID, found on <strong>App Registration &gt; Overview</strong>.</p>
-</li>
-<li>
-<p>Enter the application <strong>Secret</strong>, found on <strong>App Registration &gt; Certificates &amp; secrets</strong></p>
-</li>
-<li>
-<p>Enter the directory (tenant) ID, found on <strong>App Registration &gt; Overview</strong></p>
-</li>
 <li>
 <p>Optionally, when your application is not multi tenant,
 to reduce login friction for users with accounts in multiple tenants
@@ -1702,7 +1709,7 @@ See <a href="https://learn.microsoft.com/en-us/azure/active-directory/manage-app
 The default and mandatory value is <code>['user.read']</code>.</p>
 </li>
 <li>
-<p>Optionally, to enable the Microsoft Azure provider for sign-in: uncomment, and enter <code>microsoft</code>.</p>
+<p>To enable the Microsoft Azure provider as default sign-in provider.</p>
 </li>
 </ol>
 </div>
@@ -7505,7 +7512,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-04-17 12:09:48 UTC
+Last updated 2024-04-17 12:15:38 UTC
 </div>
 </div>
 </body>
