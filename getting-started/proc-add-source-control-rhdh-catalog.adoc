@@ -7,7 +7,7 @@ To populate the Catalog in {product}, you need to add software templates, and to
 
 * You have a GitHub account.
 * You have an account on the Red Hat OpenShift cluster.
-* You have installed the {product-short}, otherwise the GitHub login fails. For more information about installation, see xref:proc-install-rhdh-helm_rhdh-getting-started[].
+* You have installed the {product-short}, otherwise the GitHub login fails. For more information about installation, see xref:proc-install-rhdh_rhdh-getting-started[].
 
 == Configuring GitHub authentication
 
@@ -15,22 +15,22 @@ The configuration of GitHub authentication is required to enable the GitHub OAut
 
 .Procedure
 
-. In the Red Hat OpenShift cluster, navigate to the main page of the GitHub organization where you want to create the OAuth application. 
-. Click *Settings* -> *<> Developer Settings* -> *OAuth Apps* -> *Register an application*
+. In the Red Hat OpenShift cluster, navigate to the main page of the GitHub organization where you want to create the OAuth application.
+. Click *Settings* -> *Developer Settings* -> *OAuth Apps* -> *Register an application*
 . Enter the application name as `Developer Hub`.
 . Add the following URL as the *Homepage URL*:
 +
 --
-`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/`
+`pass:c[https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/]`
 --
 
 . Add the following URL as *Authorization callback URL*:
 +
 --
-`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame`
+`pass:c[https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame]`
 --
 
-. Uncheck the *Enable Device Flow* checkbox.
+. Clear the *Enable Device Flow* checkbox.
 . Click *Register application* to create your OAuth application.
 . After creating the application, click *Generate a new client secret* and copy the generated client secret.
 . In OpenShift, click *ConfigMaps*.
@@ -45,12 +45,12 @@ The configuration of GitHub authentication is required to enable the GitHub OAut
 .Environment variables
 [cols="1,1"]
 |===
-|Key |Value 
+|Key |Value
 
-|GITHUB_APP_CLIENT_ID
+|`GITHUB_OAUTH_CLIENT_ID`
 |Client ID from OAuth application
 
-|GITHUB_APP_CLIENT_SECRET
+|`GITHUB_OAUTH_CLIENT_SECRET`
 |Client Secret from OAuth application
 |===
 --
@@ -74,15 +74,38 @@ data:
       providers:
         github:
           development:
-            clientId: ${GITHUB_APP_CLIENT_ID}
-            clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+            clientId: ${GITHUB_OAUTH_CLIENT_ID}
+            clientSecret: ${GITHUB_OAUTH_CLIENT_SECRET}
 ----
 --
 
 . Click *Save*.
 . Navigate to the *Helm* tab and select *Upgrade*.
-. Under *Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from existing Secrets*, enter `github-secrets` as the value.
-. Click *Upgrade*.
+. Use one of the following views to edit the Helm configuration:
+
+** Using *Form view*
++
+.. Expand *Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from existing Secrets*.
+.. Click the *Add Backstage container environment variables from existing Secrets* link.
+.. Enter `github-secrets` as the value.
+.. Click *Upgrade*.
+
+** Using *YAML view*
++
+.. Set the value of the `upstream.backstage.extraEnvVarsSecrets` parameter to `github-secrets` as shown in the following example:
++
+[source,yaml]
+----
+# other Red Hat Developer Hub Helm Chart configurations
+upstream:
+  backstage:
+    # other Red Hat Developer Hub Helm Chart configurations
+    extraEnvVarsSecrets:
+      - github-secrets
+    # other Red Hat Developer Hub Helm Chart configurations
+----
+.. Click *Upgrade*.
+
 
 == Configuring GitHub integration
 
@@ -91,18 +114,18 @@ The configuration of GitHub is required to enable the GitHub plugins in {product
 .Procedure
 
 . In the Red Hat OpenShift cluster, navigate to the main page of the GitHub organization where you want to create the OAuth application.
-. Click *Settings* -> *<> Developer Settings* -> *GitHub Apps* -> *New GitHub App*.
+. Click *Settings* -> *Developer Settings* -> *GitHub Apps* -> *New GitHub App*.
 . Enter the application name as `Developer Hub`.
 . Add the following URL as the *Homepage URL*:
 +
 --
-`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/`
+`pass:c[https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/]`
 --
 
 . Add the following URL as *Authorization callback URL*:
 +
 --
-`https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame`
+`pass:c[https://developer-hub-<NAMESPACE_NAME>.<OPENSHIFT_ROUTE_HOST>/api/auth/github/handler/frame]`
 --
 
 . Deselect *Webhook URL* -> *Active*.
@@ -122,7 +145,7 @@ The configuration of GitHub is required to enable the GitHub plugins in {product
 .Environment variables
 [cols="1,1"]
 |===
-|Key |Value 
+|Key |Value
 
 |GITHUB_APP_APP_ID
 |App ID from GitHub application
@@ -179,12 +202,19 @@ You can enable GitHub discoverability for your components in {product-short}, su
 
 .Prerequisites
 
-* You have set up the GitHub integration. For more information, see <<Configuring GitHub integration>>. 
+* You have set up the GitHub integration. For more information, see <<Configuring GitHub integration>>.
 
 .Procedure
 
-. In Red Hat Openshift, go to the *Helm* tab and upgrade the _Developer Hub_ release.
-. Under *global → Dynamic plugins configuration → List of dynamic plugins that should be installed in the backstage application. → Package specification of the dynamic plugin to install. It should be usable by the `npm pack` command.*, add the following value:
+. In the *Developer* perspective of the OpenShift Container Platform web console, go to the *Helm* tab.
+. Click the overflow menu on a Helm release and select *Upgrade*.
+. Use one of the following views to edit the Helm configuration:
+
+** Using *Form view*
++
+.. Expand *Root Schema → global → Dynamic plugins configuration → List of dynamic plugins that should be installed in the backstage application*.
+.. Click the *Add List of dynamic plugins that should be installed in the backstage application* link.
+.. In the *Package specification of the dynamic plugin to install. It should be usable by the `npm pack` command.* field, add the following value:
 +
 --
 `./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic`
@@ -192,7 +222,25 @@ You can enable GitHub discoverability for your components in {product-short}, su
 image::rhdh/enable-gh-discovery.png[]
 --
 
-. Click *Upgrade*.
+.. Click *Upgrade*.
+
+** Using *YAML view*
++
+.. Set the value of the `global.dynamic.plugins.package` parameter to `./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic` as shown in the following example:
++
+[source,yaml]
+----
+global:
+  dynamic:
+    # other Red Hat Developer Hub Helm Chart configurations
+    plugins:
+      - disabled: false
+        package: >-
+          ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
+    # other Red Hat Developer Hub Helm Chart configurations
+----
+.. Click *Upgrade*.
+
 . Add the following code in the ConfigMap:
 +
 --
@@ -205,18 +253,18 @@ metadata:
 data:
   app-config-rhdh.yaml: |
     ...
-      catalog: 
-        providers: 
-          github: 
-            providerId: 
+      catalog:
+        providers:
+          github:
+            providerId:
               organization: '${GITHUB_ORG}'
-            schedule: 
-              frequency: 
-                minutes: 30
-              initialDelay: 
-                seconds: 15
-              timeout: 
-                minutes: 3
+              schedule:
+                frequency:
+                  minutes: 30
+                initialDelay:
+                  seconds: 15
+                timeout:
+                  minutes: 3
     ...
 ----
 
@@ -238,7 +286,7 @@ data:
           schedule:
             frequency: { minutes: 1 }
             timeout: { minutes: 1 }
-            initialDelay: { seconds: 100 } 
+            initialDelay: { seconds: 100 }
     ...
 ----
 
@@ -253,23 +301,46 @@ You can also enable GitHub discoverability for the members of your GitHub organi
 
 .Prerequisites
 
-* You have set up the GitHub integration. For more information, see <<Configuring GitHub integration>>. 
+* You have set up the GitHub integration. For more information, see <<Configuring GitHub integration>>.
 
 .Procedure
 
-. In Red Hat Openshift, go to the *Helm* tab and upgrade the _Developer Hub_ release.
-. Under *global → Dynamic plugins configuration → List of dynamic plugins that should be installed in the backstage application. → Package specification of the dynamic plugin to install. It should be usable by the `npm pack` command.*, add the following value:
+. In the *Developer* perspective of the OpenShift Container Platform web console, go to the *Helm* tab.
+. Click the overflow menu on a Helm release and select *Upgrade*.
+. Use one of the following views to edit the Helm configuration:
+
+** Using *Form view*
++
+.. Expand *Root Schema → global → Dynamic plugins configuration → List of dynamic plugins that should be installed in the backstage application*.
+.. Click the *Add List of dynamic plugins that should be installed in the backstage application* link.
+.. In the *Package specification of the dynamic plugin to install. It should be usable by the `npm pack` command.* field, add the following value:
 +
 --
 `./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic`
 
 image::rhdh/enable-gh-member-discovery.png[]
 --
+.. Click *Upgrade*.
 
-. Click *Upgrade*.
+** Using *YAML view*
++
+.. Set the value of the `global.dynamic.plugins.package` parameter to `./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic` as shown in the following example:
++
+[source,yaml]
+----
+global:
+  dynamic:
+    # other Red Hat Developer Hub Helm Chart configurations
+    plugins:
+      - disabled: false
+        package: >-
+          ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic
+    # other Red Hat Developer Hub Helm Chart configurations
+----
+.. Click *Upgrade*.
+
 . Add the following code in the ConfigMap:
 +
---
 [source,yaml]
 ----
 kind: ConfigMap
@@ -284,16 +355,13 @@ data:
         githubOrg:
           id: production
           githubUrl: "${GITHUB_URL}"
-          orgs: [ "${GITHUB_ORG}" ] <1>
+          orgs: [ "${GITHUB_ORG}" ]
     ...
 ----
++
+where:
 
-<1> Replace `${GITHUB_ORG}` with the GitHub organization you want to ingest users from.
---
+`${GITHUB_URL}`:: Denotes a variable that you must replace with the GitHub URL.
+`${GITHUB_ORG}`:: Denotes a variable that you must replace with the GitHub organization you want to ingest users from.
 
 . Click *Save*.
-
-
-
-
-

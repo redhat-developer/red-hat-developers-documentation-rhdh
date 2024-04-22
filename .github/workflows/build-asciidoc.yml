@@ -51,7 +51,7 @@ jobs:
 
     # repo must be public for this to work
     - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
+      uses: peaceiris/actions-gh-pages@v4
       # if: github.ref == 'refs/heads/main'
       with:
         github_token: ${{ secrets.RHDH_BOT_TOKEN }}
@@ -67,16 +67,23 @@ jobs:
         git config user.email "rhdh-bot@redhat.com"
 
         git checkout gh-pages; git pull || true
-        for d in $(find . -maxdepth 1 -name "pr-*" -type d); do 
-          PR="${d#*pr-}"
+        dirs=$(find . -maxdepth 1 -name "pr-*" -type d | sed -r -e "s|^\./pr-||")
+        refs=$(cat pulls.html | grep pr- | sed -r -e "s|.+.html>pr-([0-9]+)</a>.+|\1|")
+        for d in $(echo -e "$dirs\n$refs" | sort -uV); do 
+          PR="${d}"
           echo -n "Check merge status of PR $PR ... "
-          if [[ $(curl -sSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "$PULL_URL/$PR" | grep merged\") == *"merged\": true"* ]]; then
+          PR_JSON=$(curl -sSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "$PULL_URL/$PR")
+          if [[ $(echo "$PR_JSON" | grep merged\") == *"merged\": true"* ]]; then
             echo "merged, can delete from pulls.html and remove folder $d"
-            git rm -fr --quiet $d
+            git rm -fr --quiet $d || rm -fr $d
+            sed -r -e "/pr-$PR\/index.html>pr-$PR</d" -i pulls.html
+          elif [[ $(echo "$PR_JSON" | grep \"state\") == *"state\": \"closed\""* ]]; then
+            echo "closed, can delete from pulls.html and remove folder $d"
+            git rm -fr --quiet $d || rm -fr $d
             sed -r -e "/pr-$PR\/index.html>pr-$PR</d" -i pulls.html
           else
-            echo "PR is unmerged (or could not read API)"
+            echo "PR is not closed or merged (or could not read API)"
           fi
         done
-        git commit -s -m "remove merged PR branches" .
-        git push origin gh-pages
+        git commit -s -m "remove merged PR branches" . || true # don't fail if there's nothing to do
+        git push origin gh-pages || true # don't fail if there's nothing to do
