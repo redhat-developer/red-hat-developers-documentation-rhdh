@@ -1,0 +1,66 @@
+[id='enabling-telemetry-data-collection_{context}']
+= Enabling Telemetry data collection in {product-very-short}
+
+To enable telemetry data collection, you must configure the `analytics-provider-segment` plugin either using the Helm Chart or the {product} Operator. 
+
+[NOTE]
+====
+If the `analytics-provider-segment` plugin is already present in your Helm configuration file or ConfigMap file, set the value of the `plugins.disabled` parameter to `false` to quickly start telemetry data collection.
+====
+
+.Prerequisites
+* You have an administrator role in the {product-short}.
+* You have installed the `janus-idp
+-backstage-plugin-analytics-provider-segment` plugin in {product-short}. For more information, see link:{LinkAdminGuide}#rhdh-installing-dynamic-plugins[Dynamic plugin installation].
+
+.Procedure
+
+. Configure the `analytics-provider-segment` plugin by using one of the following options:
++
+.Using Helm Chart
+
+* Add the following YAML code in your Helm configuration file:
++
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: false
+----
+
++
+.Using Operator
+
+.. Perform one of the following steps:
++
+* If you have created the `dynamic-plugins-rhdh` ConfigMap file, add the `analytics-provider-segment` plugin to the list of plugins and set its `plugins.disabled` parameter to `false`.
++
+* If you have not created the ConfigMap file, create it with the following YAML code:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: false
+----
+
+.. Set the value of the `dynamicPluginsConfigMapName` parameter to the name of the ConfigMap file in your `Backstage` custom resource:
++
+[source,yaml]
+----
+spec:
+  application:
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+----
+
+. Save the configuration changes.
