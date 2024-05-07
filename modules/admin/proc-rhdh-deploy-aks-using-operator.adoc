@@ -85,6 +85,45 @@ kubectl -n <your_namespace> apply -f rhdh-ingress.yaml
 ----
 --
 
+. Create a ConfigMap named `app-config-rhdh` containing the Developer Hub configuration using the following template:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://<app_address>
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://<app_address>
+      cors:
+        origin: https://<app_address>
+----
+--
+
+. Create a Secret named `secrets-rhdh` and add a key named BACKEND_SECRET with a Base64-encoded string as value:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets-rhdh
+stringData:
+  # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup
+  BACKEND_SECRET: "xxx"
+----
+--
+
 . Create a Custom Resource (CR) manifest file named `rhdh.yaml` and include the previously created `rhdh-pull-secret` as follows:
 +
 --
@@ -98,6 +137,12 @@ spec:
   application:
     imagePullSecrets:
       - rhdh-pull-secret
+    appConfig:
+      configMaps:
+        - name: "app-config-rhdh"
+    extraEnvs:
+      secrets:
+        - name: "secrets-rhdh"
 ----
 --
 
