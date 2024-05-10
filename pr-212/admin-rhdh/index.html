@@ -455,10 +455,9 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#assembly-rhdh-telemetry_admin-rhdh">4. Telemetry data collection</a>
 <ul class="sectlevel2">
 <li><a href="#enabling-telemetry-data-collection_admin-rhdh">4.1. Enabling Telemetry data collection in RHDH</a></li>
-<li><a href="#customizing-telemetry-destination_admin-rhdh">4.2. Customizing telemetry destination</a></li>
-<li><a href="#disabling-telemetry-data-collection_admin-rhdh">4.3. Disabling Telemetry data collection in RHDH</a></li>
-<li><a href="#disabling-telemetry-in-local-environment_admin-rhdh">4.4. Disabling Telemetry in a local environment</a></li>
-<li><a href="#disabling-telemetry-in-CI-environment_admin-rhdh">4.5. Disabling Telemetry in a CI environment</a></li>
+<li><a href="#disabling-telemetry-data-collection_admin-rhdh">4.2. Disabling Telemetry data collection in RHDH</a></li>
+<li><a href="#disabling-telemetry-in-local-environment_admin-rhdh">4.3. Disabling Telemetry in a local environment</a></li>
+<li><a href="#disabling-telemetry-in-CI-environment_admin-rhdh">4.4. Disabling Telemetry in a CI environment</a></li>
 </ul>
 </li>
 <li><a href="#assembly-rhdh-integration-aws_admin-rhdh">5. Red Hat Developer Hub integration with Amazon Web Services (AWS)</a>
@@ -1498,8 +1497,10 @@ It supports multiple authentication providers.</p>
 <h2 id="assembly-rhdh-telemetry_admin-rhdh">4. Telemetry data collection</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>You can use the telemetry data collection feature by configuring the <code>janus-idp
--backstage-plugin-analytics-provider-segment</code> plugin. Based on the data collected, Red Hat analyzes your usage of the Red Hat Developer Hub application. This analysis helps in providing you support for upgrades, optimizing performance or configuration, minimizing service impacts, identifying and remediating threats, troubleshooting, improving the offerings and your experience, and responding to your issues.</p>
+<p>You can use the telemetry data collection feature by configuring the <code>analytics-provider-segment</code> plugin, which helps in sending analytics events to a specific Segment. For example, if there are number of users accessing your application, you can create multiple Segments based on location, purchasing tendency, or visiting pattern of your application users. So, a Segment denotes a classified set of your analytics data.</p>
+</div>
+<div class="paragraph">
+<p>Based on the data collected, Red Hat analyzes your usage of the Red Hat Developer Hub application. This analysis helps in providing you support for upgrades, optimizing performance or configuration, minimizing service impacts, identifying and remediating threats, troubleshooting, improving the offerings and your experience, and responding to your issues.</p>
 </div>
 <div class="paragraph">
 <p>This feature collects the following data about your RHDH usage:</p>
@@ -1510,18 +1511,39 @@ It supports multiple authentication providers.</p>
 <p>Events-related information, for example,  number of page visits, number of clicks on any links or buttons.</p>
 </li>
 <li>
-<p>IP address-related information. The IP addresses are anonymized and recorded as <code>0.0.0.0</code>.</p>
-</li>
-<li>
-<p>Username-related information. The usernames are recorded as an anonymized hash ID.</p>
-</li>
-<li>
-<p>User-related information, for example, locale, timezone, user agent including browser and OS details.</p>
+<p>System-related information, for example, locale, timezone, user agent including browser and OS details.</p>
 </li>
 <li>
 <p>Page-related information, for example, title, category, extension name, URL, path, referrer, and search parameters.</p>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>This feature also helps in anonymizing IP address and username-related information to maintain your privacy.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The IP addresses are anonymized and recorded as <code>0.0.0.0</code>.</p>
+</li>
+<li>
+<p>The usernames are recorded as an anonymized hash ID.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The anonymized IP addresses and usernames denote a unique random identifier that is used solely to identify the number of unique users of the RHDH application.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>Red Hat analyzes the collected data to understand your interactions with the RHDH application without disclosing your identity and compromising your privacy. Red Hat uses the collected data only for internal analysis and to improve your experience with Red Hat Developer Hub.</p>
@@ -1555,8 +1577,7 @@ It supports multiple authentication providers.</p>
 <p>You have an administrator role in the Developer Hub.</p>
 </li>
 <li>
-<p>You have installed the <code>janus-idp
--backstage-plugin-analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+<p>You have installed the <code>analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
 </li>
 </ul>
 </div>
@@ -1631,87 +1652,12 @@ data:
 </li>
 </ol>
 </div>
-</div>
-<div class="sect2">
-<h3 id="customizing-telemetry-destination_admin-rhdh">4.2. Customizing telemetry destination</h3>
 <div class="paragraph">
-<p>The <code>analytics-provider-segment</code> plugin sends the collected telemetry data to Red Hat by default. However, you can configure a new destination that receives telemetry data based on your needs. For configuration, you need a unique segment key that points to the destination.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>You have an administrator role in the Developer Hub.</p>
-</li>
-<li>
-<p>You have installed the <code>janus-idp
--backstage-plugin-analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Configure a new telemetry destination by using one of the following options:</p>
-<div class="ulist">
-<div class="title">Using Helm Chart</div>
-<ul>
-<li>
-<p>Add the following YAML code in your Helm configuration file:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">gupstream:
-  backstage:
-    extraEnvVars:
-      - name: SEGMENT_WRITE_KEY
-        value: &lt;segment_key&gt;</code></pre>
-</div>
-</div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">where</dt>
-<dd>
-<p><code>&lt;segment_key&gt;</code> denotes a unique identifier for destination configuration.</p>
-</dd>
-</dl>
-</div>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Using Operator</div>
-<ul>
-<li>
-<p>Add the following YAML code in your RHDH ConfigMap file:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">extraEnvs:
-  envs:
-    - name: SEGMENT_WRITE_KEY
-      value: &lt;segment_key&gt;</code></pre>
-</div>
-</div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">where</dt>
-<dd>
-<p><code>&lt;segment_key&gt;</code> denotes a unique identifier for destination configuration.</p>
-</dd>
-</dl>
-</div>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Save the configuration changes.</p>
-</li>
-</ol>
+<p>Unresolved directive in admin/assembly-rhdh-telemetry.adoc - include::proc-customizing-telemetry-destination.adoc[leveloffset=+1]</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="disabling-telemetry-data-collection_admin-rhdh">4.3. Disabling Telemetry data collection in RHDH</h3>
+<h3 id="disabling-telemetry-data-collection_admin-rhdh">4.2. Disabling Telemetry data collection in RHDH</h3>
 <div class="paragraph">
 <p>To disable telemetry data collection, you must configure the <code>analytics-provider-segment</code> plugin either using the Helm Chart or the Red Hat Developer Hub Operator.</p>
 </div>
@@ -1736,8 +1682,7 @@ data:
 <p>You have an administrator role in the Developer Hub.</p>
 </li>
 <li>
-<p>You have installed the <code>janus-idp
--backstage-plugin-analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+<p>You have installed the <code>analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
 </li>
 </ul>
 </div>
@@ -1814,7 +1759,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="disabling-telemetry-in-local-environment_admin-rhdh">4.4. Disabling Telemetry in a local environment</h3>
+<h3 id="disabling-telemetry-in-local-environment_admin-rhdh">4.3. Disabling Telemetry in a local environment</h3>
 <div class="paragraph">
 <p>By default, the <code>analytics-provider-segment</code> plugin is disabled when you run the Developer Hub application locally without using the <code>dynamic-plugins.default.yaml</code> file. However, if you run the application using the <code>dynamic-plugins.default.yaml</code> file, you can disable telemetry data collection based on your needs.</p>
 </div>
@@ -1825,8 +1770,7 @@ data:
 <p>You have an administrator role in the Developer Hub.</p>
 </li>
 <li>
-<p>You have installed the <code>janus-idp
--backstage-plugin-analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+<p>You have installed the <code>analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
 </li>
 </ul>
 </div>
@@ -1854,7 +1798,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="disabling-telemetry-in-CI-environment_admin-rhdh">4.5. Disabling Telemetry in a CI environment</h3>
+<h3 id="disabling-telemetry-in-CI-environment_admin-rhdh">4.4. Disabling Telemetry in a CI environment</h3>
 <div class="paragraph">
 <p>You can disable telemetry data collection while running RHDH in a Continuous Integration (CI) environment.</p>
 </div>
@@ -1865,8 +1809,7 @@ data:
 <p>You have an administrator role in the Developer Hub.</p>
 </li>
 <li>
-<p>You have installed the <code>janus-idp
--backstage-plugin-analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+<p>You have installed the <code>analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
 </li>
 </ul>
 </div>
@@ -7661,7 +7604,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-07 06:38:11 UTC
+Last updated 2024-05-10 11:25:17 UTC
 </div>
 </div>
 </body>
