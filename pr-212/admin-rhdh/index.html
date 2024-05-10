@@ -455,9 +455,10 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#assembly-rhdh-telemetry_admin-rhdh">4. Telemetry data collection</a>
 <ul class="sectlevel2">
 <li><a href="#enabling-telemetry-data-collection_admin-rhdh">4.1. Enabling Telemetry data collection in RHDH</a></li>
-<li><a href="#disabling-telemetry-data-collection_admin-rhdh">4.2. Disabling Telemetry data collection in RHDH</a></li>
-<li><a href="#disabling-telemetry-in-local-environment_admin-rhdh">4.3. Disabling Telemetry in a local environment</a></li>
-<li><a href="#disabling-telemetry-in-CI-environment_admin-rhdh">4.4. Disabling Telemetry in a CI environment</a></li>
+<li><a href="#customizing-telemetry-segment_admin-rhdh">4.2. Customizing telemetry Segment source</a></li>
+<li><a href="#disabling-telemetry-data-collection_admin-rhdh">4.3. Disabling Telemetry data collection in RHDH</a></li>
+<li><a href="#disabling-telemetry-in-local-environment_admin-rhdh">4.4. Disabling Telemetry in a local environment</a></li>
+<li><a href="#disabling-telemetry-in-CI-environment_admin-rhdh">4.5. Disabling Telemetry in a CI environment</a></li>
 </ul>
 </li>
 <li><a href="#assembly-rhdh-integration-aws_admin-rhdh">5. Red Hat Developer Hub integration with Amazon Web Services (AWS)</a>
@@ -1652,12 +1653,100 @@ data:
 </li>
 </ol>
 </div>
+</div>
+<div class="sect2">
+<h3 id="customizing-telemetry-segment_admin-rhdh">4.2. Customizing telemetry Segment source</h3>
 <div class="paragraph">
-<p>Unresolved directive in admin/assembly-rhdh-telemetry.adoc - include::proc-customizing-telemetry-destination.adoc[leveloffset=+1]</p>
+<p>The <code>analytics-provider-segment</code> plugin sends the collected telemetry data to Red Hat by default. However, you can configure a new Segment source that receives telemetry data based on your needs. For configuration, you need a unique Segment write key that points to the Segment source.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>By configuring a new Segment source, you can collect and analyze the same set of data that is mentioned in the <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#assembly-rhdh-telemetry_admin-rhdh">Telemetry data collection</a> section. You might also require to create your own telemetry data collection notice for your application users.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an administrator role in the Developer Hub.</p>
+</li>
+<li>
+<p>You have installed the <code>analytics-provider-segment</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Configure a new Segment source by using one of the following options:</p>
+<div class="ulist">
+<div class="title">Using Helm Chart</div>
+<ul>
+<li>
+<p>Add the following YAML code in your Helm configuration file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">upstream:
+  backstage:
+    extraEnvVars:
+      - name: SEGMENT_WRITE_KEY
+        value: &lt;segment_key&gt;</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">where</dt>
+<dd>
+<p><code>&lt;segment_key&gt;</code> denotes a unique identifier for your Segment source.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Using Operator</div>
+<ul>
+<li>
+<p>Add the following YAML code in your RHDH ConfigMap file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">extraEnvs:
+  envs:
+    - name: SEGMENT_WRITE_KEY
+      value: &lt;segment_key&gt;</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">where</dt>
+<dd>
+<p><code>&lt;segment_key&gt;</code> denotes a unique identifier for your Segment source.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Save the configuration changes.</p>
+</li>
+</ol>
 </div>
 </div>
 <div class="sect2">
-<h3 id="disabling-telemetry-data-collection_admin-rhdh">4.2. Disabling Telemetry data collection in RHDH</h3>
+<h3 id="disabling-telemetry-data-collection_admin-rhdh">4.3. Disabling Telemetry data collection in RHDH</h3>
 <div class="paragraph">
 <p>To disable telemetry data collection, you must configure the <code>analytics-provider-segment</code> plugin either using the Helm Chart or the Red Hat Developer Hub Operator.</p>
 </div>
@@ -1759,7 +1848,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="disabling-telemetry-in-local-environment_admin-rhdh">4.3. Disabling Telemetry in a local environment</h3>
+<h3 id="disabling-telemetry-in-local-environment_admin-rhdh">4.4. Disabling Telemetry in a local environment</h3>
 <div class="paragraph">
 <p>By default, the <code>analytics-provider-segment</code> plugin is disabled when you run the Developer Hub application locally without using the <code>dynamic-plugins.default.yaml</code> file. However, if you run the application using the <code>dynamic-plugins.default.yaml</code> file, you can disable telemetry data collection based on your needs.</p>
 </div>
@@ -1798,7 +1887,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="disabling-telemetry-in-CI-environment_admin-rhdh">4.4. Disabling Telemetry in a CI environment</h3>
+<h3 id="disabling-telemetry-in-CI-environment_admin-rhdh">4.5. Disabling Telemetry in a CI environment</h3>
 <div class="paragraph">
 <p>You can disable telemetry data collection while running RHDH in a Continuous Integration (CI) environment.</p>
 </div>
@@ -7604,7 +7693,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-10 11:25:17 UTC
+Last updated 2024-05-10 11:34:53 UTC
 </div>
 </div>
 </body>
