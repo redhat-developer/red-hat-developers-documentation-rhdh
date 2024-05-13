@@ -1,0 +1,76 @@
+[id="proc-migrating-oauth2-proxy-to-oidc_{context}"]
+
+= Migrating from OAuth2 Proxy with Keycloak to OIDC in {product-short}
+If you are using OAuth2 Proxy as an authentication provider with Keycloak, and you want to migrate to OIDC, you can update your authentication provider configuration to use OIDC.
+
+.Procedure
+
+. In Keycloak, update the valid redirect URI to `https://<rhdh_url>/api/auth/oidc/handler/frame`. Ensure to replace `<rhdh_url>` with your {product-short} application URL, such as, `my.rhdh.example.com`.
+. Replace the `oauth2Proxy` configuration values in the `auth` section of your `app-config.yaml` file with the `oidc` configuration values.
++
+An example of the `auth` configuration for `oauth2Proxy` is as follows: 
++
+[source,yaml]
+----
+auth:
+  environment: production
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oauth2Proxy: {}
+      production:
+        metadataUrl: ${KEYCLOAK_METADATA_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        prompt: ${KEYCLOAK_PROMPT} # recommended to use auto
+
+signInPage: oauth2Proxy
+----
++
+After migrating the auth provider to `oidc`, the `auth` configuration for this example is as follows: 
++
+[source,yaml]
+----
+auth:
+  environment: production
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${KEYCLOAK_METADATA_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        prompt: ${KEYCLOAK_PROMPT} # recommended to use auto
+
+signInPage: oidc
+----
+. Update the `signInPage` configuration value from `oauth2Proxy` to `oidc`.
+
+. Remove the OAuth2 Proxy sidecar container and update the `upstream.service` section of your Helm chart’s `values.yaml` file as follows:
++
+* `service.ports.backend`: `7007`
+* `service.ports.targetPort`: `backend`
++
+An example of the `service` configuration for `oauth2Proxy` is as follows: 
++
+[source,yaml]
+----
+service:
+  ports:
+    name: http-backend
+    backend: 4180    
+    targetPort: oauth2Proxy
+----
++
+After migrating the authentication provider to `oidc`, the `service` configuration for this example is as follows: 
++
+[source,yaml]
+----
+service:
+  ports:
+    name: http-backend
+    backend: 7007    
+    targetPort: backend
+----
+. Upgrade the {product-short} Helm chart.
