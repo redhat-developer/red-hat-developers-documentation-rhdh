@@ -2,24 +2,82 @@
 
 = Configuring Keycloak with the OIDC authentication provider
 
-You can use Keycloak to authenticate with {product-short} using the OIDC authentication provider. 
+//You can use Keycloak to authenticate with {product-short} using the OIDC authentication provider. 
+
+{product} includes an OIDC authentication provider that can authenticate users by using Keycloak.
+
+
 
 [IMPORTANT]
 ====
 The user that you create in Keycloak must also be available in the {product-short} catalog.
 ====
+////
+.Prerequistes
+. You configured {product-short} with a custom config map and secret.
 
 .Procedure
-. Log in to the Keycloak Admin Console.
-. Create a new realm, for example `RHDH`.
-. Add a new user using the following attributes:
-* *Username*: Username for the user, for example: `rhdhuser`
-* *Email*: Email address of the user.
-* *First name*: First name of the user.
-* *Last name*: Last name of the user.
-* *Email verified*: Toggle to *On*.
+////
+
+.Procedure
+. In Keycloak, create a new realm, for example `RHDH`.
+. Add a new user.
+
+*Username*:: Username for the user, for example: `rhdhuser`
+*Email*:: Email address of the user.
+*First name*:: First name of the user.
+*Last name*:: Last name of the user.
+*Email verified*:: Toggle to *On*.
+
 . Enter a *Password* for the user that you have created and toggle *Temporary* to *Off*.
-. Create a new Client ID, for example, `RHDH` and set the following attributes:
-* *Client authentication*: Toggle to *On*.
-* *Valid redirect URIs*: Set to the OIDC handler URL, for example, `<RHDH_URL>/api/auth/oidc/handler/frame`.
+
+. Create a new Client ID, for example, `RHDH`.
+
+*Client authentication*:: Toggle to *On*.
+*Valid redirect URIs*:: Set to the OIDC handler URL, for example, `<RHDH_URL>/api/auth/oidc/handler/frame`.
+
 . Navigate to the *Credentials* tab and copy the *Client secret*.
+
+. Save the Client ID and Secret for the next step.
+
+. Add your Keycloak credentials in your Developer Hub secrets.
+
+.. Edit your Developer Hub secrets, such as secrets-rhdh.
+
+.. Add the following key/value pairs:
+
+`AUTH_KEYCLOAK_CLIENT_ID`:: Enter the Client ID that you generated in Keycloak, such as `RHDH`.
+
+`AUTH_KEYCLOAK_CLIENT_SECRET`:: Enter the Client Secret that you generated in Keycloak.
+
+. Set up the OIDC authentication provider in your {product-short} custom configuration.
++
+.. Edit your custom {product-short} config map, such as `app-config-rhdh`.
++
+.. In the `app-config-rhdh.yaml` content, add the `oidc` provider configuration under the root `auth` configuration, and enable the `oidc` provider for sign-in:
++
+.`app-config-rhdh.yaml` fragment
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+      clientId: ${AUTH_KEYCLOAK_CLIENT_ID}
+      clientSecret: ${AUTH_KEYCLOAK_CLIENT_SECRET}
+      metadataUrl: ${KEYCLOAK_BASE_URL}/auth/realms/${KEYCLOAK_REALM}
+      prompt: ${KEYCLOAK_PROMPT} # recommended to use auto
+      ## Uncomment for additional configuration options
+      #callbackUrl: ${KEYCLOAK_CALLBACK_URL}
+      #tokenEndpointAuthMethod: ${KEYCLOAK_TOKEN_ENDPOINT_METHOD}
+      #tokenSignedResponseAlg: ${KEYCLOAK_SIGNED_RESPONSE_ALG}
+      #scope: ${KEYCLOAK_SCOPE}
+
+signInPage: oidc
+----
+
+.Verification
+
+. The `backstage-developer-hub` deployment starts a pod with the updated configuration.
+. Your {product-short} sign-in page displays *Sign in using OIDC*.
