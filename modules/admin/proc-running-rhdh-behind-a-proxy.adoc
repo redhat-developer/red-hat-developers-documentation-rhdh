@@ -4,7 +4,7 @@
 You can run the {product-very-short} application behind a corporate proxy by setting any of the following environment variables before starting the application:
 
 * `HTTP_PROXY`: Denotes the proxy to use for HTTP requests.
-* `HTTPS_PROXY`: denotes the proxy to use for HTTPS requests.
+* `HTTPS_PROXY`: Denotes the proxy to use for HTTPS requests.
 
 Additionally, you can set the `NO_PROXY` environment variable to exclude certain domains from proxying. The variable value is a comma-separated list of hostnames that do not require a proxy to get reached, even if one is specified.
 
@@ -16,11 +16,11 @@ Additionally, you can set the `NO_PROXY` environment variable to exclude certain
 .Procedure
 
 . Configure proxy information in one of the following deployments based on your needs:
-
++
 .Helm deployment
 
 * Set the proxy information in your Helm configuration file:
-
++
 [source,yaml]
 ----
 upstream:
@@ -33,14 +33,14 @@ upstream:
       - name: NO_PROXY
         value: '<no_proxy_settings>'
 ----
-
++
 Where,
 
 `<http_proxy_url>`:: Denotes a variable that you must replace with the HTTP proxy URL.
 `<https_proxy_url>`:: Denotes a variable that you must replace with the HTTPS proxy URL.
 `<no_proxy_settings>`:: Denotes a variable that you must replace with comma-separated URLs, which you want to exclude from proxying, for example, `foo.com,baz.com`.
-
-.Example: Setting proxy using Helm Chart
++
+.Example: Setting proxy variables using Helm Chart
 
 [source,yaml]
 ----
@@ -55,35 +55,31 @@ upstream:
         value: 'localhost,example.org'
 ----
 
++
 .Operator deployment 
 
-* Set the proxy information in your custom resource (CR) file:
-
+** Perform one of the following steps:
+* Set the proxy information in a ConfigMap file that contains default configuration:
++
+.. Search for a ConfigMap file named `backstage-default-config` in the namespace where the Operator is deployed and open it. 
+.. Find the `deployment.yaml` key.
+.. Add the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables to the containers listed in the `Deployment` spec as shown in the following example:
++ 
+.Example: Setting proxy variables in a ConfigMap file
 [source,yaml]
 ----
-spec:
-  # Other fields omitted
-  application:
-    extraEnvs:
-      envs:
-        - name: HTTP_PROXY
-          value: '<http_proxy_url>'
-        - name: HTTPS_PROXY
-          value: '<https_proxy_url>'
-        - name: NO_PROXY
-          value: '<no_proxy_settings>'
+
+
 ----
 
-Where,
 
-`<http_proxy_url>`:: Denotes a variable that you must replace with the HTTP proxy URL.
-`<https_proxy_url>`:: Denotes a variable that you must replace with the HTTPS proxy URL.
-`<no_proxy_settings>`:: Denotes a variable that you must replace with comma-separated URLs, which you want to exclude from proxying, for example, `foo.com,baz.com`.
-
-.Example: Setting proxy using Operator
+* Set the proxy information in your custom resource (CR) file as shown in the following example:
++ 
+.Example: Setting proxy variables in a CR file
 [source, yaml]
 ----
 spec:
+  # Other fields omitted
   application:
     extraEnvs:
       envs:
@@ -94,11 +90,5 @@ spec:
         - name: NO_PROXY
           value: 'localhost,example.org'
 ----
-+
-[NOTE]
-====
-Instead of configuring the proxy details in each custom resource, you can edit the Operator default configuration once in this manner:
 
-* Search for a ConfigMap file named `backstage-default-config` in the namespace where the Operator is deployed and open it. 
-* Find the `deployment.yaml` key and add the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables to the containers listed in the `Deployment` spec.
-====
+. Save the configuration changes.
