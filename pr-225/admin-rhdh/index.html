@@ -1638,10 +1638,10 @@ It supports multiple authentication providers.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>As a cluster administrator with access to the Operator namespace, you can configure the proxy variables in the Operator&#8217;s default ConfigMap file. This configuration applies the proxy settings to all the users within the namespace where the Operator is deployed.</p>
+<p>As a cluster administrator with access to the Operator namespace, you can configure the proxy variables in the Operator&#8217;s default ConfigMap file. This configuration applies the proxy settings to all the users of the Operator.</p>
 </li>
 <li>
-<p>As a developer, you can configure the proxy variables in a custom resource (CR) file. This configuration applies the proxy settings only to the users with access to that CR.</p>
+<p>As a developer, you can configure the proxy variables in a custom resource (CR) file. This configuration applies the proxy settings to theRHDH application created from that CR.</p>
 </li>
 </ul>
 </div>
@@ -1727,7 +1727,7 @@ It supports multiple authentication providers.</p>
 <div class="olist loweralpha">
 <ol class="loweralpha" type="a">
 <li>
-<p>Search for a ConfigMap file named <code>backstage-default-config</code> in the namespace where the Operator is deployed and open it.</p>
+<p>Search for a ConfigMap file named <code>backstage-default-config</code> in the default namespace <code>rhdh-operator</code> and open it.</p>
 </li>
 <li>
 <p>Find the <code>deployment.yaml</code> key.</p>
@@ -1741,7 +1741,13 @@ It supports multiple authentication providers.</p>
   deployment.yaml: |-
     apiVersion: apps/v1
     kind: Deployment
-    # Other fields omitted
+    spec:
+      template:
+        spec:
+          # Other fields omitted
+          initContainers:
+            - name: install-dynamic-plugins
+              # command omitted
               env:
                 - name: NPM_CONFIG_USERCONFIG
                   value: /opt/app-root/src/.npmrc.dynamic-plugins
@@ -1751,7 +1757,19 @@ It supports multiple authentication providers.</p>
                   value: 'http://10.10.10.106:3128'
                 - name: NO_PROXY
                   value: 'localhost,example.org'
-  # Other fields omitted</code></pre>
+              # Other fields omitted
+          containers:
+            - name: backstage-backend
+              # Other fields omitted
+              env:
+                - name: APP_CONFIG_backend_listen_port
+                  value: "7007"
+                - name: HTTP_PROXY
+                  value: 'http://10.10.10.105:3128'
+                - name: HTTPS_PROXY
+                  value: 'http://10.10.10.106:3128'
+                - name: NO_PROXY
+                  value: 'localhost,example.org'</code></pre>
 </div>
 </div>
 </li>
@@ -5512,7 +5530,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-17 05:44:13 UTC
+Last updated 2024-05-17 10:27:58 UTC
 </div>
 </div>
 </body>
