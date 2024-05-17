@@ -8,6 +8,14 @@ You can run the {product-very-short} application behind a corporate proxy by set
 
 Additionally, you can set the `NO_PROXY` environment variable to exclude certain domains from proxying. The variable value is a comma-separated list of hostnames that do not require a proxy to get reached, even if one is specified.
 
+For Helm-based deployment, both a developer or a cluster administrator, with permissions to create resources in the cluster, can configure the proxy variables in a `values.yaml` Helm configuration file.
+
+For Operator-based deployment, the approach you use for proxy configuration is based on your role:
+
+* As a cluster administrator with access to the Operator namespace, you can configure the proxy variables in the Operator's default ConfigMap file. This configuration applies the proxy settings to all the users of the Operator.
+* As a developer, you can configure the proxy variables in a custom resource (CR) file. This configuration applies the proxy settings to the{product-very-short} application created from that CR.
+
+
 .Prerequisites
 
 * You have installed the {product}. For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
@@ -58,22 +66,53 @@ upstream:
 +
 .Operator deployment 
 
-** Perform one of the following steps:
-* Set the proxy information in a ConfigMap file that contains default configuration:
+** Perform one of the following steps based on your role:
+* As an administrator, set the proxy information in the Operator's default ConfigMap file:
 +
-.. Search for a ConfigMap file named `backstage-default-config` in the namespace where the Operator is deployed and open it. 
+.. Search for a ConfigMap file named `backstage-default-config` in the default namespace `rhdh-operator` and open it. 
 .. Find the `deployment.yaml` key.
-.. Add the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables to the containers listed in the `Deployment` spec as shown in the following example:
+.. Set the value of the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables in the `Deployment` spec as shown in the following example:
 + 
 .Example: Setting proxy variables in a ConfigMap file
 [source,yaml]
 ----
-
-
+# Other fields omitted
+  deployment.yaml: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      template:
+        spec:
+          # Other fields omitted
+          initContainers:
+            - name: install-dynamic-plugins
+              # command omitted
+              env:
+                - name: NPM_CONFIG_USERCONFIG
+                  value: /opt/app-root/src/.npmrc.dynamic-plugins
+                - name: HTTP_PROXY
+                  value: 'http://10.10.10.105:3128'
+                - name: HTTPS_PROXY
+                  value: 'http://10.10.10.106:3128'
+                - name: NO_PROXY
+                  value: 'localhost,example.org'
+              # Other fields omitted
+          containers:
+            - name: backstage-backend
+              # Other fields omitted
+              env:
+                - name: APP_CONFIG_backend_listen_port
+                  value: "7007"
+                - name: HTTP_PROXY
+                  value: 'http://10.10.10.105:3128'
+                - name: HTTPS_PROXY
+                  value: 'http://10.10.10.106:3128'
+                - name: NO_PROXY
+                  value: 'localhost,example.org'
 ----
 
 
-* Set the proxy information in your custom resource (CR) file as shown in the following example:
+* As a developer, set the proxy information in your custom resource (CR) file as shown in the following example:
 + 
 .Example: Setting proxy variables in a CR file
 [source, yaml]
