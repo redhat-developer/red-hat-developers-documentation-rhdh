@@ -452,7 +452,13 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </ul>
 </li>
 <li><a href="#enabling-authentication">3. Enabling authentication in Red Hat Developer Hub</a></li>
-<li><a href="#assembly-rhdh-telemetry_admin-rhdh">4. Telemetry data collection</a></li>
+<li><a href="#assembly-rhdh-telemetry_admin-rhdh">4. Telemetry data collection</a>
+<ul class="sectlevel2">
+<li><a href="#disabling-telemetry-data-collection_admin-rhdh">4.1. Disabling telemetry data collection in RHDH</a></li>
+<li><a href="#enabling-telemetry-data-collection_admin-rhdh">4.2. Enabling telemetry data collection in RHDH</a></li>
+<li><a href="#customizing-telemetry-segment_admin-rhdh">4.3. Customizing telemetry Segment source</a></li>
+</ul>
+</li>
 <li><a href="#assembly-rhdh-integration-aws_admin-rhdh">5. Red Hat Developer Hub integration with Amazon Web Services (AWS)</a>
 <ul class="sectlevel2">
 <li><a href="#proc-rhdh-deploy-eks-using-helm_admin-rhdh">5.1. Deploying Red Hat Developer Hub in Elastic Kubernetes Service (EKS) using Helm Chart</a></li>
@@ -1668,14 +1674,267 @@ It supports multiple authentication providers.</p>
 <div class="paragraph">
 <p>With RHDH, you can customize the telemetry data collection feature and the telemetry Segment source configuration based on your needs.</p>
 </div>
+<div class="sect2">
+<h3 id="disabling-telemetry-data-collection_admin-rhdh">4.1. Disabling telemetry data collection in RHDH</h3>
 <div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-rhdh-telemetry.adoc - include::proc-disabling-telemetry.adoc[leveloffset=+1]</p>
+<p>To disable telemetry data collection, you must disable the <code>analytics-provider-segment</code> plugin either using the Helm Chart or the Red Hat Developer Hub Operator configuration.</p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-rhdh-telemetry.adoc - include::proc-enabling-telemetry.adoc[leveloffset=+1]</p>
+<p>If the <code>analytics-provider-segment</code> plugin is already present in your dynamic plugins configuration, set the value of the <code>plugins.disabled</code> parameter to <code>true</code> to disable telemetry data collection.</p>
 </div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Disable the <code>analytics-provider-segment</code> plugin by using one of the following options:</p>
+<div class="ulist">
+<div class="title">Using Helm Chart</div>
+<ul>
+<li>
+<p>Add the following YAML code in your Helm configuration file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
+  dynamic:
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: true</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist loweralpha">
+<div class="title">Using Operator</div>
+<ol class="loweralpha" type="a">
+<li>
+<p>Perform one of the following steps:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>If you have created the <code>dynamic-plugins-rhdh</code> ConfigMap file, add the <code>analytics-provider-segment</code> plugin to the list of plugins and set its <code>plugins.disabled</code> parameter to <code>true</code>.</p>
+</li>
+<li>
+<p>If you have not created the ConfigMap file, create it with the following YAML code:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: true</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Set the value of the <code>dynamicPluginsConfigMapName</code> parameter to the name of the ConfigMap file in your <code>Backstage</code> custom resource:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">spec:
+  application:
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Save the configuration changes.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="enabling-telemetry-data-collection_admin-rhdh">4.2. Enabling telemetry data collection in RHDH</h3>
 <div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-rhdh-telemetry.adoc - include::proc-customizing-telemetry-segment.adoc[leveloffset=+1]</p>
+<p>The telemetry data collection feature is enabled by default. However, if you have disabled the feature and want to re-enable it, you must enable the <code>analytics-provider-segment</code> plugin either using the Helm Chart or the Red Hat Developer Hub Operator configuration.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If the <code>analytics-provider-segment</code> plugin is already present in your dynamic plugins configuration, set the value of the <code>plugins.disabled</code> parameter to <code>false</code> to enable telemetry data collection.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Configure the <code>analytics-provider-segment</code> plugin by using one of the following options:</p>
+<div class="ulist">
+<div class="title">Using Helm Chart</div>
+<ul>
+<li>
+<p>Add the following YAML code in your Helm configuration file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
+  dynamic:
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: false</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist loweralpha">
+<div class="title">Using Operator</div>
+<ol class="loweralpha" type="a">
+<li>
+<p>Perform one of the following steps:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>If you have created the <code>dynamic-plugins-rhdh</code> ConfigMap file, add the <code>analytics-provider-segment</code> plugin to the list of plugins and set its <code>plugins.disabled</code> parameter to <code>false</code>.</p>
+</li>
+<li>
+<p>If you have not created the ConfigMap file, create it with the following YAML code:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: false</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Set the value of the <code>dynamicPluginsConfigMapName</code> parameter to the name of the ConfigMap file in your <code>Backstage</code> custom resource:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">spec:
+  application:
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Save the configuration changes.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="customizing-telemetry-segment_admin-rhdh">4.3. Customizing telemetry Segment source</h3>
+<div class="paragraph">
+<p>The <code>analytics-provider-segment</code> plugin sends the collected telemetry data to Red Hat by default. However, you can configure a new Segment source that receives telemetry data based on your needs. For configuration, you need a unique Segment write key that points to the Segment source.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>By configuring a new Segment source, you can collect and analyze the same set of data that is mentioned in the <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#assembly-rhdh-telemetry_admin-rhdh">Telemetry data collection</a> section. You might also require to create your own telemetry data collection notice for your application users.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Configure integration with your Segment source by using one of the following options:</p>
+<div class="ulist">
+<div class="title">Using Helm Chart</div>
+<ul>
+<li>
+<p>Add the following YAML code in your Helm configuration file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">upstream:
+  backstage:
+    extraEnvVars:
+      - name: SEGMENT_WRITE_KEY
+        value: &lt;segment_key&gt;</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">where</dt>
+<dd>
+<p><code>&lt;segment_key&gt;</code> denotes a unique identifier for your Segment source.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Using Operator</div>
+<ul>
+<li>
+<p>Add the following YAML code in your <code>Backstage</code> custom resource (CR):</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">extraEnvs:
+  envs:
+    - name: SEGMENT_WRITE_KEY
+      value: &lt;segment_key&gt;</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">where</dt>
+<dd>
+<p><code>&lt;segment_key&gt;</code> denotes a unique identifier for your Segment source.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Save the configuration changes.</p>
+</li>
+</ol>
+</div>
 </div>
 </div>
 </div>
@@ -5401,7 +5660,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-17 11:49:24 UTC
+Last updated 2024-05-17 11:54:54 UTC
 </div>
 </div>
 </body>
