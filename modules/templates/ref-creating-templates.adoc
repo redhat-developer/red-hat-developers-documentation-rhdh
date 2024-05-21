@@ -1,0 +1,76 @@
+// Module included in the following assemblies:
+//
+// * admin/assembly-admin-templates.adoc
+
+:_mod-docs-content-type: REFERENCE
+[id="ref-creating-templates_{context}"]
+= Creating a template as a YAML file
+
+You can create a template by defining a `Template` object as a YAML file.
+
+The `Template` object describes the template and its metadata. It also contains required input variables and a list of actions that are executed by the scaffolding service.
+
+.`Template` object example
+[source,yaml]
+----
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: template-name # <1>
+  title: Example template # <2>
+  description: An example template for v1beta3 scaffolder. # <3>
+spec:
+  owner: backstage/techdocs-core # <4>
+  type: service # <5>
+  parameters: # <6>
+    - title: Fill in some steps
+      required:
+        - name
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name of the component
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+    - title: Choose a location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+  steps: # <7>
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      # ...
+  output: # <8>
+    links:
+      - title: Repository # <9>
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in catalog # <10>
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+# ...
+----
+<1> Specify a name for the template.
+<2> Specify a title for the template. This is the title that is visible on the template tile in the *Create...* view.
+<3> Specify a description for the template. This is the description that is visible on the template tile in the *Create...* view.
+<4> Specify the ownership of the template. The `owner` field provides information about who is responsible for maintaining or overseeing the template within the system or organization. In the provided example, the `owner` field is set to `backstage/techdocs-core`. This means that this template belongs to the `techdocs-core` project in the `backstage` namespace.
+<5> Specify the component type. Any string value is accepted for this required field, but your organization should establish a proper taxonomy for these. {product} instances may read this field and behave differently depending on its value. For example, a `website` type component may present tooling in the {product} interface that is specific to just websites.
++
+The following values are common for this field:
++
+--
+`service`:: A backend service, typically exposing an API.
+`website`:: A website.
+`library`:: A software library, such as an npm module or a Java library.
+--
+<6> Use the `parameters` section to specify parameters for user input that are shown in a form view when a user creates a component by using the template in the {product} console. Each `parameters` subsection, defined by a title and properties, creates a new form page with that definition.
+<7> Use the `steps` section to specify steps that are executed in the backend. These steps must be defined by using a unique step ID, a name, and an action. You can view actions that are available on your {product} instance by visiting the URL `\https://<rhdh_url>/create/actions`.
+<8> Use the `output` section to specify the structure of output data that is created when the template is used. The `output` section, particularly the `links` subsection, provides valuable references and URLs that users can utilize to access and interact with components that are created from the template.
+<9> Provides a reference or URL to the repository associated with the generated component.
+<10> Provides a reference or URL that allows users to open the generated component in a catalog or directory where various components are listed.
