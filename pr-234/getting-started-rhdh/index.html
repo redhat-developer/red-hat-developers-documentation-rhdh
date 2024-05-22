@@ -462,6 +462,14 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#ref-supported-servicenow-custom-actions_rhdh-getting-started">8.2. Supported ServiceNow custom actions in Red Hat Developer Hub</a></li>
 </ul>
 </li>
+<li><a href="#assembly-auth-provider-github">9. GitHub authentication provider</a>
+<ul class="sectlevel2">
+<li><a href="#con-github-app-overview">9.1. GitHub App​ overview</a></li>
+<li><a href="#proc-registering-github-app">9.2. Registering a GitHub​ App</a></li>
+<li><a href="#proc-configuring-github-app">9.3. Configuring a GitHub App in Developer Hub</a></li>
+<li><a href="#proc-adding-github-to-frontend">9.4. Adding the GitHub provider to the Developer Hub front end​</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -2555,9 +2563,120 @@ data:
 </dd>
 </dl>
 </div>
-<div class="paragraph">
-<p>include:assemblies/assembly-auth-provider-github.adoc[leveloffset=+1]</p>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="assembly-auth-provider-github">9. GitHub authentication provider</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Red Hat Developer Hub uses a built-in GitHub authentication provider to authenticate users in GitHub or GitHub Enterprise.</p>
+</div>
+<div class="sect2">
+<h3 id="con-github-app-overview">9.1. GitHub App​ overview</h3>
+<div class="paragraph">
+<p>GitHub Apps are generally preferred to OAuth apps because they use fine-grained permissions, give more control over which repositories the application can access, and use short-lived tokens. For more information, see <a href="https://docs.github.com/en/apps/overview">GitHub Apps overview</a> in the GitHub documentation.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-registering-github-app">9.2. Registering a GitHub​ App</h3>
+<div class="paragraph">
+<p>In a GitHub App, you configure the allowed scopes as part of that application, therefore, you must verify the scope that your plugins require. The scope information is available in the plugin README files.</p>
+</div>
+<div class="paragraph">
+<p>To add GitHub authentication, complete the steps in <a href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">Registering a GitHub App</a> on the GitHub website.</p>
+</div>
+<div class="paragraph">
+<p>Use the following examples to enter the information about your production environment into the required fields on the <strong>Register new GitHub App</strong> page:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Application name: Red Hat Developer Hub</p>
+</li>
+<li>
+<p>Homepage URL:  <code>https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;</code></p>
+</li>
+<li>
+<p>Authorization callback URL: <code>https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;/api/auth/github/handler/frame</code></p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+The Homepage URL points to the Developer Hub front end, while the authorization callback URL points to the authentication provider backend.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-configuring-github-app">9.3. Configuring a GitHub App in Developer Hub</h3>
+<div class="paragraph">
+<p>To add GitHub authentication for Developer Hub, you must configure the GitHub App in your <code>app-config.yaml</code> file.</p>
+</div>
+<div class="paragraph">
+<p>The GitHub authentication provider uses the following configuration keys:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>clientId</code>: the client ID that you generated on GitHub. For example: b59241722e3c3b4816e2</p>
+</li>
+<li>
+<p><code>clientSecret</code>: the client secret tied to the generated client ID.</p>
+</li>
+<li>
+<p><code>enterpriseInstanceUrl</code> (optional): the base URL for a GitHub Enterprise instance. For example: <code>https://ghe.&lt;company&gt;.com</code>. The <code>enterpriseInstanceUrl</code> is only needed for GitHub Enterprise.</p>
+</li>
+<li>
+<p><code>callbackUrl</code> (optional): the callback URL that GitHub uses when initiating an OAuth flow. For example: https://your-intermediate-service.com/handler. The <code>callbackUrl</code> is only needed if Developer Hub is not the immediate receiver, such as in cases when you use one OAuth app for many Developer Hub instances.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>To configure the GitHub App, add the provider configuration to your <code>app-config.yaml</code> file under the root auth configuration. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+ environment: production
+ providers:
+   github:
+     production:
+       clientId: ${GITHUB_APP_CLIENT_ID}
+       clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+       ## uncomment if using GitHub Enterprise
+       # enterpriseInstanceUrl: ${GITHUB_URL}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-adding-github-to-frontend">9.4. Adding the GitHub provider to the Developer Hub front end​</h3>
+<div class="paragraph">
+<p>To add the provider to the front end, add the sign in configuration to your <code>app-config.yaml</code> file. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">signInPage: github</code></pre>
+</div>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For information about authenticating Backstage access with GitHub, see <a href="https://backstage.io/docs/integrations/github/github-apps/">GitHub Authentication Provider</a> in the community documentation.</p>
+</li>
+<li>
+<p>For information about adding the provider to the Backstage front end, see <a href="https://github.com/janus-idp/backstage-showcase/blob/main/showcase-docs/getting-started.md">Enabling authentication in Showcase</a> in the community documentation.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -2565,7 +2684,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-22 10:14:48 UTC
+Last updated 2024-05-22 10:22:34 UTC
 </div>
 </div>
 </body>

@@ -451,7 +451,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#proc-install-rhdh-ocp-operator_admin-rhdh">2.2. Deploying Red Hat Developer Hub on OpenShift Container Platform using the Operator</a></li>
 </ul>
 </li>
-<li><a href="#enabling-authentication">3. Enabling authentication in Red Hat Developer Hub</a></li>
+<li><a href="#enabling-authentication">3. Enabling authentication in Red Hat Developer Hub</a>
+<ul class="sectlevel2">
+<li><a href="#proc-adding-gitlab-oauth-as-an-authentication-provider_admin-rhdh">3.1. Enabling the GitLab OAuth authentication provider</a></li>
+</ul>
+</li>
 <li><a href="#assembly-rhdh-integration-aws_admin-rhdh">4. Red Hat Developer Hub integration with Amazon Web Services (AWS)</a>
 <ul class="sectlevel2">
 <li><a href="#proc-rhdh-deploy-eks-using-helm_admin-rhdh">4.1. Deploying Red Hat Developer Hub in Elastic Kubernetes Service (EKS) using Helm Chart</a></li>
@@ -472,6 +476,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#con-rbac-config-permission-policies_admin-rhdh">6.1. Permission policies configuration</a></li>
 <li><a href="#proc-rbac-ui-manage-roles_admin-rhdh">6.2. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</a></li>
 <li><a href="#con-rbac-rest-api_admin-rhdh">6.3. Role-based Access Control (RBAC) REST API</a></li>
+</ul>
+</li>
+<li><a href="#assembly-admin-templates">7. Managing templates</a>
+<ul class="sectlevel2">
+<li><a href="#proc-creating-templates_assembly-admin-templates">7.1. Creating a template by using the Template Editor</a></li>
+<li><a href="#ref-creating-templates_assembly-admin-templates">7.2. Creating a template as a YAML file</a></li>
 </ul>
 </li>
 </ul>
@@ -1323,44 +1333,7 @@ data:
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-install-rhdh-custom-backstage-image_admin-rhdh">2.2.3. Installing Red Hat Developer Hub using a custom Backstage image</h4>
-<div class="paragraph">
-<p>You can install a Red Hat Developer Hub instance that uses a custom Backstage image in one of the following ways:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Use the <strong>Form view</strong> and enter the image in <strong>application</strong> &#8594; <strong>image</strong></p>
-</li>
-<li>
-<p>Use the <strong>YAML view</strong> to enter the image directly in the Backstage custom resource specification, as shown in the following example:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">spec:
-  application:
-       image: &lt;your custom image&gt;</code></pre>
-</div>
-</div>
-</li>
-</ul>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Warning</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Installing a Red Hat Developer Hub application with a custom Backstage image might pose security risks to your organization. It is your responsibility to ensure that the image is from trusted sources and that it has been tested and validated for security compliance. Red Hat only supports the images shipped within the Red Hat Developer Hub Operator.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect3">
-<h4 id="proc-install-rhdh-airgapped-environment-ocp-operator_admin-rhdh">2.2.4. Installing Red Hat Developer Hub using the Operator in an air-gapped environment</h4>
+<h4 id="proc-install-rhdh-airgapped-environment-ocp-operator_admin-rhdh">2.2.3. Installing Red Hat Developer Hub using the Operator in an air-gapped environment</h4>
 <div class="paragraph">
 <p>On an OpenShift Container Platform cluster operating on a restricted network, public resources are not available. However, deploying the Red Hat Developer Hub Operator and running Developer Hub requires the following public resources:</p>
 </div>
@@ -1606,6 +1579,161 @@ It supports multiple authentication providers.</p>
 <p>Configure Red Hat Developer Hub to use the authentication provider.</p>
 </li>
 </ol>
+</div>
+<div class="sect2">
+<h3 id="proc-adding-gitlab-oauth-as-an-authentication-provider_admin-rhdh">3.1. Enabling the GitLab OAuth authentication provider</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub includes a GitLab authentication provider that can authenticate users by using GitLab OAuth.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequistes</div>
+<ul>
+<li>
+<p>You configured Developer Hub with a custom config map and secret.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>To allow Developer Hub to authenticate with Gitlab, create an OAuth Application in Gitlab.</p>
+<div class="paragraph">
+<p>Go to <a href="https://gitlab.com/-/profile/applications">GitLab User settings &gt; Applications</a>, and click the <strong>Add new application</strong> button.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Name</strong></dt>
+<dd>
+<p>Enter your application name, such as <code>Developer Hub</code>.</p>
+</dd>
+<dt class="hdlist1"><strong>Redirect URI</strong></dt>
+<dd>
+<p>Enter the backend authentication URI set in Developer Hub, such as <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code>.
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.</p>
+</dd>
+<dt class="hdlist1"><strong>Scopes</strong></dt>
+<dd>
+<p>Select the following scopes from the list and click <strong>Save application</strong>:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>read_user</code></dt>
+<dd>
+<p>Grants read-only access to the authenticated user&#8217;s profile through the /user API endpoint, which includes username, public email, and full name.
+Also grants access to read-only API endpoints under /users.</p>
+</dd>
+<dt class="hdlist1"><code>read_repository</code></dt>
+<dd>
+<p>Grants read-only access to the authenticated user&#8217;s profile through the /user API endpoint, which includes username, public email, and full name.
+Also grants access to read-only API endpoints under /users.</p>
+</dd>
+<dt class="hdlist1"><code>write_repository</code></dt>
+<dd>
+<p>Grants read/write access to repositories on private projects using Git-over-HTTP (not using the API).</p>
+</dd>
+<dt class="hdlist1"><code>openid</code></dt>
+<dd>
+<p>Grants permission to authenticate with GitLab using OpenID Connect.
+Also gives read-only access to the user&#8217;s profile and group memberships.</p>
+</dd>
+<dt class="hdlist1"><code>profile</code></dt>
+<dd>
+<p>Grants read-only access to the user&#8217;s profile data using OpenID Connect.</p>
+</dd>
+<dt class="hdlist1"><code>email</code></dt>
+<dd>
+<p>Grants read-only access to the user&#8217;s primary email address using OpenID Connect.</p>
+<div class="paragraph">
+<p>Save the <strong>Application ID</strong> and <strong>Secret</strong> for the next step.</p>
+</div>
+</dd>
+</dl>
+</div>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Add your Gitlab credentials in your Developer Hub secrets.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Edit your Developer Hub secrets, such as <code>secrets-rhdh</code>.</p>
+</li>
+<li>
+<p>Add the following key/value pairs:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>AUTH_GITLAB_CLIENT_ID</code></dt>
+<dd>
+<p>Enter the <strong>Application ID</strong> that you generated on GitLab, such as <code>4928c033ab3d592845c044a653bc20583baf84f2e67b954c6fdb32a532ab76c9</code>.</p>
+</dd>
+<dt class="hdlist1"><code>AUTH_GITLAB_CLIENT_SECRET</code></dt>
+<dd>
+<p>Enter the <strong>Secret</strong> that you generated on Gitlab, such as <code>gloas-f2c9c350759cc08346fbf94a476ae83c579c76dd629fc5eeef9dc21eedfe0475</code>.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set up the Gitlab authentication provider in your Developer Hub custom configuration.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Edit your custom Developer Hub config map, such as <code>app-config-rhdh</code>.</p>
+</li>
+<li>
+<p>In the <code>app-config-rhdh.yaml</code> content, add the <code>gitlab</code> provider configuration under the root <code>auth</code> configuration, and enable the <code>gitlab</code> provider for sign-in:</p>
+<div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: production
+  providers:
+    gitlab:
+      production:
+        clientId: ${AUTH_GITLAB_CLIENT_ID}
+        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
+        # audience: https://gitlab.company.com # <b class="conum">(1)</b>
+        # callbackUrl: https://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame # <b class="conum">(2)</b>
+signInPage: gitlab # <b class="conum">(3)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Optionally, when using a self-hosted Gitlab: uncomment, and enter your GitLab instance base URL, such as
+<code>https://gitlab.company.com</code>.</p>
+</li>
+<li>
+<p>Optionally, when using a custom redirect URI: uncomment, and enter the URL matching the <strong>Redirect URI</strong> registered when creating your GitLab OAuth App, such as <code>http://<em>&lt;APP_FQDN&gt;</em>/api/auth/gitlab/handler/frame</code>.
+Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</code> after 'frame'.</p>
+</li>
+<li>
+<p>To enable the Gitlab provider as default sign-in provider.</p>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>The <code>backstage-developer-hub</code> deployment starts a pod with the updated configuration.</p>
+</li>
+<li>
+<p>Your Developer Hub sign-in page displays <strong>Sign in using GitLab</strong>.</p>
+</li>
+</ol>
+</div>
 </div>
 </div>
 </div>
@@ -4263,7 +4391,7 @@ data:
 <p>With the administrator role in Developer Hub, you can assign permissions to users and groups, which allow users or groups to view, create, modify, and delete the roles using the Developer Hub Web UI.</p>
 </div>
 <div class="paragraph">
-<p>To access the RBAC features in the Web UI, you must install and configure the <code>@janus-idp/backstage-plugin-rbac</code> plugin as a dynamic plugin.</p>
+<p>To access the RBAC features in the Web UI, you must install and configure the <code>@janus-idp/backstage-plugin-rbac</code> plugin as a dynamic plugin. For more information about installing a dynamic plugin, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/confuguring_plugins_in_red_hat_developer_hub/index">Configuring plugins in Red Hat Developer Hub</a>.</p>
 </div>
 <div class="paragraph">
 <p>After you install the <code>@janus-idp/backstage-plugin-rbac</code> plugin, the <strong>Administration</strong> option appears at the bottom of the sidebar. When you can click <strong>Administration</strong>, the RBAC tab appears by default, displaying all of the existing roles created in the Developer Hub. In the RBAC tab, you can also view the total number of users, groups, and the total number of permission policies associated with a role. You can also edit or delete a role using the <strong>Actions</strong> column.</p>
@@ -4280,7 +4408,7 @@ data:
 <p>You have an administrator role in the Developer Hub.</p>
 </li>
 <li>
-<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub.</p>
+<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/confuguring_plugins_in_red_hat_developer_hub/index">Configuring plugins in Red Hat Developer Hub</a>.</p>
 </li>
 <li>
 <p>You have configured the required permission policies. For more information, see <a href="#con-rbac-config-permission-policies_admin-rhdh">Permission policies configuration</a>.</p>
@@ -4357,7 +4485,7 @@ data:
 <p>You have an administrator role in the Developer Hub.</p>
 </li>
 <li>
-<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub.</p>
+<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/confuguring_plugins_in_red_hat_developer_hub/index">Configuring plugins in Red Hat Developer Hub</a>.</p>
 </li>
 <li>
 <p>You have configured the required permission policies. For more information, see <a href="#con-rbac-config-permission-policies_admin-rhdh">Permission policies configuration</a>.</p>
@@ -4424,7 +4552,7 @@ data:
 <p>You have an administrator role in the Developer Hub.</p>
 </li>
 <li>
-<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub.</p>
+<p>You have installed the <code>@janus-idp/backstage-plugin-rbac</code> plugin in Developer Hub. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/confuguring_plugins_in_red_hat_developer_hub/index">Configuring plugins in Red Hat Developer Hub</a>.</p>
 </li>
 <li>
 <p>You have configured the required permission policies. For more information, see <a href="#con-rbac-config-permission-policies_admin-rhdh">Permission policies configuration</a>.</p>
@@ -5328,10 +5456,257 @@ data:
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="assembly-admin-templates">7. Managing templates</h2>
+<div class="sectionbody">
+<!-- toc disabled -->
+<div class="paragraph">
+<p>A template is a form composed of different UI fields that is defined in a YAML file. Templates include <em>actions</em>, which are steps that are executed in sequential order and can be executed conditionally.</p>
+</div>
+<div class="paragraph">
+<p>You can use templates to easily create Red Hat Developer Hub components, and then publish these components to different locations, such as the Red Hat Developer Hub software catalog, or repositories in GitHub or GitLab.</p>
+</div>
+<div class="sect2">
+<h3 id="proc-creating-templates_assembly-admin-templates">7.1. Creating a template by using the Template Editor</h3>
+<div class="paragraph">
+<p>You can create a template by using the Template Editor.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Access the Template Editor by using one of the following options:</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/template-editor.png" alt="Template Editor">
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Open the URL <code>https://&lt;rhdh_url&gt;/create/edit</code> for your Red Hat Developer Hub instance.</p>
+</li>
+<li>
+<p>Click <strong>Create&#8230;&#8203;</strong> in the navigation menu of the Red Hat Developer Hub console, then click the overflow menu button and select <strong>Template editor</strong>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Click <strong>Edit Template Form</strong>.</p>
+</li>
+<li>
+<p>Optional: Modify the YAML definition for the parameters of your template. For more information about these parameters, see <a href="#ref-creating-templates_assembly-admin-templates">Creating a template as a YAML file</a>.</p>
+</li>
+<li>
+<p>In the <strong>Name *</strong> field, enter a unique name for your template.</p>
+</li>
+<li>
+<p>From the <strong>Owner</strong> drop-down menu, choose an owner for the template.</p>
+</li>
+<li>
+<p>Click <strong>Next</strong>.</p>
+</li>
+<li>
+<p>In the <strong>Repository Location</strong> view, enter the following information about the hosted repository that you want to publish the template to:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Select an available <strong>Host</strong> from the drop-down menu.</p>
+<div class="openblock">
+<div class="content">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Available hosts are defined in the YAML parameters by the <code>allowedHosts</code> field:</p>
+</div>
+<div class="listingblock">
+<div class="title">Example YAML</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+        ui:options:
+          allowedHosts:
+            - github.com
+# ...</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>In the <strong>Owner *</strong> field, enter an organization, user or project that the hosted repository belongs to.</p>
+</li>
+<li>
+<p>In the <strong>Repository *</strong> field, enter the name of the hosted repository.</p>
+</li>
+<li>
+<p>Click <strong>Review</strong>.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Review the information for accuracy, then click <strong>Create</strong>.</p>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Click the <strong>Catalog</strong> tab in the navigation panel.</p>
+</li>
+<li>
+<p>In the <strong>Kind</strong> drop-down menu, select <strong>Template</strong>.</p>
+</li>
+<li>
+<p>Confirm that your template is shown in the list of existing templates.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="ref-creating-templates_assembly-admin-templates">7.2. Creating a template as a YAML file</h3>
+<div class="paragraph">
+<p>You can create a template by defining a <code>Template</code> object as a YAML file.</p>
+</div>
+<div class="paragraph">
+<p>The <code>Template</code> object describes the template and its metadata. It also contains required input variables and a list of actions that are executed by the scaffolding service.</p>
+</div>
+<div class="listingblock">
+<div class="title"><code>Template</code> object example</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: template-name # <b class="conum">(1)</b>
+  title: Example template # <b class="conum">(2)</b>
+  description: An example template for v1beta3 scaffolder. # <b class="conum">(3)</b>
+spec:
+  owner: backstage/techdocs-core # <b class="conum">(4)</b>
+  type: service # <b class="conum">(5)</b>
+  parameters: # <b class="conum">(6)</b>
+    - title: Fill in some steps
+      required:
+        - name
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name of the component
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+    - title: Choose a location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+  steps: # <b class="conum">(7)</b>
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      # ...
+  output: # <b class="conum">(8)</b>
+    links:
+      - title: Repository # <b class="conum">(9)</b>
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in catalog # <b class="conum">(10)</b>
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+# ...</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Specify a name for the template.</p>
+</li>
+<li>
+<p>Specify a title for the template. This is the title that is visible on the template tile in the <strong>Create&#8230;&#8203;</strong> view.</p>
+</li>
+<li>
+<p>Specify a description for the template. This is the description that is visible on the template tile in the <strong>Create&#8230;&#8203;</strong> view.</p>
+</li>
+<li>
+<p>Specify the ownership of the template. The <code>owner</code> field provides information about who is responsible for maintaining or overseeing the template within the system or organization. In the provided example, the <code>owner</code> field is set to <code>backstage/techdocs-core</code>. This means that this template belongs to the <code>techdocs-core</code> project in the <code>backstage</code> namespace.</p>
+</li>
+<li>
+<p>Specify the component type. Any string value is accepted for this required field, but your organization should establish a proper taxonomy for these. Red Hat Developer Hub instances may read this field and behave differently depending on its value. For example, a <code>website</code> type component may present tooling in the Red Hat Developer Hub interface that is specific to just websites.</p>
+<div class="paragraph">
+<p>The following values are common for this field:</p>
+</div>
+<div class="openblock">
+<div class="content">
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>service</code></dt>
+<dd>
+<p>A backend service, typically exposing an API.</p>
+</dd>
+<dt class="hdlist1"><code>website</code></dt>
+<dd>
+<p>A website.</p>
+</dd>
+<dt class="hdlist1"><code>library</code></dt>
+<dd>
+<p>A software library, such as an npm module or a Java library.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Use the <code>parameters</code> section to specify parameters for user input that are shown in a form view when a user creates a component by using the template in the Red Hat Developer Hub console. Each <code>parameters</code> subsection, defined by a title and properties, creates a new form page with that definition.</p>
+</li>
+<li>
+<p>Use the <code>steps</code> section to specify steps that are executed in the backend. These steps must be defined by using a unique step ID, a name, and an action. You can view actions that are available on your Red Hat Developer Hub instance by visiting the URL <code>https://&lt;rhdh_url&gt;/create/actions</code>.</p>
+</li>
+<li>
+<p>Use the <code>output</code> section to specify the structure of output data that is created when the template is used. The <code>output</code> section, particularly the <code>links</code> subsection, provides valuable references and URLs that users can utilize to access and interact with components that are created from the template.</p>
+</li>
+<li>
+<p>Provides a reference or URL to the repository associated with the generated component.</p>
+</li>
+<li>
+<p>Provides a reference or URL that allows users to open the generated component in a catalog or directory where various components are listed.</p>
+</li>
+</ol>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/writing-templates">Backstage documentation - Writing Templates</a></p>
+</li>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/builtin-actions">Backstage documentation - Builtin actions</a></p>
+</li>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/writing-custom-actions">Backstage documentation - Writing Custom Actions</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-22 10:14:48 UTC
+Last updated 2024-05-22 10:22:34 UTC
 </div>
 </div>
 </body>
