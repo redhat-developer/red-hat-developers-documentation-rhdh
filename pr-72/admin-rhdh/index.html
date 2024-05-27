@@ -476,9 +476,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#con-rbac-config-permission-policies_admin-rhdh">6.1. Permission policies configuration</a></li>
 <li><a href="#proc-rbac-ui-manage-roles_admin-rhdh">6.2. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</a></li>
 <li><a href="#con-rbac-rest-api_admin-rhdh">6.3. Role-based Access Control (RBAC) REST API</a></li>
-<li><a href="#rhdh-aap">6.4. Installation and configuration of Ansible Automation Platform</a></li>
-<li><a href="#rhdh-keycloak_admin-rhdh">6.5. Installation and configuration of Keycloak</a></li>
-<li><a href="#rhdh-nexus">6.6. Installation and configuration of Nexus Repository Manager</a></li>
+</ul>
+</li>
+<li><a href="#assembly-admin-templates">7. Managing templates</a>
+<ul class="sectlevel2">
+<li><a href="#proc-creating-templates_assembly-admin-templates">7.1. Creating a template by using the Template Editor</a></li>
+<li><a href="#ref-creating-templates_assembly-admin-templates">7.2. Creating a template as a YAML file</a></li>
 </ul>
 </li>
 </ul>
@@ -5448,644 +5451,254 @@ data:
 </dd>
 </dl>
 </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="assembly-admin-templates">7. Managing templates</h2>
+<div class="sectionbody">
+<!-- toc disabled -->
 <div class="paragraph">
-<p>Unresolved directive in title-admin.adoc - include::modules/rhdh-plugins-reference/con-rhdh-installing-dynamic-plugins.adoc[leveloffset=+1]
-Unresolved directive in title-admin.adoc - include::modules/rhdh-plugins-reference/ref-rhdh-plugins.adoc[leveloffset=+1]</p>
+<p>A template is a form composed of different UI fields that is defined in a YAML file. Templates include <em>actions</em>, which are steps that are executed in sequential order and can be executed conditionally.</p>
 </div>
-</div>
-</div>
+<div class="paragraph">
+<p>You can use templates to easily create Red Hat Developer Hub components, and then publish these components to different locations, such as the Red Hat Developer Hub software catalog, or repositories in GitHub or GitLab.</p>
 </div>
 <div class="sect2">
-<h3 id="rhdh-aap">6.4. Installation and configuration of Ansible Automation Platform</h3>
+<h3 id="proc-creating-templates_assembly-admin-templates">7.1. Creating a template by using the Template Editor</h3>
 <div class="paragraph">
-<p>The Ansible Automation Platform (AAP) plugin synchronizes the accessible templates including job templates and workflow job templates from AAP into your Developer Hub catalog.</p>
-</div>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Important</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The Ansible Automation Platform plugin is a Technology Preview feature only.</p>
-</div>
-<div class="paragraph">
-<p>Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.</p>
-</div>
-<div class="paragraph">
-<p>For more information on Red Hat Technology Preview features, see <a href="https://access.redhat.com/support/offerings/techpreview/">Technology Preview Features Scope</a>.</p>
-</div>
-<div class="paragraph">
-<p>Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the <a href="https://access.redhat.com/policy/developerhub-support-policy">Red Hat Developer Support Policy</a> page.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="sect3">
-<h4 id="_for-administrators">6.4.1. For administrators</h4>
-<div class="sect4">
-<h5 id="_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</h5>
-<div class="paragraph">
-<p>The AAP backend plugin allows you to configure one or multiple providers using your <code>app-config.yaml</code> configuration file in Developer Hub.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>Your Developer Hub application is installed and running.</p>
-</li>
-<li>
-<p>You have created an account in Ansible Automation Platform.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<div class="title">Installation</div>
-<p>The AAP backend plugin is pre-loaded in Developer Hub with basic configuration properties. To enable it, set the <code>disabled</code> property to <code>false</code> as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
-  dynamic:
-    includes:
-      - dynamic-plugins.default.yaml
-    plugins:
-      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-aap-backend-dynamic
-        disabled: false</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<div class="title">Basic configuration</div>
-<p>To enable the AAP plugin, you must set the following environment variables:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>AAP_BASE_URL</code>: Base URL of the service</p>
-</li>
-<li>
-<p><code>AAP AUTH TOKEN</code>: Authentication token for the service</p>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Advanced configuration</div>
-<ol class="arabic">
-<li>
-<p>You can use the <code>aap</code> marker to configure the <code>app-config.yaml</code> file of Developer Hub as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">   catalog:
-     providers:
-       aap:
-         dev:
-           baseUrl: $(AAP_BASE_URL)
-           authorization: 'Bearer ${AAP_AUTH_TOKEN}'
-           owner: &lt;owner&gt;
-           system: &lt;system&gt;
-           schedule: # optional; same options as in TaskScheduleDefinition
-             # supports cron, ISO duration, "human duration" as used in code
-             frequency: { minutes: 1 }
-             # supports ISO duration, "human duration" as used in code
-             timeout: { minutes: 1 }</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect4">
-<h5 id="_log-lines-for-aap-backend-plugin-troubleshoot">Log lines for AAP Backend plugin troubleshoot</h5>
-<div class="paragraph">
-<p>When you start your Developer Hub application, you can see the following log lines:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-log" data-lang="log">[1] 2023-02-13T15:26:09.356Z catalog info Discovered ResourceEntity API type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.423Z catalog info Discovered ResourceEntity Red Hat Event (DEV, v1.2.0) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.819Z catalog info Applying the mutation with 3 entities type=plugin target=AapResourceEntityProvider:dev</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_for-users">6.4.2. For users</h4>
-<div class="sect4">
-<h5 id="_accessing-templates-from-aap-in-developer-hub">Accessing templates from AAP in Developer Hub</h5>
-<div class="paragraph">
-<p>When you have configured the AAP backend plugin successfully, it synchronizes the templates including job templates and workflow job templates from AAP and displays them on the Developer Hub Catalog page as Resources.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>Your Developer Hub application is installed and running.</p>
-</li>
-<li>
-<p>You have installed the AAP backend plugin. For installation and configuration instructions, see <a href="#_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</a>.</p>
-</li>
-</ul>
+<p>You can create a template by using the Template Editor.</p>
 </div>
 <div class="olist arabic">
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>Open your Developer Hub application and Go to the <strong>Catalog</strong> page.</p>
-</li>
-<li>
-<p>Select <strong>Resource</strong> from the <strong>Kind</strong> drop-down and <strong>job template</strong> or <strong>workflow job template</strong> from the <strong>Type</strong> drop-down on the left side of the page.</p>
-<div class="openblock">
-<div class="content">
+<p>Access the Template Editor by using one of the following options:</p>
 <div class="imageblock">
 <div class="content">
-<img src="images/rhdh-plugins-reference/aap-backend-plugin-user1.png" alt="aap-backend-plugin-backstage">
+<img src="images/rhdh/template-editor.png" alt="Template Editor">
 </div>
-</div>
-<div class="paragraph">
-<p>A list of all the available templates from AAP appears on the page.</p>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Select a template from the list.</p>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p>The <strong>OVERVIEW</strong> tab appears containing different cards, such as:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>About</strong>: Provides detailed information about the template.</p>
+<p>Open the URL <code>https://&lt;rhdh_url&gt;/create/edit</code> for your Red Hat Developer Hub instance.</p>
 </li>
 <li>
-<p><strong>Relations</strong>: Displays the visual representation of the template and associated aspects.</p>
-</li>
-<li>
-<p><strong>Links</strong>: Contains links to the AAP dashboard and the details page of the template.</p>
-</li>
-<li>
-<p><strong>Has subcomponents</strong>: Displays a list of associated subcomponents.</p>
+<p>Click <strong>Create&#8230;&#8203;</strong> in the navigation menu of the Red Hat Developer Hub console, then click the overflow menu button and select <strong>Template editor</strong>.</p>
 </li>
 </ul>
 </div>
-<div class="imageblock">
+</li>
+<li>
+<p>Click <strong>Edit Template Form</strong>.</p>
+</li>
+<li>
+<p>Optional: Modify the YAML definition for the parameters of your template. For more information about these parameters, see <a href="#ref-creating-templates_assembly-admin-templates">Creating a template as a YAML file</a>.</p>
+</li>
+<li>
+<p>In the <strong>Name *</strong> field, enter a unique name for your template.</p>
+</li>
+<li>
+<p>From the <strong>Owner</strong> drop-down menu, choose an owner for the template.</p>
+</li>
+<li>
+<p>Click <strong>Next</strong>.</p>
+</li>
+<li>
+<p>In the <strong>Repository Location</strong> view, enter the following information about the hosted repository that you want to publish the template to:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Select an available <strong>Host</strong> from the drop-down menu.</p>
+<div class="openblock">
 <div class="content">
-<img src="images/rhdh-plugins-reference/aap-backend-plugin-user2.png" alt="aap-backend-plugin-backstage-details">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Available hosts are defined in the YAML parameters by the <code>allowedHosts</code> field:</p>
 </div>
+<div class="listingblock">
+<div class="title">Example YAML</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+        ui:options:
+          allowedHosts:
+            - github.com
+# ...</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 </li>
+<li>
+<p>In the <strong>Owner *</strong> field, enter an organization, user or project that the hosted repository belongs to.</p>
+</li>
+<li>
+<p>In the <strong>Repository *</strong> field, enter the name of the hosted repository.</p>
+</li>
+<li>
+<p>Click <strong>Review</strong>.</p>
+</li>
 </ol>
 </div>
+</li>
+<li>
+<p>Review the information for accuracy, then click <strong>Create</strong>.</p>
+</li>
+</ol>
 </div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Click the <strong>Catalog</strong> tab in the navigation panel.</p>
+</li>
+<li>
+<p>In the <strong>Kind</strong> drop-down menu, select <strong>Template</strong>.</p>
+</li>
+<li>
+<p>Confirm that your template is shown in the list of existing templates.</p>
+</li>
+</ol>
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-keycloak_admin-rhdh">6.5. Installation and configuration of Keycloak</h3>
+<h3 id="ref-creating-templates_assembly-admin-templates">7.2. Creating a template as a YAML file</h3>
 <div class="paragraph">
-<p>The Keycloak backend plugin, which integrates Keycloak into Developer Hub, has the following capabilities:</p>
+<p>You can create a template by defining a <code>Template</code> object as a YAML file.</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p>Synchronization of Keycloak users in a realm.</p>
-</li>
-<li>
-<p>Synchronization of Keycloak groups and their users in a realm.</p>
-</li>
-</ul>
-</div>
-<div class="sect3">
-<h4 id="_for-administrators-2">6.5.1. For administrators</h4>
-<div class="sect4">
-<h5 id="_installation">Installation</h5>
 <div class="paragraph">
-<p>The Keycloak plugin is pre-loaded in Developer Hub with basic configuration properties. To enable it, set the <code>disabled</code> property to <code>false</code> as follows:</p>
+<p>The <code>Template</code> object describes the template and its metadata. It also contains required input variables and a list of actions that are executed by the scaffolding service.</p>
 </div>
 <div class="listingblock">
+<div class="title"><code>Template</code> object example</div>
 <div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
-  dynamic:
-    includes:
-      - dynamic-plugins.default.yaml
-    plugins:
-      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-keycloak-backend-dynamic
-        disabled: false</code></pre>
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: template-name # <b class="conum">(1)</b>
+  title: Example template # <b class="conum">(2)</b>
+  description: An example template for v1beta3 scaffolder. # <b class="conum">(3)</b>
+spec:
+  owner: backstage/techdocs-core # <b class="conum">(4)</b>
+  type: service # <b class="conum">(5)</b>
+  parameters: # <b class="conum">(6)</b>
+    - title: Fill in some steps
+      required:
+        - name
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name of the component
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+    - title: Choose a location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+  steps: # <b class="conum">(7)</b>
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      # ...
+  output: # <b class="conum">(8)</b>
+    links:
+      - title: Repository # <b class="conum">(9)</b>
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in catalog # <b class="conum">(10)</b>
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+# ...</code></pre>
 </div>
 </div>
-</div>
-<div class="sect4">
-<h5 id="_basic-configuration">Basic configuration</h5>
-<div class="paragraph">
-<p>To enable the Keycloak plugin, you must set the following environment variables:</p>
-</div>
-<div class="ulist">
-<ul>
+<div class="colist arabic">
+<ol>
 <li>
-<p><code>KEYCLOAK_BASE_URL</code></p>
+<p>Specify a name for the template.</p>
 </li>
 <li>
-<p><code>KEYCLOAK_LOGIN_REALM</code></p>
+<p>Specify a title for the template. This is the title that is visible on the template tile in the <strong>Create&#8230;&#8203;</strong> view.</p>
 </li>
 <li>
-<p><code>KEYCLOAK_REALM</code></p>
+<p>Specify a description for the template. This is the description that is visible on the template tile in the <strong>Create&#8230;&#8203;</strong> view.</p>
 </li>
 <li>
-<p><code>KEYCLOAK_CLIENT_ID</code></p>
+<p>Specify the ownership of the template. The <code>owner</code> field provides information about who is responsible for maintaining or overseeing the template within the system or organization. In the provided example, the <code>owner</code> field is set to <code>backstage/techdocs-core</code>. This means that this template belongs to the <code>techdocs-core</code> project in the <code>backstage</code> namespace.</p>
 </li>
 <li>
-<p><code>KEYCLOAK_CLIENT_SECRET</code></p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect4">
-<h5 id="_advanced-configuration">Advanced configuration</h5>
+<p>Specify the component type. Any string value is accepted for this required field, but your organization should establish a proper taxonomy for these. Red Hat Developer Hub instances may read this field and behave differently depending on its value. For example, a <code>website</code> type component may present tooling in the Red Hat Developer Hub interface that is specific to just websites.</p>
 <div class="paragraph">
-<div class="title">Schedule configuration</div>
-<p>You can configure a schedule in the <code>app-config.yaml</code> file, as follows:</p>
+<p>The following values are common for this field:</p>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">     catalog:
-       providers:
-         keycloakOrg:
-           default:
-             # ...
-             # highlight-add-start
-             schedule: # optional; same options as in TaskScheduleDefinition
-               # supports cron, ISO duration, "human duration" as used in code
-               frequency: { minutes: 1 }
-               # supports ISO duration, "human duration" as used in code
-               timeout: { minutes: 1 }
-               initialDelay: { seconds: 15 }
-               # highlight-add-end</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>If you have made any changes to the schedule in the <code>app-config.yaml</code> file, then restart to apply the changes.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<div class="title">Keycloak query parameters</div>
-<p>You can override the default Keycloak query parameters in the <code>app-config.yaml</code> file, as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">   catalog:
-     providers:
-       keycloakOrg:
-         default:
-           # ...
-           # highlight-add-start
-           userQuerySize: 500 # Optional
-           groupQuerySize: 250 # Optional
-           # highlight-add-end</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Communication between Developer Hub and Keycloak is enabled by using the Keycloak API. Username and password, or client credentials are supported authentication methods.</p>
-</div>
-<div class="paragraph">
-<p>The following table describes the parameters that you can configure to enable the plugin under <code>catalog.providers.keycloakOrg.&lt;ENVIRONMENT_NAME&gt;</code> object in the <code>app-config.yaml</code> file:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 25%;">
-<col style="width: 25%;">
-<col style="width: 25%;">
-<col style="width: 25%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Description</th>
-<th class="tableblock halign-left valign-top">Default Value</th>
-<th class="tableblock halign-left valign-top">Required</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>baseUrl</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Location of the Keycloak server, such as <code>https://localhost:8443/auth</code>. Note that the newer versions of Keycloak omit the <code>/auth</code> context path.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">""</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>realm</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Realm to synchronize</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>loginRealm</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Realm used to authenticate</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>username</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Username to authenticate</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">""</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Yes if using password based authentication</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Password to authenticate</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">""</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Yes if using password based authentication</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clientId</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Client ID to authenticate</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">""</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Yes if using client credentials based authentication</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clientSecret</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Client Secret to authenticate</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">""</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Yes if using client credentials based authentication</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>userQuerySize</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of users to query at a time</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>100</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>groupQuerySize</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of groups to query at a time</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>100</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
-</tr>
-</tbody>
-</table>
-<div class="paragraph">
-<p>When using client credentials, the access type must be set to <code>confidential</code> and service accounts must be enabled. You must also add the following roles from the <code>realm-management</code> client role:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>query-groups</code></p>
-</li>
-<li>
-<p><code>query-users</code></p>
-</li>
-<li>
-<p><code>view-users</code></p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect4">
-<h5 id="_limitations">Limitations</h5>
-<div class="paragraph">
-<p>If you have self-signed or corporate certificate issues, you can set the following environment variable before starting Developer Hub:</p>
-</div>
-<div class="paragraph">
-<p><code>NODE_TLS_REJECT_UNAUTHORIZED=0</code></p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The solution of setting the environment variable is not recommended.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_for-users-2">6.5.2. For users</h4>
-<div class="sect4">
-<h5 id="_import-of-users-and-groups-in-developer-hub-using-the-keycloak-plugin">Import of users and groups in Developer Hub using the Keycloak plugin</h5>
-<div class="paragraph">
-<p>After configuring the plugin successfully, the plugin imports the users and groups each time when started.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>If you set up a schedule, users and groups will also be imported.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>After the first import is complete, you can select <strong>User</strong> to list the users from the catalog page:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh-plugins-reference/users.jpg" alt="catalog-list">
-</div>
-</div>
-<div class="paragraph">
-<p>You can see the list of users on the page:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh-plugins-reference/user-list.jpg" alt="user-list">
-</div>
-</div>
-<div class="paragraph">
-<p>When you select a user, you can see the information imported from Keycloak:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh-plugins-reference/user2.jpg" alt="user-profile">
-</div>
-</div>
-<div class="paragraph">
-<p>You can also select a group, view the list, and select or view the information imported from Keycloak for a group:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh-plugins-reference/group1.jpg" alt="group-profile">
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="rhdh-nexus">6.6. Installation and configuration of Nexus Repository Manager</h3>
-<div class="paragraph">
-<p>The Nexus Repository Manager plugin displays the information about your build artifacts in your Developer Hub application. The build artifacts are available in the Nexus Repository Manager.</p>
-</div>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Important</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The Nexus Repository Manager plugin is a Technology Preview feature only.</p>
-</div>
-<div class="paragraph">
-<p>Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.</p>
-</div>
-<div class="paragraph">
-<p>For more information on Red Hat Technology Preview features, see <a href="https://access.redhat.com/support/offerings/techpreview/">Technology Preview Features Scope</a>.</p>
-</div>
-<div class="paragraph">
-<p>Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the <a href="https://access.redhat.com/policy/developerhub-support-policy">Red Hat Developer Support Policy</a> page.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="sect3">
-<h4 id="_for-administrators-3">6.6.1. For administrators</h4>
-<div class="sect4">
-<h5 id="_installing-and-configuring-the-nexus-repository-manager-plugin">Installing and configuring the Nexus Repository Manager plugin</h5>
-<div class="paragraph">
-<div class="title">Installation</div>
-<p>The Nexus Repository Manager plugin is pre-loaded in Developer Hub with basic configuration properties. To enable it, set the disabled property to <code>false</code> as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
-  dynamic:
-    includes:
-      - dynamic-plugins.default.yaml
-    plugins:
-      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-nexus-repository-manager
-        disabled: false</code></pre>
-</div>
-</div>
-<div class="olist arabic">
-<div class="title">Configuration</div>
-<ol class="arabic">
-<li>
-<p>Set the proxy to the desired Nexus Repository Manager server in the <code>app-config.yaml</code> file as follows:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">proxy:
-    '/nexus-repository-manager':
-    target: 'https://&lt;NEXUS_REPOSITORY_MANAGER_URL&gt;'
-    headers:
-        X-Requested-With: 'XMLHttpRequest'
-        # Uncomment the following line to access a private Nexus Repository Manager using a token
-        # Authorization: 'Bearer &lt;YOUR TOKEN&gt;'
-    changeOrigin: true
-    # Change to "false" in case of using self hosted Nexus Repository Manager instance with a self-signed certificate
-    secure: true</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Optional: Change the base URL of Nexus Repository Manager proxy as follows:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">nexusRepositoryManager:
-    # default path is `/nexus-repository-manager`
-    proxyPath: /custom-path</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Optional: Enable the following experimental annotations:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">nexusRepositoryManager:
-    experimentalAnnotations: true</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Annotate your entity using the following annotations:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">metadata:
-    annotations:
-    # insert the chosen annotations here
-    # example
-    nexus-repository-manager/docker.image-name: `&lt;ORGANIZATION&gt;/&lt;REPOSITORY&gt;`,</code></pre>
-</div>
-</div>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_for-users-3">6.6.2. For users</h4>
-<div class="sect4">
-<h5 id="_using-the-nexus-repository-manager-plugin-in-developer-hub">Using the Nexus Repository Manager plugin in Developer Hub</h5>
-<div class="paragraph">
-<p>The Nexus Repository Manager is a front-end plugin that enables you to view the information about build artifacts.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>Your Developer Hub application is installed and running.</p>
-</li>
-<li>
-<p>You have installed the Nexus Repository Manager plugin. For the installation process, see <a href="#_installing-and-configuring-the-nexus-repository-manager-plugin">Installing and configuring the Nexus Repository Manager plugin</a>.</p>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Open your Developer Hub application and select a component from the <strong>Catalog</strong> page.</p>
-</li>
-<li>
-<p>Go to the <strong>BUILD ARTIFACTS</strong> tab.</p>
 <div class="openblock">
 <div class="content">
-<div class="paragraph">
-<p>The <strong>BUILD ARTIFACTS</strong> tab contains a list of build artifacts and related information, such as <strong>VERSION</strong>, <strong>REPOSITORY</strong>, <strong>REPOSITORY TYPE</strong>, <strong>MANIFEST</strong>, <strong>MODIFIED</strong>, and <strong>SIZE</strong>.</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh-plugins-reference/nexus-repository-manager.png" alt="nexus-repository-manager-tab">
-</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>service</code></dt>
+<dd>
+<p>A backend service, typically exposing an API.</p>
+</dd>
+<dt class="hdlist1"><code>website</code></dt>
+<dd>
+<p>A website.</p>
+</dd>
+<dt class="hdlist1"><code>library</code></dt>
+<dd>
+<p>A software library, such as an npm module or a Java library.</p>
+</dd>
+</dl>
 </div>
 </div>
 </div>
 </li>
+<li>
+<p>Use the <code>parameters</code> section to specify parameters for user input that are shown in a form view when a user creates a component by using the template in the Red Hat Developer Hub console. Each <code>parameters</code> subsection, defined by a title and properties, creates a new form page with that definition.</p>
+</li>
+<li>
+<p>Use the <code>steps</code> section to specify steps that are executed in the backend. These steps must be defined by using a unique step ID, a name, and an action. You can view actions that are available on your Red Hat Developer Hub instance by visiting the URL <code>https://&lt;rhdh_url&gt;/create/actions</code>.</p>
+</li>
+<li>
+<p>Use the <code>output</code> section to specify the structure of output data that is created when the template is used. The <code>output</code> section, particularly the <code>links</code> subsection, provides valuable references and URLs that users can utilize to access and interact with components that are created from the template.</p>
+</li>
+<li>
+<p>Provides a reference or URL to the repository associated with the generated component.</p>
+</li>
+<li>
+<p>Provides a reference or URL that allows users to open the generated component in a catalog or directory where various components are listed.</p>
+</li>
 </ol>
 </div>
-<div class="paragraph">
-<p>Unresolved directive in title-admin.adoc - include::modules/rhdh-plugins-reference/setting-up-openshift-pipelines-to-view-software-supply-chain-security-elements.adoc[leveloffset=+1]</p>
-</div>
-</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/writing-templates">Backstage documentation - Writing Templates</a></p>
+</li>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/builtin-actions">Backstage documentation - Builtin actions</a></p>
+</li>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/writing-custom-actions">Backstage documentation - Writing Custom Actions</a></p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -6093,7 +5706,7 @@ Unresolved directive in title-admin.adoc - include::modules/rhdh-plugins-referen
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-27 08:20:26 UTC
+Last updated 2024-05-27 08:25:27 UTC
 </div>
 </div>
 </body>
