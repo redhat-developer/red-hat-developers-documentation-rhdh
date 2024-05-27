@@ -1,0 +1,61 @@
+[id='proc-add-custom-app-file-openshift_{context}']
+= Adding a custom application configuration file to {ocp-brand-name}
+
+To access the {product}, you must add a custom application configuration file to OpenShift. In {ocp-short}, you can use the following content as a base template to create a ConfigMap named `app-config-rhdh`:
+
+[source]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |
+    app:
+      title: Red Hat Developer Hub
+----
+
+.Prerequisites
+
+* You have created an {ocp-brand-name} account.
+
+.Procedure
+
+. From the {ocp-short} web console, select the *ConfigMaps* tab.
+. Click *Create ConfigMap*.
+. From *Create ConfigMap* page, select the *YAML view* option in *Configure via* and make the changes to the file, if needed.
+. Click *Create*.
+. Go to the *Helm* tab.
++
+The list of Helm Releases appears on the page.
+. Click the overflow menu on a Helm release and select *Upgrade*.
+. Use one of the following views to edit the Helm configuration:
+
+** Using *Form view* 
++
+.. Expand *Root Schema → Backstage chart schema → Backstage parameters → Extra app configuration files to inline into command arguments*. 
+.. Click the *Add Extra app configuration files to inline into command arguments* link.
+.. Enter the value in the following fields:
++
+--
+* *configMapRef*: `app-config-rhdh`
+* *filename*: `app-config-rhdh.yaml`
+--
+.. Click *Upgrade*.
+
+** Using *YAML view* 
+
+.. Set the value of the `upstream.backstage.extraAppConfig.configMapRef` and `upstream.backstage.extraAppConfig.filename` parameters in the following manner:
++
+[source, yaml]
+----
+# ... other Red Hat Developer Hub Helm Chart configurations
+upstream:
+  backstage:
+    extraAppConfig:
+      - configMapRef: app-config-rhdh
+        filename: app-config-rhdh.yaml
+# ... other Red Hat Developer Hub Helm Chart configurations
+----
+.. Click *Upgrade*.
+
