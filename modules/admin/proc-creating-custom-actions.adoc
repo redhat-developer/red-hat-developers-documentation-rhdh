@@ -11,9 +11,86 @@ You can create custom actions for your {product} instance that can be used when 
 .Procedure
 
 . Create a new directory inside your backend plugin directory to store your custom actions. The backend plugin directory is usually located at `packages/backend/src/plugins/scaffolder`. Give the new directory a meaningful name, for example `actions`.
-. Create a custom action as a TypeScript file in your `actions` directory.
-. Register the custom action in your backend plugin, which is usually located at `packages/backend/src/plugins/scaffolder.ts`.
-. After saving these changes, rebuild your {product} backend and restart it to apply the new custom action.
-. You can now use the custom action in your templates.
+. Create a custom action as a TypeScript file in your `actions` directory, as shown in the following example:
++
+.Example of a `file:create` action defined as a TypeScript file
+[source,typescript]
+----
+import { createTemplateAction } from '@backstage/plugin-scaffolder-node';
+import fs from 'fs-extra';
+import { z } from 'zod';
 
-.Verification
+export const createNewFileAction = () => {
+  return createTemplateAction({
+    id: 'acme:file:create',
+    schema: {
+      input: z.object({
+        contents: z.string().describe('The contents of the file'),
+        filename: z
+          .string()
+          .describe('The filename of the file that is created'),
+      }),
+    },
+
+    async handler(ctx) {
+      await fs.outputFile(
+        `${ctx.workspacePath}/${ctx.input.filename}`,
+        ctx.input.contents,
+      );
+    },
+  });
+};
+----
+
+. Register the custom action in your backend plugin, which is usually located at `packages/backend/src/plugins/scaffolder.ts`. Open the `scaffolder.ts` file, import your custom action, then add it to the list of actions, as shown in the following example:
++
+.Example `scaffolder.ts` file
+[source,typescript]
+----
+import { Router } from 'express';
+import { createRouter } from '@backstage/plugin-scaffolder-backend';
+import { PluginEnvironment } from '../types';
+import { createNewFileAction } from './actions/createNewFileAction'; # <1>
+
+export default async function createPlugin(env: PluginEnvironment): Promise<Router> {
+  const router = await createRouter({
+    logger: env.logger,
+    database: env.database,
+    config: env.config,
+    reader: env.reader,
+    catalogClient: env.catalogClient,
+    actions: [
+      createNewFileAction(), # <2>
+    ],
+  });
+
+  return router;
+}
+----
+<1> Import the custom action.
+<2> Register the custom action.
+
+. After saving these changes, rebuild your {product} backend and restart it to apply the new custom action.
+. You can now use the custom action in your templates, as shown in the following example:
++
+.Example template YAML using the custom action
+[source,yaml]
+----
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-file
+  title: Create File
+  description: Creates a file with specified contents
+spec:
+  owner: team@example.com
+  steps:
+    - id: create-file
+      name: Create File
+      action: acme:file:create
+      input:
+        filename: example.txt
+        contents: |
+          This is an example file created by the Backstage custom action.
+# ...
+----
