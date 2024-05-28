@@ -482,7 +482,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#proc-creating-templates_assembly-admin-templates">7.1. Creating a template by using the Template Editor</a></li>
 <li><a href="#ref-creating-templates_assembly-admin-templates">7.2. Creating a template as a YAML file</a></li>
-<li><a href="#con-actions_assembly-admin-templates">7.3. Actions</a></li>
+<li><a href="#con-actions_assembly-admin-templates">7.3. Using actions in templates</a></li>
 </ul>
 </li>
 </ul>
@@ -5693,17 +5693,11 @@ spec:
 <li>
 <p><a href="https://backstage.io/docs/features/software-templates/writing-templates">Backstage documentation - Writing Templates</a></p>
 </li>
-<li>
-<p><a href="https://backstage.io/docs/features/software-templates/builtin-actions">Backstage documentation - Builtin actions</a></p>
-</li>
-<li>
-<p><a href="https://backstage.io/docs/features/software-templates/writing-custom-actions">Backstage documentation - Writing Custom Actions</a></p>
-</li>
 </ul>
 </div>
 </div>
 <div class="sect2">
-<h3 id="con-actions_assembly-admin-templates">7.3. Actions</h3>
+<h3 id="con-actions_assembly-admin-templates">7.3. Using actions in templates</h3>
 <div class="paragraph">
 <p>Actions are defined as part of a step in a template. Red Hat Developer Hub provides some builtin actions that are available for you to use in templates by default, or you can create your own custom actions.</p>
 </div>
@@ -5743,18 +5737,114 @@ spec:
 <p>Create a new directory inside your backend plugin directory to store your custom actions. The backend plugin directory is usually located at <code>packages/backend/src/plugins/scaffolder</code>. Give the new directory a meaningful name, for example <code>actions</code>.</p>
 </li>
 <li>
-<p>Create a custom action as a TypeScript file in your <code>actions</code> directory.</p>
+<p>Create a custom action as a TypeScript file in your <code>actions</code> directory, as shown in the following example:</p>
+<div class="listingblock">
+<div class="title">Example of a <code>file:create</code> action defined as a TypeScript file</div>
+<div class="content">
+<pre class="highlight"><code class="language-typescript" data-lang="typescript">import { createTemplateAction } from '@backstage/plugin-scaffolder-node';
+import fs from 'fs-extra';
+import { z } from 'zod';
+
+export const createNewFileAction = () =&gt; {
+  return createTemplateAction({
+    id: 'acme:file:create',
+    schema: {
+      input: z.object({
+        contents: z.string().describe('The contents of the file'),
+        filename: z
+          .string()
+          .describe('The filename of the file that is created'),
+      }),
+    },
+
+    async handler(ctx) {
+      await fs.outputFile(
+        `${ctx.workspacePath}/${ctx.input.filename}`,
+        ctx.input.contents,
+      );
+    },
+  });
+};</code></pre>
+</div>
+</div>
 </li>
 <li>
-<p>Register the custom action in your backend plugin, which is usually located at <code>packages/backend/src/plugins/scaffolder.ts</code>.</p>
+<p>Register the custom action in your backend plugin, which is usually located at <code>packages/backend/src/plugins/scaffolder.ts</code>. Open the <code>scaffolder.ts</code> file, import your custom action, then add it to the list of actions, as shown in the following example:</p>
+<div class="listingblock">
+<div class="title">Example <code>scaffolder.ts</code> file</div>
+<div class="content">
+<pre class="highlight"><code class="language-typescript" data-lang="typescript">import { Router } from 'express';
+import { createRouter } from '@backstage/plugin-scaffolder-backend';
+import { PluginEnvironment } from '../types';
+import { createNewFileAction } from './actions/createNewFileAction'; # <b class="conum">(1)</b>
+
+export default async function createPlugin(env: PluginEnvironment): Promise&lt;Router&gt; {
+  const router = await createRouter({
+    logger: env.logger,
+    database: env.database,
+    config: env.config,
+    reader: env.reader,
+    catalogClient: env.catalogClient,
+    actions: [
+      createNewFileAction(), # <b class="conum">(2)</b>
+    ],
+  });
+
+  return router;
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Import the custom action.</p>
+</li>
+<li>
+<p>Register the custom action.</p>
+</li>
+</ol>
+</div>
 </li>
 <li>
 <p>After saving these changes, rebuild your Red Hat Developer Hub backend and restart it to apply the new custom action.</p>
 </li>
 <li>
-<p>You can now use the custom action in your templates.</p>
+<p>You can now use the custom action in your templates, as shown in the following example:</p>
+<div class="listingblock">
+<div class="title">Example template YAML using the custom action</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-file
+  title: Create File
+  description: Creates a file with specified contents
+spec:
+  owner: team@example.com
+  steps:
+    - id: create-file
+      name: Create File
+      action: acme:file:create
+      input:
+        filename: example.txt
+        contents: |
+          This is an example file created by the Backstage custom action.
+# ...</code></pre>
+</div>
+</div>
 </li>
 </ol>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/builtin-actions">Backstage documentation - Builtin actions</a></p>
+</li>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/writing-custom-actions">Backstage documentation - Writing Custom Actions</a></p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -5763,7 +5853,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-23 14:55:28 UTC
+Last updated 2024-05-28 13:28:21 UTC
 </div>
 </div>
 </body>
