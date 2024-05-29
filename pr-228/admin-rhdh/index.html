@@ -478,6 +478,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#con-rbac-rest-api_admin-rhdh">6.3. Role-based Access Control (RBAC) REST API</a></li>
 </ul>
 </li>
+<li><a href="#assembly-admin-templates">7. Managing templates</a>
+<ul class="sectlevel2">
+<li><a href="#proc-creating-templates_assembly-admin-templates">7.1. Creating a template by using the Template Editor</a></li>
+<li><a href="#ref-creating-templates_assembly-admin-templates">7.2. Creating a template as a YAML file</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -5450,10 +5456,257 @@ data:
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="assembly-admin-templates">7. Managing templates</h2>
+<div class="sectionbody">
+<!-- toc disabled -->
+<div class="paragraph">
+<p>A template is a form composed of different UI fields that is defined in a YAML file. Templates include <em>actions</em>, which are steps that are executed in sequential order and can be executed conditionally.</p>
+</div>
+<div class="paragraph">
+<p>You can use templates to easily create Red Hat Developer Hub components, and then publish these components to different locations, such as the Red Hat Developer Hub software catalog, or repositories in GitHub or GitLab.</p>
+</div>
+<div class="sect2">
+<h3 id="proc-creating-templates_assembly-admin-templates">7.1. Creating a template by using the Template Editor</h3>
+<div class="paragraph">
+<p>You can create a template by using the Template Editor.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Access the Template Editor by using one of the following options:</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/template-editor.png" alt="Template Editor">
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Open the URL <code>https://&lt;rhdh_url&gt;/create/edit</code> for your Red Hat Developer Hub instance.</p>
+</li>
+<li>
+<p>Click <strong>Create&#8230;&#8203;</strong> in the navigation menu of the Red Hat Developer Hub console, then click the overflow menu button and select <strong>Template editor</strong>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Click <strong>Edit Template Form</strong>.</p>
+</li>
+<li>
+<p>Optional: Modify the YAML definition for the parameters of your template. For more information about these parameters, see <a href="#ref-creating-templates_assembly-admin-templates">Creating a template as a YAML file</a>.</p>
+</li>
+<li>
+<p>In the <strong>Name *</strong> field, enter a unique name for your template.</p>
+</li>
+<li>
+<p>From the <strong>Owner</strong> drop-down menu, choose an owner for the template.</p>
+</li>
+<li>
+<p>Click <strong>Next</strong>.</p>
+</li>
+<li>
+<p>In the <strong>Repository Location</strong> view, enter the following information about the hosted repository that you want to publish the template to:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Select an available <strong>Host</strong> from the drop-down menu.</p>
+<div class="openblock">
+<div class="content">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Available hosts are defined in the YAML parameters by the <code>allowedHosts</code> field:</p>
+</div>
+<div class="listingblock">
+<div class="title">Example YAML</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+        ui:options:
+          allowedHosts:
+            - github.com
+# ...</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>In the <strong>Owner *</strong> field, enter an organization, user or project that the hosted repository belongs to.</p>
+</li>
+<li>
+<p>In the <strong>Repository *</strong> field, enter the name of the hosted repository.</p>
+</li>
+<li>
+<p>Click <strong>Review</strong>.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Review the information for accuracy, then click <strong>Create</strong>.</p>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Click the <strong>Catalog</strong> tab in the navigation panel.</p>
+</li>
+<li>
+<p>In the <strong>Kind</strong> drop-down menu, select <strong>Template</strong>.</p>
+</li>
+<li>
+<p>Confirm that your template is shown in the list of existing templates.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="ref-creating-templates_assembly-admin-templates">7.2. Creating a template as a YAML file</h3>
+<div class="paragraph">
+<p>You can create a template by defining a <code>Template</code> object as a YAML file.</p>
+</div>
+<div class="paragraph">
+<p>The <code>Template</code> object describes the template and its metadata. It also contains required input variables and a list of actions that are executed by the scaffolding service.</p>
+</div>
+<div class="listingblock">
+<div class="title"><code>Template</code> object example</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: template-name # <b class="conum">(1)</b>
+  title: Example template # <b class="conum">(2)</b>
+  description: An example template for v1beta3 scaffolder. # <b class="conum">(3)</b>
+spec:
+  owner: backstage/techdocs-core # <b class="conum">(4)</b>
+  type: service # <b class="conum">(5)</b>
+  parameters: # <b class="conum">(6)</b>
+    - title: Fill in some steps
+      required:
+        - name
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name of the component
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+    - title: Choose a location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+  steps: # <b class="conum">(7)</b>
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      # ...
+  output: # <b class="conum">(8)</b>
+    links:
+      - title: Repository # <b class="conum">(9)</b>
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in catalog # <b class="conum">(10)</b>
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+# ...</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Specify a name for the template.</p>
+</li>
+<li>
+<p>Specify a title for the template. This is the title that is visible on the template tile in the <strong>Create&#8230;&#8203;</strong> view.</p>
+</li>
+<li>
+<p>Specify a description for the template. This is the description that is visible on the template tile in the <strong>Create&#8230;&#8203;</strong> view.</p>
+</li>
+<li>
+<p>Specify the ownership of the template. The <code>owner</code> field provides information about who is responsible for maintaining or overseeing the template within the system or organization. In the provided example, the <code>owner</code> field is set to <code>backstage/techdocs-core</code>. This means that this template belongs to the <code>techdocs-core</code> project in the <code>backstage</code> namespace.</p>
+</li>
+<li>
+<p>Specify the component type. Any string value is accepted for this required field, but your organization should establish a proper taxonomy for these. Red Hat Developer Hub instances may read this field and behave differently depending on its value. For example, a <code>website</code> type component may present tooling in the Red Hat Developer Hub interface that is specific to just websites.</p>
+<div class="paragraph">
+<p>The following values are common for this field:</p>
+</div>
+<div class="openblock">
+<div class="content">
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>service</code></dt>
+<dd>
+<p>A backend service, typically exposing an API.</p>
+</dd>
+<dt class="hdlist1"><code>website</code></dt>
+<dd>
+<p>A website.</p>
+</dd>
+<dt class="hdlist1"><code>library</code></dt>
+<dd>
+<p>A software library, such as an npm module or a Java library.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Use the <code>parameters</code> section to specify parameters for user input that are shown in a form view when a user creates a component by using the template in the Red Hat Developer Hub console. Each <code>parameters</code> subsection, defined by a title and properties, creates a new form page with that definition.</p>
+</li>
+<li>
+<p>Use the <code>steps</code> section to specify steps that are executed in the backend. These steps must be defined by using a unique step ID, a name, and an action. You can view actions that are available on your Red Hat Developer Hub instance by visiting the URL <code>https://&lt;rhdh_url&gt;/create/actions</code>.</p>
+</li>
+<li>
+<p>Use the <code>output</code> section to specify the structure of output data that is created when the template is used. The <code>output</code> section, particularly the <code>links</code> subsection, provides valuable references and URLs that users can utilize to access and interact with components that are created from the template.</p>
+</li>
+<li>
+<p>Provides a reference or URL to the repository associated with the generated component.</p>
+</li>
+<li>
+<p>Provides a reference or URL that allows users to open the generated component in a catalog or directory where various components are listed.</p>
+</li>
+</ol>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/writing-templates">Backstage documentation - Writing Templates</a></p>
+</li>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/builtin-actions">Backstage documentation - Builtin actions</a></p>
+</li>
+<li>
+<p><a href="https://backstage.io/docs/features/software-templates/writing-custom-actions">Backstage documentation - Writing Custom Actions</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-21 19:47:32 UTC
+Last updated 2024-05-29 14:57:44 UTC
 </div>
 </div>
 </body>
