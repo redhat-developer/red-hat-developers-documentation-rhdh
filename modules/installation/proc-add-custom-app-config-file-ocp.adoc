@@ -1,17 +1,58 @@
 [id="proc-add-custom-app-config-file-ocp_{context}"]
 = Adding a custom application configuration file to {ocp-short} using the Operator
 
+A custom application configuration file is a ConfigMap that you can use to change the configuration of your {product} instance to meet the needs and preferences of your organization. If you are deploying your {product-short} instance on {ocp-brand-name}, you can use the {product} Operator to add a custom application configuration file to your {ocp-short} instance by creating the ConfigMap and referencing it in the {product-short} Custom Resource.
+
+The custom application configuration file contains a sensitive environment variable, named `BACKEND_SECRET`, which is a mandatory backend authentication key that {product-short} uses to reference an environment variable defined in an {ocp-short} Secret. To authenticate users, you must create a custom Secret, named 'secrets-rhdh', and reference it in the {product-short} Custom Resource.
+
+[NOTE]
+====
+You are responsible for protecting your {product} installation from external and unauthorized access. Manage the backend authentication key like any other secret. Meet strong password requirements, do not expose it in any configuration files, and only inject it into configuration files as an environment variable.
+====
+
 .Prerequisites
-* You have an active {ocp-brand-name} account.
+* You have an active {ocp-brand-name} account
+* Your administrator has installed the {product} Operator in {ocp-short}. For more information, see _Installing the {product} Operator_ in link:{LinkAdminGuide}[{NameOfAdminGuide}]
+* Your administrator has created the {product} Custom Resource in {ocp-short}.
 
 .Procedure
 . From the *Developer* perspective, select the *ConfigMaps* tab.
 . Click *Create ConfigMap*.
-. Select the *YAML view* option in *Configure via* and make the changes to the file, if necessary.
+. Select the *YAML view* option in *Configure via* and use the following example as a base template to create a ConfigMap, such as `app-config-rhdh.yaml`:
++
+[source,yaml,subs="attributes+"]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: {product}
+      baseUrl: https://backstage-<CUSTOM_RESOURCE_NAME>-<NAMESPACE_NAME>.<OPENSHIFT_INGRESS_DOMAIN>
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://backstage-<CUSTOM_RESOURCE_NAME>-<NAMESPACE_NAME>.<OPENSHIFT_INGRESS_DOMAIN>
+      cors:
+        origin: https://backstage-<CUSTOM_RESOURCE_NAME>-<NAMESPACE_NAME>.<OPENSHIFT_INGRESS_DOMAIN>
+----
++
+.. Use the mandatory backend authentication key for {product} to reference an environment variable defined in an {ocp-short} Secret.
+.. Set the external URL of your {product} instance in the `app.baseUrl`, `backend.baseUrl` and `backend.cors.origin` fields of the application configuration. By default, the URL is similar to the following example:
+`pass:c[https://backstage-<CUSTOM_RESOURCE_NAME>-<NAMESPACE_NAME>.<OPENSHIFT_INGRESS_DOMAIN>;]`.
++
+[NOTE]
+====
+You can use the `oc get ingresses.config/cluster -o jsonpath='{.spec.domain}'` command to display your ingress domain. If you want to use a different host or sub-domain, customize the `Custom Resource spec.application.route field` and adjust the application configuration accordingly.
+====
+
 . Click *Create*.
 . Select the *Secrets* tab.
 . Click *Create Key/value Secret*.
-. Name the secret `secrets-rhdh`.
+. Create a custom secret named `secrets-rhdh`.
 . Add a key named `BACKEND_SECRET` and a base64 encoded string as a value. Use a unique value for each {product} instance. For example, you can use the following command to generate a key from your terminal:
 +
 [source,yaml]
@@ -25,7 +66,7 @@ node -p 'require("crypto").randomBytes(24).toString("base64")'
 +
 image::rhdh/operator-install-2.png[]
 
-. Add the `spec.application.appConfig.configMaps` and `spec.application.extraEnvs.secrets` fields to the custom resource. For example:
+. In the Custom Resource file, enter the name of the custom application configuration ConfigMap as the value for the `spec.application.appConfig.configMaps` field and the name of the custom Secret as the value for the `spec.application.extraEnvs.secrets` field. For example:
 +
 [source, yaml]
 ----
@@ -48,7 +89,7 @@ spec:
 ----
 . Click *Save*.
 . Navigate back to the *Topology* view and wait for the {product} pod to start.
-. Click the *Open URL* icon to start using the {product} platform with the new configuration changes.
+. Click the *Open URL* icon to launch the {product} platform with the configuration changes.
 
 .Additional resources
 * For more information about roles and responsibilities in {product-short}, see xref:con-rbac-overview_{context}[Role-Based Access Control (RBAC) in {product}] in the Administration Guide for {product}.
