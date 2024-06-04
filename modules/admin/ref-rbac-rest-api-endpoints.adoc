@@ -1,7 +1,189 @@
 [id='ref-rbac-rest-api-endpoints_{context}']
 = Supported RBAC REST API endpoints
 
-The RBAC REST API provides the following endpoints for managing permission policies and roles in the {product-short} and for retrieving information about the policies and roles.
+The RBAC REST API provides the following endpoints for managing roles, permission and, conditional policies in the {product-short} and for retrieving information about the roles and policies.
+
+== Roles
+
+The RBAC REST API supports the following endpoints for managing roles in the {product}.
+
+[GET] /api/permission/roles::
++
+--
+Returns all roles in {product-short}.
+
+.Example response (JSON)
+[source,json]
+----
+[
+  {
+    "memberReferences": ["user:default/pataknight"],
+    "name": "role:default/guests"
+  },
+  {
+    "memberReferences": [
+      "group:default/janus-authors",
+      "user:default/matt"
+    ],
+    "name": "role:default/rbac_admin"
+  }
+]
+----
+--
+
+[GET] /api/permission/roles/{kind}/{namespace}/{name}::
++
+--
+Creates a role in {product-short}.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`body`
+|The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
+|Request body
+|Required
+|===
+
+.Example request body (JSON)
+[source,json]
+----
+{
+  "memberReferences": ["group:default/test"],
+  "name": "role:default/test_admin"
+}
+----
+
+.Example response
+[source]
+----
+201 Created
+----
+--
+
+[PUT] /api/permission/roles/{kind}/{namespace}/{name}::
++
+--
+Updates `memberReferences`, `kind`, `namespace`, or `name` for a role in {product-short}.
+
+.Request parameters
+The request body contains the `oldRole` and `newRole` objects:
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`body`
+|The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
+|Request body
+|Required
+|===
+
+.Example request body (JSON)
+[source,json]
+----
+{
+  "oldRole": {
+    "memberReferences": ["group:default/test"],
+    "name": "role:default/test_admin"
+  },
+  "newRole": {
+    "memberReferences": ["group:default/test", "user:default/test2"],
+    "name": "role:default/test_admin"
+  }
+}
+----
+
+.Example response
+[source]
+----
+200 OK
+----
+--
+
+[DELETE] /api/permission/roles/{kind}/{namespace}/{name}?memberReferences=<VALUE>::
++
+--
+Deletes the specified user or group from a role in {product-short}.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`kind`
+|Kind of the entity
+|String
+|Required
+
+|`namespace`
+|Namespace of the entity
+|String
+|Required
+
+|`name`
+|Username related to the entity
+|String
+|Required
+
+|`memberReferences`
+|Associated group information
+|String
+|Required
+|===
+
+.Example response
+[source]
+----
+204
+----
+--
+
+[DELETE] /api/permission/roles/{kind}/{namespace}/{name}::
++
+--
+Deletes a specified role from {product-short}.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Requirement
+
+|`kind`
+|Kind of the entity
+|String
+|Required
+
+|`namespace`
+|Namespace of the entity
+|String
+|Required
+
+|`name`
+|Username related to the entity
+|String
+|Required
+|===
+
+.Example response
+[source]
+----
+204
+----
+--
 
 == Permission policies
 
@@ -285,38 +467,241 @@ Returns permission policies for all static plugins.
 ----
 --
 
-== Roles
+== Conditional policies
 
-The RBAC REST API supports the following endpoints for managing roles in the {product}.
+The RBAC REST API supports the following endpoints for managing conditional policies in the {product}.
 
-[GET] /api/permission/roles::
+[GET] /api/plugins/condition-rules::
 +
 --
-Returns all roles in {product-short}.
+Returns available conditional policies.
+
+.Example response (JSON)
+[source,json]
+----
+[
+   {
+      "pluginId": "catalog",
+      "rules": [
+         {
+            "name": "HAS_ANNOTATION",
+            "description": "Allow entities with the specified annotation",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "annotation": {
+                     "type": "string",
+                     "description": "Name of the annotation to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the annotation to match on"
+                  }
+               },
+               "required": [
+                  "annotation"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_LABEL",
+            "description": "Allow entities with the specified label",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "label": {
+                     "type": "string",
+                     "description": "Name of the label to match on"
+                  }
+               },
+               "required": [
+                  "label"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_METADATA",
+            "description": "Allow entities with the specified metadata subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities metadata to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_SPEC",
+            "description": "Allow entities with the specified spec subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities spec to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_KIND",
+            "description": "Allow entities matching a specified kind",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "kinds": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of kinds to match at least one of"
+                  }
+               },
+               "required": [
+                  "kinds"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_OWNER",
+            "description": "Allow entities owned by a specified claim",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "claims": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of claims to match at least one on within ownedBy"
+                  }
+               },
+               "required": [
+                  "claims"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         }
+      ]
+   }
+   ... <another plugin condition parameter schemas>
+]
+----
+--
+
+[GET] /api/permission/roles/conditions/:id::
++
+--
+Returns conditions for the specified ID.
+
+.Example response (JSON)
+[source,json]
+----
+{
+  "id": 1,
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {
+          "claims": ["group:default/team-a"]
+        }
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": ["Group"]
+        }
+      }
+    ]
+  }
+}
+----
+--
+
+[GET] /api/permission/roles/conditions::
++
+--
+Returns list of all conditions for the specified roles.
 
 .Example response (JSON)
 [source,json]
 ----
 [
   {
-    "memberReferences": ["user:default/pataknight"],
-    "name": "role:default/guests"
-  },
-  {
-    "memberReferences": [
-      "group:default/janus-authors",
-      "user:default/matt"
-    ],
-    "name": "role:default/rbac_admin"
+    "id": 1,
+    "result": "CONDITIONAL",
+    "roleEntityRef": "role:default/test",
+    "pluginId": "catalog",
+    "resourceType": "catalog-entity",
+    "permissionMapping": ["read"],
+    "conditions": {
+      "anyOf": [
+        {
+          "rule": "IS_ENTITY_OWNER",
+          "resourceType": "catalog-entity",
+          "params": {
+            "claims": ["group:default/team-a"]
+          }
+        },
+        {
+          "rule": "IS_ENTITY_KIND",
+          "resourceType": "catalog-entity",
+          "params": {
+            "kinds": ["Group"]
+          }
+        }
+      ]
+    }
   }
 ]
 ----
 --
 
-[GET] /api/permission/roles/{kind}/{namespace}/{name}::
+[POST] /api/permission/roles/conditions::
 +
 --
-Creates a role in {product-short}.
+Creates a conditional policy for the specified role.
 
 .Request parameters
 [cols="15%,45%,15%,25%", frame="all", options="header"]
@@ -326,9 +711,34 @@ Creates a role in {product-short}.
 |Type
 |Requirement
 
-|`body`
-|The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
-|Request body
+|`result`
+|Always has the value `CONDITIONAL`
+|String
+|Required
+
+|`roleEntityRef`
+|String entity reference to the RBAC role, such as `role:default/dev`
+|String
+|Required
+
+|`pluginId`
+|Corresponding plugin ID, such as `catalog`
+|String
+|Required
+
+|`permissionMapping`
+|Array permission actionn, such as `['read', 'update', 'delete']`
+|String array
+|Required
+
+|`resourceType`
+|Resource type provided by the plugin, such as `catalog-entity`
+|String
+|Required
+
+|`conditions`
+|Condition JSON with parameters or array parameters joined by criteria
+|JSON
 |Required
 |===
 
@@ -336,25 +746,36 @@ Creates a role in {product-short}.
 [source,json]
 ----
 {
-  "memberReferences": ["group:default/test"],
-  "name": "role:default/test_admin"
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["group:default/team-a"]
+    }
+  }
 }
 ----
 
-.Example response
-[source]
+.Example response (JSON)
+[source,json]
 ----
-201 Created
+{
+  "id": 1
+}
 ----
 --
 
-[PUT] /api/permission/roles/{kind}/{namespace}/{name}::
+[PUT] /permission/roles/conditions/:id::
 +
 --
-Updates `memberReferences`, `kind`, `namespace`, or `name` for a role in {product-short}.
+Updates a condition policy for a specified ID.
 
 .Request parameters
-The request body contains the `oldRole` and `newRole` objects:
 [cols="15%,45%,15%,25%", frame="all", options="header"]
 |===
 |Name
@@ -362,9 +783,34 @@ The request body contains the `oldRole` and `newRole` objects:
 |Type
 |Requirement
 
-|`body`
-|The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
-|Request body
+|`result`
+|Always has the value `CONDITIONAL`
+|String
+|Required
+
+|`roleEntityRef`
+|String entity reference to the RBAC role, such as `role:default/dev`
+|String
+|Required
+
+|`pluginId`
+|Corresponding plugin ID, such as `catalog`
+|String
+|Required
+
+|`permissionMapping`
+|Array permission actionn, such as `['read', 'update', 'delete']`
+|String array
+|Required
+
+|`resourceType`
+|Resource type provided by the plugin, such as `catalog-entity`
+|String
+|Required
+
+|`conditions`
+|Condition JSON with parameters or array parameters joined by criteria
+|JSON
 |Required
 |===
 
@@ -372,13 +818,28 @@ The request body contains the `oldRole` and `newRole` objects:
 [source,json]
 ----
 {
-  "oldRole": {
-    "memberReferences": ["group:default/test"],
-    "name": "role:default/test_admin"
-  },
-  "newRole": {
-    "memberReferences": ["group:default/test", "user:default/test2"],
-    "name": "role:default/test_admin"
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {
+          "claims": ["group:default/team-a"]
+        }
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": ["Group"]
+        }
+      }
+    ]
   }
 }
 ----
@@ -386,43 +847,14 @@ The request body contains the `oldRole` and `newRole` objects:
 .Example response
 [source]
 ----
-200 OK
+200
 ----
 --
 
-[DELETE] /api/permission/roles/{kind}/{namespace}/{name}?memberReferences=<VALUE>::
+[DELETE] /api/permission/roles/conditions/:id::
 +
 --
-Deletes the specified user or group from a role in {product-short}.
-
-.Request parameters
-[cols="15%,45%,15%,25%", frame="all", options="header"]
-|===
-|Name
-|Description
-|Type
-|Requirement
-
-|`kind`
-|Kind of the entity
-|String
-|Required
-
-|`namespace`
-|Namespace of the entity
-|String
-|Required
-
-|`name`
-|Username related to the entity
-|String
-|Required
-
-|`memberReferences`
-|Associated group information
-|String
-|Required
-|===
+Deletes a conditional policy for the specified ID.
 
 .Example response
 [source]
@@ -431,38 +863,3 @@ Deletes the specified user or group from a role in {product-short}.
 ----
 --
 
-[DELETE] /api/permission/roles/{kind}/{namespace}/{name}::
-+
---
-Deletes a specified role from {product-short}.
-
-.Request parameters
-[cols="15%,45%,15%,25%", frame="all", options="header"]
-|===
-|Name
-|Description
-|Type
-|Requirement
-
-|`kind`
-|Kind of the entity
-|String
-|Required
-
-|`namespace`
-|Namespace of the entity
-|String
-|Required
-
-|`name`
-|Username related to the entity
-|String
-|Required
-|===
-
-.Example response
-[source]
-----
-204
-----
---
