@@ -3,43 +3,66 @@
 
 This section lists fixed issues with {product} {product-version}:
 
-Fix an inability to dynamically load a number of upstream backend plugins::
+Dynamic Plugins Fail to Load in showcase Post-Upstream Backstage Update to 1.25::
 +
 --
-Before this release, a whole category of upstream or third-party backstage backend plugins could not be loaded dynamically when converted to dynamic plugins. Impacted plugins were those using the `resolvePackagePath()` backstage API method. This issue impacted most of the backend plugins using the database service and providing migration scripts.
-This release removes such an important limitation of the dynamic plugin feature.
+Moving to Backstage 1.25 caused an issue where dynamic plugin UI elements became unavailable. This occurred due to an upstream security fix that required authentication tokens for all backend endpoints, including static assets used by dynamic plugins.
+
+As a result of this bug, users could not access dynamic plugin UI elements, leading to a degraded user experience and decreased functionality within the application.
+
+In this release, the security requirement for dynamic plugin static assets has been removed, which restores access to dynamic plugin UI elements.
+
+Following the implementation of this fix, users can view and interact with dynamic plugin UI elements, resulting in improved usability and functionality within the application. link:xxx[(RHIDP-2044)]
 --
 
-Incorrect configuration in the Atlassian Auth provider::
+API throwing error upon adding conditions for scaffolder-action resource-type::
 +
 --
-Before this release, the authorization URL was constructed as `${baseUrl}/oauth/authorize`, which did not align with the Atlassian expected path, resulting in an authentication error. Now, the users are directed to the authorization URL to get an authorization code for successful authentication.
+In earlier versions of {product}, defining conditional policies with a policy action of 'use' would result in an error.
+
+This issue led to difficulties in defining conditional policies, hindering the configuration of permissions within the application.
+
+With this fix, you can now define conditional policies in {product-short} with permission policy actions of 'use'. link:xxx[(RHIDP-2237)]
 --
 
-RBAC: CSV repopulates the database whenever there is a server restart::
+[janus-idp/operator] Setting custom `spec.application.route.host` not working using the RHDH Operator on OpenShift, due to inconsistent permissions between downstream and upstream CSVs::
 +
 --
-Before this release, the `policy.csv file` was used to load permissions into {product-short}. There might be instances of overlapping permissions, and the permissions could be reloaded into the database. 
+In earlier versions of the {product} Operator, setting a custom Route host on OpenShift Container Platform using the spec.application.route.host field in the Custom Resource was not possible.
 
+This limitation prevented users from configuring custom Route hosts, limiting their ability to customize the deployment environment.
+
+With this release, a fix was implemented to enable setting a custom Route host on OpenShift Container Platform using the specified field in the Custom Resource. link:xxx[(RHIDP-2325)]
 --
 
-Validation is not working for the `Create Role` API::
+Cannot mount a secret/configmap with a '.' in its name::
 +
 --
-Before this release, the validation process in the `Create Role` API was ineffective, allowing the creation of roles that were invalid. This resulted in input errors when attempting to update or delete these roles. 
+In earlier versions of the {product} Operator, it was not possible to reference a ConfigMap or Secret object in the Custom Resource if that object contained a dot (`.`) character in its name. 
 
+This issue prevented the {product} instance from starting correctly.
+
+With this update, this issue has been fixed. link:xxx[(RHIDP-2246)]
 --
 
-RBAC backend plugin: policy change requires server restart::
+Upgrading Operator from 1.1 to 1.2 makes existing RHDH instance use a new empty database, causing existing data to not be used::
 +
 --
-Before this release, manually manipulating the `policy.csv` file led to inconsistent behavior, causing the manipulated permission or role to not apply correctly within the RBAC plugin. 
+When upgrading the {product} Operator from version 1.1 to 1.2 with an already-running operator-backed instance of {product-short}, the instance would be configured to use a new empty local database pod and volume. This resulted in existing database data being retained but running in an unused database.
 
+This misconfiguration caused the existing {product-short} instance to use a new empty local database pod and volume, resulting in data redundancy and potential data inconsistency issues.
+
+This update ensures that an existing {product-short} instance continues to use the existing local database when the Operator is upgraded to a newer version. link:xxx[(RHIDP-2432)]
 --
 
-No support for monitoring {product} plugins::
+Add corporate proxy support to RHDH::
 +
 --
-Before this release, no support was provided to administrators for monitoring {product} plugins. With this release, administrators can generate a list of {product-short} plugins and their versions for monitoring purposes. 
+In earlier versions of the {product}, the support for conventional HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables was not properly implemented. This led to issues when running {product-short} behind a corporate proxy, causing authentication failures and other access-related issues.
 
+The absence of support for these environment variables resulted in the inability to authenticate with public GitHub authentication provider and other access-related issues when {product-short} was deployed behind a corporate proxy.
+
+This update addresses the issue by adding support for the conventional HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables and etting these variables using either the Helm Chart or the Operator will change the behavior of {product-short}, ensuring that all backend calls are routed through the corporate proxy specified.
+
+With this fix, {product-short} instances can now effectively operate behind a corporate proxy. Setting the specified environment variables enables seamless communication through the corporate proxy, resolving authentication and access-related issues previously encountered.
 --
