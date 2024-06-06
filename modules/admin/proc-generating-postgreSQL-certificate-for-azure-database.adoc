@@ -1,0 +1,52 @@
+[id='generating-postgreSQL-certificate-for-azure-database_{context}']
+= Generating PostgreSQL certificate for Azure database
+
+For Azure database, you can generate a PostgreSQL certificate file in the .pem format. The content of this certificate file is used to create a PostgreSQL Secret for {product-very-short} configuration.
+
+.Prerequisites
+* You have created an link:https://azure.microsoft.com/en-us/[Azure account] with active subscription.
+* You have created an link:https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/overview[Azure database for PostgreSQL flexible server instance].
+* You are using PostgreSQL version 15 on Azure.
+* You have your database host, database port, username, and password handy. The format for database host is `<db-instance-name>.postgres.database.com`. The database port that is usually used is `5432`.
+* You have installed the {product-very-short} application by using one of the following options:
+** {product} Operator
+** Helm Chart 
+* Optional: You have installed the `psql` client to check your database connections.
+
+.Procedure
+
+. Optional: Check your database connection by running the following command:
++
+[source,bash]
+----
+psql -h <db-host> -p <db-port> -U <username> -P <password>
+----
++
+.Example output
+[source,bash]
+----
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+Type "help" for help.
+postgres=> 
+(type ‘\q’ to quit from psql CLI)
+----
+
+. Go to this link:https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/concepts-networking-ssl-tls#downloading-root-ca-certificates-and-updating-application-clients-in-certificate-pinning-scenarios[site] and download Microsoft RSA Root Certificate Authority 2017 and DigiCert Global Root CA certificates.
+
+. Go to this link:https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/concepts-networking-ssl-tls#downloading-root-ca-certificates-and-updating-application-clients-in-certificate-pinning-scenarios[site] and convert .crt files you downloaded to .pem format as shown in the following example:
++
+[source,bash]
+----
+openssl x509 -in DigiCertGlobalRootCA.crt -out DigiCertGlobalRootCA.crt.pem -outform PEM
+
+openssl x509 -in Microsoft ECC Root Certificate Authority 2017.crt -out Microsoft ECC Root Certificate Authority 2017.crt.pem -outform PEM
+----
+
+. Go to this link:https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/how-to-update-client-certificates-java#updating-root-ca-certificates-for-other-clients-for-certificate-pinning-scenarios[site] and merge two CA certificate files as shown in the following example: 
++
+[source,bash]
+====
+cat DigiCertGlobalRootCA.crt.pem Microsoft ECC Root Certificate Authority 2017.crt.pem > <postgres-crt>.pem
+====
+
+. Use the .pem certificate file to create a PostgreSQL Secret. For more information, see 
