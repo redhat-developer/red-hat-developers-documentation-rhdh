@@ -451,7 +451,14 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#proc-install-rhdh-ocp-operator_admin-rhdh">2.2. Deploying Red Hat Developer Hub on OpenShift Container Platform using the Operator</a></li>
 </ul>
 </li>
-<li><a href="#assembly-configuring-postgresql-databases_admin-rhdh">3. Configuring external PostgreSQL databases</a></li>
+<li><a href="#assembly-configuring-postgresql-databases_admin-rhdh">3. Configuring external PostgreSQL databases</a>
+<ul class="sectlevel2">
+<li><a href="#generating-postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Generating PostgreSQL certificate for AWS RDS</a></li>
+<li><a href="#generating-postgreSQL-certificate-for-azure-database_admin-rhdh">3.2. Generating PostgreSQL certificate for Azure database</a></li>
+<li><a href="#proc-creating-secrets-for-postgresql_admin-rhdh">3.3. Creating PostgreSQL secrets</a></li>
+<li><a href="#proc-configuring-postgresql-details-in-RHDH_admin-rhdh">3.4. Configuring PostgreSQL details in RHDH</a></li>
+</ul>
+</li>
 <li><a href="#enabling-authentication">4. Enabling authentication in Red Hat Developer Hub</a>
 <ul class="sectlevel2">
 <li><a href="#proc-adding-gitlab-oauth-as-an-authentication-provider_admin-rhdh">4.1. Enabling the GitLab OAuth authentication provider</a></li>
@@ -1590,17 +1597,348 @@ bash prepare-restricted-environment.sh \
 <div class="paragraph">
 <p>You can configure and use external PostgreSQL databases in Red Hat Developer Hub. You must have a PostgreSQL certificate file that is used to configure the RHDH instance either using the Operator or Helm Chart.</p>
 </div>
+<div class="sect2">
+<h3 id="generating-postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Generating PostgreSQL certificate for AWS RDS</h3>
 <div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-configuring-postgresql-databases.adoc - include::proc-generating-postgresql-certificate-for-aws-rds.adoc[leveloffset=+1]</p>
+<p>For Amazon Web Services (AWS) Relational Database Service (RDS), you can generate a PostgreSQL certificate file in the .pem format. The content of this file is used to create a PostgreSQL Secret for Developer Hub configuration.</p>
 </div>
-<div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-configuring-postgresql-databases.adoc - include::proc-generating-postgreSQL-certificate-for-azure-database.adoc[leveloffset=+1]</p>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an AWS account with active subscription and a PostgreSQL instance on <a href="https://aws.amazon.com/rds/postgresql/">Amazon RDS for PostgreSQL</a>.</p>
+</li>
+<li>
+<p>You are using PostgreSQL version 15 on AWS RDS.</p>
+</li>
+<li>
+<p>You have your database host, database port, username, and password handy. The database port that is usually used is <code>5432</code>.</p>
+</li>
+<li>
+<p>You have installed the RHDH application by using one of the following options:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Red Hat Developer Hub Operator</p>
+</li>
+<li>
+<p>Helm Chart</p>
+</li>
+</ul>
 </div>
-<div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-configuring-postgresql-databases.adoc - include::proc-creating-secrets-for-postgresql.adoc[leveloffset=+1]</p>
+</li>
+<li>
+<p>Optional: You have installed the <code>psql</code> client to check your database connection.</p>
+</li>
+</ul>
 </div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Optional: Check your database connection by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">psql -h &lt;db-host&gt; -p &lt;db-port&gt; -U &lt;username&gt; -P &lt;password&gt;</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example output</div>
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+Type "help" for help.
+postgres=&gt;
+(type ‘\q’ to quit from psql CLI)</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Go to the <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html#UsingWithRDS.SSL.CertificatesAllRegions">Certificate bundles for all AWS Regions</a> or <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html#UsingWithRDS.SSL.RegionCertificates">Certificate bundles for specific AWS Regions</a> site and download a certificate file of the .pem format.</p>
+</li>
+<li>
+<p>Use the .pem certificate file to create a PostgreSQL Secret. For more information, see</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="generating-postgreSQL-certificate-for-azure-database_admin-rhdh">3.2. Generating PostgreSQL certificate for Azure database</h3>
 <div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-configuring-postgresql-databases.adoc - include::proc-configuring-postgresql-details-in-RHDH.adoc[leveloffset=+1]</p>
+<p>For Azure database, you can generate a PostgreSQL certificate file in the .pem format. The content of this certificate file is used to create a PostgreSQL Secret for RHDH configuration.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have created an <a href="https://azure.microsoft.com/en-us/">Azure account</a> with active subscription.</p>
+</li>
+<li>
+<p>You have created an <a href="https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/overview">Azure database for PostgreSQL flexible server instance</a>.</p>
+</li>
+<li>
+<p>You are using PostgreSQL version 15 on Azure.</p>
+</li>
+<li>
+<p>You have your database host, database port, username, and password handy. The format for database host is <code>&lt;db-instance-name&gt;.postgres.database.com</code>. The database port that is usually used is <code>5432</code>.</p>
+</li>
+<li>
+<p>You have installed the RHDH application by using one of the following options:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Red Hat Developer Hub Operator</p>
+</li>
+<li>
+<p>Helm Chart</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Optional: You have installed the <code>psql</code> client to check your database connections.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Optional: Check your database connection by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">psql -h &lt;db-host&gt; -p &lt;db-port&gt; -U &lt;username&gt; -P &lt;password&gt;</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example output</div>
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+Type "help" for help.
+postgres=&gt; 
+(type ‘\q’ to quit from psql CLI)</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Go to this <a href="https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/concepts-networking-ssl-tls#downloading-root-ca-certificates-and-updating-application-clients-in-certificate-pinning-scenarios">site</a> and download Microsoft RSA Root Certificate Authority 2017 and DigiCert Global Root CA certificates.</p>
+</li>
+<li>
+<p>Go to this <a href="https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/concepts-networking-ssl-tls#downloading-root-ca-certificates-and-updating-application-clients-in-certificate-pinning-scenarios">site</a> and convert .crt files you downloaded to .pem format as shown in the following example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">openssl x509 -in DigiCertGlobalRootCA.crt -out DigiCertGlobalRootCA.crt.pem -outform PEM
+
+openssl x509 -in Microsoft ECC Root Certificate Authority 2017.crt -out Microsoft ECC Root Certificate Authority 2017.crt.pem -outform PEM</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Go to this <a href="https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/how-to-update-client-certificates-java#updating-root-ca-certificates-for-other-clients-for-certificate-pinning-scenarios">site</a> and merge two CA certificate files as shown in the following example:</p>
+<div class="exampleblock">
+<div class="content">
+<div class="paragraph">
+<p>cat DigiCertGlobalRootCA.crt.pem Microsoft ECC Root Certificate Authority 2017.crt.pem &gt; &lt;postgres-crt&gt;.pem</p>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Use the .pem certificate file to create a PostgreSQL Secret. For more information, see</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-creating-secrets-for-postgresql_admin-rhdh">3.3. Creating PostgreSQL secrets</h3>
+<div class="paragraph">
+<p>For both Helm Chart and Operator-based installation options, you must create PostgreSQL Secrets in the namespace where you plan to configure the RHDH instance.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Create a Secret with the content of the .pem certificate file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
+kind: Secret
+metadata:
+ name: &lt;postgres-crt&gt;
+type: Opaque
+stringData:
+ postgres-crt.pem: |-
+   -----BEGIN CERTIFICATE-----
+   MIIFqDCCA5CgAwIBAgIQHtOXCV/YtLNHcB6qvn9FszANBgkqhkiG9w0BAQwFADBl
+   ................</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the Secret by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">oc -n &lt;your-namespace&gt; apply -f &lt;postgres-crt&gt;.yaml</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Create a Secret to connect with the PostgreSQL database:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
+kind: Secret
+metadata:
+ name: &lt;postgres-cred&gt;
+type: Opaque
+stringData:
+ POSTGRES_PASSWORD: &lt;password&gt;
+ POSTGRES_PORT: &lt;db-port&gt;
+ POSTGRES_USER: &lt;username&gt;
+ POSTGRES_HOST: &lt;db-host&gt;
+ PGSSLMODE: require
+ NODE_EXTRA_CA_CERTS: &lt;abs-path-to-pem-file&gt; # e.g. /opt/app-root/src/postgres-crt.pem</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the Secret by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">oc -n &lt;your-namespace&gt; apply -f &lt;postgres-cred&gt;.yaml</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-configuring-postgresql-details-in-RHDH_admin-rhdh">3.4. Configuring PostgreSQL details in RHDH</h3>
+<div class="paragraph">
+<p>You can configure PostgreSQL details, such as credential and certificate secrets in the Red Hat Developer Hub application.</p>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>Configure PostgreSQL details by using one of the following options:</p>
+<div class="olist loweralpha">
+<div class="title">Using Helm chart</div>
+<ol class="loweralpha" type="a">
+<li>
+<p>Add the following YAML code in your Helm configuration file named <code>values.yaml</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">upstream:
+ postgresql:
+   enabled: false  # disable PostgreSQL instance creation
+   auth:
+     existingSecret: postgres-cred
+ backstage:
+   appConfig:
+     backend:
+       database:
+         connection:  # configure Backstage DB connection parameters
+           host: ${POSTGRES_HOST}
+           port: ${POSTGRES_PORT}
+           user: ${POSTGRES_USER}
+           password: ${POSTGRES_PASSWORD}
+   extraEnvVarsSecrets:
+     - postgres-cred # inject credentials secret to Backstage cont.
+   extraEnvVars:
+     - name: BACKEND_SECRET
+       valueFrom:
+         secretKeyRef:
+           key: backend-secret
+           name: '{{ include "janus-idp.backend-secret-name" $ }}'
+   extraVolumeMounts:
+     - mountPath: /opt/app-root/src/dynamic-plugins-root
+       name: dynamic-plugins-root
+     - mountPath: /opt/app-root/src/postgres-crt.pem
+       name: postgres-crt # inject certificate secret to Backstage cont.
+       subPath: postgres-crt.pem
+   extraVolumes:
+     - ephemeral:
+         volumeClaimTemplate:
+           spec:
+             accessModes:
+               - ReadWriteOnce
+             resources:
+               requests:
+                 storage: 1Gi
+       name: dynamic-plugins-root
+     - configMap:
+         defaultMode: 420
+         name: dynamic-plugins
+         optional: true
+       name: dynamic-plugins
+     - name: dynamic-plugins-npmrc
+       secret:
+         defaultMode: 420
+         optional: true
+         secretName: dynamic-plugins-npmrc
+     - name: postgres-crt
+       secret:
+         secretName: postgres-crt</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the Helm configuration by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">helm install -n &lt;your-namespace&gt; &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub -f values.yaml</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist loweralpha">
+<div class="title">Using the Operator</div>
+<ol class="loweralpha" type="a">
+<li>
+<p>Set the value of the <code>enableLocalDb</code> parameter to <code>false</code> to disable your local database:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+spec:
+ database:
+   enableLocalDb: false
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Add PostgreSQL credential and certificate secret in the <code>&lt;rhdh-custom-resource&gt;</code> file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+spec:
+  application:
+    extraFiles:
+     mountPath: &lt;folder&gt; # e g /opt/app-root/src
+     secrets:
+       - name: &lt;postgres-crt&gt;
+         key: postgres-crt.pem # key name as in &lt;postgres-crt&gt; Secret
+    extraEnvs:
+      secrets:
+        - name: &lt;postgres-cred&gt;
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the configuration by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">oc -n &lt;your-namespace&gt; apply -f &lt;rhdh-custom-resource&gt;.yaml</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
 </div>
 </div>
 </div>
@@ -6216,7 +6554,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-06 12:57:50 UTC
+Last updated 2024-06-06 13:06:32 UTC
 </div>
 </div>
 </body>
