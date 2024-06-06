@@ -1,0 +1,111 @@
+[id="proc-configuring-postgresql-details-in-RHDH_{context}"]
+= Configuring PostgreSQL details in RHDH
+
+You can configure PostgreSQL details, such as credential and certificate secrets in the {product} application.
+
+.Procedure
+
+* Configure PostgreSQL details by using one of the following options:
++
+.Using Helm chart
+.. Add the following YAML code in your Helm configuration file named `values.yaml`:
++
+[source,yaml]
+----
+upstream:
+ postgresql:
+   enabled: false  # disable PostgreSQL instance creation 
+   auth:
+     existingSecret: postgres-cred 
+ backstage:
+   appConfig:
+     backend:
+       database:
+         connection:  # configure Backstage DB connection parameters
+           host: ${POSTGRES_HOST} 
+           port: ${POSTGRES_PORT}
+           user: ${POSTGRES_USER}
+           password: ${POSTGRES_PASSWORD}
+   extraEnvVarsSecrets:
+     - postgres-cred # inject credentials secret to Backstage cont.
+   extraEnvVars:
+     - name: BACKEND_SECRET
+       valueFrom:
+         secretKeyRef:
+           key: backend-secret
+           name: '{{ include "janus-idp.backend-secret-name" $ }}'
+   extraVolumeMounts:
+     - mountPath: /opt/app-root/src/dynamic-plugins-root
+       name: dynamic-plugins-root
+     - mountPath: /opt/app-root/src/postgres-crt.pem
+       name: postgres-crt # inject certificate secret to Backstage cont.
+       subPath: postgres-crt.pem
+   extraVolumes:
+     - ephemeral:
+         volumeClaimTemplate:
+           spec:
+             accessModes:
+               - ReadWriteOnce
+             resources:
+               requests:
+                 storage: 1Gi
+       name: dynamic-plugins-root
+     - configMap:
+         defaultMode: 420
+         name: dynamic-plugins
+         optional: true
+       name: dynamic-plugins
+     - name: dynamic-plugins-npmrc
+       secret:
+         defaultMode: 420
+         optional: true
+         secretName: dynamic-plugins-npmrc
+     - name: postgres-crt 
+       secret:
+         secretName: postgres-crt
+----
+
+.. Apply the Helm configuration by running the following command:
++
+[source,bash]
+----
+helm install -n <your-namespace> <your_deploy_name> openshift-helm-charts/redhat-developer-hub -f values.yaml 
+----
+
++
+.Using the Operator
+.. Set the value of the `enableLocalDb` parameter to `false` to disable your local database:
++
+[source,yaml]
+----
+# ...
+spec:
+ database:
+   enableLocalDb: false
+# ...
+----
+
+.. Add PostgreSQL credential and certificate secret in the `<rhdh-custom-resource>` file:
++
+[source,yaml]
+----
+# ...
+spec:
+  application: 
+    extraFiles:
+     mountPath: <folder> # e g /opt/app-root/src
+     secrets:
+       - name: <postgres-crt> 
+         key: postgres-crt.pem # key name as in <postgres-crt> Secret
+    extraEnvs:
+      secrets:
+        - name: <postgres-cred>
+# ...
+----
+
+.. Apply the configuration by running the following command:
++
+[source,bash]
+----
+oc -n <your-namespace> apply -f <rhdh-custom-resource>.yaml 
+----
