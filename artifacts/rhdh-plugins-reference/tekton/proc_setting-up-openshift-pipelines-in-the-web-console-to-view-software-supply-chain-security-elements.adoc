@@ -1,0 +1,317 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="setting-up-openshift-pipelines-in-the-web-console-to-view-software-supply-chain-security-elements_{context}"]
+= Setting up OpenShift Pipelines in the web console to view Software Supply Chain Security elements
+
+Use the *Developer* or *Administrator* perspective to create or modify a pipeline and view key Software Supply Chain Security elements within a project.
+
+Set up {pipelines-shortname} to view:
+
+* **Project vulnerabilities**: Visual representation of identified vulnerabilities within a project.
+
+* **Software Bill of Materials (SBOMs)**: Download or view detailed listing of PipelineRun components.
+
+Additionally, PipelineRuns that meet Tekton Chains requirement displays signed badges next to their names. This badge indicates that the pipeline run execution results are cryptographically signed and stored securely, for example within an OCI image.
+
+.The signed badge
+image::rhdh-plugins-reference/badge.png[]
+
+The PipelineRun displays the signed badge next to its name only if you have configured Tekton Chains. For information on configuring Tekton Chains, see link:https://docs.openshift.com/pipelines/1.13/secure/using-tekton-chains-for-openshift-pipelines-supply-chain-security.html[Using Tekton Chains for OpenShift Pipelines supply chain security].
+
+== Setting up OpenShift Pipelines to view project vulnerabilities
+
+In {product}, the Pipeline Runs section on the *CI* tab page provides a visual representation of identified vulnerabilities,  categorized by the severity (critical, high, medium, and low). This streamlined view facilitates prioritization and remediation efforts.
+
+.Viewing vulnerabilities on the `PipelineRun` list page
+image::rhdh-plugins-reference/vulnerabilities_details.png[]
+
+
+[NOTE]
+====
+TThe vulnerability scan task discussed in this chapter uses `roxctl` for example purposes only. `roxctl` is a community project and is not supported by {product} by default. For guidance on implementing these or any other community-supported tasks consult your support agreements or contact support services.
+====
+
+.Prerequisites
+
+* You have link:https://docs.openshift.com/container-platform/4.14/web_console/web-console.html#web-console[logged in to the {ocp-short} web console].
+
+* You have the appropriate link:https://docs.openshift.com/container-platform/4.14/authentication/using-rbac.html#default-roles_using-rbac[roles and permissions] in a project to create applications and other workloads in {ocp-short}.
+
+* You have an existing vulnerability scan task.
+
+.Procedures
+
+. In the *Developer* or *Administrator* perspective, switch to the relevant project where you want a visual representation of vulnerabilities.
+
+. Update your existing vulnerability scan task to ensure that it stores the output in the .json file and then extracts the vulnerability summary in the following format:
+
++
+[source,yaml]
+----
+# The format to extract vulnerability summary (adjust the jq command for different JSON structures).
+jq -rce \ 
+    '{vulnerabilities:{
+      critical: (.result.summary.CRITICAL),
+      high: (.result.summary.IMPORTANT),
+      medium: (.result.summary.MODERATE),
+      low: (.result.summary.LOW)
+      }}' scan_output.json | tee $(results.SCAN_OUTPUT.path)
+----
++
+[NOTE]
+====
+You might need to adjust the link:https://jqlang.github.io/jq/download/[jq] command for different JSON structures.
+====
+
+.. (Optional) If you do not have a vulnerability scan task, create one in the following format:
++
+*Example vulnerability scan task using `roxctl`*
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: vulnerability-scan  # <1>
+  annotations:
+    task.output.location: results  # <2>
+    task.results.format: application/json
+    task.results.key: SCAN_OUTPUT  # <3>
+spec:
+  results:
+    - description: CVE result format  # <4>
+      name: SCAN_OUTPUT
+      type: string
+  steps:
+    - name: roxctl  # <5>
+      image: quay.io/roxctl-tool-image  # <6>
+      env:
+        - name: ENV_VAR_NAME_1  # <7>
+          valueFrom:
+            secretKeyRef:
+              key: secret_key_1            
+              name: secret_name_1
+      env:
+        - name: ENV_VAR_NAME_2
+          valueFrom:
+            secretKeyRef:
+              key: secret_key_2            
+              name: secret_name_2
+      script: | # <8>
+        #!/bin/sh
+        # Sample shell script
+        echo "ENV_VAR_NAME_1: " $ENV_VAR_NAME_1
+        echo "ENV_VAR_NAME_2: " $ENV_VAR_NAME_2
+        jq --version (adjust the jq command for different JSON structures)
+        curl -k -L -H "Authorization: Bearer $ENV_VAR_NAME_1" https://$ENV_VAR_NAME_2/api/cli/download/roxctl-linux --output ./roxctl
+        chmod +x ./roxctl 
+        echo "roxctl version"
+        ./roxctl version
+        echo "image from pipeline: " 
+        
+        # Replace the following line with your dynamic image logic
+        DYNAMIC_IMAGE=$(get_dynamic_image_logic_here)
+        echo "Dynamic image: $DYNAMIC_IMAGE"
+        ./roxctl image scan --insecure-skip-tls-verify -e $ENV_VAR_NAME_2 --image $DYNAMIC_IMAGE --output json  > roxctl_output.json
+        more roxctl_output.json
+        jq -rce \  # <9>
+          '{vulnerabilities:{
+          critical: (.result.summary.CRITICAL),
+          high: (.result.summary.IMPORTANT),
+          medium: (.result.summary.MODERATE),
+          low: (.result.summary.LOW)
+            }}' scan_output.json | tee $(results.SCAN_OUTPUT.path)
+----
+<1> The name of your task.
+<2> The location for storing the task outputs.
+<3> The naming convention of the scan task result. A valid naming convention must end with the `SCAN_OUTPUT` string. For example, SCAN_OUTPUT, MY_CUSTOM_SCAN_OUTPUT, or ACS_SCAN_OUTPUT.
+<4> The description of the result.
+<5> The name of the vulnerability scanning tool that you have used. 
+<6> The location of the actual image containing the scan tool.
+<7> The tool-specific environment variables.
+<8> The shell script to be executed with json output. For example, scan_output.json.
+<9> The format to extract vulnerability summary (adjust `jq` command for different JSON structures).
+
++
+[NOTE]
+====
+This is an example configuration. Modify the values according to your specific scanning tool to set results in the expected format.
+====
+
+
+. Update an appropriate Pipeline to add vulnerabilities specifications in the following format:
+
++
+[source,yaml]
+----
+...
+spec:
+  results:
+    - description: The common vulnerabilities and exposures (CVE) result
+      name: SCAN_OUTPUT
+      value: $(tasks.vulnerability-scan.results.SCAN_OUTPUT)
+----
+
+. Rerun the modified OpenShift pipeline.
+
+.Verification
+
+. Log in to {product-short}.
+. Select *Catalog* and open an appropriate project for which you updated the pipeline in Openshift console.
+. Select the *CI* tab and review the *Vulnerabilities* column for a visual representation of identified vulnerabilities.
+
+
+== Setting up OpenShift Pipelines to view SBOM
+
+
+In {product}, under the CI tab, the Pipeline Runs section offers a feature to view Software Bill of Material (SBOM). This enhances transparency and control over your supply chain by listing all the software libraries a component utilizes. These libraries may provide specific functionality or facilitate development.
+
+You can use an SBOM to better understand the composition of your software, identify vulnerabilities, and assess the potential impact of any security issues that might arise.
+
+.Options to download or view SBOM
+image::rhdh-plugins-reference/sbom.png[]
+
+[NOTE]
+====
+The SBOM task discussed in this chapter uses `syft` for example purposes only. `syft` is a community project and is not supported by Red Hat Developer Hub by default. For guidance on implementing these or any other community-supported tasks consult your support agreements or contact support services.
+====
+
+.Prerequisites
+
+* You have link:https://docs.openshift.com/container-platform/4.14/web_console/web-console.html#web-console[logged in to the {ocp-short} web console].
+
+* You have the appropriate link:https://docs.openshift.com/container-platform/4.14/authentication/using-rbac.html#default-roles_using-rbac[roles and permissions] in a project to create applications and other workloads in {ocp-short}.
+
+.Procedure
+
+. In the *Developer* or *Administrator* perspective, switch to the relevant project where you want a visual representation of SBOM.
+
+. Add a task in the following format to view or download the SBOM information:
+
++
+.Example SBOM task
+
++
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: sbom-task # <1>
+  annotations:
+    task.output.location: results  # <2>
+    task.results.format: application/text
+    task.results.key: LINK_TO_SBOM  # <3>
+    task.results.type: external-link  # <4>
+spec:
+  results:
+    - description: Contains the SBOM link  # <5>
+      name: LINK_TO_SBOM
+  steps:
+    - name: print-sbom-results
+      image: quay.io/image  # <6>
+      script: | # <7>
+        #!/bin/sh
+        syft version
+        syft quay.io/<username>/quarkus-demo:v2 --output cyclonedx-json=sbom-image.json
+        echo 'BEGIN SBOM'
+        cat sbom-image.json
+        echo 'END SBOM'
+        echo 'quay.io/user/workloads/<namespace>/node-express/node-express:build-8e536-1692702836' | tee $(results.LINK_TO_SBOM.path) # <8>
+----
+<1> The name of your task.
+<2> The location for storing the task outputs.
+<3> The SBOM task result name. Do not change the name of the SBOM result task.
+<4> (Optional) Set to open the SBOM in a new tab.
+<5> The description of the result.
+<6> The image that generates the SBOM.
+<7> The script that generates the SBOM image.
+<8> The SBOM image along with the path name.
+
+. Update the Pipeline to reference the newly created SBOM task.
+
++
+[source,yaml]
+----
+...
+spec:
+  tasks:
+    - name: sbom-task  
+      taskRef: 
+        name: sbom-task # <1>
+  results:
+    - name: IMAGE_URL  # <2>
+      description: url
+      value: <oci_image_registry_url> # <3>
+----
+<1> The same name as created in Step 2.
+<2> The name of the result.
+<3> The OCI image repository URL which contains the `.sbom` images.
+
+. Rerun the modified OpenShift pipeline.
+
+
+== Viewing an SBOM in the web UI
+
+.Prerequisites
+
+* You have set up {pipelines-shortname} to download or view SBOM.
+
+.Procedure
+
+. Log in to {product}.
+. Select *Catalog* and open an appropriate project for which you updated the pipeline in Openshift console.
+. Select the *CI* tab.
+
+.. If you have defined the external link, select link icon and the system displays the SBOM in a new tab.
+
+.. If you have not defined an external link, selecting link icon displays the SBOM task logs and you can use your web browser to immediately search the SBOM for terms that indicate vulnerabilities in your software supply chain. For example, try searching for `log4j`.
+
+== Reading the SBOM
+
+In the SBOM, as the following sample excerpt shows, you can see four characteristics of each library that a project uses:
+
+* Its author or publisher
+
+* Its name
+
+* Its version
+
+* Its licenses
+
+This information helps you verify that individual libraries are safely-sourced, updated, and compliant.
+
+.Example SBOM
+
+[source,terminal]
+----
+{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.4",
+    "serialNumber": "urn:uuid:89146fc4-342f-496b-9cc9-07a6a1554220",
+    "version": 1,
+    "metadata": {
+        ...
+    },
+    "components": [
+        {
+            "bom-ref": "pkg:pypi/flask@2.1.0?package-id=d6ad7ed5aac04a8",
+            "type": "library",
+            "author": "Armin Ronacher <armin.ronacher@active-4.com>",
+            "name": "Flask",
+            "version": "2.1.0",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "BSD-3-Clause"
+                    }
+                }
+            ],
+            "cpe": "cpe:2.3:a:armin-ronacher:python-Flask:2.1.0:*:*:*:*:*:*:*",
+            "purl": "pkg:pypi/Flask@2.1.0",
+            "properties": [
+                {
+                    "name": "syft:package:foundBy",
+                    "value": "python-package-cataloger"
+                    ...
+----
