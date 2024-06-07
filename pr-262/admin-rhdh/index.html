@@ -453,7 +453,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </li>
 <li><a href="#assembly-configuring-postgresql-databases_admin-rhdh">3. Configuring external PostgreSQL databases</a>
 <ul class="sectlevel2">
-<li><a href="#generating-postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Generating PostgreSQL certificate for AWS RDS</a></li>
+<li><a href="#postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Downloading PostgreSQL certificate for AWS RDS</a></li>
 <li><a href="#generating-postgreSQL-certificate-for-azure-database_admin-rhdh">3.2. Generating PostgreSQL certificate for Azure database</a></li>
 <li><a href="#proc-creating-secrets-for-postgresql_admin-rhdh">3.3. Creating PostgreSQL secrets</a></li>
 <li><a href="#proc-configuring-postgresql-secrets-in-RHDH_admin-rhdh">3.4. Configuring PostgreSQL secrets in RHDH</a></li>
@@ -1598,9 +1598,9 @@ bash prepare-restricted-environment.sh \
 <p>As an administrator, you can configure and use external PostgreSQL databases in Red Hat Developer Hub. You must have a PostgreSQL certificate file that is used to configure the RHDH instance either using the Operator or Helm Chart.</p>
 </div>
 <div class="sect2">
-<h3 id="generating-postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Generating PostgreSQL certificate for AWS RDS</h3>
+<h3 id="postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Downloading PostgreSQL certificate for AWS RDS</h3>
 <div class="paragraph">
-<p>For Amazon Web Services (AWS) Relational Database Service (RDS), you can generate a PostgreSQL certificate file in the .pem format. The content of this file is used to create a PostgreSQL secret for Developer Hub configuration.</p>
+<p>For Amazon Web Services (AWS) Relational Database Service (RDS), you can download a PostgreSQL certificate file in the .pem format. The content of this file is used to create a PostgreSQL secret for Developer Hub configuration.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -1656,7 +1656,7 @@ postgres=&gt;
 <p>Go to the <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html#UsingWithRDS.SSL.CertificatesAllRegions">Certificate bundles for all AWS Regions</a> or <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html#UsingWithRDS.SSL.RegionCertificates">Certificate bundles for specific AWS Regions</a> site and download a certificate file of the .pem format.</p>
 </li>
 <li>
-<p>Use the .pem certificate file to create a PostgreSQL secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
+<p>Use the downloaded .pem certificate file to create a PostgreSQL secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
 </li>
 </ol>
 </div>
@@ -1679,7 +1679,7 @@ postgres=&gt;
 <p>You are using PostgreSQL version 15 on Azure.</p>
 </li>
 <li>
-<p>You have your database host, database port, username, and password handy. The format for database host is <code>&lt;db-instance-name&gt;.postgres.database.com</code>. The database port that is usually used is <code>5432</code>.</p>
+<p>You have your database host, database port, username, and password handy. The format for database host is <code>&lt;db-instance-name&gt;.postgres.database.azure.com</code>. The database port that is usually used is <code>5432</code>.</p>
 </li>
 <li>
 <p>You have installed the RHDH application by using one of the following options:</p>
@@ -1726,14 +1726,14 @@ postgres=&gt; 
 <p>Go to this <a href="https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/concepts-networking-ssl-tls#downloading-root-ca-certificates-and-updating-application-clients-in-certificate-pinning-scenarios">site</a> and convert .crt files you downloaded to .pem format as shown in the following example:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-bash" data-lang="bash">openssl x509 -in DigiCertGlobalRootCA.crt -out DigiCertGlobalRootCA.crt.pem -outform PEM
+<pre class="highlight"><code class="language-bash" data-lang="bash">openssl x509 -in "DigiCertGlobalRootCA.crt" -out "DigiCertGlobalRootCA.pem" -outform PEM
 
-openssl x509 -in Microsoft ECC Root Certificate Authority 2017.crt -out Microsoft ECC Root Certificate Authority 2017.crt.pem -outform PEM</code></pre>
+openssl x509 -in "Microsoft ECC Root Certificate Authority 2017.crt" -out "Microsoft ECC Root Certificate Authority 2017.pem" -outform PEM</code></pre>
 </div>
 </div>
 </li>
 <li>
-<p>Go to this <a href="https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/how-to-update-client-certificates-java#updating-root-ca-certificates-for-other-clients-for-certificate-pinning-scenarios">site</a> and merge two CA certificate files as shown in the following example:</p>
+<p>Go to this <a href="https://learn.microsoft.com/en-gb/azure/postgresql/flexible-server/how-to-update-client-certificates-java#updating-root-ca-certificates-for-other-clients-for-certificate-pinning-scenarios">site</a> and merge two CA certificate files into a single certificate file as shown in the following example:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-bash" data-lang="bash">cat DigiCertGlobalRootCA.crt.pem Microsoft ECC Root Certificate Authority 2017.crt.pem &gt; &lt;postgres-crt&gt;.pem</code></pre>
@@ -1741,7 +1741,7 @@ openssl x509 -in Microsoft ECC Root Certificate Authority 2017.crt -out Microsof
 </div>
 </li>
 <li>
-<p>Use the .pem certificate file to create a PostgreSQL secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
+<p>Use the generated .pem certificate file to create a PostgreSQL secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
 </li>
 </ol>
 </div>
@@ -6552,7 +6552,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-07 04:56:08 UTC
+Last updated 2024-06-07 11:01:08 UTC
 </div>
 </div>
 </body>
