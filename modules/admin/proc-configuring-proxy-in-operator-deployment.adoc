@@ -1,0 +1,80 @@
+[id="proc-configuring-proxy-in-operator-deployment_{context}"]
+= Configuring proxy information in Operator deployment
+
+For Operator-based deployment, the approach you use for proxy configuration is based on your role:
+
+* As a cluster administrator with access to the Operator namespace, you can configure the proxy variables in the Operator's default ConfigMap file. This configuration applies the proxy settings to all the users of the Operator.
+* As a developer, you can configure the proxy variables in a custom resource (CR) file. This configuration applies the proxy settings to the {product-very-short} application created from that CR.
+
+.Prerequisites
+
+* You have installed the {product} application.
+
+.Procedure
+
+. Perform one of the following steps based on your role:
+
+* As an administrator, set the proxy information in the Operator's default ConfigMap file:
++
+.. Search for a ConfigMap file named `backstage-default-config` in the default namespace `rhdh-operator` and open it. 
+.. Find the `deployment.yaml` key.
+.. Set the value of the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables in the `Deployment` spec as shown in the following example:
++ 
+.Example: Setting proxy variables in a ConfigMap file
+[source,yaml]
+----
+# Other fields omitted
+  deployment.yaml: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      template:
+        spec:
+          # Other fields omitted
+          initContainers:
+            - name: install-dynamic-plugins
+              # command omitted
+              env:
+                - name: NPM_CONFIG_USERCONFIG
+                  value: /opt/app-root/src/.npmrc.dynamic-plugins
+                - name: HTTP_PROXY
+                  value: 'http://10.10.10.105:3128'
+                - name: HTTPS_PROXY
+                  value: 'http://10.10.10.106:3128'
+                - name: NO_PROXY
+                  value: 'localhost,example.org'
+              # Other fields omitted
+          containers:
+            - name: backstage-backend
+              # Other fields omitted
+              env:
+                - name: APP_CONFIG_backend_listen_port
+                  value: "7007"
+                - name: HTTP_PROXY
+                  value: 'http://10.10.10.105:3128'
+                - name: HTTPS_PROXY
+                  value: 'http://10.10.10.106:3128'
+                - name: NO_PROXY
+                  value: 'localhost,example.org'
+----
+
+
+* As a developer, set the proxy information in your custom resource (CR) file as shown in the following example:
++ 
+.Example: Setting proxy variables in a CR file
+[source, yaml]
+----
+spec:
+  # Other fields omitted
+  application:
+    extraEnvs:
+      envs:
+        - name: HTTP_PROXY
+          value: 'http://10.10.10.105:3128'
+        - name: HTTPS_PROXY
+          value: 'http://10.10.10.106:3128'
+        - name: NO_PROXY
+          value: 'localhost,example.org'
+----
+
+. Save the configuration changes.
