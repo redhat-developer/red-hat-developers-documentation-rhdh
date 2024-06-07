@@ -448,7 +448,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#proc-install-rhdh_rhdh-getting-started">2. Installing Red Hat Developer Hub</a></li>
 <li><a href="#ref-rhdh-supported-configs_rhdh-getting-started">3. Supported configurations for Red Hat Developer Hub</a>
 <ul class="sectlevel2">
-<li><a href="#proc-add-custom-app-file-openshift_rhdh-getting-started">3.1. Adding a custom application configuration file to Red Hat OpenShift Container Platform</a></li>
+<li><a href="#assembly-add-custom-app-file-openshift_rhdh-getting-started">3.1. Adding a custom application configuration file to Red Hat OpenShift Container Platform</a></li>
 <li><a href="#proc-add-source-control-rhdh-catalog_rhdh-getting-started">3.2. Adding source control for Catalog in Red Hat Developer Hub</a></li>
 </ul>
 </li>
@@ -468,6 +468,13 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#proc-registering-github-app">9.2. Registering a GitHub​ App</a></li>
 <li><a href="#proc-configuring-github-app">9.3. Configuring a GitHub App in Developer Hub</a></li>
 <li><a href="#proc-adding-github-to-frontend">9.4. Adding the GitHub provider to the Developer Hub front end​</a></li>
+</ul>
+</li>
+<li><a href="#assembly-auth-provider-oidc">10. OpenID Connect authentication provider</a>
+<ul class="sectlevel2">
+<li><a href="#con-oidc-configration_rhdh-getting-started">10.1. Overview of using the OIDC authentication provider in Developer Hub</a></li>
+<li><a href="#proc-configuring-keycloak-with-oidc_rhdh-getting-started">10.2. Configuring Keycloak with the OIDC authentication provider</a></li>
+<li><a href="#proc-migrating-oauth2-proxy-to-oidc_rhdh-getting-started">10.3. Migrating from OAuth2 Proxy with Keycloak to OIDC in Developer Hub</a></li>
 </ul>
 </li>
 </ul>
@@ -554,9 +561,9 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </ul>
 </div>
 <div class="sect2">
-<h3 id="proc-add-custom-app-file-openshift_rhdh-getting-started">3.1. Adding a custom application configuration file to Red Hat OpenShift Container Platform</h3>
+<h3 id="assembly-add-custom-app-file-openshift_rhdh-getting-started">3.1. Adding a custom application configuration file to Red Hat OpenShift Container Platform</h3>
 <div class="paragraph">
-<p>To access the Red Hat Developer Hub, you must add a custom application configuration file to OpenShift. In OpenShift Container Platform, you can use the following content as a base template to create a ConfigMap named <code>app-config-rhdh</code>:</p>
+<p>To access the Red Hat Developer Hub, you must add a custom application configuration file to Red Hat OpenShift Container Platform. In OpenShift Container Platform, you can use the following content as a base template to create a ConfigMap named <code>app-config-rhdh</code>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -567,8 +574,26 @@ metadata:
 data:
   app-config-rhdh.yaml: |
     app:
-      title: Red Hat Developer Hub</code></pre>
+      title: {product}</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>You can add the custom application configuration file to OpenShift Container Platform in one of the following ways:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The Red Hat Developer Hub Operator</p>
+</li>
+<li>
+<p>The Red Hat Developer Hub Helm chart.</p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="proc-add-custom-app-file-openshift-helm_rhdh-getting-started">3.1.1. Adding a custom application configuration file to OpenShift Container Platform using the Helm chart</h4>
+<div class="paragraph">
+<p>You can use the Red Hat Developer Hub Helm chart to add a custom application configuration file to your OpenShift Container Platform instance.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -588,22 +613,19 @@ data:
 <p>Click <strong>Create ConfigMap</strong>.</p>
 </li>
 <li>
-<p>From <strong>Create ConfigMap</strong> page, select the <strong>YAML view</strong> option in <strong>Configure via</strong> and make the changes to the file, if needed.</p>
+<p>From <strong>Create ConfigMap</strong> page, select the <strong>YAML view</strong> option in <strong>Configure via</strong> and make changes to the file, if needed.</p>
 </li>
 <li>
 <p>Click <strong>Create</strong>.</p>
 </li>
 <li>
-<p>Go to the <strong>Helm</strong> tab.</p>
-<div class="paragraph">
-<p>The list of Helm Releases appears on the page.</p>
-</div>
+<p>Go to the <strong>Helm</strong> tab to see the list of Helm releases.</p>
 </li>
 <li>
-<p>Click the overflow menu on a Helm release and select <strong>Upgrade</strong>.</p>
+<p>Click the overflow menu on the Helm release that you want to use and select <strong>Upgrade</strong>.</p>
 </li>
 <li>
-<p>Use one of the following views to edit the Helm configuration:</p>
+<p>Use either the <strong>Form view</strong> or <strong>YAML view</strong> to edit the Helm configuration.</p>
 <div class="ulist">
 <ul>
 <li>
@@ -644,7 +666,7 @@ data:
 <div class="olist loweralpha">
 <ol class="loweralpha" type="a">
 <li>
-<p>Set the value of the <code>upstream.backstage.extraAppConfig.configMapRef</code> and <code>upstream.backstage.extraAppConfig.filename</code> parameters in the following manner:</p>
+<p>Set the value of the <code>upstream.backstage.extraAppConfig.configMapRef</code> and <code>upstream.backstage.extraAppConfig.filename</code> parameters as follows:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-yaml" data-lang="yaml"># ... other Red Hat Developer Hub Helm Chart configurations
@@ -667,6 +689,181 @@ upstream:
 </div>
 </li>
 </ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-add-custom-app-config-file-ocp-operator_rhdh-getting-started">3.1.2. Adding a custom application configuration file to OpenShift Container Platform using the Operator</h4>
+<div class="paragraph">
+<p>A custom application configuration file is a <code>ConfigMap</code> object that you can use to change the configuration of your Red Hat Developer Hub instance. If you are deploying your Developer Hub instance on Red Hat OpenShift Container Platform, you can use the Red Hat Developer Hub Operator to add a custom application configuration file to your OpenShift Container Platform instance by creating the <code>ConfigMap</code> object and referencing it in the Developer Hub custom resource (CR).</p>
+</div>
+<div class="paragraph">
+<p>The custom application configuration file contains a sensitive environment variable, named <code>BACKEND_SECRET</code>. This variable contains a mandatory backend authentication key that Developer Hub uses to reference an environment variable defined in an OpenShift Container Platform secret. You must create a secret, named 'secrets-rhdh', and reference it in the Developer Hub CR.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You are responsible for protecting your Red Hat Developer Hub installation from external and unauthorized access. Manage the backend authentication key like any other secret. Meet strong password requirements, do not expose it in any configuration files, and only inject it into configuration files as an environment variable.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an active Red Hat OpenShift Container Platform account.</p>
+</li>
+<li>
+<p>Your administrator has installed the Red Hat Developer Hub Operator in OpenShift Container Platform. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">Installing the Red Hat Developer Hub Operator</a>.</p>
+</li>
+<li>
+<p>You have created the Red Hat Developer Hub CR in OpenShift Container Platform.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>From the <strong>Developer</strong> perspective in the OpenShift Container Platform web console, select the <strong>ConfigMaps</strong> view.</p>
+</li>
+<li>
+<p>Click <strong>Create ConfigMap</strong>.</p>
+</li>
+<li>
+<p>Select the <strong>YAML view</strong> option in <strong>Configure via</strong> and use the following example as a base template to create a <code>ConfigMap</code> object, such as <code>app-config-rhdh.yaml</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;
+      cors:
+        origin: https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;</code></pre>
+</div>
+</div>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Use the mandatory backend authentication key for Red Hat Developer Hub to reference an environment variable defined in an OpenShift Container Platform secret.</p>
+</li>
+<li>
+<p>Set the external URL of your Red Hat Developer Hub instance in the <code>app.baseUrl</code>, <code>backend.baseUrl</code> and <code>backend.cors.origin</code> fields of the application configuration. By default, the URL is similar to the following example:
+<code>https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;;</code>.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You can use the <code>oc get ingresses.config/cluster -o jsonpath='{.spec.domain}'</code> command to display your ingress domain. If you want to use a different host or sub-domain, customize the CR <code>spec.application.route</code> field and adjust the application configuration accordingly.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Select the <strong>Secrets</strong> view.</p>
+</li>
+<li>
+<p>Click <strong>Create Key/value Secret</strong>.</p>
+</li>
+<li>
+<p>Create a secret named <code>secrets-rhdh</code>.</p>
+</li>
+<li>
+<p>Add a key named <code>BACKEND_SECRET</code> and a base64 encoded string as a value. Use a unique value for each Red Hat Developer Hub instance. For example, you can use the following command to generate a key from your terminal:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">node -p 'require("crypto").randomBytes(24).toString("base64")'</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Select the <strong>Topology</strong> view.</p>
+</li>
+<li>
+<p>Click the overflow menu for the Red Hat Developer Hub instance that you want to use and select <strong>Edit Backstage</strong> to load the YAML view of the Red Hat Developer Hub instance.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/operator-install-2.png" alt="operator install 2">
+</div>
+</div>
+</li>
+<li>
+<p>In the CR, enter the name of the custom application configuration config map as the value for the <code>spec.application.appConfig.configMaps</code> field, and enter the name of your secret as the value for the <code>spec.application.extraEnvs.secrets</code> field. For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config-rhdh
+    extraEnvs:
+      secrets:
+         - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Save</strong>.</p>
+</li>
+<li>
+<p>Navigate back to the <strong>Topology</strong> view and wait for the Red Hat Developer Hub pod to start.</p>
+</li>
+<li>
+<p>Click the <strong>Open URL</strong> icon to use the Red Hat Developer Hub platform with the configuration changes.</p>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information about roles and responsibilities in Developer Hub, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">Role-Based Access Control (RBAC) in Red Hat Developer Hub</a>.</p>
+</li>
+</ul>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -2681,10 +2878,296 @@ The Homepage URL points to the Developer Hub front end, while the authorization 
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="assembly-auth-provider-oidc">10. OpenID Connect authentication provider</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Red Hat Developer Hub uses the OpenID Connect (OIDC) authentication provider to authenticate with third-party services that support the OIDC protocol.</p>
+</div>
+<div class="sect2">
+<h3 id="con-oidc-configration_rhdh-getting-started">10.1. Overview of using the OIDC authentication provider in Developer Hub</h3>
+<div class="paragraph">
+<p>You can configure the OIDC authentication provider in Developer Hub by updating your <code>app-config.yaml</code> file under the root auth configuration. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: production
+  # Providing an auth.session.secret will enable session support in the auth-backend
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
+        prompt: ${AUTH_OIDC_PROMPT} # Recommended to use auto
+        ## Uncomment for additional configuration options
+        # callbackUrl: ${AUTH_OIDC_CALLBACK_URL}
+        # tokenEndpointAuthMethod: ${AUTH_OIDC_TOKEN_ENDPOINT_METHOD}
+        # tokenSignedResponseAlg: ${AUTH_OIDC_SIGNED_RESPONSE_ALG}
+        # scope: ${AUTH_OIDC_SCOPE}
+signInPage: oidc</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-configuring-keycloak-with-oidc_rhdh-getting-started">10.2. Configuring Keycloak with the OIDC authentication provider</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub includes an OIDC authentication provider that can authenticate users by using Keycloak.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The user that you create in Keycloak must also be available in the Developer Hub catalog.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In Keycloak, create a new realm, for example <code>RHDH</code>.</p>
+</li>
+<li>
+<p>Add a new user.</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Username</strong></dt>
+<dd>
+<p>Username for the user, for example: <code>rhdhuser</code></p>
+</dd>
+<dt class="hdlist1"><strong>Email</strong></dt>
+<dd>
+<p>Email address of the user.</p>
+</dd>
+<dt class="hdlist1"><strong>First name</strong></dt>
+<dd>
+<p>First name of the user.</p>
+</dd>
+<dt class="hdlist1"><strong>Last name</strong></dt>
+<dd>
+<p>Last name of the user.</p>
+</dd>
+<dt class="hdlist1"><strong>Email verified</strong></dt>
+<dd>
+<p>Toggle to <strong>On</strong>.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Navigate to the <strong>Credentials</strong> tab.</p>
+</li>
+<li>
+<p>Click <strong>Set password</strong>.</p>
+</li>
+<li>
+<p>Enter the <strong>Password</strong> for the user account and toggle <strong>Temporary</strong> to <strong>Off</strong>.</p>
+</li>
+<li>
+<p>Create a new Client ID, for example, <code>RHDH</code>.</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Client authentication</strong></dt>
+<dd>
+<p>Toggle to <strong>On</strong>.</p>
+</dd>
+<dt class="hdlist1"><strong>Valid redirect URIs</strong></dt>
+<dd>
+<p>Set to the OIDC handler URL, for example, <code><a href="https://&lt;RHDH_URL&gt;/api/auth/oidc/handler/frame" class="bare">https://&lt;RHDH_URL&gt;/api/auth/oidc/handler/frame</a></code>.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Navigate to the <strong>Credentials</strong> tab and copy the <strong>Client secret</strong>.</p>
+</li>
+<li>
+<p>Save the Client ID and the Client Secret for the next step.</p>
+</li>
+<li>
+<p>In Developer Hub, add your Keycloak credentials in your Developer Hub secrets.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Edit your Developer Hub secrets, such as secrets-rhdh.</p>
+</li>
+<li>
+<p>Add the following key/value pairs:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>AUTH_KEYCLOAK_CLIENT_ID</code></dt>
+<dd>
+<p>Enter the Client ID that you generated in Keycloak, such as <code>RHDH</code>.</p>
+</dd>
+<dt class="hdlist1"><code>AUTH_KEYCLOAK_CLIENT_SECRET</code></dt>
+<dd>
+<p>Enter the Client Secret that you generated in Keycloak.</p>
+</dd>
+</dl>
+</div>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Set up the OIDC authentication provider in your Developer Hub custom configuration.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Edit your custom Developer Hub ConfigMap, such as <code>app-config-rhdh</code>.</p>
+</li>
+<li>
+<p>In the <code>app-config-rhdh.yaml</code> content, add the <code>oidc</code> provider configuration under the root <code>auth</code> configuration, and enable the <code>oidc</code> provider for sign-in:</p>
+<div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+      clientId: ${AUTH_KEYCLOAK_CLIENT_ID}
+      clientSecret: ${AUTH_KEYCLOAK_CLIENT_SECRET}
+      metadataUrl: ${KEYCLOAK_BASE_URL}/auth/realms/${KEYCLOAK_REALM}
+      prompt: ${KEYCLOAK_PROMPT} # recommended to use auto
+      ## Uncomment for additional configuration options
+      #callbackUrl: ${KEYCLOAK_CALLBACK_URL}
+      #tokenEndpointAuthMethod: ${KEYCLOAK_TOKEN_ENDPOINT_METHOD}
+      #tokenSignedResponseAlg: ${KEYCLOAK_SIGNED_RESPONSE_ALG}
+      #scope: ${KEYCLOAK_SCOPE}
+signInPage: oidc</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Restart your <code>backstage-developer-hub</code> application to apply the changes.</p>
+</li>
+<li>
+<p>Your Developer Hub sign-in page displays <strong>Sign in using OIDC</strong>.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-migrating-oauth2-proxy-to-oidc_rhdh-getting-started">10.3. Migrating from OAuth2 Proxy with Keycloak to OIDC in Developer Hub</h3>
+<div class="paragraph">
+<p>If you are using OAuth2 Proxy as an authentication provider with Keycloak, and you want to migrate to OIDC, you can update your authentication provider configuration to use OIDC.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In Keycloak, update the valid redirect URI to <code><a href="https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame" class="bare">https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame</a></code>. Make sure to replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application URL, such as, <code>my.rhdh.example.com</code>.</p>
+</li>
+<li>
+<p>Replace the <code>oauth2Proxy</code> configuration values in the <code>auth</code> section of your <code>app-config.yaml</code> file with the <code>oidc</code> configuration values.</p>
+</li>
+<li>
+<p>Update the <code>signInPage</code> configuration value from <code>oauth2Proxy</code> to <code>oidc</code>.</p>
+<div class="paragraph">
+<p>The following example shows the <code>auth.providers</code> and <code>signInPage</code> configuration for <code>oauth2Proxy</code> prior to migrating the authentication provider to <code>oidc</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: production
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oauth2Proxy: {}
+signInPage: oauth2Proxy</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The following example shows the <code>auth.providers</code> and <code>signInPage</code> configuration after migrating the authentication provider to <code>oidc</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">auth:
+  environment: production
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${KEYCLOAK_METADATA_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        prompt: ${KEYCLOAK_PROMPT} # recommended to use auto
+signInPage: oidc</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Remove the OAuth2 Proxy sidecar container and update the <code>upstream.service</code> section of your Helm chart’s <code>values.yaml</code> file as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>service.ports.backend</code>: <code>7007</code></p>
+</li>
+<li>
+<p><code>service.ports.targetPort</code>: <code>backend</code></p>
+<div class="paragraph">
+<p>The following example shows the <code>service</code> configuration for <code>oauth2Proxy</code> prior to migrating the authentication provider to <code>oidc</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">service:
+  ports:
+    name: http-backend
+    backend: 4180
+    targetPort: oauth2Proxy</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The following example shows the <code>service</code> configuration after migrating the authentication provider to <code>oidc</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">service:
+  ports:
+    name: http-backend
+    backend: 7007
+    targetPort: backend</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Upgrade the Developer Hub Helm chart.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-05-27 12:54:10 UTC
+Last updated 2024-06-07 09:58:56 UTC
 </div>
 </div>
 </body>
