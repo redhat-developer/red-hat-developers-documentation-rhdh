@@ -456,6 +456,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#generating-postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Generating PostgreSQL certificate for AWS RDS</a></li>
 <li><a href="#generating-postgreSQL-certificate-for-azure-database_admin-rhdh">3.2. Generating PostgreSQL certificate for Azure database</a></li>
 <li><a href="#proc-creating-secrets-for-postgresql_admin-rhdh">3.3. Creating PostgreSQL secrets</a></li>
+<li><a href="#proc-configuring-postgresql-secrets-in-RHDH_admin-rhdh">3.4. Configuring PostgreSQL secrets in RHDH</a></li>
 </ul>
 </li>
 <li><a href="#enabling-authentication">4. Enabling authentication in Red Hat Developer Hub</a>
@@ -1807,8 +1808,134 @@ stringData:
 </li>
 </ol>
 </div>
+</div>
+<div class="sect2">
+<h3 id="proc-configuring-postgresql-secrets-in-RHDH_admin-rhdh">3.4. Configuring PostgreSQL secrets in RHDH</h3>
 <div class="paragraph">
-<p>Unresolved directive in assemblies/assembly-configuring-postgresql-databases.adoc - include::modules/admin/proc-configuring-postgresql-details-in-RHDH.adoc[leveloffset=+1]</p>
+<p>You can configure PostgreSQL credential and certificate secrets in the Red Hat Developer Hub application. This configuration helps you to connect Developer Hub with the PostgreSQL database.</p>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>Configure PostgreSQL details by using one of the following options:</p>
+<div class="olist loweralpha">
+<div class="title">Using Helm chart</div>
+<ol class="loweralpha" type="a">
+<li>
+<p>Add the following YAML code in your Helm configuration file named <code>values.yaml</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">upstream:
+ postgresql:
+   enabled: false  # disable PostgreSQL instance creation
+   auth:
+     existingSecret: postgres-cred
+ backstage:
+   appConfig:
+     backend:
+       database:
+         connection:  # configure Backstage DB connection parameters
+           host: ${POSTGRES_HOST}
+           port: ${POSTGRES_PORT}
+           user: ${POSTGRES_USER}
+           password: ${POSTGRES_PASSWORD}
+   extraEnvVarsSecrets:
+     - postgres-cred # inject credentials secret to Backstage cont.
+   extraEnvVars:
+     - name: BACKEND_SECRET
+       valueFrom:
+         secretKeyRef:
+           key: backend-secret
+           name: '{{ include "janus-idp.backend-secret-name" $ }}'
+   extraVolumeMounts:
+     - mountPath: /opt/app-root/src/dynamic-plugins-root
+       name: dynamic-plugins-root
+     - mountPath: /opt/app-root/src/postgres-crt.pem
+       name: postgres-crt # inject certificate secret to Backstage cont.
+       subPath: postgres-crt.pem
+   extraVolumes:
+     - ephemeral:
+         volumeClaimTemplate:
+           spec:
+             accessModes:
+               - ReadWriteOnce
+             resources:
+               requests:
+                 storage: 1Gi
+       name: dynamic-plugins-root
+     - configMap:
+         defaultMode: 420
+         name: dynamic-plugins
+         optional: true
+       name: dynamic-plugins
+     - name: dynamic-plugins-npmrc
+       secret:
+         defaultMode: 420
+         optional: true
+         secretName: dynamic-plugins-npmrc
+     - name: postgres-crt
+       secret:
+         secretName: postgres-crt</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the Helm configuration by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">helm install -n &lt;your-namespace&gt; &lt;your_deploy_name&gt; openshift-helm-charts/redhat-developer-hub -f values.yaml</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist loweralpha">
+<div class="title">Using the Operator</div>
+<ol class="loweralpha" type="a">
+<li>
+<p>Set the value of the <code>enableLocalDb</code> parameter to <code>false</code> to disable your local database:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+spec:
+ database:
+   enableLocalDb: false
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Add PostgreSQL credential and certificate secrets in the <code>&lt;rhdh-custom-resource&gt;</code> file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+spec:
+  application:
+    extraFiles:
+     mountPath: &lt;folder&gt; # e g /opt/app-root/src
+     secrets:
+       - name: &lt;postgres-crt&gt;
+         key: postgres-crt.pem # key name as in &lt;postgres-crt&gt; Secret
+    extraEnvs:
+      secrets:
+        - name: &lt;postgres-cred&gt;
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the configuration by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">oc -n &lt;your-namespace&gt; apply -f &lt;rhdh-custom-resource&gt;.yaml</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -6425,7 +6552,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-07 04:53:14 UTC
+Last updated 2024-06-07 04:56:08 UTC
 </div>
 </div>
 </body>
