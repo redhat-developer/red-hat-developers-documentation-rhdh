@@ -692,9 +692,177 @@ upstream:
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-add-custom-app-file-openshift-operator_rhdh-getting-started">3.1.2. Adding a custom application configuration file to OpenShift Container Platform using the Operator</h4>
+<h4 id="proc-add-custom-app-config-file-ocp-operator_rhdh-getting-started">3.1.2. Adding a custom application configuration file to OpenShift Container Platform using the Operator</h4>
 <div class="paragraph">
-<p>You can use the Red Hat Developer Hub Operator to add a custom application configuration file to your OpenShift Container Platform instance. For more information, see <em>Configuring the Developer Hub Custom Resource</em> in <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">Administration guide for Red Hat Developer Hub</a>.</p>
+<p>A custom application configuration file is a <code>ConfigMap</code> object that you can use to change the configuration of your Red Hat Developer Hub instance. If you are deploying your Developer Hub instance on Red Hat OpenShift Container Platform, you can use the Red Hat Developer Hub Operator to add a custom application configuration file to your OpenShift Container Platform instance by creating the <code>ConfigMap</code> object and referencing it in the Developer Hub custom resource (CR).</p>
+</div>
+<div class="paragraph">
+<p>The custom application configuration file contains a sensitive environment variable, named <code>BACKEND_SECRET</code>. This variable contains a mandatory backend authentication key that Developer Hub uses to reference an environment variable defined in an OpenShift Container Platform secret. You must create a secret, named 'secrets-rhdh', and reference it in the Developer Hub CR.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You are responsible for protecting your Red Hat Developer Hub installation from external and unauthorized access. Manage the backend authentication key like any other secret. Meet strong password requirements, do not expose it in any configuration files, and only inject it into configuration files as an environment variable.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an active Red Hat OpenShift Container Platform account.</p>
+</li>
+<li>
+<p>Your administrator has installed the Red Hat Developer Hub Operator in OpenShift Container Platform. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">Installing the Red Hat Developer Hub Operator</a>.</p>
+</li>
+<li>
+<p>You have created the Red Hat Developer Hub CR in OpenShift Container Platform.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>From the <strong>Developer</strong> perspective in the OpenShift Container Platform web console, select the <strong>ConfigMaps</strong> view.</p>
+</li>
+<li>
+<p>Click <strong>Create ConfigMap</strong>.</p>
+</li>
+<li>
+<p>Select the <strong>YAML view</strong> option in <strong>Configure via</strong> and use the following example as a base template to create a <code>ConfigMap</code> object, such as <code>app-config-rhdh.yaml</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;
+      cors:
+        origin: https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;</code></pre>
+</div>
+</div>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Use the mandatory backend authentication key for Red Hat Developer Hub to reference an environment variable defined in an OpenShift Container Platform secret.</p>
+</li>
+<li>
+<p>Set the external URL of your Red Hat Developer Hub instance in the <code>app.baseUrl</code>, <code>backend.baseUrl</code> and <code>backend.cors.origin</code> fields of the application configuration. By default, the URL is similar to the following example:
+<code>https://backstage-&lt;custom_resource_name&gt;-&lt;namespace_name&gt;.&lt;openshift_ingress_domain&gt;;</code>.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You can use the <code>oc get ingresses.config/cluster -o jsonpath='{.spec.domain}'</code> command to display your ingress domain. If you want to use a different host or sub-domain, customize the CR <code>spec.application.route</code> field and adjust the application configuration accordingly.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Select the <strong>Secrets</strong> view.</p>
+</li>
+<li>
+<p>Click <strong>Create Key/value Secret</strong>.</p>
+</li>
+<li>
+<p>Create a secret named <code>secrets-rhdh</code>.</p>
+</li>
+<li>
+<p>Add a key named <code>BACKEND_SECRET</code> and a base64 encoded string as a value. Use a unique value for each Red Hat Developer Hub instance. For example, you can use the following command to generate a key from your terminal:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">node -p 'require("crypto").randomBytes(24).toString("base64")'</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Select the <strong>Topology</strong> view.</p>
+</li>
+<li>
+<p>Click the overflow menu for the Red Hat Developer Hub instance that you want to use and select <strong>Edit Backstage</strong> to load the YAML view of the Red Hat Developer Hub instance.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/operator-install-2.png" alt="operator install 2">
+</div>
+</div>
+</li>
+<li>
+<p>In the CR, enter the name of the custom application configuration config map as the value for the <code>spec.application.appConfig.configMaps</code> field, and enter the name of your secret as the value for the <code>spec.application.extraEnvs.secrets</code> field. For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config-rhdh
+    extraEnvs:
+      secrets:
+         - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Save</strong>.</p>
+</li>
+<li>
+<p>Navigate back to the <strong>Topology</strong> view and wait for the Red Hat Developer Hub pod to start.</p>
+</li>
+<li>
+<p>Click the <strong>Open URL</strong> icon to use the Red Hat Developer Hub platform with the configuration changes.</p>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information about roles and responsibilities in Developer Hub, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">Role-Based Access Control (RBAC) in Red Hat Developer Hub</a>.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -1831,8 +1999,22 @@ data:
 <div class="sect1">
 <h2 id="proc-customizing-the-web-console_rhdh-getting-started">7. Customizing your theme in Red Hat Developer Hub</h2>
 <div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>You can customize your Red Hat Developer Hub (Developer Hub) theme mode.</p>
+<p>In Developer Hub, theme configurations are used to change the look and feel of different UI components. So, you might notice changes in different UI components, such as buttons, tabs, sidebars, cards, and tables along with some changes in background color and font used on the RHDH pages.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>You can customize your Red Hat Developer Hub theme mode.</p>
 </div>
 <div class="paragraph">
 <p>RHDH supports the following theme modes:</p>
@@ -2999,7 +3181,7 @@ signInPage: oidc</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-04 15:22:55 UTC
+Last updated 2024-06-10 07:40:54 UTC
 </div>
 </div>
 </body>
