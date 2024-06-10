@@ -465,8 +465,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </li>
 <li><a href="#assembly-rhdh-observability">5. Enabling observability for Red Hat Developer Hub</a>
 <ul class="sectlevel2">
-<li><a href="#proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability">5.1. Enabling metrics monitoring in a Helm chart deployment on an OpenShift Container Platform cluster</a></li>
-<li><a href="#proc-admin-enabling-metrics-ocp-operator_assembly-rhdh-observability">5.2. Enabling metrics monitoring in a Red Hat Developer Hub Operator deployment on an OpenShift Container Platform cluster</a></li>
+<li><a href="#proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability">5.1. Enabling metrics monitoring in a Helm chart installation on an OpenShift Container Platform cluster</a></li>
+<li><a href="#proc-admin-enabling-metrics-ocp-operator_assembly-rhdh-observability">5.2. Enabling metrics monitoring in a Red Hat Developer Hub Operator installation on an OpenShift Container Platform cluster</a></li>
 </ul>
 </li>
 <li><a href="#assembly-running-rhdh-behind-a-proxy">6. Running the RHDH application behind a corporate proxy</a>
@@ -2202,7 +2202,7 @@ extraEnvs:
 <p>Red Hat Developer Hub provides a <code>/metrics</code> endpoint that can be scraped by the Prometheus collector. You can use Prometheus and Grafana to monitor your Red Hat Developer Hub instance and observe metrics that are scraped from this endpoint.</p>
 </div>
 <div class="sect2">
-<h3 id="proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability">5.1. Enabling metrics monitoring in a Helm chart deployment on an OpenShift Container Platform cluster</h3>
+<h3 id="proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability">5.1. Enabling metrics monitoring in a Helm chart installation on an OpenShift Container Platform cluster</h3>
 <div class="paragraph">
 <p>You can enable and view metrics for a Red Hat Developer Hub Helm deployment from the <strong>Developer</strong> perspective of the OpenShift Container Platform web console.</p>
 </div>
@@ -2210,7 +2210,10 @@ extraEnvs:
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>Your OpenShift Container Platform cluster has <a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html">monitoring for user-defined projects</a> enabled, and <a href="https://docs.openshift.com/container-platform/4.15/observability/monitoring/managing-metrics.html#specifying-how-a-service-is-monitored_managing-metrics">a <code>ServiceMonitor</code> custom resource (CR)</a> has been created to scrape metrics from the endpoint.</p>
+<p>Your OpenShift Container Platform cluster has <a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html">monitoring for user-defined projects</a> enabled.</p>
+</li>
+<li>
+<p>You have <a href="https://docs.openshift.com/container-platform/4.15/observability/monitoring/managing-metrics.html#specifying-how-a-service-is-monitored_managing-metrics">created a <code>ServiceMonitor</code> custom resource (CR)</a> to scrape metrics from the endpoint.</p>
 </li>
 <li>
 <p>You have installed Red Hat Developer Hub on OpenShift Container Platform using the Helm chart.</p>
@@ -2268,7 +2271,7 @@ extraEnvs:
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-admin-enabling-metrics-ocp-operator_assembly-rhdh-observability">5.2. Enabling metrics monitoring in a Red Hat Developer Hub Operator deployment on an OpenShift Container Platform cluster</h3>
+<h3 id="proc-admin-enabling-metrics-ocp-operator_assembly-rhdh-observability">5.2. Enabling metrics monitoring in a Red Hat Developer Hub Operator installation on an OpenShift Container Platform cluster</h3>
 <div class="paragraph">
 <p>You can enable and view metrics for an Operator-installed Red Hat Developer Hub instance from the <strong>Developer</strong> perspective of the OpenShift Container Platform web console.</p>
 </div>
@@ -2276,12 +2279,79 @@ extraEnvs:
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>Your OpenShift Container Platform cluster has <a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html">monitoring for user-defined projects</a> enabled, and <a href="https://docs.openshift.com/container-platform/4.15/observability/monitoring/managing-metrics.html#specifying-how-a-service-is-monitored_managing-metrics">a <code>ServiceMonitor</code> custom resource (CR)</a> has been created to scrape metrics from the endpoint.</p>
+<p>Your OpenShift Container Platform cluster has <a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html">monitoring for user-defined projects</a> enabled.</p>
 </li>
 <li>
 <p>You have installed Red Hat Developer Hub on OpenShift Container Platform using the Red Hat Developer Hub Operator.</p>
 </li>
+<li>
+<p>You have installed the OpenShift Container Platform <code>oc</code> CLI.</p>
+</li>
 </ul>
+</div>
+<div class="paragraph">
+<div class="title">Procedure</div>
+<p>Currently, the Red Hat Developer Hub Operator does not support creating a <code>ServiceMonitor</code> custom resource (CR) by default. You must complete the following steps to create a <code>ServiceMonitor</code> custom resource (CR) to scrape metrics from the endpoint.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Substitute the values for your environment and then run the following commands to create the <code>ServiceMonitor</code> CR:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-terminal" data-lang="terminal">&lt;custom_resource_name&gt;=my-rhdh</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-terminal" data-lang="terminal">&lt;project_name&gt;=my-project</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF &gt; /tmp/$&lt;custom_resource_name&gt;.ServiceMonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: &lt;custom_resource_name&gt;
+  namespace: &lt;project_name&gt;
+  labels:
+    app.kubernetes.io/instance: &lt;custom_resource_name&gt;
+    app.kubernetes.io/name: backstage
+spec:
+  namespaceSelector:
+    matchNames:
+      - &lt;project_name&gt;
+  selector:
+    matchLabels:
+      janus-idp.io/app: backstage-&lt;custom_resource_name&gt;
+  endpoints:
+  - port: http-backend
+    path: '/metrics'
+EOF</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the <code>ServiceMonitor</code> CR by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-terminal" data-lang="terminal">oc apply -f /tmp/$&lt;custom_resource_name&gt;.ServiceMonitor.yaml</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>From the <strong>Developer</strong> perspective in the OpenShift Container Platform web console, select the <strong>Observe</strong> view.</p>
+</li>
+<li>
+<p>Click the <strong>Metrics</strong> tab to view metrics for Red Hat Developer Hub pods.</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -2290,7 +2360,6 @@ extraEnvs:
 <h2 id="assembly-running-rhdh-behind-a-proxy">6. Running the RHDH application behind a corporate proxy</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<div class="title">Verification</div>
 <p>You can run the RHDH application behind a corporate proxy by setting any of the following environment variables before starting the application:</p>
 </div>
 <div class="ulist">
@@ -6510,7 +6579,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-10 17:10:40 UTC
+Last updated 2024-06-10 17:24:15 UTC
 </div>
 </div>
 </body>
