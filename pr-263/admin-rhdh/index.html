@@ -2213,9 +2213,6 @@ extraEnvs:
 <p>Your OpenShift Container Platform cluster has <a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html">monitoring for user-defined projects</a> enabled.</p>
 </li>
 <li>
-<p>You have <a href="https://docs.openshift.com/container-platform/4.15/observability/monitoring/managing-metrics.html#specifying-how-a-service-is-monitored_managing-metrics">created a <code>ServiceMonitor</code> custom resource (CR)</a> to scrape metrics from the endpoint.</p>
-</li>
-<li>
 <p>You have installed Red Hat Developer Hub on OpenShift Container Platform using the Helm chart.</p>
 </li>
 </ul>
@@ -2285,7 +2282,7 @@ extraEnvs:
 <p>You have installed Red Hat Developer Hub on OpenShift Container Platform using the Red Hat Developer Hub Operator.</p>
 </li>
 <li>
-<p>You have installed the OpenShift Container Platform <code>oc</code> CLI.</p>
+<p>You have installed the OpenShift CLI (`oc`).</p>
 </li>
 </ul>
 </div>
@@ -2296,25 +2293,14 @@ extraEnvs:
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Substitute the values for your environment and then run the following commands to create the <code>ServiceMonitor</code> CR:</p>
+<p>Create the <code>ServiceMonitor</code> CR as a YAML file:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-terminal" data-lang="terminal">&lt;custom_resource_name&gt;=my-rhdh</code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-terminal" data-lang="terminal">&lt;project_name&gt;=my-project</code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF &gt; /tmp/$&lt;custom_resource_name&gt;.ServiceMonitor.yaml
-apiVersion: monitoring.coreos.com/v1
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: &lt;custom_resource_name&gt;
-  namespace: &lt;project_name&gt;
+  name: &lt;custom_resource_name&gt; # <b class="conum">(1)</b>
+  namespace: &lt;project_name&gt; # <b class="conum">(2)</b>
   labels:
     app.kubernetes.io/instance: &lt;custom_resource_name&gt;
     app.kubernetes.io/name: backstage
@@ -2324,19 +2310,28 @@ spec:
       - &lt;project_name&gt;
   selector:
     matchLabels:
-      janus-idp.io/app: backstage-&lt;custom_resource_name&gt;
+      rhdh.redhat.com/app: backstage-&lt;custom_resource_name&gt;
   endpoints:
-  - port: http-backend
-    path: '/metrics'
-EOF</code></pre>
+  - port: backend
+    path: '/metrics'</code></pre>
 </div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Replace <code>&lt;custom_resource_name&gt;</code> with the name of your Red Hat Developer Hub CR.</p>
+</li>
+<li>
+<p>Replace <code>&lt;project_name&gt;</code> with the name of the OpenShift Container Platform project where your Red Hat Developer Hub instance is running.</p>
+</li>
+</ol>
 </div>
 </li>
 <li>
 <p>Apply the <code>ServiceMonitor</code> CR by running the following command:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-terminal" data-lang="terminal">oc apply -f /tmp/$&lt;custom_resource_name&gt;.ServiceMonitor.yaml</code></pre>
+<pre class="highlight"><code class="language-terminal" data-lang="terminal">oc apply -f &lt;filename&gt;</code></pre>
 </div>
 </div>
 </li>
@@ -5175,6 +5170,24 @@ data:
 <td class="tableblock halign-left valign-top"><p class="tableblock">read</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to read a single or multiple steps from a template</p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scaffolder.task.create</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">create</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows the user or role to trigger software templates which create new scaffolder tasks</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scaffolder.task.cancel</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows the user or role to cancel currently running scaffolder tasks</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scaffolder.task.read</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">read</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to read all scaffolder tasks and their associated events and logs</p></td>
+</tr>
 </tbody>
 </table>
 <div class="dlist">
@@ -5250,6 +5263,76 @@ data:
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to access the proxy endpoint</p></td>
+</tr>
+</tbody>
+</table>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">OCM permissions</dt>
+</dl>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 25%;">
+<col style="width: 15%;">
+<col style="width: 45%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Resource type</th>
+<th class="tableblock halign-left valign-top">Policy</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ocm.entity.read</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">read</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to read from the OCM plugin</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ocm.cluster.read</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">read</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to read the cluster information in the OCM plugin</p></td>
+</tr>
+</tbody>
+</table>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Topology permissions</dt>
+</dl>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 25%;">
+<col style="width: 15%;">
+<col style="width: 45%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Resource type</th>
+<th class="tableblock halign-left valign-top">Policy</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>topology.view.read</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">read</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to view the topology plugin</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kubernetes.proxy</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to access the proxy endpoint, allowing them to read pod logs and events within RHDH</p></td>
 </tr>
 </tbody>
 </table>
@@ -6579,7 +6662,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-10 17:26:12 UTC
+Last updated 2024-06-12 15:13:00 UTC
 </div>
 </div>
 </body>
