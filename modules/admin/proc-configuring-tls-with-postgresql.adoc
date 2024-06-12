@@ -1,0 +1,154 @@
+[id="proc-configuring-tls-with-postgresql_{context}"]
+= Configuring TLS with the PostgreSQL database in {product-very-short}
+
+You can also configure Transport Layer Security (TLS) with the PostgreSQL database for secure transfer of data over different communication channels. 
+
+.Prerequisites
+
+* You have installed the CrunchyData PostgreSQL Operator in {ocp-short}. For more information, see link:https://access.crunchydata.com/documentation/postgres-operator/latest/quickstart#installation[Installing the PostgreSQL Operator].
+
+* You have created the PostgreSQL secret named `postgress-external-db-cluster-cert` in the namespace where you plan to configure the PostgreSQL database. For more information, see link:{LinkAdminGuide}#proc-creating-secrets-for-postgresql_admin-rhdh[Creating PostgreSQL secrets].  
+
+.Procedure
+
+. Configure the PostgreSQL database in a namespace by using the following YAML code:
++
+[source,yaml]
+----
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: postgress-external-db
+spec:
+  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-14.2-1
+  postgresVersion: 14
+  instances:
+    - name: instance1
+      dataVolumeClaimSpec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 2Gi
+      resources:
+        limits:
+          cpu: 300m
+        requests:
+          cpu: 200m
+      sidecars:
+        replicaCertCopy:
+          resources:
+            limits:
+              cpu: 300m
+            requests:
+              cpu: 200m
+  backups:
+    pgbackrest:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.38-0
+      global:
+        # Save backups for 7 days, this means 1 full backups with 6 differential ones in between
+        repo1-retention-full: "1"
+        repo1-retention-full-type: count
+      repoHost:
+        resources:
+          limits:
+            cpu: 300m
+          requests:
+            cpu: 200m
+      repos:
+        - name: repo1
+          schedules:
+            # Every sunday at 01:00 full backup
+            full: "0 1 * * 0"
+            # Monday through saturday at 01:00 differential backup
+            differential: "0 1 * * 1-6"
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - "ReadWriteOnce"
+              resources:
+                requests:
+                  storage: 2Gi
+      sidecars:
+        pgbackrest:
+          resources:
+            limits:
+              cpu: 300m
+            requests:
+              cpu: 200m
+        pgbackrestConfig:
+          resources:
+            limits:
+              cpu: 300m
+            requests:
+              cpu: 200m
+  users:
+    - name: janus-idp
+      options: "SUPERUSER"
+    - name: sonarqube
+      databases:
+        - sonarqube
+      options: "NOSUPERUSER"
+# ...
+----
+
+. Locate the self-signed certificates in the `postgress-external-db-cluster-cert` secret within the same namespace.
++
+[NOTE]
+====
+You can retrieve the password, hostname, port, and other relevant information for the user `janus-idp` from the `postgress-external-db-pguser-janus-idp` secret.
+====
+
+. Apply the `postgress-external-db-cluster-cert` secret to the namespace where you have deployed your {product-very-short} instance.
+. Update the `values.yaml` Helm configuration file to configure the TLS details as shown in the following example:
++
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+  # ...
+          connection:  # configure Backstage DB connection parameters
+            host: ${POSTGRES_HOST}
+            port: ${POSTGRES_PORT}
+            user: ${POSTGRES_USER}
+            password: ${POSTGRES_PASSWORD}
+            ssl:
+              rejectUnauthorized: true,
+              ca:
+                $file: /opt/app-root/src/postgres-ca.pem
+              key:
+                $file: /opt/app-root/src/postgres-key.key
+              cert:
+                $file: /opt/app-root/src/postgres-crt.pem
+         # ...
+    extraVolumeMounts:
+      # The initContainer below will install dynamic plugins in this volume mount.
+      - mountPath: /opt/app-root/src/postgres-crt.pem
+        name: postgress-external-db-cluster-cert
+        subPath: tls.crt
+      - mountPath: /opt/app-root/src/postgres-ca.pem
+        name: postgress-external-db-cluster-cert
+        subPath: ca.crt
+      - mountPath: /opt/app-root/src/postgres-key.key
+        name: postgress-external-db-cluster-cert
+        subPath: tls.key
+    extraVolumes:
+      # ...
+      - name: postgress-external-db-cluster-cert
+        secret:
+          secretName: postgress-external-db-cluster-cert        
+        # ...
+    initContainers:
+      # ...
+    extraEnvVarsSecrets:
+      - rhdh-secrets
+      - postgres-cred
+  postgresql:
+    enabled: false
+    auth:
+      existingSecret: postgres-cred      
+# ...    
+----
+
+. Save the configuration changes.
