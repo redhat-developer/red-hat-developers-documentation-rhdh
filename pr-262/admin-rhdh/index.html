@@ -457,6 +457,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#generating-postgreSQL-certificate-for-azure-database_admin-rhdh">3.2. Generating PostgreSQL certificate for Azure database</a></li>
 <li><a href="#proc-creating-secrets-for-postgresql_admin-rhdh">3.3. Creating PostgreSQL secrets</a></li>
 <li><a href="#proc-configuring-postgresql-secrets-in-RHDH_admin-rhdh">3.4. Configuring PostgreSQL secrets in RHDH</a></li>
+<li><a href="#proc-configuring-tls-with-postgresql_admin-rhdh">3.5. Configuring TLS with the PostgreSQL database in RHDH</a></li>
 </ul>
 </li>
 <li><a href="#enabling-authentication">4. Enabling authentication in Red Hat Developer Hub</a>
@@ -1597,6 +1598,20 @@ bash prepare-restricted-environment.sh \
 <div class="paragraph">
 <p>As an administrator, you can configure and use external PostgreSQL databases in Red Hat Developer Hub. You must have a PostgreSQL certificate file that is used to configure the RHDH instance either using the Operator or Helm Chart.</p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>RHDH supports only configuring PostgreSQL databases. You are responsible for maintenance activities, such as backing up your data or configuring high availability (HA) for the configured PostgreSQL databases.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 <div class="sect2">
 <h3 id="postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Downloading PostgreSQL certificate for AWS RDS</h3>
 <div class="paragraph">
@@ -1936,6 +1951,185 @@ spec:
 </div>
 </li>
 </ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-configuring-tls-with-postgresql_admin-rhdh">3.5. Configuring TLS with the PostgreSQL database in RHDH</h3>
+<div class="paragraph">
+<p>You can also configure Transport Layer Security (TLS) with the PostgreSQL database for secure transfer of data over different communication channels.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have installed the CrunchyData PostgreSQL Operator in OpenShift Container Platform. For more information, see <a href="https://access.crunchydata.com/documentation/postgres-operator/latest/quickstart#installation">Installing the PostgreSQL Operator</a>.</p>
+</li>
+<li>
+<p>You have created the PostgreSQL secret named <code>postgress-external-db-cluster-cert</code> in the namespace where you plan to configure the PostgreSQL database. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Configure the PostgreSQL database in a namespace by using the following YAML code:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: postgress-external-db
+spec:
+  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-14.2-1
+  postgresVersion: 14
+  instances:
+    - name: instance1
+      dataVolumeClaimSpec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 2Gi
+      resources:
+        limits:
+          cpu: 300m
+        requests:
+          cpu: 200m
+      sidecars:
+        replicaCertCopy:
+          resources:
+            limits:
+              cpu: 300m
+            requests:
+              cpu: 200m
+  backups:
+    pgbackrest:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.38-0
+      global:
+        # Save backups for 7 days, this means 1 full backups with 6 differential ones in between
+        repo1-retention-full: "1"
+        repo1-retention-full-type: count
+      repoHost:
+        resources:
+          limits:
+            cpu: 300m
+          requests:
+            cpu: 200m
+      repos:
+        - name: repo1
+          schedules:
+            # Every sunday at 01:00 full backup
+            full: "0 1 * * 0"
+            # Monday through saturday at 01:00 differential backup
+            differential: "0 1 * * 1-6"
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - "ReadWriteOnce"
+              resources:
+                requests:
+                  storage: 2Gi
+      sidecars:
+        pgbackrest:
+          resources:
+            limits:
+              cpu: 300m
+            requests:
+              cpu: 200m
+        pgbackrestConfig:
+          resources:
+            limits:
+              cpu: 300m
+            requests:
+              cpu: 200m
+  users:
+    - name: janus-idp
+      options: "SUPERUSER"
+    - name: sonarqube
+      databases:
+        - sonarqube
+      options: "NOSUPERUSER"
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Locate the self-signed certificates in the <code>postgress-external-db-cluster-cert</code> secret within the same namespace.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You can retrieve the password, hostname, port, and other relevant information for the user <code>janus-idp</code> from the <code>postgress-external-db-pguser-janus-idp</code> secret.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>Apply the <code>postgress-external-db-cluster-cert</code> secret to the namespace where you have deployed your RHDH instance.</p>
+</li>
+<li>
+<p>Update the <code>values.yaml</code> Helm configuration file to configure the TLS details as shown in the following example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
+  dynamic:
+    plugins:
+  # ...
+          connection:  # configure Backstage DB connection parameters
+            host: ${POSTGRES_HOST}
+            port: ${POSTGRES_PORT}
+            user: ${POSTGRES_USER}
+            password: ${POSTGRES_PASSWORD}
+            ssl:
+              rejectUnauthorized: true,
+              ca:
+                $file: /opt/app-root/src/postgres-ca.pem
+              key:
+                $file: /opt/app-root/src/postgres-key.key
+              cert:
+                $file: /opt/app-root/src/postgres-crt.pem
+         # ...
+    extraVolumeMounts:
+      # The initContainer below will install dynamic plugins in this volume mount.
+      - mountPath: /opt/app-root/src/postgres-crt.pem
+        name: postgress-external-db-cluster-cert
+        subPath: tls.crt
+      - mountPath: /opt/app-root/src/postgres-ca.pem
+        name: postgress-external-db-cluster-cert
+        subPath: ca.crt
+      - mountPath: /opt/app-root/src/postgres-key.key
+        name: postgress-external-db-cluster-cert
+        subPath: tls.key
+    extraVolumes:
+      # ...
+      - name: postgress-external-db-cluster-cert
+        secret:
+          secretName: postgress-external-db-cluster-cert
+        # ...
+    initContainers:
+      # ...
+    extraEnvVarsSecrets:
+      - rhdh-secrets
+      - postgres-cred
+  postgresql:
+    enabled: false
+    auth:
+      existingSecret: postgres-cred
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Save the configuration changes.</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -6552,7 +6746,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-07 11:01:08 UTC
+Last updated 2024-06-12 07:33:48 UTC
 </div>
 </div>
 </body>
