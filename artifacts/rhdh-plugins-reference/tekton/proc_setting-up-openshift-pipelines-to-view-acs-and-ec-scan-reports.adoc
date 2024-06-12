@@ -1,0 +1,153 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="setting-up-openshift-pipelines-to-view-acs-and-ec-scan-reports_{context}"]
+= Setting up OpenShift Pipelines to view ACS and EC scan reports
+
+[IMPORTANT]
+====
+The scan tasks discussed in this chapter, specifically those using `roxctl` and `enterprise-contract`, are presented as examples. Both are community projects and, as such, are not supported by Red Hat Developer Hub by default. For guidance on implementing these or any other community-supported tasks consult your support agreements or contact support services.
+====
+
+In {product}, under the CI tab, the Pipeline Runs section offers a feature to access and interpret detailed task reports through a structured pop-ip interface. The pop-up consists of the following sections:
+
+* *Enterprise Contract (conditionally shown on the availability of EC task):* If you have used Enterprise Contract (EC) scan tasks in your pipeline, this section displays information regarding your application's compliance with the Supply chain Levels for Software Artifacts (SLSA) security framework. Enterprise Contract is a tool that verifies the provenance of application snapshots against a defined policy, ensuring compliance with the Supply chain Levels for Software Artifacts (SLSA) security framework.
+
+* *Advanced Cluster Security (conditionally shown on the availability of ACS tasks):* If you have used Advanced Cluster Security (ACS) scan tasks in your pipeline, this section displays the individual tabs all the ACS scan tasks, for example, Image scan, Image check, and Deployment check, and offers an initial summary of the security issues.
+
+* *Others:* This section displays the results of a `PipelineRun`, for example, IMAGE_URL, and `IMAGE_DIGEST`. This section displays only when there is more than one section (for example, Enterprise Contract or Advanced Cluster Security) available in the pop-up.
+
++
+[NOTE]
+====
+In the absence of Advanced Cluster Security or Enterprise Contract task results, the pop-up displays only the name-value pair without a section title.
+====
+
+== Setting up OpenShift Pipelines to view detailed ACS and EC scan reports
+
+.Prerequisites
+
+* You have link:https://docs.openshift.com/container-platform/4.14/web_console/web-console.html#web-console[logged in to the {ocp-short} console].
+
+* You have the appropriate link:https://docs.openshift.com/container-platform/4.14/authentication/using-rbac.html#default-roles_using-rbac[roles and permissions] in a project to create applications and other workloads in {ocp-short}.
+
+* You have an existing vulnerability scan task.
+
+.Procedure
+
+. In the *Developer* or *Administrator* perspective, switch to the relevant project where you want access and interpret detailed vulnerability scan reports.
+
+. Update your existing vulnerability scan task with appropriate annotations.
+
+.. For ACS, update your existing scan task with annotations in the following format:
++
+[source,yaml]
+----
+...
+metadata:
+ name: acs-image-scan <1>
+ annotations:
+    task.results.format: application/json <2>
+    task.results.type: roxctl-image-scan <3>
+    task.results.key: SCAN_OUTPUT
+    task.output.location: logs
+    task.results.container: step-report <4>
+spec: …
+      steps:
+        - name: report
+          image: 'quay.io/lrangine/crda-maven:11.0'
+          script: |
+              #!/bin/sh
+              cat $(workspaces.reports.path)/image-scan
+----
+<1> Task name. For example, acs-image-scan, acs-image-check, acs-deployment-check
+<2> The supported result format
+<3> Type of scan tasks. For example, `roxctl-image-scan`, `roxctl-image-check`, and `roxctl-deployment-check`. You can create separate tasks in pipeline for these scan tasks.
+<4> The name of the container to get the POD logs.
+
+.. For EC, update your existing scan task with annotations in the following format:
++
+[source,yaml]
+----
+...
+metadata:
+ name: enterprise-contract-task <1>
+ annotations:
+    task.results.format: application/json <2>
+    task.results.type: ec <3>
+    task.output.location: logs
+    task.results.container: step-report-json <4>
+spec: …
+      steps:
+        - name: report-json
+          image: quay.io/enterprise-contract/ec-cli:snapshot@sha256:33be4031a3316a46db3559a4d8566bc22f9d4d491d262d699614f32f35b45b67 <5>
+          command: [cat]
+          args:
+            - "$(params.HOMEDIR)/report-json.json"
+----
+<1> Name of the task, such as enterprise-contract-task.
+<2> Format supported for the result.
+<3> Type of scan tool, here ec.
+<4> Container name for retrieving POD logs.
+<5> Image URL for the scanning tool.
+
+. Rerun the affected OpenShift Pipeline.
+
+.Verification
+
+. Log in to {product}.
+
+. Select *Catalog* and open an appropriate project for which you updated the pipeline in Openshift console.
+. Select the *CI* tab > *Actions* column > *View output* icon and review the detailed vulnerabilities reports in the software components.
+
++
+.The ACS and EC tasks in a pipeline
+image::rhdh-plugins-reference/acs-ec.png[]
+
+
+== Interpreting vulnerability and compliance scan reports
+
+The detailed reports generated by Advanced Cluster Security (ACS) and Enterprise Contract (EC) tasks are instrumental in providing security insights crucial for maintaining a robust security posture. 
+
+Here's an example of how to interpret `roxctl image scan` (Image Scan) reports. You can apply a similar approach to interpret reports from `roxctl image check` (Image Check) and `roxctl deployment check` (Deployment Check).
+
+*ACS scan insights*
+
+* *Vulnerability Breakdown:* ACS scans categorize detected vulnerabilities by severity (Critical, Important, Moderate, Low), status (fixable, non-fixable), and offer a summary of the scan results. This categorization includes the total number of vulnerabilities and components analyzed, alongside specific Common Vulnerabilities and Exposures (CVEs) identified.
+
+* *Details Provided:* For each identified vulnerability, the report includes:
+
+** *CVE ID:* A unique identifier for the vulnerability.
+** *Severity:* The level of threat posed by the vulnerability.
+** *Component:* The software component affected by the vulnerability.
+** *Component Version:* The version of the affected component.
+** *Remediation Suggestions:* Recommendations for addressing the vulnerability, including the version in which the vulnerability is fixed, if applicable.
+
+.The ACS report
+image::rhdh-plugins-reference/acsreport.png[]
+
+*EC Scan Insights*
+
+* *Policy Compliance Overview:* EC scans assess the application’s compliance with the Supply Chain Levels for Software Artifacts (SLSA) security framework. The reports list the checks conducted, the status (success, warning, failure) of each check, and provide messages for any warnings or failures observed.
+
+* *Details Provided:* Policy reports detail:
+
+** *Successful Checks*: Counts and specifics of policy rules met.
+
+** *Warnings and Failures*: Any policy rules that resulted in warnings or failures, with messages explaining the reason.
+
+** *Rule Compliance*: Specifics on how well the application adheres to individual policy rules, such as source code reference and attestation checks.
+
+.The EC report
+image::rhdh-plugins-reference/ecreport.png[]
+
+== Utilizing the insights from vulnerability and compliance scan reports
+
+The insights gleaned from ACS and EC scan reports are critical for prioritizing security and compliance efforts:
+
+* *Prioritize Critical Vulnerabilities:* Address vulnerabilities classified as critical with urgency to mitigate potential exploitation risks.
+
+* *Address Fixable Vulnerabilities:* Focus on vulnerabilities with available fixes to improve security posture efficiently. For vulnerabilities without immediate fixes, seek workarounds or implement additional security measures.
+
+* *Review Policy Compliance:* Ensure your application's integrity by closely reviewing compliance with SLSA and other relevant standards. Address any compliance gaps as per the EC scan recommendations.
+
+* *Streamline Report Review:* Employ provided filters within the reports to focus on significant areas, facilitating a more efficient review process and allowing for quick identification of critical issues and compliance gaps.
