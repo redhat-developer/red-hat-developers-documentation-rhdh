@@ -1,0 +1,130 @@
+[id="proc-configuring-postgresql-with-crunchy-database_{context}"]
+= Configuring an external PostgreSQL instance with TLS connection for Crunchy database
+
+You can configure an external PostgreSQL instance with the Crunchy database. To configure your PostgreSQL instance with TLS connection, you need a Certificate Authority (CA) certificate, TLS private key, and TLS certificate. 
+
+.Prerequisites
+
+* You have installed the CrunchyData PostgreSQL Operator on the {ocp-short} cluster. For more information, see link:https://access.crunchydata.com/documentation/postgres-operator/latest/quickstart#installation[Installing the PostgreSQL Operator].
+
+* You have generated the CA certificate, TLS key, and TLS certificate. For more information, see link:https://www.crunchydata.com/blog/set-up-tls-for-postgresql-in-kubernetes#prerequisites[Prerequisites to enable TLS].
+
+.Procedure
+
+. Create a credential secret named `postgres-cred` to connect with the PostgreSQL instance:
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgres-cred
+data: <1>
+  POSTGRES_PASSWORD: <password>
+  POSTGRES_PORT: "<db-port>"
+  POSTGRES_USER: <username>
+  POSTGRES_HOST: <db-host>
+  PGSSLMODE: <ssl-mode> # for TLS connection <2>
+EOF
+----
+<1> Provide credential data to connect with your PostgreSQL instance.
+<2> Provide the value to configure a TLS connection for your PostgreSQL instance.
++
+[NOTE]
+====
+You can retrieve the password, hostname, port, and other relevant information for the user `janus-idp` from the `postgress-external-db-pguser-janus-idp` secret.
+====
+
+. Create a certificate secret named `postgress-external-db-cluster-cert` with the CA certificate, TLS key, and TLS certificate files:
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgress-external-db-cluster-cert
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-key.key: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-crt.pem: |-    
+   -----BEGIN CERTIFICATE-----
+   XXX
+   # ...
+----
+
+. Apply the `postgress-external-db-cluster-cert` secret to the namespace where you have deployed your {product-very-short} instance:
++
+[source,terminal]
+----
+oc apply -n <your-namespace> -f postgress-external-db-cluster-cert.yaml
+----
+
+. Configure your PostgreSQL instance in the Helm configuration file named `values.yaml``:
++
+[source,yaml]
+----
+# ...
+upstream:
+ postgresql:
+   enabled: false  # disable PostgreSQL instance creation (1)
+ backstage:
+   appConfig:
+     backend:
+       database:
+          connection:  # configure Backstage DB connection parameters
+            host: ${POSTGRES_HOST}
+            port: ${POSTGRES_PORT}
+            user: ${POSTGRES_USER}
+            password: ${POSTGRES_PASSWORD}
+            ssl:
+              rejectUnauthorized: true,
+              ca:
+                $file: /opt/app-root/src/postgres-ca.pem
+              key:
+                $file: /opt/app-root/src/postgres-key.key
+              cert:
+                $file: /opt/app-root/src/postgres-crt.pem
+         # ...
+    extraVolumeMounts:
+      # The initContainer below will install dynamic plugins in this volume mount.
+      - mountPath: /opt/app-root/src/postgres-crt.pem
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
+        subPath: tls.crt
+      - mountPath: /opt/app-root/src/postgres-ca.pem
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
+        subPath: ca.crt
+      - mountPath: /opt/app-root/src/postgres-key.key
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
+        subPath: tls.key
+    extraVolumes:
+      # ...
+      - name: postgress-external-db-cluster-cert
+        secret:
+          secretName: postgress-external-db-cluster-cert  <2>      
+        # ...
+    initContainers:
+      # ...
+    extraEnvVarsSecrets:
+      - postgres-cred # inject credential secret to Backstage <3>
+    auth:
+      existingSecret: postgres-cred      
+# ...    
+----
+<1> Set the value of the `upstream.postgresql.enabled` parameter to `false` to disable creating local PostgreSQL instances. 
+<2> Ensure that the name of the certificate secret is correct.
+<3> Ensure that the name of the credential secret is correct.
+
+. Apply the configuration changes in your Helm configuration file:
++
+[source,yaml]
+----
+helm install -n <your-namespace> <your-release-name> redhat-developer/backstage -f values.yaml
+----
+

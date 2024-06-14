@@ -1,7 +1,7 @@
 [id="proc-configuring-postgresql-instance-using-helm_{context}"]
 = Configuring an external PostgreSQL instance using the Helm Chart
 
-You can configure and use a PostgreSQL instance by using the Helm Chart. By default, the Helm Chart creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the {product-very-short} instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, AWS RDS or Azure database. 
+You can configure an external PostgreSQL instance by using the Helm Chart. By default, the Helm Chart creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the {product-very-short} instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, AWS RDS, Azure database, or Crunchy database. 
 
 .Prerequisites
 
@@ -15,7 +15,7 @@ You can configure and use a PostgreSQL instance by using the Helm Chart. By defa
 
 [NOTE]
 ====
-By default, {product-short} uses a database for each plugin and automatically creates it if none is found. As an administrator, know that users might need the `Create Database` privilege in addition to `PSQL Database` privileges.  
+By default, {product-short} uses a database for each plugin and automatically creates it if none is found. As an administrator, know that users might need the `Create Database` privilege in addition to `PSQL Database` privileges for configuring an external PostgreSQL instance.  
 ====
  
 
@@ -36,7 +36,7 @@ stringData: <2>
  POSTGRES_PORT: "<db-port>"
  POSTGRES_USER: <username>
  POSTGRES_HOST: <db-host>
- PGSSLMODE: require #  for TLS connection <3>
+ PGSSLMODE: <ssl-mode> # for TLS connection <3>
  NODE_EXTRA_CA_CERTS: <abs-path-to-pem-file> # for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem <4>
 EOF
 ----
@@ -69,7 +69,7 @@ stringData:
 # ...
 upstream:
  postgresql:
-   enabled: false  # disable PostgreSQL instance creation <1>
+   enabled: false  # disable local PostgreSQL instance creation <1>
  backstage:
    appConfig:
      backend:
@@ -118,7 +118,7 @@ upstream:
          secretName: <crt-secret> <3>
          # ...
 ----
-<1> Creation of the PostgreSQL instance is disabled by default. To enable, set the value of this parameter to `true`.
+<1> Set the value of the `upstream.postgresql.enabled` parameter to `false` to disable creating local PostgreSQL instances.
 <2> Provide the name of the credential secret that you created.
 <3> Optional: Provide the name of the certificate secret only for a TLS connection.  
 
