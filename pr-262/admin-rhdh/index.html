@@ -458,7 +458,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#proc-configuring-postgresql-instance-using-operator_admin-rhdh">3.3. Configuring an external PostgreSQL instance using the Operator</a></li>
 <li><a href="#proc-configuring-postgresql-instance-using-helm_admin-rhdh">3.4. Configuring an external PostgreSQL instance using the Helm Chart</a></li>
 <li><a href="#proc-migrating-databases-to-an-external-server_admin-rhdh">3.5. Migrating local databases to an external database server</a></li>
-<li><a href="#proc-configuring-tls-with-postgresql_admin-rhdh">3.6. Configuring TLS with the PostgreSQL database in RHDH</a></li>
+<li><a href="#proc-configuring-postgresql-with-crunchy-database_admin-rhdh">3.6. Configuring an external PostgreSQL instance with TLS connection for Crunchy database</a></li>
 </ul>
 </li>
 <li><a href="#enabling-authentication">4. Enabling authentication in Red Hat Developer Hub</a>
@@ -1607,8 +1607,10 @@ bash prepare-restricted-environment.sh \
 </td>
 <td class="content">
 <div class="paragraph">
-<p>RHDH supports only configuring PostgreSQL databases. You are responsible for maintenance activities, such as backing up your data or configuring high availability (HA) for the configured PostgreSQL databases.
-Also, configuring the PostgreSQL databases by using the Red Hat Developer Hub Operator is not intended for production use.</p>
+<p>RHDH supports only configuring PostgreSQL databases. You are responsible for maintenance activities, such as backing up your data or configuring high availability (HA) for the configured PostgreSQL databases.</p>
+</div>
+<div class="paragraph">
+<p>Also, configuring PostgreSQL databases by using the Red Hat Developer Hub Operator is not intended for production use.</p>
 </div>
 </td>
 </tr>
@@ -1617,7 +1619,7 @@ Also, configuring the PostgreSQL databases by using the Red Hat Developer Hub Op
 <div class="sect2">
 <h3 id="postgresql-certificate-for-aws-rds_admin-rhdh">3.1. Downloading PostgreSQL certificate for AWS RDS</h3>
 <div class="paragraph">
-<p>For Amazon Web Services (AWS) Relational Database Service (RDS), you can download a PostgreSQL certificate file in the .pem format. The content of this file is used to create a PostgreSQL secret for Developer Hub configuration.</p>
+<p>For Amazon Web Services (AWS) Relational Database Service (RDS), you can download a PostgreSQL certificate file in the .pem format. The content of this file is used for creating a certificate secret to configure a PostgreSQL instance in Developer Hub.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -1673,7 +1675,7 @@ postgres=&gt;
 <p>Go to the <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html#UsingWithRDS.SSL.CertificatesAllRegions">Certificate bundles for all AWS Regions</a> or <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html#UsingWithRDS.SSL.RegionCertificates">Certificate bundles for specific AWS Regions</a> site and download a certificate file of the .pem format.</p>
 </li>
 <li>
-<p>Use the downloaded .pem certificate file to create a PostgreSQL secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
+<p>Use the downloaded .pem certificate file to create a certificate secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-configuring-postgresql-instance-using-operator_admin-rhdh">Configuring an external PostgreSQL instance using the Operator</a> or <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-configuring-postgresql-instance-using-helm_admin-rhdh">Configuring an external PostgreSQL instance using the Helm Chart</a>.</p>
 </li>
 </ol>
 </div>
@@ -1681,7 +1683,7 @@ postgres=&gt;
 <div class="sect2">
 <h3 id="generating-postgreSQL-certificate-for-azure-database_admin-rhdh">3.2. Generating PostgreSQL certificate for Azure database</h3>
 <div class="paragraph">
-<p>For Azure database, you can generate a PostgreSQL certificate file in the .pem format. The content of this certificate file is used to create a PostgreSQL secret for RHDH configuration.</p>
+<p>For Azure database, you can generate a PostgreSQL certificate file in the .pem format. The content of this certificate file is used for creating a certificate secret to configure a PostgreSQL instance in Developer Hub.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -1758,7 +1760,7 @@ openssl x509 -in "Microsoft ECC Root Certificate Authority 2017.crt" -out "Micro
 </div>
 </li>
 <li>
-<p>Use the generated .pem certificate file to create a PostgreSQL secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
+<p>Use the generated .pem certificate file to create a certificate secret. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-configuring-postgresql-instance-using-operator_admin-rhdh">Configuring an external PostgreSQL instance using the Operator</a> or <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-configuring-postgresql-instance-using-helm_admin-rhdh">Configuring an external PostgreSQL instance using the Helm Chart</a>.</p>
 </li>
 </ol>
 </div>
@@ -1766,7 +1768,7 @@ openssl x509 -in "Microsoft ECC Root Certificate Authority 2017.crt" -out "Micro
 <div class="sect2">
 <h3 id="proc-configuring-postgresql-instance-using-operator_admin-rhdh">3.3. Configuring an external PostgreSQL instance using the Operator</h3>
 <div class="paragraph">
-<p>You can configure and use a PostgreSQL instance by using the Red Hat Developer Hub Operator. By default, the Operator creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the RHDH instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, AWS RDS or Azure database.</p>
+<p>You can configure an external PostgreSQL instance by using the Red Hat Developer Hub Operator. By default, the Operator creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the RHDH instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, AWS RDS, Azure database, or Crunchy database.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -1803,7 +1805,7 @@ openssl x509 -in "Microsoft ECC Root Certificate Authority 2017.crt" -out "Micro
 </td>
 <td class="content">
 <div class="paragraph">
-<p>By default, Developer Hub uses a database for each plugin and automatically creates it if none is found. As an administrator, know that users might need the <code>Create Database</code> privilege in addition to <code>PSQL Database</code> privileges.</p>
+<p>By default, Developer Hub uses a database for each plugin and automatically creates it if none is found. As an administrator, know that users might need the <code>Create Database</code> privilege in addition to <code>PSQL Database</code> privileges for configuring an external PostgreSQL instance.</p>
 </div>
 </td>
 </tr>
@@ -1827,7 +1829,7 @@ stringData: <b class="conum">(2)</b>
  POSTGRES_PORT: "&lt;db-port&gt;"
  POSTGRES_USER: &lt;username&gt;
  POSTGRES_HOST: &lt;db-host&gt;
- PGSSLMODE: require #  for TLS connection <b class="conum">(3)</b>
+ PGSSLMODE: &lt;ssl-mode&gt; # for TLS connection <b class="conum">(3)</b>
  NODE_EXTRA_CA_CERTS: &lt;abs-path-to-pem-file&gt; # for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem <b class="conum">(4)</b>
 EOF</code></pre>
 </div>
@@ -1919,13 +1921,16 @@ spec:
 </table>
 </div>
 </li>
+<li>
+<p>Apply the <code>Backstage</code> CR to the namespace where you have deployed the RHDH instance.</p>
+</li>
 </ol>
 </div>
 </div>
 <div class="sect2">
 <h3 id="proc-configuring-postgresql-instance-using-helm_admin-rhdh">3.4. Configuring an external PostgreSQL instance using the Helm Chart</h3>
 <div class="paragraph">
-<p>You can configure and use a PostgreSQL instance by using the Helm Chart. By default, the Helm Chart creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the RHDH instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, AWS RDS or Azure database.</p>
+<p>You can configure an external PostgreSQL instance by using the Helm Chart. By default, the Helm Chart creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the RHDH instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, AWS RDS, Azure database, or Crunchy database.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -1962,7 +1967,7 @@ spec:
 </td>
 <td class="content">
 <div class="paragraph">
-<p>By default, Developer Hub uses a database for each plugin and automatically creates it if none is found. As an administrator, know that users might need the <code>Create Database</code> privilege in addition to <code>PSQL Database</code> privileges.</p>
+<p>By default, Developer Hub uses a database for each plugin and automatically creates it if none is found. As an administrator, know that users might need the <code>Create Database</code> privilege in addition to <code>PSQL Database</code> privileges for configuring an external PostgreSQL instance.</p>
 </div>
 </td>
 </tr>
@@ -1986,7 +1991,7 @@ stringData: <b class="conum">(2)</b>
  POSTGRES_PORT: "&lt;db-port&gt;"
  POSTGRES_USER: &lt;username&gt;
  POSTGRES_HOST: &lt;db-host&gt;
- PGSSLMODE: require #  for TLS connection <b class="conum">(3)</b>
+ PGSSLMODE: &lt;ssl-mode&gt; # for TLS connection <b class="conum">(3)</b>
  NODE_EXTRA_CA_CERTS: &lt;abs-path-to-pem-file&gt; # for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem <b class="conum">(4)</b>
 EOF</code></pre>
 </div>
@@ -2033,7 +2038,7 @@ stringData:
 <pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
 upstream:
  postgresql:
-   enabled: false  # disable PostgreSQL instance creation <b class="conum">(1)</b>
+   enabled: false  # disable local PostgreSQL instance creation <b class="conum">(1)</b>
  backstage:
    appConfig:
      backend:
@@ -2086,7 +2091,7 @@ upstream:
 <div class="colist arabic">
 <ol>
 <li>
-<p>Creation of the PostgreSQL instance is disabled by default. To enable, set the value of this parameter to <code>true</code>.</p>
+<p>Set the value of the <code>upstream.postgresql.enabled</code> parameter to <code>false</code> to disable creating local PostgreSQL instances.</p>
 </li>
 <li>
 <p>Provide the name of the credential secret that you created.</p>
@@ -2134,10 +2139,10 @@ upstream:
 <p>You have installed the <a href="https://www.postgresql.org/docs/current/app-pgdump.html">pg_dump</a> and <a href="https://www.postgresql.org/docs/current/app-psql.html">psql</a> utilities on your local machine.</p>
 </li>
 <li>
-<p>For data export, the PGSQL user sufficient privileges to make a full dump of local databases.</p>
+<p>For data export, you have the PGSQL user sufficient privileges to make a full dump of local databases.</p>
 </li>
 <li>
-<p>For data import, the PGSQL user sufficient admin privileges to create an external database and populate it with database dumps.</p>
+<p>For data import, you have the PGSQL user sufficient admin privileges to create an external database and populate it with database dumps.</p>
 </li>
 </ul>
 </div>
@@ -2160,10 +2165,10 @@ upstream:
 <p>The <code>&lt;pgsql-pod-name&gt;</code> variable denotes the name of a PostgreSQL pod with the format <code>backstage-psql--&lt;_index&gt;</code>.</p>
 </li>
 <li>
-<p>The <code>&lt;forward-to-port&gt;</code> variable denotes the port of your choice to forward PostgreSQL data to</p>
+<p>The <code>&lt;forward-to-port&gt;</code> variable denotes the port of your choice to forward PostgreSQL data to.</p>
 </li>
 <li>
-<p>The <code>&lt;forward-from-port&gt;</code> variable denotes the local PostgreSQL instance port, usually <code>5432</code></p>
+<p>The <code>&lt;forward-from-port&gt;</code> variable denotes the local PostgreSQL instance port, usually <code>5432</code>.</p>
 <div class="listingblock">
 <div class="title">Example: Configuring port forwarding</div>
 <div class="content">
@@ -2286,9 +2291,9 @@ spec:
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-configuring-tls-with-postgresql_admin-rhdh">3.6. Configuring TLS with the PostgreSQL database in RHDH</h3>
+<h3 id="proc-configuring-postgresql-with-crunchy-database_admin-rhdh">3.6. Configuring an external PostgreSQL instance with TLS connection for Crunchy database</h3>
 <div class="paragraph">
-<p>You can also configure Transport Layer Security (TLS) with the PostgreSQL database for secure transfer of data over different communication channels.</p>
+<p>You can configure an external PostgreSQL instance with the Crunchy database. To configure your PostgreSQL instance with TLS connection, you need a Certificate Authority (CA) certificate, TLS private key, and TLS certificate.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -2297,7 +2302,7 @@ spec:
 <p>You have installed the CrunchyData PostgreSQL Operator on the OpenShift Container Platform cluster. For more information, see <a href="https://access.crunchydata.com/documentation/postgres-operator/latest/quickstart#installation">Installing the PostgreSQL Operator</a>.</p>
 </li>
 <li>
-<p>You have created the PostgreSQL secret named <code>postgress-external-db-cluster-cert</code> in the namespace where you plan to configure the PostgreSQL database. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#proc-creating-secrets-for-postgresql_admin-rhdh">Creating PostgreSQL secrets</a>.</p>
+<p>You have generated the CA certificate, TLS key, and TLS certificate. For more information, see <a href="https://www.crunchydata.com/blog/set-up-tls-for-postgresql-in-kubernetes#prerequisites">Prerequisites to enable TLS</a>.</p>
 </li>
 </ul>
 </div>
@@ -2305,89 +2310,33 @@ spec:
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>Configure the PostgreSQL database in a namespace by using the following YAML code:</p>
+<p>Create a credential secret named <code>postgres-cred</code> to connect with the PostgreSQL instance:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: postgres-operator.crunchydata.com/v1beta1
-kind: PostgresCluster
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
+apiVersion: v1
+kind: Secret
 metadata:
-  name: postgress-external-db
-spec:
-  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-14.2-1
-  postgresVersion: 14
-  instances:
-    - name: instance1
-      dataVolumeClaimSpec:
-        accessModes:
-          - "ReadWriteOnce"
-        resources:
-          requests:
-            storage: 2Gi
-      resources:
-        limits:
-          cpu: 300m
-        requests:
-          cpu: 200m
-      sidecars:
-        replicaCertCopy:
-          resources:
-            limits:
-              cpu: 300m
-            requests:
-              cpu: 200m
-  backups:
-    pgbackrest:
-      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.38-0
-      global:
-        # Save backups for 7 days, this means 1 full backups with 6 differential ones in between
-        repo1-retention-full: "1"
-        repo1-retention-full-type: count
-      repoHost:
-        resources:
-          limits:
-            cpu: 300m
-          requests:
-            cpu: 200m
-      repos:
-        - name: repo1
-          schedules:
-            # Every sunday at 01:00 full backup
-            full: "0 1 * * 0"
-            # Monday through saturday at 01:00 differential backup
-            differential: "0 1 * * 1-6"
-          volume:
-            volumeClaimSpec:
-              accessModes:
-                - "ReadWriteOnce"
-              resources:
-                requests:
-                  storage: 2Gi
-      sidecars:
-        pgbackrest:
-          resources:
-            limits:
-              cpu: 300m
-            requests:
-              cpu: 200m
-        pgbackrestConfig:
-          resources:
-            limits:
-              cpu: 300m
-            requests:
-              cpu: 200m
-  users:
-    - name: janus-idp
-      options: "SUPERUSER"
-    - name: sonarqube
-      databases:
-        - sonarqube
-      options: "NOSUPERUSER"
-# ...</code></pre>
+ name: postgres-cred
+data: <b class="conum">(1)</b>
+  POSTGRES_PASSWORD: &lt;password&gt;
+  POSTGRES_PORT: "&lt;db-port&gt;"
+  POSTGRES_USER: &lt;username&gt;
+  POSTGRES_HOST: &lt;db-host&gt;
+  PGSSLMODE: &lt;ssl-mode&gt; # for TLS connection <b class="conum">(2)</b>
+EOF</code></pre>
 </div>
 </div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Provide credential data to connect with your PostgreSQL instance.</p>
 </li>
 <li>
-<p>Locate the self-signed certificates in the <code>postgress-external-db-cluster-cert</code> secret within the same namespace.</p>
+<p>Provide the value to configure a TLS connection for your PostgreSQL instance.</p>
+</li>
+</ol>
+</div>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -2404,16 +2353,49 @@ spec:
 </div>
 </li>
 <li>
-<p>Apply the <code>postgress-external-db-cluster-cert</code> secret to the namespace where you have deployed your RHDH instance.</p>
-</li>
-<li>
-<p>Update the <code>values.yaml</code> Helm configuration file to configure the TLS details as shown in the following example:</p>
+<p>Create a certificate secret named <code>postgress-external-db-cluster-cert</code> with the CA certificate, TLS key, and TLS certificate files:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">global:
-  dynamic:
-    plugins:
-  # ...
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgress-external-db-cluster-cert
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-key.key: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-crt.pem: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+   # ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the <code>postgress-external-db-cluster-cert</code> secret to the namespace where you have deployed your RHDH instance:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-terminal" data-lang="terminal">oc apply -n &lt;your-namespace&gt; -f postgress-external-db-cluster-cert.yaml</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Configure your PostgreSQL instance in the Helm configuration file named <code>values.yaml`</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+upstream:
+ postgresql:
+   enabled: false  # disable PostgreSQL instance creation (1)
+ backstage:
+   appConfig:
+     backend:
+       database:
           connection:  # configure Backstage DB connection parameters
             host: ${POSTGRES_HOST}
             port: ${POSTGRES_PORT}
@@ -2431,35 +2413,50 @@ spec:
     extraVolumeMounts:
       # The initContainer below will install dynamic plugins in this volume mount.
       - mountPath: /opt/app-root/src/postgres-crt.pem
-        name: postgress-external-db-cluster-cert
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
         subPath: tls.crt
       - mountPath: /opt/app-root/src/postgres-ca.pem
-        name: postgress-external-db-cluster-cert
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
         subPath: ca.crt
       - mountPath: /opt/app-root/src/postgres-key.key
-        name: postgress-external-db-cluster-cert
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
         subPath: tls.key
     extraVolumes:
       # ...
       - name: postgress-external-db-cluster-cert
         secret:
-          secretName: postgress-external-db-cluster-cert
+          secretName: postgress-external-db-cluster-cert  <b class="conum">(2)</b>
         # ...
     initContainers:
       # ...
     extraEnvVarsSecrets:
-      - rhdh-secrets
-      - postgres-cred
-  postgresql:
-    enabled: false
+      - postgres-cred # inject credential secret to Backstage <b class="conum">(3)</b>
     auth:
       existingSecret: postgres-cred
 # ...</code></pre>
 </div>
 </div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Set the value of the <code>upstream.postgresql.enabled</code> parameter to <code>false</code> to disable creating local PostgreSQL instances.</p>
 </li>
 <li>
-<p>Save the configuration changes.</p>
+<p>Ensure that the name of the certificate secret is correct.</p>
+</li>
+<li>
+<p>Ensure that the name of the credential secret is correct.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Apply the configuration changes in your Helm configuration file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">helm install -n &lt;your-namespace&gt; &lt;your-release-name&gt; redhat-developer/backstage -f values.yaml</code></pre>
+</div>
+</div>
 </li>
 </ol>
 </div>
@@ -7078,7 +7075,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-13 12:51:11 UTC
+Last updated 2024-06-14 11:14:26 UTC
 </div>
 </div>
 </body>
