@@ -457,8 +457,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#generating-postgreSQL-certificate-for-azure-database_admin-rhdh">3.2. Generating PostgreSQL certificate for Azure database</a></li>
 <li><a href="#proc-configuring-postgresql-instance-using-operator_admin-rhdh">3.3. Configuring an external PostgreSQL instance using the Operator</a></li>
 <li><a href="#proc-configuring-postgresql-instance-using-helm_admin-rhdh">3.4. Configuring an external PostgreSQL instance using the Helm Chart</a></li>
-<li><a href="#proc-migrating-databases-to-an-external-server_admin-rhdh">3.5. Migrating local databases to an external database server</a></li>
-<li><a href="#proc-configuring-postgresql-with-crunchy-database_admin-rhdh">3.6. Configuring an external PostgreSQL instance with TLS connection for Crunchy database</a></li>
+<li><a href="#proc-configuring-postgresql-with-crunchy-database_admin-rhdh">3.5. Configuring an external PostgreSQL instance with TLS connection for Crunchy database</a></li>
+<li><a href="#proc-migrating-databases-to-an-external-server_admin-rhdh">3.6. Migrating local databases to an external database server</a></li>
 </ul>
 </li>
 <li><a href="#enabling-authentication">4. Enabling authentication in Red Hat Developer Hub</a>
@@ -2114,7 +2114,186 @@ upstream:
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-migrating-databases-to-an-external-server_admin-rhdh">3.5. Migrating local databases to an external database server</h3>
+<h3 id="proc-configuring-postgresql-with-crunchy-database_admin-rhdh">3.5. Configuring an external PostgreSQL instance with TLS connection for Crunchy database</h3>
+<div class="paragraph">
+<p>You can configure an external PostgreSQL instance with the Crunchy database. To configure your PostgreSQL instance with TLS connection, you need a Certificate Authority (CA) certificate, TLS private key, and TLS certificate.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have a Crunchy database account with active subscription.</p>
+</li>
+<li>
+<p>You have installed the CrunchyData PostgreSQL Operator on the OpenShift Container Platform cluster. For more information, see <a href="https://access.crunchydata.com/documentation/postgres-operator/latest/quickstart#installation">Installing the PostgreSQL Operator</a>.</p>
+</li>
+<li>
+<p>You have generated the CA certificate, TLS key, and TLS certificate. For more information, see <a href="https://www.crunchydata.com/blog/set-up-tls-for-postgresql-in-kubernetes#prerequisites">Prerequisites to enable TLS</a>.</p>
+</li>
+<li>
+<p>You are using PostgreSQL version 15 on the Crunchy database.</p>
+</li>
+<li>
+<p>You have your database host, database port, username, and password handy. The database port that is usually used is <code>5432</code>.</p>
+</li>
+<li>
+<p>You have installed the RHDH application by using one of the following options:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Red Hat Developer Hub Operator</p>
+</li>
+<li>
+<p>Helm Chart</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Create a credential secret named <code>postgres-cred</code> to connect with the PostgreSQL instance:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgres-cred
+data: <b class="conum">(1)</b>
+  POSTGRES_PASSWORD: &lt;password&gt;
+  POSTGRES_PORT: "&lt;db-port&gt;"
+  POSTGRES_USER: &lt;username&gt;
+  POSTGRES_HOST: &lt;db-host&gt;
+  PGSSLMODE: &lt;ssl-mode&gt; # for TLS connection <b class="conum">(2)</b>
+EOF</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Provide credential data to connect with your PostgreSQL instance.</p>
+</li>
+<li>
+<p>Provide the value to configure a TLS connection for your PostgreSQL instance.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Create a certificate secret named <code>postgress-external-db-cluster-cert</code> with the CA certificate, TLS key, and TLS certificate files:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgress-external-db-cluster-cert
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-key.key: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-crt.pem: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+   # ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Apply the <code>postgress-external-db-cluster-cert</code> secret to the namespace where you have deployed your RHDH instance:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-terminal" data-lang="terminal">oc apply -n &lt;your-namespace&gt; -f postgress-external-db-cluster-cert.yaml</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Configure your PostgreSQL instance in the Helm configuration file named <code>values.yaml`</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
+upstream:
+ postgresql:
+   enabled: false  # disable PostgreSQL instance creation (1)
+ backstage:
+   appConfig:
+     backend:
+       database:
+          connection:  # configure Backstage DB connection parameters
+            host: ${POSTGRES_HOST}
+            port: ${POSTGRES_PORT}
+            user: ${POSTGRES_USER}
+            password: ${POSTGRES_PASSWORD}
+            ssl:
+              rejectUnauthorized: true,
+              ca:
+                $file: /opt/app-root/src/postgres-ca.pem
+              key:
+                $file: /opt/app-root/src/postgres-key.key
+              cert:
+                $file: /opt/app-root/src/postgres-crt.pem
+         # ...
+    extraVolumeMounts:
+      # The initContainer below will install dynamic plugins in this volume mount.
+      - mountPath: /opt/app-root/src/postgres-crt.pem
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
+        subPath: tls.crt
+      - mountPath: /opt/app-root/src/postgres-ca.pem
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
+        subPath: ca.crt
+      - mountPath: /opt/app-root/src/postgres-key.key
+        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
+        subPath: tls.key
+    extraVolumes:
+      # ...
+      - name: postgress-external-db-cluster-cert
+        secret:
+          secretName: postgress-external-db-cluster-cert  <b class="conum">(2)</b>
+        # ...
+    initContainers:
+      # ...
+    extraEnvVarsSecrets:
+      - postgres-cred # inject credential secret to Backstage <b class="conum">(3)</b>
+    auth:
+      existingSecret: postgres-cred
+# ...</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Set the value of the <code>upstream.postgresql.enabled</code> parameter to <code>false</code> to disable creating local PostgreSQL instances.</p>
+</li>
+<li>
+<p>Ensure that the name of the certificate secret is correct.</p>
+</li>
+<li>
+<p>Ensure that the name of the credential secret is correct.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Apply the configuration changes in your Helm configuration file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">helm install -n &lt;your-namespace&gt; &lt;your-release-name&gt; redhat-developer/backstage -f values.yaml</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-migrating-databases-to-an-external-server_admin-rhdh">3.6. Migrating local databases to an external database server</h3>
 <div class="paragraph">
 <p>By default, Red Hat Developer Hub hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured. You can migrate the data from an RHDH instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS or Azure database. To migrate the data from each RHDH instance one by one, you can use PostgreSQL utilities, such as <a href="https://www.postgresql.org/docs/current/app-pgdump.html">pg_dump</a> with <a href="https://www.postgresql.org/docs/current/app-psql.html">psql</a> or <a href="https://www.pgadmin.org/">pgAdmin</a>.</p>
 </div>
@@ -2288,177 +2467,6 @@ spec:
 </td>
 </tr>
 </table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="proc-configuring-postgresql-with-crunchy-database_admin-rhdh">3.6. Configuring an external PostgreSQL instance with TLS connection for Crunchy database</h3>
-<div class="paragraph">
-<p>You can configure an external PostgreSQL instance with the Crunchy database. To configure your PostgreSQL instance with TLS connection, you need a Certificate Authority (CA) certificate, TLS private key, and TLS certificate.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>You have installed the CrunchyData PostgreSQL Operator on the OpenShift Container Platform cluster. For more information, see <a href="https://access.crunchydata.com/documentation/postgres-operator/latest/quickstart#installation">Installing the PostgreSQL Operator</a>.</p>
-</li>
-<li>
-<p>You have generated the CA certificate, TLS key, and TLS certificate. For more information, see <a href="https://www.crunchydata.com/blog/set-up-tls-for-postgresql-in-kubernetes#prerequisites">Prerequisites to enable TLS</a>.</p>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Create a credential secret named <code>postgres-cred</code> to connect with the PostgreSQL instance:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
-apiVersion: v1
-kind: Secret
-metadata:
- name: postgres-cred
-data: <b class="conum">(1)</b>
-  POSTGRES_PASSWORD: &lt;password&gt;
-  POSTGRES_PORT: "&lt;db-port&gt;"
-  POSTGRES_USER: &lt;username&gt;
-  POSTGRES_HOST: &lt;db-host&gt;
-  PGSSLMODE: &lt;ssl-mode&gt; # for TLS connection <b class="conum">(2)</b>
-EOF</code></pre>
-</div>
-</div>
-<div class="colist arabic">
-<ol>
-<li>
-<p>Provide credential data to connect with your PostgreSQL instance.</p>
-</li>
-<li>
-<p>Provide the value to configure a TLS connection for your PostgreSQL instance.</p>
-</li>
-</ol>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>You can retrieve the password, hostname, port, and other relevant information for the user <code>janus-idp</code> from the <code>postgress-external-db-pguser-janus-idp</code> secret.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>Create a certificate secret named <code>postgress-external-db-cluster-cert</code> with the CA certificate, TLS key, and TLS certificate files:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
-apiVersion: v1
-kind: Secret
-metadata:
- name: postgress-external-db-cluster-cert
-type: Opaque
-stringData:
- postgres-ca.pem: |-
-   -----BEGIN CERTIFICATE-----
-   XXX
- postgres-key.key: |-
-   -----BEGIN CERTIFICATE-----
-   XXX
- postgres-crt.pem: |-
-   -----BEGIN CERTIFICATE-----
-   XXX
-   # ...</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Apply the <code>postgress-external-db-cluster-cert</code> secret to the namespace where you have deployed your RHDH instance:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-terminal" data-lang="terminal">oc apply -n &lt;your-namespace&gt; -f postgress-external-db-cluster-cert.yaml</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Configure your PostgreSQL instance in the Helm configuration file named <code>values.yaml`</code>:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml"># ...
-upstream:
- postgresql:
-   enabled: false  # disable PostgreSQL instance creation (1)
- backstage:
-   appConfig:
-     backend:
-       database:
-          connection:  # configure Backstage DB connection parameters
-            host: ${POSTGRES_HOST}
-            port: ${POSTGRES_PORT}
-            user: ${POSTGRES_USER}
-            password: ${POSTGRES_PASSWORD}
-            ssl:
-              rejectUnauthorized: true,
-              ca:
-                $file: /opt/app-root/src/postgres-ca.pem
-              key:
-                $file: /opt/app-root/src/postgres-key.key
-              cert:
-                $file: /opt/app-root/src/postgres-crt.pem
-         # ...
-    extraVolumeMounts:
-      # The initContainer below will install dynamic plugins in this volume mount.
-      - mountPath: /opt/app-root/src/postgres-crt.pem
-        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
-        subPath: tls.crt
-      - mountPath: /opt/app-root/src/postgres-ca.pem
-        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
-        subPath: ca.crt
-      - mountPath: /opt/app-root/src/postgres-key.key
-        name: postgress-external-db-cluster-cert # inject certificate secret to Backstage
-        subPath: tls.key
-    extraVolumes:
-      # ...
-      - name: postgress-external-db-cluster-cert
-        secret:
-          secretName: postgress-external-db-cluster-cert  <b class="conum">(2)</b>
-        # ...
-    initContainers:
-      # ...
-    extraEnvVarsSecrets:
-      - postgres-cred # inject credential secret to Backstage <b class="conum">(3)</b>
-    auth:
-      existingSecret: postgres-cred
-# ...</code></pre>
-</div>
-</div>
-<div class="colist arabic">
-<ol>
-<li>
-<p>Set the value of the <code>upstream.postgresql.enabled</code> parameter to <code>false</code> to disable creating local PostgreSQL instances.</p>
-</li>
-<li>
-<p>Ensure that the name of the certificate secret is correct.</p>
-</li>
-<li>
-<p>Ensure that the name of the credential secret is correct.</p>
-</li>
-</ol>
-</div>
-</li>
-<li>
-<p>Apply the configuration changes in your Helm configuration file:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">helm install -n &lt;your-namespace&gt; &lt;your-release-name&gt; redhat-developer/backstage -f values.yaml</code></pre>
-</div>
-</div>
-</li>
-</ol>
 </div>
 </div>
 </div>
@@ -7075,7 +7083,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-14 11:14:26 UTC
+Last updated 2024-06-14 11:29:15 UTC
 </div>
 </div>
 </body>
