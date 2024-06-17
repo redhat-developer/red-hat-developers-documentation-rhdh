@@ -1,0 +1,65 @@
+[id="enabling-telemetry-data-collection_{context}"]
+= Enabling telemetry data collection in {product-very-short}
+
+The telemetry data collection feature is enabled by default. However, if you have disabled the feature and want to re-enable it, you must enable the `analytics-provider-segment` plugin either by using the Helm Chart or the {product} Operator configuration. 
+
+[NOTE]
+====
+If the `analytics-provider-segment` plugin is already present in your dynamic plugins configuration, set the value of the `plugins.disabled` parameter to `false` to enable telemetry data collection.
+====
+
+.Procedure
+
+. Configure the `analytics-provider-segment` plugin by using one of the following options:
++
+.Using Helm Chart
+
+* Add the following YAML code in your Helm configuration file:
++
+[source,yaml]
+----
+# ...
+global:
+  dynamic:
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: false
+# ...
+----
+
++
+.Using the Operator
+
+.. Perform one of the following steps:
++
+* If you have created the `dynamic-plugins-rhdh` ConfigMap file, add the `analytics-provider-segment` plugin to the list of plugins and set its `plugins.disabled` parameter to `false`.
++
+* If you have not created the ConfigMap file, create it with the following YAML code:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/janus-idp-backstage-plugin-analytics-provider-segment'
+        disabled: false        
+----
+
+.. Set the value of the `dynamicPluginsConfigMapName` parameter to the name of the ConfigMap file in your `Backstage` custom resource:
++
+[source,yaml]
+----
+# ...
+spec:
+  application:
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+# ...    
+----
+
+. Save the configuration changes.
