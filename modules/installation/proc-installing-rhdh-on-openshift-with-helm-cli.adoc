@@ -8,16 +8,11 @@ You can use the Helm CLI to install {product} on {ocp-brand-name}.
 * You have installed the Helm CLI.
 
 .Procedure
-. Define the _<rhdh>_ {ocp-short} project name to deploy to:
+. Create and activate the _<rhdh>_ {ocp-short} project:
 +
 [subs="quotes+"]
 ----
 NAMESPACE=_<rhdh>_
-----
-
-. Create and activate the _<rhdh>_ {ocp-short} project:
-+
-----
 oc new-project ${NAMESPACE} || oc project ${NAMESPACE}
 ----
 
@@ -28,22 +23,12 @@ oc new-project ${NAMESPACE} || oc project ${NAMESPACE}
 helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
 ----
 
-. Collect the {product-short} database password from your {ocp-short} cluster:
-+
-----
-PASSWORD=$(oc get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
-----
-
-. Collect your {ocp-short} cluster router base URL:
-+
-----
-CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
-----
-
-. Configure your {product-short} Helm chart instance with the collected values:
+. Configure your {product-short} Helm chart instance with the {product-short} database password and router base URL values from your {ocp-short} cluster:
 +
 [subs="attributes+"]
 ----
+PASSWORD=$(oc get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
 helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
     --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
     --set global.postgresql.auth.password="$PASSWORD"
