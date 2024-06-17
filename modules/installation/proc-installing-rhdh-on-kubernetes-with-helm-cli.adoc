@@ -14,14 +14,23 @@ You can use the Helm CLI to install {product} on Kubernetes.
 helm repo add openshift-helm-charts https://charts.openshift.io/
 ----
 
-. Create and activate the _<rhdh>_ Kubernetes namespace:
+. Define the _<rhdh>_ Kubernetes namespace name to deploy to:
 +
 [subs="quotes+"]
 ----
 NAMESPACE=_<rhdh>_
-kubectl create namespace ${NAMESPACE} || true
+----
+. Create the _<rhdh>_ Kubernetes namespace:
++
+[subs="quotes+"]
+----
+kubectl create namespace ${NAMESPACE}
+----
+. Activate the _<rhdh>_ Kubernetes namespace:
++
+[subs="quotes+"]
+----
 kubectl config set-context --current --namespace=${NAMESPACE}
-kubectl config view --minify | grep namespace:
 ----
 
 . Install the {product} Helm chart:
@@ -31,10 +40,14 @@ kubectl config view --minify | grep namespace:
 helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
 ----
 
-. Collect values from your OpenShift or Kubernetes cluster:
+. Collect the {product-short} database password from your {ocp-short} cluster:
 +
 ----
 PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+----
+. Collect your {ocp-short} cluster router base URL:
++
+----
 CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
 ----
 
