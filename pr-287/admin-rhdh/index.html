@@ -448,8 +448,9 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#assembly-install-rhdh-ocp">2. Deploying Red Hat Developer Hub on OpenShift Container Platform</a>
 <ul class="sectlevel2">
 <li><a href="#proc-install-rhdh-ocp-helm_admin-rhdh">2.1. Deploying Red Hat Developer Hub on OpenShift Container Platform using Helm Chart</a></li>
-<li><a href="#proc-installing-with-helm-cli_admin-rhdh">2.2. Installing Red Hat Developer Hub with Helm CLI</a></li>
-<li><a href="#proc-install-rhdh-ocp-operator_admin-rhdh">2.3. Deploying Red Hat Developer Hub on OpenShift Container Platform using the Operator</a></li>
+<li><a href="#proc-installing-rhdh-on-openshift-with-helm-cli_admin-rhdh">2.2. Installing Red Hat Developer Hub on Red Hat OpenShift Container Platform with Helm CLI</a></li>
+<li><a href="#installing-rhdh-on-kubernetes-with-helm-cli_admin-rhdh">2.3. Installing Red Hat Developer Hub on Kubernetes with Helm CLI</a></li>
+<li><a href="#proc-install-rhdh-ocp-operator_admin-rhdh">2.4. Deploying Red Hat Developer Hub on OpenShift Container Platform using the Operator</a></li>
 </ul>
 </li>
 <li><a href="#enabling-authentication">3. Enabling authentication in Red Hat Developer Hub</a>
@@ -788,15 +789,15 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-installing-with-helm-cli_admin-rhdh">2.2. Installing Red Hat Developer Hub with Helm CLI</h3>
+<h3 id="proc-installing-rhdh-on-openshift-with-helm-cli_admin-rhdh">2.2. Installing Red Hat Developer Hub on Red Hat OpenShift Container Platform with Helm CLI</h3>
 <div class="paragraph">
-<p>You can use the Helm CLI to install Red Hat Developer Hub on Red Hat OpenShift Container Platform or Kubernetes.</p>
+<p>You can use the Helm CLI to install Red Hat Developer Hub on Red Hat OpenShift Container Platform.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>An <code>oc</code> CLI or <code>kubectl</code> CLI session, with <code>developer</code> or <code>admin</code> permissions, on an Red Hat OpenShift Container Platform or Kubernetes cluster.</p>
+<p>An <code>oc</code> session, with <code>developer</code> or <code>admin</code> permissions, on an OpenShift Container Platform cluster.</p>
 </li>
 <li>
 <p>You have installed the Helm CLI.</p>
@@ -807,24 +808,16 @@ Backend failed to start up Error: Missing required config value at 'backend.data
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>For a Kubernetes cluster, you  must first add the OpenShift Container Platform Helm charts repository. On OpenShift Container Platform, this is already present.</p>
+<p>Create and activate the <em>&lt;rhdh&gt;</em> OpenShift Container Platform project:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-terminal" data-lang="terminal">helm repo add openshift-helm-charts https://charts.openshift.io/</code></pre>
+<pre>NAMESPACE=&lt;em&gt;&lt;rhdh&gt;&lt;/em&gt;
+oc new-project ${NAMESPACE} || oc project ${NAMESPACE}</pre>
 </div>
 </div>
 </li>
 <li>
-<p>Create and activate the <em>&lt;rhdh&gt;</em> OpenShift project or Kubernetes namespace:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-terminal" data-lang="terminal">$ NAMESPACE=&lt;em&gt;&lt;rhdh&gt;&lt;/em&gt;
-$ oc new-project ${NAMESPACE} || oc project ${NAMESPACE}</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Install the Developer Hub Helm chart:</p>
+<p>Install the Developer Hub Helm Chart:</p>
 <div class="listingblock">
 <div class="content">
 <pre>helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz</pre>
@@ -832,20 +825,20 @@ $ oc new-project ${NAMESPACE} || oc project ${NAMESPACE}</code></pre>
 </div>
 </li>
 <li>
-<p>Collect values from your OpenShift Container Platform or Kubernetes cluster:</p>
+<p>Collect values from your OpenShift Container Platform cluster:</p>
 <div class="listingblock">
 <div class="content">
-<pre>$ PASSWORD=$(oc get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
-$ CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')</pre>
+<pre>PASSWORD=$(oc get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')</pre>
 </div>
 </div>
 </li>
 <li>
-<p>Configure your Developer Hub Helm chart instance with the collected values:</p>
+<p>Configure your Developer Hub Helm Chart instance with the collected values:</p>
 <div class="listingblock">
 <div class="content">
-<pre>$ helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz" \
-    --set global.clusterRouterBase="${CLUSTER_ROUTER_BASE}" \
+<pre>helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz" \
+    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
     --set global.postgresql.auth.password="$PASSWORD"</pre>
 </div>
 </div>
@@ -854,7 +847,91 @@ $ CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{
 <p>Display the running Developer Hub instance URL:</p>
 <div class="listingblock">
 <div class="content">
-<pre>$ echo https://redhat-developer-hub-${NAMESPACE}.${CLUSTER_ROUTER_BASE}</pre>
+<pre>echo "https://redhat-developer-hub-$NAMESPACE.$CLUSTER_ROUTER_BASE"</pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Verification</div>
+<ul>
+<li>
+<p>Open the running Developer Hub instance URL in your browser to use Developer Hub.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="installing-rhdh-on-kubernetes-with-helm-cli_admin-rhdh">2.3. Installing Red Hat Developer Hub on Kubernetes with Helm CLI</h3>
+<div class="paragraph">
+<p>You can use the Helm CLI to install Red Hat Developer Hub on Kubernetes.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>A <code>kubectl</code> session, with <code>developer</code> or <code>admin</code> permissions, on a Kubernetes cluster.</p>
+</li>
+<li>
+<p>You have installed the Helm CLI.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Add the OpenShift Helm Charts repository.</p>
+<div class="listingblock">
+<div class="content">
+<pre>helm repo add openshift-helm-charts https://charts.openshift.io/</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Create and activate the <em>&lt;rhdh&gt;</em> Kubernetes namespace:</p>
+<div class="listingblock">
+<div class="content">
+<pre>NAMESPACE=&lt;em&gt;&lt;rhdh&gt;&lt;/em&gt;
+kubectl create namespace ${NAMESPACE} || true
+kubectl config set-context --current --namespace=${NAMESPACE}
+kubectl config view --minify | grep namespace:</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Install the Developer Hub Helm Chart:</p>
+<div class="listingblock">
+<div class="content">
+<pre>helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Collect values from your OpenShift or Kubernetes cluster:</p>
+<div class="listingblock">
+<div class="content">
+<pre>PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Configure your Developer Hub Helm Chart instance with the collected values:</p>
+<div class="listingblock">
+<div class="content">
+<pre>helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz" \
+    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
+    --set global.postgresql.auth.password="$PASSWORD"</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Display the running Developer Hub instance URL:</p>
+<div class="listingblock">
+<div class="content">
+<pre>echo "https://redhat-developer-hub-$NAMESPACE.$CLUSTER_ROUTER_BASE"</pre>
 </div>
 </div>
 </li>
@@ -869,7 +946,7 @@ $ CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{
 </ul>
 </div>
 <div class="sect3">
-<h4 id="proc-add-custom-app-file-openshift-helm_admin-rhdh">2.2.1. Adding a custom application configuration file to OpenShift Container Platform using the Helm chart</h4>
+<h4 id="proc-add-custom-app-file-openshift-helm_admin-rhdh">2.3.1. Adding a custom application configuration file to OpenShift Container Platform using the Helm chart</h4>
 <div class="paragraph">
 <p>You can use the Red Hat Developer Hub Helm chart to add a custom application configuration file to your OpenShift Container Platform instance.</p>
 </div>
@@ -970,7 +1047,7 @@ upstream:
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-install-rhdh-airgapped-environment-ocp-helm_admin-rhdh">2.2.2. Installing Red Hat Developer Hub using the Helm Chart in an air-gapped environment</h4>
+<h4 id="proc-install-rhdh-airgapped-environment-ocp-helm_admin-rhdh">2.3.2. Installing Red Hat Developer Hub using the Helm Chart in an air-gapped environment</h4>
 <div class="paragraph">
 <p>An air-gapped environment, also known as an air-gapped network or isolated network, ensures security by physically segregating the system or network. This isolation is established to prevent unauthorized access, data transfer, or communication between the air-gapped system and external sources.</p>
 </div>
@@ -1158,7 +1235,7 @@ upstream:
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-install-rhdh-ocp-operator_admin-rhdh">2.3. Deploying Red Hat Developer Hub on OpenShift Container Platform using the Operator</h3>
+<h3 id="proc-install-rhdh-ocp-operator_admin-rhdh">2.4. Deploying Red Hat Developer Hub on OpenShift Container Platform using the Operator</h3>
 <div class="paragraph">
 <p>As a developer, you can deploy a Red Hat Developer Hub instance on OpenShift Container Platform by using the <strong>Developer Catalog</strong> in the Red Hat OpenShift Container Platform web console. This deployment method uses the Red Hat Developer Hub Operator.</p>
 </div>
@@ -1238,7 +1315,7 @@ upstream:
 </ul>
 </div>
 <div class="sect3">
-<h4 id="proc-add-custom-app-config-file-ocp-operator_admin-rhdh">2.3.1. Adding a custom application configuration file to OpenShift Container Platform using the Operator</h4>
+<h4 id="proc-add-custom-app-config-file-ocp-operator_admin-rhdh">2.4.1. Adding a custom application configuration file to OpenShift Container Platform using the Operator</h4>
 <div class="paragraph">
 <p>A custom application configuration file is a <code>ConfigMap</code> object that you can use to change the configuration of your Red Hat Developer Hub instance. If you are deploying your Developer Hub instance on Red Hat OpenShift Container Platform, you can use the Red Hat Developer Hub Operator to add a custom application configuration file to your OpenShift Container Platform instance by creating the <code>ConfigMap</code> object and referencing it in the Developer Hub custom resource (CR).</p>
 </div>
@@ -1412,7 +1489,7 @@ spec:
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-config-dynamic-plugins-rhdh-operator_admin-rhdh">2.3.2. Configuring dynamic plugins with the Red Hat Developer Hub Operator</h4>
+<h4 id="proc-config-dynamic-plugins-rhdh-operator_admin-rhdh">2.4.2. Configuring dynamic plugins with the Red Hat Developer Hub Operator</h4>
 <div class="paragraph">
 <p>You can store the configuration for dynamic plugins in a <code>ConfigMap</code> object that your <code>Backstage</code> custom resource (CR) can reference.</p>
 </div>
@@ -1535,7 +1612,7 @@ spec:
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-install-rhdh-airgapped-environment-ocp-operator_admin-rhdh">2.3.3. Installing Red Hat Developer Hub using the Operator in an air-gapped environment</h4>
+<h4 id="proc-install-rhdh-airgapped-environment-ocp-operator_admin-rhdh">2.4.3. Installing Red Hat Developer Hub using the Operator in an air-gapped environment</h4>
 <div class="paragraph">
 <p>On an OpenShift Container Platform cluster operating on a restricted network, public resources are not available. However, deploying the Red Hat Developer Hub Operator and running Developer Hub requires the following public resources:</p>
 </div>
@@ -6582,7 +6659,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-17 08:44:34 UTC
+Last updated 2024-06-17 09:12:16 UTC
 </div>
 </div>
 </body>
