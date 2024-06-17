@@ -35,7 +35,7 @@ for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TIT
     echo "Building $t into $d ..."; 
     echo "  $CMD"
     $CMD
-    for im in $(grep images/ "$d/index.html" | grep -v 'mask-image' | grep -v 'background' | grep -v 'fa-icons' | grep -v 'jupumbra' | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do
+    for im in $(grep images/ "$d/index.html" | grep -E -v 'mask-image|background|fa-icons|jupumbra' | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do
         # echo "  Copy $im ...";
         IMDIR="$d/${im%/*}/"
         mkdir -p "${IMDIR}"; rsync -q "$im" "${IMDIR}";
