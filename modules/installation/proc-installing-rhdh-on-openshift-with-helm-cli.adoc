@@ -1,0 +1,50 @@
+[id="proc-installing-rhdh-on-openshift-with-helm-cli_{context}"]
+= Installing {product} on {ocp-brand-name} with Helm CLI
+
+You can use the Helm CLI to install {product} on {ocp-brand-name}.
+
+.Prerequisites
+* An `oc` session, with `developer` or `admin` permissions, on an {ocp-short} cluster.
+* You have installed the Helm CLI.
+
+.Procedure
+. Create and activate the _<rhdh>_ {ocp-short} project:
++
+[subs="quotes+"]
+----
+NAMESPACE=_<rhdh>_
+oc new-project ${NAMESPACE} || oc project ${NAMESPACE}
+----
+
+. Install the {product-short} Helm Chart:
++
+[subs="attributes+"]
+----
+helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
+----
+
+. Collect values from your {ocp-short} cluster:
++
+----
+PASSWORD=$(oc get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
+----
+
+. Configure your {product-short} Helm Chart instance with the collected values:
++
+[subs="attributes+"]
+----
+helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
+    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
+    --set global.postgresql.auth.password="$PASSWORD"
+----
+
+. Display the running {product-short} instance URL:
++
+----
+echo "https://redhat-developer-hub-$NAMESPACE.$CLUSTER_ROUTER_BASE"
+----
+
+.Verification
+* Open the running {product-short} instance URL in your browser to use {product-short}.
+
