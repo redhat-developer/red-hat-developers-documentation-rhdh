@@ -8,7 +8,7 @@ You can use the Helm CLI to install {product} on the following platforms:
 
 .Prerequisites
 * A `kubectl` session, with `developer` or `admin` permissions, on a Kubernetes cluster.
-* You have installed the Helm CLI.
+* You have installed the link:https://helm.sh/docs/intro/install[Helm CLI].
 
 .Procedure
 . Add the OpenShift Helm Charts repository.
@@ -17,22 +17,12 @@ You can use the Helm CLI to install {product} on the following platforms:
 helm repo add openshift-helm-charts https://charts.openshift.io/
 ----
 
-. Define the _<rhdh>_ Kubernetes namespace name to deploy to:
+. Create and activate the _<rhdh>_ Kubernetes namespace:
 +
 [subs="quotes+"]
 ----
 NAMESPACE=_<rhdh>_
-----
-
-. Create the _<rhdh>_ Kubernetes namespace:
-+
-----
 kubectl create namespace ${NAMESPACE}
-----
-
-. Activate the _<rhdh>_ Kubernetes namespace:
-+
-----
 kubectl config set-context --current --namespace=${NAMESPACE}
 ----
 
@@ -43,22 +33,12 @@ kubectl config set-context --current --namespace=${NAMESPACE}
 helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
 ----
 
-. Collect the {product-short} database password from your {ocp-short} cluster:
-+
-----
-PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
-----
-
-. Collect your {ocp-short} cluster router base URL:
-+
-----
-CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
-----
-
-. Configure your {product-short} Helm chart instance with the collected values:
+. Configure your {product-short} Helm chart instance with the {product-short} database password and router base URL values from your {ocp-short} cluster:
 +
 [subs="attributes+"]
 ----
+PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
 helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
     --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
     --set global.postgresql.auth.password="$PASSWORD"
