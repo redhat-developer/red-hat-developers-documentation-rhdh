@@ -31,22 +31,7 @@ echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}
 set -e
 for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
     d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}}; 
-    CMD="asciidoctor \
-           --backend=html5 \
-           --destination-dir $d \
-           --failure-level ERROR \
-           --section-numbers \
-           --trace \
-           --warnings \
-           -a chapter-signifier=Chapter \
-           -a sectnumslevels=5 \
-           -a source-highlighter=coderay \
-           -a stylesdir=`pwd`/.asciidoctor \
-           -a stylesheet=docs.css \
-           -a toc=left \
-           -a toclevels=5 \
-           -o index.html \
-           $t";
+    CMD="asciidoctor --backend=html5 -o index.html --section-numbers -a chapter-signifier=Chapter -a toc -a icons=font --failure-level ERROR --trace --warnings --destination-dir $d -a stylesdir=`pwd`/.asciidoctor -a stylesheet=docs.css $t";
     echo "Building $t into $d ..."; 
     echo "  $CMD"
     $CMD
