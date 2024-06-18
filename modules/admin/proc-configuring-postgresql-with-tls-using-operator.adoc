@@ -1,0 +1,102 @@
+[id="proc-configuring-postgresql-with-tls-using-operator_{context}"]
+= Configuring an external PostgreSQL instance with TLS connection using the Operator
+
+You can configure an external PostgreSQL instance with TLS connection by using the {product} Operator. 
+
+.Prerequisites
+
+* You have the following details:
+** `db-host`: Denotes your PostgreSQL instance Domain Name System (DNS) or IP address 
+** `db-port`: Denotes your PostgreSQL instance port number, usually `5432`
+** `username`: Denotes the user name to connect to your PostgreSQL instance
+** `password`: Denotes the password to connect to your PostgreSQL instance
+
+* You have the certificate files and the TLS private key. For more information, see link:{LinkAdminGuide}#postgresql-certificate-for-crunchy-database_admin-rhdh[Generating PostgreSQL certificate for the Crunchy database].
+ 
+
+.Procedure
+
+. Create a credential secret named `postgres-cred` to connect with the PostgreSQL instance:
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgres-cred
+data: <1>
+  POSTGRES_PASSWORD: <password>
+  POSTGRES_PORT: "<db-port>"
+  POSTGRES_USER: <username>
+  POSTGRES_HOST: <db-host>
+  PGSSLMODE: <ssl-mode> # for TLS connection <2>
+EOF
+----
+<1> Provide credential data to connect with your PostgreSQL instance.
+<2> Provide the value to configure a TLS connection for your PostgreSQL instance.
+
+. Create a certificate secret named `postgress-external-db-cluster-cert` with the CA certificate, TLS key, and TLS certificate files:
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgress-external-db-cluster-cert
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-key.key: |-
+   -----BEGIN CERTIFICATE-----
+   XXX
+ postgres-crt.pem: |-    
+   -----BEGIN CERTIFICATE-----
+   XXX
+   # ...
+----
+
+. Apply the `postgress-external-db-cluster-cert` secret to the namespace where you have deployed your {product-very-short} instance:
++
+[source,terminal]
+----
+oc apply -n <your-namespace> -f postgress-external-db-cluster-cert.yaml
+----
+
+. Create a `Backstage` custom resource (CR):
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+ name: <backstage-instance-name>
+spec:
+ database:
+   enableLocalDb: false <1>
+ application: 
+    extraFiles:
+     mountPath: <path> # e g /opt/app-root/src
+     secrets:
+       - name: postgress-external-db-cluster-cert <2>
+         key: postgres-crt.pem, postgres-ca.pem, postgres-key.key # key name as in certificate secret
+    extraEnvs:
+      secrets:
+        - name: postgres-cred <3>
+        # ... 
+----
+<1> Set the value of the `enableLocalDb` parameter to `false` to disable creating local PostgreSQL instances.
+<2> Ensure that the name of the certificate secret is correct. 
+<3> Ensure that the name of the credential secret is correct.
++
+[NOTE]
+====
+The environment variables listed in the `Backstage` CR work with the Operator default configuration. If you have changed the Operator default configuration, you must reconfigure the `Backstage` CR accordingly.
+====
+
+. Apply the `Backstage` CR to the namespace where you have deployed the {product-very-short} instance.
+

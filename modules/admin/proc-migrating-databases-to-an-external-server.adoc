@@ -1,7 +1,7 @@
 [id="proc-migrating-databases-to-an-external-server_{context}"]
 = Migrating local databases to an external database server
 
-By default, {product} hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured. You can migrate the data from an {product-very-short} instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS or Azure database. To migrate the data from each {product-very-short} instance one by one, you can use PostgreSQL utilities, such as link:https://www.postgresql.org/docs/current/app-pgdump.html[pg_dump] with link:https://www.postgresql.org/docs/current/app-psql.html[psql] or link:https://www.pgadmin.org/[pgAdmin]. 
+By default, {product} hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured. You can migrate the data from an {product-very-short} instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS, Azure database, or Crunchy database. To migrate the data from each {product-very-short} instance one by one, you can use PostgreSQL utilities, such as link:https://www.postgresql.org/docs/current/app-pgdump.html[pg_dump] with link:https://www.postgresql.org/docs/current/app-psql.html[psql] or link:https://www.pgadmin.org/[pgAdmin]. 
 
 [NOTE]
 ====
@@ -20,7 +20,7 @@ For quick migration, you can also use this link:https://github.com/janus-idp/ope
 +
 [source,terminal]
 ----
-kubectl port-forward -n <your-namespace> <pgsql-pod-name> <forward-to-port>:<forward-from-port>
+oc port-forward -n <your-namespace> <pgsql-pod-name> <forward-to-port>:<forward-from-port>
 ----
 Where:
 * The `<pgsql-pod-name>` variable denotes the name of a PostgreSQL pod with the format `backstage-psql--<_index>`.
@@ -30,9 +30,7 @@ Where:
 .Example: Configuring port forwarding
 [source,terminal]
 ----
-kubectl port-forward -n backstage backstage-psql-backstage1-0 15432:5432
-Forwarding from 127.0.0.1:15432 -> 5432
-Forwarding from [::1]:15432 -> 5432
+oc port-forward -n backstage backstage-psql-backstage1-0 15432:5432
 ----
 
 . Make a copy of the `db_copy.sh` script and edit the following details based on your configuration:
@@ -59,7 +57,7 @@ Where,
 You can stop port forwarding when copying of the data is complete. Also, if you are dealing with large databases, go to the link:https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-LARGE[site] and see the details to use the compression tools. 
 ====
 
-. Reconfigure your `Backstage` custom resource (CR). For more information, see link:{LinkAdminGuide}#proc-configuring-postgresql-instance-using-operator_admin-rhdh[Configuring a PostgreSQL instance using the Operator]. 
+. Reconfigure your `Backstage` custom resource (CR). For more information, see link:{LinkAdminGuide}#proc-configuring-postgresql-instance-using-operator_admin-rhdh[Configuring an external PostgreSQL instance using the Operator] or link:{LinkAdminGuide}#proc-configuring-postgresql-with-tls-using-operator_admin-rhdh[Configuring an external PostgreSQL instance with TLS connection using the Operator]. 
 . Check that the following code is present at the end of your `Backstage` CR after reconfiguration:
 +
 [source,yaml]
@@ -88,7 +86,7 @@ Reconfiguring the `Backstage` CR deletes the corresponding `StatefulSet` and `Po
 
 [source,terminal]
 ----
-kubectl -n backstage delete pvc <local-psql-pvc-name>
+oc -n backstage delete pvc <local-psql-pvc-name>
 ----
 ====
 
