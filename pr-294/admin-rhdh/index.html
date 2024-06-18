@@ -3978,6 +3978,14 @@ h1 {
 <li><a href="#ref-creating-templates_assembly-admin-templates">9.2. Creating a template as a YAML file</a></li>
 </ul>
 </li>
+<li><a href="#assembly-techdocs-plugin_assembly-admin-templates">10. Configuring the TechDocs plugin in Red Hat Developer Hub</a>
+<ul class="sectlevel2">
+<li><a href="#ref-techdocs-example-config-plugin-helm_assembly-admin-templates">10.1. Example TechDocs Plugin configuration for the Helm chart</a></li>
+<li><a href="#ref-techdocs-example-config-plugin-operator_assembly-admin-templates">10.2. Example TechDocs Plugin configuration for the Operator</a></li>
+<li><a href="#con-techdocs-configure-storage_assembly-admin-templates">10.3. Configuring storage for TechDocs files</a></li>
+<li><a href="#con-techdocs-config-cicd_assembly-admin-templates">10.4. Configuring CI/CD to generate and publish TecDocs sites</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -10151,10 +10159,403 @@ spec:
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="assembly-techdocs-plugin_assembly-admin-templates">10. Configuring the TechDocs plugin in Red Hat Developer Hub</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Red Hat Developer Hub TechDocs plugin helps your organization create, find, and use documentation in a central location and in a standardized way. For example:</p>
+</div>
+<div class="paragraph">
+<p><strong>Docs-like-code approach</strong>: Write your technical documentation in Markdown files that are stored inside your project repository along with your code.</p>
+</div>
+<div class="paragraph">
+<p><strong>Documentation site generation</strong>: Use MkDocs to create a full-featured, Markdown-based, static HTML site for your documentation that is rendered centrally in Developer Hub.</p>
+</div>
+<div class="paragraph">
+<p><strong>Documentation site metadata and integrations</strong>: See additional metadata about the documentation site alongside the static documentation, such as the date of the last update, the site owner, top contributors, open GitHub issues, Slack support channels, and Stack Overflow Enterprise tags.</p>
+</div>
+<div class="paragraph">
+<p><strong>Built-in navigation and search</strong>: Find the information that you want from a document more quickly and easily.</p>
+</div>
+<div class="paragraph">
+<p><strong>Add-ons</strong>: Customize your TechDocs experience with Add-ons to address higher-order documentation needs.</p>
+</div>
+<div class="paragraph">
+<p>The TechDocs plugin is preinstalled and enabled on a Developer Hub instance by default. You can disable or enable the TechDocs plugin, and change other parameters, by configuring the Red Hat Developer Hub Helm chart or the Red Hat Developer Hub Operator config map.</p>
+</div>
+<div class="paragraph">
+<p>Red Hat Developer Hub includes a built-in TechDocs builder that can be used to generate static HTML documentation from your codebase. However, the default basic setup of the local builder is not intended for production.</p>
+</div>
+<div class="paragraph">
+<p>You can use a CI/CD pipeline with the repository that has a dedicated job to generate docs for TechDocs. The generated static files are stored in OpenShift Data Foundation or in a cloud storage solution of your choice and published to a static HTML documentation site.</p>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/confuguring_plugins_in_red_hat_developer_hub/index">Configuring plugins in Red Hat Developer Hub</a>.</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="ref-techdocs-example-config-plugin-helm_assembly-admin-templates">10.1. Example TechDocs Plugin configuration for the Helm chart</h3>
+<div class="paragraph">
+<p>The following example shows a Developer Hub Helm chart configuration for the TechDocs plugin:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>global:
+  dynamic:
+    includes:
+      - 'dynamic-plugins.default.yaml'
+  plugins:
+    - disabled: false
+      package: ./dynamic-plugins/dist/backstage-plugin-techdocs-backend-dynamic
+      pluginConfig:
+        techdocs:
+          builder: external
+          generator:
+            runIn: local
+          publisher:
+            awsS3:
+              bucketName: '${BUCKET_NAME}'
+              credentials:
+                accessKeyId: '${AWS_ACCESS_KEY_ID}'
+                secretAccessKey: '${AWS_SECRET_ACCESS_KEY}'
+              endpoint: 'https://${BUCKET_HOST}'
+              regions: '${BUCKET_REGION}'
+              s3ForcePathStyle: true
+            type: awsS3</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="ref-techdocs-example-config-plugin-operator_assembly-admin-templates">10.2. Example TechDocs Plugin configuration for the Operator</h3>
+<div class="paragraph">
+<p>The following example shows a Red Hat Developer Hub Operator ConfigMap configuration for the TechDocs plugin:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - disabled: false
+        package: ./dynamic-plugins/dist/backstage-plugin-techdocs-backend-dynamic
+        pluginConfig:
+          techdocs:
+            builder: external
+            generator:
+              runIn: local
+            publisher:
+              awsS3:
+                bucketName: '${BUCKET_NAME}'
+                credentials:
+                  accessKeyId: '${AWS_ACCESS_KEY_ID}'
+                  secretAccessKey: '${AWS_SECRET_ACCESS_KEY}'
+                endpoint: 'https://${BUCKET_HOST}'
+                regions: '${BUCKET_REGION}'
+                s3ForcePathStyle: true
+              type: awsS3</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="con-techdocs-configure-storage_assembly-admin-templates">10.3. Configuring storage for TechDocs files</h3>
+<div class="paragraph">
+<p>The TechDocs publisher stores generated files in local storage or in cloud storage, such as OpenShift Data Foundation, Google GCS, AWS S3, or Azure Blob Storage.</p>
+</div>
+<div class="sect3">
+<h4 id="proc-techdocs-using-odf-storage_assembly-admin-templates">10.3.1. Using OpenShift Data Foundation for file storage</h4>
+<div class="paragraph">
+<p>You can configure OpenShift Data Foundation to store the files that TechDocs generates instead of relying on cloud storage like Google GCS, AWS S3, or Azure Blob Storage.</p>
+</div>
+<div class="paragraph">
+<p>OpenShift Data Foundation provides a <code>ObjectBucketClaim</code> custom resource (CR) that you can use to request an S3 compatible bucket backend. You must install the OpenShift Data Foundation Operator to use this feature.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>An OpenShift Container Platform administrator has installed the OpenShift Data Foundation Operator in Red Hat OpenShift Container Platform. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation/4.15/html/deploying_openshift_data_foundation_using_amazon_web_services/deploy-using-dynamic-storage-devices-aws#installing-openshift-data-foundation-operator-using-the-operator-hub_cloud-storage">Installing Red Hat OpenShift Data Foundation Operator</a> in the OpenShift Container Platform documentation.</p>
+</li>
+<li>
+<p>An OpenShift Container Platform administrator has created an OpenShift Data Foundation cluster and configured the <code>StorageSystem</code>. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation/4.15/html/deploying_openshift_data_foundation_using_amazon_web_services/deploy-using-dynamic-storage-devices-aws#creating-an-openshift-data-foundation-service_cloud-storage">Creating an OpenShift Data Foundation cluster</a> in the OpenShift Container Platform documentation.</p>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>In the OpenShift Container Platform web console, create an <code>ObjectBucketClaim</code> CR where the generated TechDocs files are stored. For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: rhdh-bucket-claim
+spec:
+  generateBucketName: rhdh-bucket-
+  storageClassName: openshift-storage.noobaa.io</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Creating the Developer Hub <code>ObjectBucketClaim</code> CR automatically creates both the Developer Hub <code>ObjectBucketClaim</code> config map and secret. The config map and secret have the same name as the <code>ObjetBucketClaim</code> CR.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information about the Object Bucket Claim, see <a href="https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation/4.12/html/managing_hybrid_and_multicloud_resources/object-bucket-claim#doc-wrapper">Object Bucket Claim</a> in the OpenShift Container Platform documentation.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-techdocs-configure-odf-helm_assembly-admin-templates">10.3.2. Adding access information to the Red Hat Developer Hub Helm chart</h4>
+<div class="paragraph">
+<p>Add access information for the <code>ObjectBucket</code> to the Red Hat Developer Hub Helm chart configuration.</p>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>In the <code>upstream.backstage</code> key in the Helm chart values, enter the name of the Developer Hub <code>ObjectBucketClaim</code> secret as the value for the <code>extraEnvVarsSecrets</code> field and the <code>extraEnvVarsCM</code> field. For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>upstream:
+  backstage:
+    extraEnvVarsSecrets:
+      - &lt;rhdh_bucket_claim_name&gt;
+    extraEnvVarsCM:
+      - &lt;rhdh_bucket_claim_name&gt;</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-techdocs-configure-odf-operator_assembly-admin-templates">10.3.3. Adding access information to the Red Hat Developer Hub Operator</h4>
+<div class="paragraph">
+<p>Add access information for the <code>ObjectBucket</code> to the Red Hat Developer Hub Operator configuration.</p>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>In the Developer Hub <code>ObjectBucketClaim</code> CR, enter the name of the Developer Hub <code>ObjectBucketClaim</code> config map as the value for the <code>spec.application.extraEnvs.configMaps</code> field and enter the Developer Hub <code>ObjectBucketClaim</code> secret name as the value for the <code>spec.application.extraEnvs.secrets</code> field. For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>spec:
+  application:
+    extraEnvs:
+      configMaps:
+        - name: &lt;rhdh_bucket_claim_name&gt;
+      secrets:
+        - name: &lt;rhdh_bucket_claim_name&gt;</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="con-techdocs-config-cicd_assembly-admin-templates">10.4. Configuring CI/CD to generate and publish TecDocs sites</h3>
+<div class="paragraph">
+<p>TechDocs reads the static generated documentation files from a cloud storage bucket, such as OpenShift Data Foundation. The documentation site is generated on the CI/CD workflow associated with the repository containing the documentation files. You can generate docs on CI and publish to a cloud storage using the <code>techdocs-cli</code> tool.</p>
+</div>
+<div class="paragraph">
+<p>You can use the following example to create a script for TechDocs publication:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code># Prepare
+REPOSITORY_URL='https://github.com/org/repo'
+git clone $REPOSITORY_URL
+cd repo
+
+# Install @techdocs/cli, mkdocs and mkdocs plugins
+npm install -g @techdocs/cli
+pip install "mkdocs-techdocs-core==1.*"
+
+# Generate
+techdocs-cli generate --no-docker
+
+# Publish
+techdocs-cli publish --publisher-type awsS3 --storage-name &lt;bucket/container&gt; --entity &lt;Namespace/Kind/Name&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The TechDocs workflow starts the CI when a user makes changes in the repository containing the documentation files. You can configure the workflow to start only when files inside the <code>docs/</code> directory or <code>mkdocs.yml</code> are changed.</p>
+</div>
+<div class="sect3">
+<h4 id="proc-techdocs-config-cicd-prep-repo_assembly-admin-templates">10.4.1. Preparing your repository for continuous iteration (CI)</h4>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>To clone your documentation source repository in a working directory, enter the following command:</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>git clone &lt;https://path/to/docs-repository/&gt;</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-techdocs-generate-site_assembly-admin-templates">10.4.2. Generating the TechDocs site</h4>
+<div class="paragraph">
+<div class="title">Procedure</div>
+<p>To configure CI/CD to generate your techdocs, complete the following steps:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Install the <code>npx</code> package to run <code>techdocs-cli</code> using the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>npm install -g npx</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Install the <code>techdocs-cli</code> tool using the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>npm install -g @techdocs/cli</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Install the <code>mkdocs</code> plugins using the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>pip install "mkdocs-techdocs-core==1.*"</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Generate your techdocs site using the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>npx @techdocs/cli generate --no-docker --source-dir &lt;path_to_repo&gt; --output-dir ./site</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Where <code>&lt;path_to_repo&gt;</code> is the location in the file path you used to clone your repository.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-techdocs-publish-site_assembly-admin-templates">10.4.3. Publishing the TechDocs site</h4>
+<div class="paragraph">
+<div class="title">Procedure</div>
+<p>To publish your techdocs site, complete the following steps:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Set the necessary authentication environment variables for your cloud storage provider.</p>
+</li>
+<li>
+<p>Publish your techdocs using the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>npx @techdocs/cli publish --publisher-type &lt;awsS3|googleGcs&gt; --storage-name &lt;bucket/container&gt; --entity &lt;namespace/kind/name&gt; --directory ./site</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Add a <code>.github/workflows/techdocs.yml</code> file in your Software Template(s). For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>name: Publish TechDocs Site
+
+on:
+ push:
+   branches: [main]
+   # You can even set it to run only when TechDocs related files are updated.
+   # paths:
+   #   - "docs/**"
+   #   - "mkdocs.yml"
+
+jobs:
+ publish-techdocs-site:
+   runs-on: ubuntu-latest
+
+   # The following secrets are required in your CI environment for publishing files to AWS S3.
+   # e.g. You can use GitHub Organization secrets to set them for all existing and new repositories.
+   env:
+     TECHDOCS_S3_BUCKET_NAME: ${{ secrets.TECHDOCS_S3_BUCKET_NAME }}
+     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+     AWS_REGION: ${{ secrets.AWS_REGION }}
+     ENTITY_NAMESPACE: 'default'
+     ENTITY_KIND: 'Component'
+     ENTITY_NAME: 'my-doc-entity'
+     # In a Software template, Scaffolder will replace {{cookiecutter.component_id | jsonify}}
+     # with the correct entity name. This is same as metadata.name in the entity's catalog-info.yaml
+     # ENTITY_NAME: '{{ cookiecutter.component_id | jsonify }}'
+
+   steps:
+     - name: Checkout code
+       uses: actions/checkout@v3
+
+     - uses: actions/setup-node@v3
+     - uses: actions/setup-python@v4
+       with:
+         python-version: '3.9'
+
+     - name: Install techdocs-cli
+       run: sudo npm install -g @techdocs/cli
+
+     - name: Install mkdocs and mkdocs plugins
+       run: python -m pip install mkdocs-techdocs-core==1.*
+
+     - name: Generate docs site
+       run: techdocs-cli generate --no-docker --verbose
+
+     - name: Publish docs site
+       run: techdocs-cli publish --publisher-type awsS3 --storage-name $TECHDOCS_S3_BUCKET_NAME --entity $ENTITY_NAMESPACE/$ENTITY_KIND/$ENTITY_NAME</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-18 23:45:09 UTC
+Last updated 2024-06-18 23:59:09 UTC
 </div>
 </div>
 </body>
