@@ -5,35 +5,16 @@ You can edit the Helm Chart default setting to configure an external PostgreSQL 
 
 .Prerequisites
 
+* You are using PostgreSQL version 15.
 * You have the following details:
 ** `db-host`: Denotes your PostgreSQL instance Domain Name System (DNS) or IP address 
 ** `db-port`: Denotes your PostgreSQL instance port number, usually `5432`
 ** `username`: Denotes the user name to connect to your PostgreSQL instance
 ** `password`: Denotes the password to connect to your PostgreSQL instance
-
-* You have the certificate files and the TLS private key. For more information, see link:{LinkAdminGuide}#postgresql-certificate-for-crunchy-database_admin-rhdh[Generating PostgreSQL certificate for the Crunchy database].
+* You have installed the {product-very-short} application by using the Operator or Helm Chart.
+* You have the certificate files and the TLS private key. For more information, refer to your PostgreSQL vendor documentation. 
 
 .Procedure
-
-. Create a credential secret named `postgres-cred` to connect with the PostgreSQL instance:
-+
-[source,yaml]
-----
-cat <<EOF | oc -n <your-namespace> create -f -
-apiVersion: v1
-kind: Secret
-metadata:
- name: postgres-cred
-data: <1>
-  POSTGRES_PASSWORD: <password>
-  POSTGRES_PORT: "<db-port>"
-  POSTGRES_USER: <username>
-  POSTGRES_HOST: <db-host>
-  PGSSLMODE: <ssl-mode> # for TLS connection <2>
-EOF
-----
-<1> Provide credential data to connect with your PostgreSQL instance.
-<2> Provide the value to configure a TLS connection for your PostgreSQL instance.
 
 . Create a certificate secret named `postgress-external-db-cluster-cert` with the CA certificate, TLS key, and TLS certificate files:
 +
@@ -61,6 +42,26 @@ stringData:
 <2> Provide the TLS private key.
 <3> Provide the TLS certificate key.
 
+. Create a credential secret named `postgres-cred` to connect with the PostgreSQL instance:
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: postgres-cred
+data: <1>
+  POSTGRES_PASSWORD: <password>
+  POSTGRES_PORT: "<db-port>"
+  POSTGRES_USER: <username>
+  POSTGRES_HOST: <db-host>
+  PGSSLMODE: <ssl-mode> # for TLS connection <2>
+EOF
+----
+<1> Provide credential data to connect with your PostgreSQL instance.
+<2> Provide the value based on the required link:https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNECT-SSLMODE[SSL mode].
+
 . Apply the `postgress-external-db-cluster-cert` secret to the namespace where you have deployed your {product-very-short} instance:
 +
 [source,terminal]
@@ -68,7 +69,7 @@ stringData:
 oc apply -n <your-namespace> -f postgress-external-db-cluster-cert.yaml
 ----
 
-. Configure your PostgreSQL instance in the Helm configuration file named `values.yaml``:
+. Configure your PostgreSQL instance in the Helm configuration file named `values.yaml`:
 +
 [source,yaml]
 ----
