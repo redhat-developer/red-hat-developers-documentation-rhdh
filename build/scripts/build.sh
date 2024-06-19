@@ -31,7 +31,7 @@ echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}
 set -e
 for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
     d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}}; 
-    CMD="asciidoctor --backend=html5 -o index.html --section-numbers -a chapter-signifier=Chapter -a toc -a icons=font --failure-level ERROR --trace --warnings --destination-dir $d -a stylesdir=`pwd`/.asciidoctor -a stylesheet=docs.css $t";
+    CMD="asciidoctor --backend=html5 -o index.html --section-numbers -a chapter-signifier=Chapter -a toc -a source-highlighter=coderay --failure-level ERROR --trace --warnings --destination-dir $d -a stylesdir=`pwd`/.asciidoctor -a stylesheet=docs.css $t";
     echo "Building $t into $d ..."; 
     echo "  $CMD"
     $CMD
