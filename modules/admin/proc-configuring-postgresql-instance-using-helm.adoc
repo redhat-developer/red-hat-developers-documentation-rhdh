@@ -12,7 +12,7 @@ You can configure an external PostgreSQL instance by using the Helm Chart. By de
 ** `username`: Denotes the user name to connect to your PostgreSQL instance
 ** `password`: Denotes the password to connect to your PostgreSQL instance
 * You have installed the {product-very-short} application by using the Helm Chart.
-* You have a PostgreSQL certificate of the .pem format so that you can secure your database connection using the Secure Socket Layer (SSL) or Transport Layer Security (TLS) protocol. For more information, refer to your PostgreSQL vendor documentation. 
+* Optional: You have a CA certificate, TLS private key, and TLS certificate so that you can secure your database connection by using the Transport Layer Security (TLS) protocol. For more information, refer to your PostgreSQL vendor documentation.
 
 [NOTE]
 ====
@@ -22,7 +22,7 @@ By default, {product-short} uses a database for each plugin and automatically cr
 
 .Procedure
 
-. Optional: Create a certificate secret with the PostgreSQL certificate file only if you need a TLS connection for your PostgreSQL instance:
+. Optional: Create a certificate secret to configure your PostgreSQL instance with a TLS connection: 
 +
 [source,yaml]
 ----
@@ -33,14 +33,22 @@ metadata:
  name: <crt-secret> <1>
 type: Opaque
 stringData:
- postgres-crt.pem: |-
+ postgres-ca.pem: |-
   -----BEGIN CERTIFICATE-----
-  <certificate-key> <2>
-  # ... 
+  <ca-certificate-key> <2>
+ postgres-key.key: |-
+  -----BEGIN CERTIFICATE-----
+  <tls-private-key> <3>
+ postgres-crt.pem: |-    
+  -----BEGIN CERTIFICATE-----
+  <tls-certificate-key> <4>
+  # ...
 EOF  
 ----
 <1> Provide the name of the certificate secret.
-<2> Provide the certificate key.
+<2> Provide the CA certificate key.
+<3> Provide the TLS private key.
+<4> Provide the TLS certificate key.
 
 . Create a credential secret to connect with the PostgreSQL instance:
 +
@@ -72,59 +80,79 @@ EOF
 ----
 # ...
 upstream:
- postgresql:
-   enabled: false  # disable local PostgreSQL instance creation <1>
- backstage:
-   appConfig:
-     backend:
-       database:
-         connection:  # configure Backstage DB connection parameters
-           host: ${POSTGRES_HOST}
-           port: ${POSTGRES_PORT}
-           user: ${POSTGRES_USER}
-           password: ${POSTGRES_PASSWORD}
-   extraEnvVarsSecrets:
-     - <cred-secret> # inject credentials secret to Backstage cont. <2>
-   extraEnvVars:
-     - name: BACKEND_SECRET
-       valueFrom:
-         secretKeyRef:
-           key: backend-secret
-           name: '{{ include "janus-idp.backend-secret-name" $ }}'
-   extraVolumeMounts:
-     - mountPath: /opt/app-root/src/dynamic-plugins-root
-       name: dynamic-plugins-root
-     - mountPath: /opt/app-root/src/postgres-crt.pem
-       name: postgres-crt # inject certificate secret to Backstage cont.
-       subPath: postgres-crt.pem
-   extraVolumes:
-     - ephemeral:
-         volumeClaimTemplate:
-           spec:
-             accessModes:
-               - ReadWriteOnce
-             resources:
-               requests:
-                 storage: 1Gi
-       name: dynamic-plugins-root
-     - configMap:
-         defaultMode: 420
-         name: dynamic-plugins
-         optional: true
-       name: dynamic-plugins
-     - name: dynamic-plugins-npmrc
-       secret:
-         defaultMode: 420
-         optional: true
-         secretName: dynamic-plugins-npmrc
-     - name: postgres-crt
-       secret:
-         secretName: <crt-secret> <3>
-         # ...
+  postgresql:
+    enabled: false  # disable PostgreSQL instance creation <1>
+    auth:
+      existingSecret: <cred-secret> # inject credentials secret to Backstage <2>
+  backstage:
+    appConfig:
+      backend:
+        database:
+          connection:  # configure Backstage DB connection parameters
+            host: ${POSTGRES_HOST}
+            port: ${POSTGRES_PORT}
+            user: ${POSTGRES_USER}
+            password: ${POSTGRES_PASSWORD}
+            ssl:
+              rejectUnauthorized: true,
+              ca:
+                $file: /opt/app-root/src/postgres-ca.pem
+              key:
+                $file: /opt/app-root/src/postgres-key.key
+              cert:
+                $file: /opt/app-root/src/postgres-crt.pem
+  extraEnvVarsSecrets:
+    - <cred-secret> # inject credentials secret to Backstage <3>
+  extraEnvVars:
+    - name: BACKEND_SECRET
+      valueFrom:
+        secretKeyRef:
+          key: backend-secret
+          name: '{{ include "janus-idp.backend-secret-name" $ }}'
+  extraVolumeMounts:
+    - mountPath: /opt/app-root/src/dynamic-plugins-root
+      name: dynamic-plugins-root
+    - mountPath: /opt/app-root/src/postgres-crt.pem
+      name: postgres-crt # inject TLS certificate to Backstage cont. <4>
+      subPath: postgres-crt.pem
+    - mountPath: /opt/app-root/src/postgres-ca.pem
+      name: postgres-ca # inject CA certificate to Backstage cont. <5>
+      subPath: postgres-ca.pem
+    - mountPath: /opt/app-root/src/postgres-key.key
+      name: postgres-key # inject TLS private key to Backstage cont. <6>
+      subPath: postgres-key.key              
+  extraVolumes:
+    - ephemeral:
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+      name: dynamic-plugins-root
+    - configMap:
+        defaultMode: 420
+        name: dynamic-plugins
+        optional: true
+      name: dynamic-plugins
+    - name: dynamic-plugins-npmrc
+      secret:
+        defaultMode: 420
+        optional: true
+        secretName: dynamic-plugins-npmrc
+    - name: postgres-crt
+      secret:
+        secretName: <crt-secret> <7>
+        # ...
 ----
-<1> Set the value of the `upstream.postgresql.enabled` parameter to `false` to disable creating local PostgreSQL instances.
-<2> Provide the name of the credential secret that you created.
-<3> Optional: Provide the name of the certificate secret only for a TLS connection.  
+<1> Set the value of the `upstream.postgresql.enabled` parameter to `false` to disable creating local PostgreSQL instances. 
+<2> Provide the name of the credential secret.
+<3> Provide the name of the credential secret.
+<4> Optional: Provide the name of the TLS certificate only for a TLS connection.
+<5> Optional: Provide the name of the CA certificate only for a TLS connection.
+<6> Optional: Provide the name of the TLS private key only if your TLS connection requires a private key.
+<7> Provide the name of the certificate secret if you have configured a TLS connection.
 
 . Apply the configuration changes in your Helm configuration file:
 +
