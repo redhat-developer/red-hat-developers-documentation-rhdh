@@ -28,14 +28,30 @@ mkdir -p titles-generated/"${BRANCH}";
 echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}</title></head><body><ul>" > titles-generated/"${BRANCH}"/index.html;
 # exclude the rhdh-plugins-reference as it's embedded in the admin guide
 # shellcheck disable=SC2044,SC2013
+set -e
 for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
     d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}}; 
-    CMD="asciidoctor --backend=html5 -o index.html --section-numbers -a toc --failure-level ERROR --trace --warnings --destination-dir $d $t"; 
+    CMD="asciidoctor \
+           --backend=html5 \
+           --destination-dir $d \
+           --failure-level ERROR \
+           --section-numbers \
+           --trace \
+           --warnings \
+           -a chapter-signifier=Chapter \
+           -a sectnumslevels=5 \
+           -a source-highlighter=coderay \
+           -a stylesdir=`pwd`/.asciidoctor \
+           -a stylesheet=docs.css \
+           -a toc=left \
+           -a toclevels=5 \
+           -o index.html \
+           $t";
     echo "Building $t into $d ..."; 
     echo "  $CMD"
     $CMD
-    for im in $(grep images/ "$d/index.html" | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do 
-        # echo "  Copy $im ..."; 
+    for im in $(grep images/ "$d/index.html" | grep -E -v 'mask-image|background|fa-icons|jupumbra' | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do
+        # echo "  Copy $im ...";
         IMDIR="$d/${im%/*}/"
         mkdir -p "${IMDIR}"; rsync -q "$im" "${IMDIR}";
     done
