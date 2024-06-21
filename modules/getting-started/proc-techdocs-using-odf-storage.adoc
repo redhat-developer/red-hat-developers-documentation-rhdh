@@ -1,0 +1,39 @@
+:_mod-docs-content-type: PROCEDURE
+[id="proc-techdocs-using-odf-storage_{context}"]
+= Using {odf-name} for file storage
+
+You can configure {odf-name} to store the files that TechDocs generates instead of relying on other cloud storage solutions.
+
+{odf-name} provides an `ObjectBucketClaim` custom resource (CR) that you can use to request an S3 compatible bucket backend. You must install the {odf-name} Operator to use this feature.
+
+.Prerequisites
+
+* An {ocp-short} administrator has installed the {odf-name} Operator in {ocp-brand-name}. For more information, see link:https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation/4.15/html/deploying_openshift_data_foundation_using_amazon_web_services/deploy-using-dynamic-storage-devices-aws#installing-openshift-data-foundation-operator-using-the-operator-hub_cloud-storage[{ocp-short} - Installing {company-name} {odf-name} Operator].
+* An {ocp-short} administrator has created an {odf-name} cluster and configured the `StorageSystem` schema. For more information, see link:https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation/latest/html/deploying_openshift_data_foundation_using_amazon_web_services/deploy-using-dynamic-storage-devices-aws#creating-an-openshift-data-foundation-service_cloud-storage[{ocp-short} - Creating an {odf-name} cluster].
+
+.Procedure
+
+* Create an `ObjectBucketClaim` CR where the generated TechDocs files are stored. For example:
++
+[source,yaml]
+----
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: <rhdh_bucket_claim_name>
+spec:
+  generateBucketName: <rhdh_bucket_claim_name>
+  storageClassName: openshift-storage.noobaa.io
+----
++
+[NOTE]
+====
+Creating the {product-short} `ObjectBucketClaim` CR automatically creates both the {product-short} `ObjectBucketClaim` config map and secret. The config map and secret have the same name as the `ObjetBucketClaim` CR.
+====
+
+After you create the `ObjectBucketClaim` CR, you can use the information stored in the config map and secret to make the information accessible to the {product-short} container as environment variables. Depending on the method that you used to install {product-short}, you add the access information to either the {product} Helm chart or Operator configuration.
+
+[role="_additional-resources"]
+.Additional resources
+
+* For more information about the Object Bucket Claim, see link:https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation/4.12/html/managing_hybrid_and_multicloud_resources/object-bucket-claim#doc-wrapper[{ocp-short} - Object Bucket Claim].
