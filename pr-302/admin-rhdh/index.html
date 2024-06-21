@@ -487,9 +487,10 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </li>
 <li><a href="#con-rbac-overview_admin-rhdh">8. Role-Based Access Control (RBAC) in Red Hat Developer Hub</a>
 <ul class="sectlevel2">
-<li><a href="#con-rbac-config-permission-policies_admin-rhdh">8.1. Permission policies configuration</a></li>
-<li><a href="#proc-rbac-ui-manage-roles_admin-rhdh">8.2. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</a></li>
-<li><a href="#con-rbac-rest-api_admin-rhdh">8.3. Role-based Access Control (RBAC) REST API</a></li>
+<li><a href="#ref-rbac-permission-policies_admin-rhdh">8.1. Permission policies in Red Hat Developer Hub</a></li>
+<li><a href="#con-rbac-conditional-policies-rhdh_admin-rhdh">8.2. Conditional policies in Red Hat Developer Hub</a></li>
+<li><a href="#proc-rbac-ui-manage-roles_admin-rhdh">8.3. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</a></li>
+<li><a href="#con-rbac-rest-api_admin-rhdh">8.4. Role-based Access Control (RBAC) REST API</a></li>
 </ul>
 </li>
 <li><a href="#assembly-admin-templates">9. Managing templates</a>
@@ -2052,10 +2053,7 @@ Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</
 </table>
 </div>
 <div class="paragraph">
-<p>Red Hat analyzes the collected data to understand your interactions with the RHDH application without disclosing your identity and compromising your privacy. Red Hat uses the collected data only for internal analysis and to improve the offerings and your experience with Red Hat Developer Hub.</p>
-</div>
-<div class="paragraph">
-<p>This feature collects the following data about your RHDH usage:</p>
+<p>Red Hat collects and analyzes the following data to improve your experience with Red Hat Developer Hub:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -2068,23 +2066,13 @@ Due to a peculiarity with GitLab OAuth, ensure the URL has no trailing <code>/</
 <li>
 <p>Page-related information, for example, title, category, extension name, URL, path, referrer, and search parameters.</p>
 </li>
-</ul>
-</div>
-<div class="paragraph">
-<p>IP address and username are anonymized to maintain your privacy:</p>
-</div>
-<div class="ulist">
-<ul>
 <li>
-<p>The IP addresses are anonymized and recorded as <code>0.0.0.0</code>.</p>
+<p>Anonymized IP addresses, recorded as <code>0.0.0.0</code>.</p>
 </li>
 <li>
-<p>The usernames are recorded as an anonymized hash.</p>
+<p>Anonymized username hashes, which are unique identifiers used solely to identify the number of unique users of the RHDH application.</p>
 </li>
 </ul>
-</div>
-<div class="paragraph">
-<p>The username hash is a unique identifier that is used solely to identify the number of unique users of the RHDH application.</p>
 </div>
 <div class="paragraph">
 <p>With RHDH, you can customize the telemetry data collection feature and the telemetry Segment source configuration based on your needs.</p>
@@ -4885,193 +4873,7 @@ spec:
 <p>The Red Hat Developer Hub uses RBAC to improve the permission system within the platform. The RBAC feature in Developer Hub introduces an administrator role and leverages the organizational structure including teams, groups, and users by facilitating efficient access control.</p>
 </div>
 <div class="sect2">
-<h3 id="con-rbac-config-permission-policies_admin-rhdh">8.1. Permission policies configuration</h3>
-<div class="paragraph">
-<p>There are two approaches to configure the permission policies in Red Hat Developer Hub, including:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Configuration of permission policies administrators</p>
-</li>
-<li>
-<p>Configuration of permission policies defined in an external file</p>
-</li>
-</ul>
-</div>
-<div class="sect3">
-<h4 id="con-rbac-config-permission-policies-admin_admin-rhdh">8.1.1. Configuration of permission policies administrators</h4>
-<div class="paragraph">
-<p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
-</div>
-<div class="paragraph">
-<p>The purpose of configuring policy administrators is to enable a specific, restricted number of authenticated users to access the RBAC REST API. The permission policies are defined in a <code>policy.csv</code> file, which is referenced in the <code>app-config-rhdh</code> ConfigMap. OpenShift platform administrators or cluster administrators can perform this task with access to the namespace where Red Hat Developer Hub is deployed.</p>
-</div>
-<div class="paragraph">
-<p>You can set the credentials of a permission policy administrator in the <code>app-config.yaml</code> file as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
-  enabled: true
-  rbac:
-    admin:
-      users:
-        - name: user:default/joeuser</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="con-rbac-config-permission-policies-external-file_admin-rhdh">8.1.2. Configuration of permission policies defined in an external file</h4>
-<div class="paragraph">
-<p>You can follow this approach of configuring the permission policies before starting the Red Hat Developer Hub. If permission policies are defined in an external file, then you can import the same file in the Developer Hub. The permission policies need to be defined in Casbin rules format. For information about the Casbin rules format, see <a href="https://casbin.org/docs/category/the-basics">Basics of Casbin rules</a>.</p>
-</div>
-<div class="paragraph">
-<p>The following is an example of permission policies configuration:</p>
-</div>
-<div class="paragraph">
-<p><code>p, role:default/guests, catalog-entity, read, deny</code></p>
-</div>
-<div class="paragraph">
-<p><code>p, role:default/guests, catalog.entity.create, create, deny</code></p>
-</div>
-<div class="paragraph">
-<p><code>g, user:default/&lt;USER_TO_ROLE&gt;, role:default/guests</code></p>
-</div>
-<div class="paragraph">
-<p>If a defined permission does not contain an action associated with it, then add <code>use</code> as a policy. See the following example:</p>
-</div>
-<div class="paragraph">
-<p><code>p, role:default/guests, kubernetes.proxy, use, deny</code></p>
-</div>
-<div class="paragraph">
-<p>You can define the <code>policy.csv</code> file path in the <code>app-config.yaml</code> file:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
-  enabled: true
-  rbac:
-    policies-csv-file: /some/path/rbac-policy.csv</code></pre>
-</div>
-</div>
-<div class="sect4">
-<h5 id="_mounting-policy-csv-file-to-the-developer-hub-helm-chart">Mounting <code>policy.csv</code> file to the Developer Hub Helm Chart</h5>
-<div class="paragraph">
-<p>When the Red Hat Developer Hub is deployed with the Helm Chart, then you must define the <code>policy.csv</code> file by mounting it to the Developer Hub Helm Chart.</p>
-</div>
-<div class="paragraph">
-<p>You can add your <code>policy.csv</code> file to the Developer Hub Helm Chart by creating a <code>configMap</code> and mounting it.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>You are logged in to your OpenShift Container Platform account using the OpenShift Container Platform web console.</p>
-</li>
-<li>
-<p>Red Hat Developer Hub is installed and deployed using Helm Chart.</p>
-<div class="paragraph">
-<p>For more information about installing the Red Hat Developer Hub on OpenShift Container Platform using Helm Chart, see <a href="#proc-install-rhdh-ocp-helm_admin-rhdh">Deploying Red Hat Developer Hub on OpenShift Container Platform using Helm Chart</a>.</p>
-</div>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>In OpenShift Container Platform, create a ConfigMap to hold the policies as shown in the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="title">Example <code>ConfigMap</code></div>
-<div class="content">
-<pre class="highlight"><code>kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: rbac-policy
-  namespace: rhdh
-data:
-  rbac-policy.csv: |
-    p, role:default/guests, catalog-entity, read, allow
-    p, role:default/guests, catalog.entity.create, create, allow
-
-    g, user:default/&lt;YOUR_USER&gt;, role:default/guests</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>In the Developer Hub Helm Chart, go to <strong>Root Schema &#8594; Backstage chart schema &#8594; Backstage parameters &#8594; Backstage container additional volume mounts</strong>.</p>
-</li>
-<li>
-<p>Select <strong>Add Backstage container additional volume mounts</strong> and add the following values:</p>
-<div class="openblock">
-<div class="content">
-<div class="ulist">
-<ul>
-<li>
-<p><strong>mountPath</strong>: <code>opt/app-root/src/rbac</code></p>
-</li>
-<li>
-<p><strong>Name</strong>: <code>rbac-policy</code></p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Add the RBAC policy to the <strong>Backstage container additional volumes</strong> in the Developer Hub Helm Chart:</p>
-<div class="openblock">
-<div class="content">
-<div class="ulist">
-<ul>
-<li>
-<p><strong>name</strong>: <code>rbac-policy</code></p>
-</li>
-<li>
-<p><strong>configMap</strong></p>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>defaultMode</strong>: <code>420</code></p>
-</li>
-<li>
-<p><strong>name</strong>: <code>rbac-policy</code></p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Update the policy path in the <code>app-config.yaml</code> file as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="title">Example <code>app-config.yaml</code> file</div>
-<div class="content">
-<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
-  enabled: true
-  rbac:
-    policies-csv-file: ./rbac/rbac-policy.csv</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="ref-rbac-permission-policies_admin-rhdh">8.1.3. Permission policies in Red Hat Developer Hub</h4>
+<h3 id="ref-rbac-permission-policies_admin-rhdh">8.1. Permission policies in Red Hat Developer Hub</h3>
 <div class="paragraph">
 <p>Permission policies in Red Hat Developer Hub are a set of rules to govern access to resources or functionalities. These policies state the authorization level that is granted to users based on their roles. The permission policies are implemented to maintain security and confidentiality within a given environment.</p>
 </div>
@@ -5348,10 +5150,678 @@ data:
 </tr>
 </tbody>
 </table>
+<div class="sect3">
+<h4 id="con-rbac-config-permission-policies_admin-rhdh">8.1.1. Permission policies configuration</h4>
+<div class="paragraph">
+<p>There are two approaches to configure the permission policies in Red Hat Developer Hub, including:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Configuration of permission policies administrators</p>
+</li>
+<li>
+<p>Configuration of permission policies defined in an external file</p>
+</li>
+</ul>
+</div>
+<div class="sect4">
+<h5 id="con-rbac-config-permission-policies-admin_admin-rhdh">Configuration of permission policies administrators</h5>
+<div class="paragraph">
+<p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
+</div>
+<div class="paragraph">
+<p>The purpose of configuring policy administrators is to enable a specific, restricted number of authenticated users to access the RBAC REST API. The permission policies are defined in a <code>policy.csv</code> file, which is referenced in the <code>app-config-rhdh</code> ConfigMap. OpenShift platform administrators or cluster administrators can perform this task with access to the namespace where Red Hat Developer Hub is deployed.</p>
+</div>
+<div class="paragraph">
+<p>You can set the credentials of a permission policy administrator in the <code>app-config.yaml</code> file as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/joeuser</code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="con-rbac-config-permission-policies-external-file_admin-rhdh">Configuration of permission policies defined in an external file</h5>
+<div class="paragraph">
+<p>You can follow this approach of configuring the permission policies before starting the Red Hat Developer Hub. If permission policies are defined in an external file, then you can import the same file in the Developer Hub. The permission policies need to be defined in Casbin rules format. For information about the Casbin rules format, see <a href="https://casbin.org/docs/category/the-basics">Basics of Casbin rules</a>.</p>
+</div>
+<div class="paragraph">
+<p>The following is an example of permission policies configuration:</p>
+</div>
+<div class="paragraph">
+<p><code>p, role:default/guests, catalog-entity, read, deny</code></p>
+</div>
+<div class="paragraph">
+<p><code>p, role:default/guests, catalog.entity.create, create, deny</code></p>
+</div>
+<div class="paragraph">
+<p><code>g, user:default/&lt;USER_TO_ROLE&gt;, role:default/guests</code></p>
+</div>
+<div class="paragraph">
+<p>If a defined permission does not contain an action associated with it, then add <code>use</code> as a policy. See the following example:</p>
+</div>
+<div class="paragraph">
+<p><code>p, role:default/guests, kubernetes.proxy, use, deny</code></p>
+</div>
+<div class="paragraph">
+<p>You can define the <code>policy.csv</code> file path in the <code>app-config.yaml</code> file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    policies-csv-file: /some/path/rbac-policy.csv</code></pre>
+</div>
+</div>
+<div class="sect5">
+<h6 id="_mounting-policy-csv-file-to-the-developer-hub-helm-chart">Mounting <code>policy.csv</code> file to the Developer Hub Helm Chart</h6>
+<div class="paragraph">
+<p>When the Red Hat Developer Hub is deployed with the Helm Chart, then you must define the <code>policy.csv</code> file by mounting it to the Developer Hub Helm Chart.</p>
+</div>
+<div class="paragraph">
+<p>You can add your <code>policy.csv</code> file to the Developer Hub Helm Chart by creating a <code>configMap</code> and mounting it.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You are logged in to your OpenShift Container Platform account using the OpenShift Container Platform web console.</p>
+</li>
+<li>
+<p>Red Hat Developer Hub is installed and deployed using Helm Chart.</p>
+<div class="paragraph">
+<p>For more information about installing the Red Hat Developer Hub on OpenShift Container Platform using Helm Chart, see <a href="#proc-install-rhdh-ocp-helm_admin-rhdh">Deploying Red Hat Developer Hub on OpenShift Container Platform using Helm Chart</a>.</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In OpenShift Container Platform, create a ConfigMap to hold the policies as shown in the following example:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>ConfigMap</code></div>
+<div class="content">
+<pre class="highlight"><code>kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rbac-policy
+  namespace: rhdh
+data:
+  rbac-policy.csv: |
+    p, role:default/guests, catalog-entity, read, allow
+    p, role:default/guests, catalog.entity.create, create, allow
+
+    g, user:default/&lt;YOUR_USER&gt;, role:default/guests</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>In the Developer Hub Helm Chart, go to <strong>Root Schema &#8594; Backstage chart schema &#8594; Backstage parameters &#8594; Backstage container additional volume mounts</strong>.</p>
+</li>
+<li>
+<p>Select <strong>Add Backstage container additional volume mounts</strong> and add the following values:</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>mountPath</strong>: <code>opt/app-root/src/rbac</code></p>
+</li>
+<li>
+<p><strong>Name</strong>: <code>rbac-policy</code></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Add the RBAC policy to the <strong>Backstage container additional volumes</strong> in the Developer Hub Helm Chart:</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>name</strong>: <code>rbac-policy</code></p>
+</li>
+<li>
+<p><strong>configMap</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>defaultMode</strong>: <code>420</code></p>
+</li>
+<li>
+<p><strong>name</strong>: <code>rbac-policy</code></p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Update the policy path in the <code>app-config.yaml</code> file as follows:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>app-config.yaml</code> file</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    policies-csv-file: ./rbac/rbac-policy.csv</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-rbac-ui-manage-roles_admin-rhdh">8.2. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</h3>
+<h3 id="con-rbac-conditional-policies-rhdh_admin-rhdh">8.2. Conditional policies in Red Hat Developer Hub</h3>
+<div class="paragraph">
+<p>The permission framework in Red Hat Developer Hub provides conditions, supported by the RBAC backend plugin (<code>backstage-plugin-rbac-backend</code>). The conditions work as content filters for the Developer Hub resources that are provided by the RBAC backend plugin.</p>
+</div>
+<div class="paragraph">
+<p>The RBAC backend API stores conditions assigned to roles in the database. When you request to access the frontend resources, the RBAC backend API searches for the corresponding conditions and delegates them to the appropriate plugin using its plugin ID. If you are assigned to multiple roles with different conditions, then the RBAC backend merges the conditions using the <code>anyOf</code> criteria.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Conditional criteria</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>A condition in Developer Hub is a simple condition with a rule and parameters. However, a condition can also contain a parameter or an array of parameters combined by conditional criteria. The supported conditional criteria includes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>allOf</code>: Ensures that all conditions within the array must be true for the combined condition to be satisfied.</p>
+</li>
+<li>
+<p><code>anyOf</code>: Ensures that at least one of the conditions within the array must be true for the combined condition to be satisfied.</p>
+</li>
+<li>
+<p><code>not</code>: Ensures that the condition within it must not be true for the combined condition to be satisfied.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">Conditional object</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>The plugin specifies the parameters supported for conditions. You can access the conditional object schema from the RBAC API endpoint to understand how to construct a conditional JSON object, which is then used by the RBAC backend plugin API.</p>
+</div>
+<div class="paragraph">
+<p>A conditional object contains the following parameters:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 1. Conditional object parameters</caption>
+<colgroup>
+<col style="width: 30%;">
+<col style="width: 45%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>result</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Always has the value <code>CONDITIONAL</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>roleEntityRef</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String entity reference to the RBAC role, such as <code>role:default/dev</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pluginId</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Corresponding plugin ID, such as <code>catalog</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>permissionMapping</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Array permission actions, such as <code>['read', 'update', 'delete']</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>resourceType</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Resource type provided by the plugin, such as <code>catalog-entity</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>conditions</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JSON</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Condition JSON with parameters or array parameters joined by criteria</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+<div class="sect3">
+<h4 id="ref-rbac-conditional-policy-definition_admin-rhdh">8.2.1. Conditional policies definition</h4>
+<div class="paragraph">
+<p>You can access API endpoints for conditional policies in Red Hat Developer Hub. For example, to retrieve the available conditional rules, which can help you define these policies, you can access the <code>GET [api/plugins/condition-rules]</code> endpoint.</p>
+</div>
+<div class="paragraph">
+<p>The <code>api/plugins/condition-rules</code> returns the condition parameters schemas, for example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+   {
+      "pluginId": "catalog",
+      "rules": [
+         {
+            "name": "HAS_ANNOTATION",
+            "description": "Allow entities with the specified annotation",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "annotation": {
+                     "type": "string",
+                     "description": "Name of the annotation to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the annotation to match on"
+                  }
+               },
+               "required": [
+                  "annotation"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_LABEL",
+            "description": "Allow entities with the specified label",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "label": {
+                     "type": "string",
+                     "description": "Name of the label to match on"
+                  }
+               },
+               "required": [
+                  "label"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_METADATA",
+            "description": "Allow entities with the specified metadata subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities metadata to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_SPEC",
+            "description": "Allow entities with the specified spec subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities spec to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_KIND",
+            "description": "Allow entities matching a specified kind",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "kinds": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of kinds to match at least one of"
+                  }
+               },
+               "required": [
+                  "kinds"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_OWNER",
+            "description": "Allow entities owned by a specified claim",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "claims": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of claims to match at least one on within ownedBy"
+                  }
+               },
+               "required": [
+                  "claims"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         }
+      ]
+   }
+   ... &lt;another plugin condition parameter schemas&gt;
+]</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The RBAC backend API constructs a condition JSON object based on the previous condition schema.</p>
+</div>
+<div class="sect4">
+<h5 id="_examples-of-conditional-policies">Examples of conditional policies</h5>
+<div class="paragraph">
+<p>In Red Hat Developer Hub, you can define conditional policies with or without criteria. You can use the following examples to define the conditions based on your use case:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">A condition without criteria</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Consider a condition without criteria displaying catalogs only if user is a member of the owner group. To add this condition, you can use the catalog plugin schema <code>IS_ENTITY_OWNER</code> as follows:</p>
+</div>
+<div class="listingblock">
+<div class="title">Example condition without criteria</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "rule": "IS_ENTITY_OWNER",
+  "resourceType": "catalog-entity",
+  "params": {
+    "claims": ["group:default/team-a"]
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the previous example, the only conditional parameter used is <code>claims</code>, which contains a list of user or group entity references.</p>
+</div>
+<div class="paragraph">
+<p>You can apply the previous example condition to the RBAC REST API by adding additional parameters as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["group:default/team-a"]
+    }
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">A condition with criteria</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Consider a condition with criteria, which displays catalogs only if user is a member of owner group OR displays list of all catalog user groups.</p>
+</div>
+<div class="paragraph">
+<p>To add the criteria, you can add another rule as <code>IS_ENTITY_KIND</code> in the condition as follows:</p>
+</div>
+<div class="listingblock">
+<div class="title">Example condition with criteria</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "anyOf": [
+    {
+      "rule": "IS_ENTITY_OWNER",
+      "resourceType": "catalog-entity",
+      "params": {
+        "claims": ["group:default/team-a"]
+      }
+    },
+    {
+      "rule": "IS_ENTITY_KIND",
+      "resourceType": "catalog-entity",
+      "params": {
+        "kinds": ["Group"]
+      }
+    }
+  ]
+}</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Running conditions in parallel during creation is not supported. Therefore, consider defining nested conditional policies based on the available criteria.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">Example of nested conditions</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "anyOf": [
+    {
+      "rule": "IS_ENTITY_OWNER",
+      "resourceType": "catalog-entity",
+      "params": {
+        "claims": ["group:default/team-a"]
+      }
+    },
+    {
+      "rule": "IS_ENTITY_KIND",
+      "resourceType": "catalog-entity",
+      "params": {
+        "kinds": ["Group"]
+      }
+    }
+  ],
+  "not": {
+    "rule": "IS_ENTITY_KIND",
+    "resourceType": "catalog-entity",
+    "params": { "kinds": ["Api"] }
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can apply the previous example condition to the RBAC REST API by adding additional parameters as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {
+          "claims": ["group:default/team-a"]
+        }
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": ["Group"]
+        }
+      }
+    ]
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>The following examples can be used with Developer Hub plugins. These examples can help you determine how to define conditional policies:</p>
+</div>
+<div class="listingblock">
+<div class="title">Conditional policy defined for Keycloak plugin</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["update", "delete"],
+  "conditions": {
+    "not": {
+      "rule": "HAS_ANNOTATION",
+      "resourceType": "catalog-entity",
+      "params": { "annotation": "keycloak.org/realm", "value": "&lt;YOUR_REALM&gt;" }
+    }
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous example of Keycloak plugin prevents users in the <code>role:default/developer</code> from updating or deleting users that are ingested into the catalog from the Keycloak plugin.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In the previous example, the annotation <code>keycloak.org/realm</code> requires the value of <code>&lt;YOUR_REALM&gt;</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">Conditional policy defined for Quay plugin</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "scaffolder",
+  "resourceType": "scaffolder-action",
+  "permissionMapping": ["use"],
+  "conditions": {
+    "not": {
+      "rule": "HAS_ACTION_ID",
+      "resourceType": "scaffolder-action",
+      "params": { "actionId": "quay:create-repository" }
+    }
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous example of Quay plugin prevents the role <code>role:default/developer</code> from using the Quay scaffolder action. Note that <code>permissionMapping</code> contains <code>use</code>, signifying that <code>scaffolder-action</code> resource type permission does not have a permission policy.</p>
+</div>
+<div class="paragraph">
+<p>For more information about permissions in Red Hat Developer Hub, see <a href="#ref-rbac-permission-policies_admin-rhdh">Permission policies in Red Hat Developer Hub</a>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-rbac-ui-manage-roles_admin-rhdh">8.3. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</h3>
 <div class="paragraph">
 <p>Administrators can use the Developer Hub web interface (Web UI) to allocate specific roles and permissions to individual users or groups. Allocating roles ensures that access to resources and functionalities is regulated across the Developer Hub.</p>
 </div>
@@ -5365,7 +5835,7 @@ data:
 <p>After you install the <code>@janus-idp/backstage-plugin-rbac</code> plugin, the <strong>Administration</strong> option appears at the bottom of the sidebar. When you can click <strong>Administration</strong>, the RBAC tab appears by default, displaying all of the existing roles created in the Developer Hub. In the RBAC tab, you can also view the total number of users, groups, and the total number of permission policies associated with a role. You can also edit or delete a role using the <strong>Actions</strong> column.</p>
 </div>
 <div class="sect3">
-<h4 id="proc-rbac-ui-create-role_admin-rhdh">8.2.1. Creating a role in the Red Hat Developer Hub Web UI</h4>
+<h4 id="proc-rbac-ui-create-role_admin-rhdh">8.3.1. Creating a role in the Red Hat Developer Hub Web UI</h4>
 <div class="paragraph">
 <p>You can create a role in the Red Hat Developer Hub using the Web UI.</p>
 </div>
@@ -5428,7 +5898,7 @@ data:
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-rbac-ui-edit-role_admin-rhdh">8.2.2. Editing a role in the Red Hat Developer Hub Web UI</h4>
+<h4 id="proc-rbac-ui-edit-role_admin-rhdh">8.3.2. Editing a role in the Red Hat Developer Hub Web UI</h4>
 <div class="paragraph">
 <p>You can edit a role in the Red Hat Developer Hub using the Web UI.</p>
 </div>
@@ -5495,7 +5965,7 @@ data:
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-rbac-ui-delete-role_admin-rhdh">8.2.3. Deleting a role in the Red Hat Developer Hub Web UI</h4>
+<h4 id="proc-rbac-ui-delete-role_admin-rhdh">8.3.3. Deleting a role in the Red Hat Developer Hub Web UI</h4>
 <div class="paragraph">
 <p>You can delete a role in the Red Hat Developer Hub using the Web UI.</p>
 </div>
@@ -5560,7 +6030,7 @@ data:
 </div>
 </div>
 <div class="sect2">
-<h3 id="con-rbac-rest-api_admin-rhdh">8.3. Role-based Access Control (RBAC) REST API</h3>
+<h3 id="con-rbac-rest-api_admin-rhdh">8.4. Role-based Access Control (RBAC) REST API</h3>
 <div class="paragraph">
 <p>Red Hat Developer Hub provides RBAC REST API that you can use to manage the permissions and roles in the Developer Hub. This API supports you to facilitate and automate the maintenance of Developer Hub permission policies and roles.</p>
 </div>
@@ -5704,7 +6174,7 @@ data:
 </ul>
 </div>
 <div class="sect3">
-<h4 id="proc-rbac-send-request-rbac-rest-api_admin-rhdh">8.3.1. Sending requests with the RBAC REST API using a REST client or curl utility</h4>
+<h4 id="proc-rbac-send-request-rbac-rest-api_admin-rhdh">8.4.1. Sending requests with the RBAC REST API using a REST client or curl utility</h4>
 <div class="paragraph">
 <p>The RBAC REST API enables you to interact with the permission policies and roles in Developer Hub without using the user interface. You can send RBAC REST API requests using any REST client or curl utility.</p>
 </div>
@@ -5787,9 +6257,292 @@ data:
 </div>
 </div>
 <div class="sect3">
-<h4 id="ref-rbac-rest-api-endpoints_admin-rhdh">8.3.2. Supported RBAC REST API endpoints</h4>
+<h4 id="ref-rbac-rest-api-endpoints_admin-rhdh">8.4.2. Supported RBAC REST API endpoints</h4>
 <div class="paragraph">
-<p>The RBAC REST API provides the following endpoints for managing permission policies and roles in the Developer Hub and for retrieving information about the policies and roles.</p>
+<p>The RBAC REST API provides endpoints for managing roles, permissions, and conditional policies in the Developer Hub and for retrieving information about the roles and policies.</p>
+</div>
+<div class="sect4">
+<h5 id="_roles">Roles</h5>
+<div class="paragraph">
+<p>The RBAC REST API supports the following endpoints for managing roles in the Red Hat Developer Hub.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">[GET] /api/permission/roles</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns all roles in Developer Hub.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "memberReferences": ["user:default/username"],
+    "name": "role:default/guests"
+  },
+  {
+    "memberReferences": [
+      "group:default/groupname",
+      "user:default/username"
+    ],
+    "name": "role:default/rbac_admin"
+  }
+]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[GET] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns information for a single role in Developer Hub.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "memberReferences": [
+      "group:default/groupname",
+      "user:default/username"
+    ],
+    "name": "role:default/rbac_admin"
+  }
+]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[POST] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Creates a role in Developer Hub.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 2. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>body</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The <code>memberReferences</code>, <code>group</code>, <code>namespace</code>, and <code>name</code> the new role to be created.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request body</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example request body (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "memberReferences": ["group:default/test"],
+  "name": "role:default/test_admin"
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>201 Created</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[PUT] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Updates <code>memberReferences</code>, <code>kind</code>, <code>namespace</code>, or <code>name</code> for a role in Developer Hub.</p>
+</div>
+<div class="paragraph">
+<div class="title">Request parameters</div>
+<p>The request body contains the <code>oldRole</code> and <code>newRole</code> objects:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>body</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The <code>memberReferences</code>, <code>group</code>, <code>namespace</code>, and <code>name</code> the new role to be created.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request body</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example request body (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "oldRole": {
+    "memberReferences": ["group:default/test"],
+    "name": "role:default/test_admin"
+  },
+  "newRole": {
+    "memberReferences": ["group:default/test", "user:default/test2"],
+    "name": "role:default/test_admin"
+  }
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>200 OK</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}?memberReferences=&lt;VALUE&gt;</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Deletes the specified user or group from a role in Developer Hub.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 3. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>memberReferences</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Associated group information</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>204</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Deletes a specified role from Developer Hub.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 4. Request parameters</caption>
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 45%;">
+<col style="width: 15%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+<div class="listingblock">
+<div class="title">Example response</div>
+<div class="content">
+<pre class="highlight"><code>204</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+</dl>
+</div>
 </div>
 <div class="sect4">
 <h5 id="_permission-policies">Permission policies</h5>
@@ -5835,7 +6588,7 @@ data:
 <p>Returns permission policies related to the specified entity reference.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 1. Request parameters</caption>
+<caption class="title">Table 5. Request parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 45%;">
@@ -5901,7 +6654,7 @@ data:
 <p>Creates a permission policy for a specified entity.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 2. Request parameters</caption>
+<caption class="title">Table 6. Request parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 45%;">
@@ -6044,7 +6797,7 @@ data:
 <p>Deletes a permission policy added to the specified entity.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 3. Request parameters</caption>
+<caption class="title">Table 7. Request parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 45%;">
@@ -6162,33 +6915,244 @@ data:
 </div>
 </div>
 <div class="sect4">
-<h5 id="_roles">Roles</h5>
+<h5 id="_conditional-policies">Conditional policies</h5>
 <div class="paragraph">
-<p>The RBAC REST API supports the following endpoints for managing roles in the Red Hat Developer Hub.</p>
+<p>The RBAC REST API supports the following endpoints for managing conditional policies in the Red Hat Developer Hub.</p>
 </div>
 <div class="dlist">
 <dl>
-<dt class="hdlist1">[GET] /api/permission/roles</dt>
+<dt class="hdlist1">[GET] /api/plugins/condition-rules</dt>
 <dd>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>Returns all roles in Developer Hub.</p>
+<p>Returns available conditional rule parameter schemas for the available plugins that are enabled in Developer Hub.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+   {
+      "pluginId": "catalog",
+      "rules": [
+         {
+            "name": "HAS_ANNOTATION",
+            "description": "Allow entities with the specified annotation",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "annotation": {
+                     "type": "string",
+                     "description": "Name of the annotation to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the annotation to match on"
+                  }
+               },
+               "required": [
+                  "annotation"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_LABEL",
+            "description": "Allow entities with the specified label",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "label": {
+                     "type": "string",
+                     "description": "Name of the label to match on"
+                  }
+               },
+               "required": [
+                  "label"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_METADATA",
+            "description": "Allow entities with the specified metadata subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities metadata to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_SPEC",
+            "description": "Allow entities with the specified spec subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities spec to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_KIND",
+            "description": "Allow entities matching a specified kind",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "kinds": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of kinds to match at least one of"
+                  }
+               },
+               "required": [
+                  "kinds"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_OWNER",
+            "description": "Allow entities owned by a specified claim",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "claims": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of claims to match at least one on within ownedBy"
+                  }
+               },
+               "required": [
+                  "claims"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         }
+      ]
+   }
+   ... &lt;another plugin condition parameter schemas&gt;
+]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[GET] /api/permission/roles/conditions/:id</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns conditions for the specified ID.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example response (JSON)</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "id": 1,
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {
+          "claims": ["group:default/team-a"]
+        }
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": ["Group"]
+        }
+      }
+    ]
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">[GET] /api/permission/roles/conditions</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Returns list of all conditions for all roles.</p>
 </div>
 <div class="listingblock">
 <div class="title">Example response (JSON)</div>
 <div class="content">
 <pre class="highlight"><code class="language-json" data-lang="json">[
   {
-    "memberReferences": ["user:default/pataknight"],
-    "name": "role:default/guests"
-  },
-  {
-    "memberReferences": [
-      "group:default/janus-authors",
-      "user:default/matt"
-    ],
-    "name": "role:default/rbac_admin"
+    "id": 1,
+    "result": "CONDITIONAL",
+    "roleEntityRef": "role:default/test",
+    "pluginId": "catalog",
+    "resourceType": "catalog-entity",
+    "permissionMapping": ["read"],
+    "conditions": {
+      "anyOf": [
+        {
+          "rule": "IS_ENTITY_OWNER",
+          "resourceType": "catalog-entity",
+          "params": {
+            "claims": ["group:default/team-a"]
+          }
+        },
+        {
+          "rule": "IS_ENTITY_KIND",
+          "resourceType": "catalog-entity",
+          "params": {
+            "kinds": ["Group"]
+          }
+        }
+      ]
+    }
   }
 ]</code></pre>
 </div>
@@ -6196,15 +7160,15 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[GET] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[POST] /api/permission/roles/conditions</dt>
 <dd>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>Creates a role in Developer Hub.</p>
+<p>Creates a conditional policy for the specified role.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 4. Request parameters</caption>
+<caption class="title">Table 8. Request parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 45%;">
@@ -6221,9 +7185,39 @@ data:
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>body</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The <code>memberReferences</code>, <code>group</code>, <code>namespace</code>, and <code>name</code> the new role to be created.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Request body</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>result</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Always has the value <code>CONDITIONAL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>roleEntityRef</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String entity reference to the RBAC role, such as <code>role:default/dev</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pluginId</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Corresponding plugin ID, such as <code>catalog</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>permissionMapping</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Array permission action, such as <code>['read', 'update', 'delete']</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>resourceType</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Resource type provided by the plugin, such as <code>catalog-entity</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>conditions</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Condition JSON with parameters or array parameters joined by criteria</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JSON</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
 </tr>
 </tbody>
@@ -6232,32 +7226,41 @@ data:
 <div class="title">Example request body (JSON)</div>
 <div class="content">
 <pre class="highlight"><code class="language-json" data-lang="json">{
-  "memberReferences": ["group:default/test"],
-  "name": "role:default/test_admin"
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["group:default/team-a"]
+    }
+  }
 }</code></pre>
 </div>
 </div>
 <div class="listingblock">
-<div class="title">Example response</div>
+<div class="title">Example response (JSON)</div>
 <div class="content">
-<pre class="highlight"><code>201 Created</code></pre>
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "id": 1
+}</code></pre>
 </div>
 </div>
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[PUT] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[PUT] /permission/roles/conditions/:id</dt>
 <dd>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>Updates <code>memberReferences</code>, <code>kind</code>, <code>namespace</code>, or <code>name</code> for a role in Developer Hub.</p>
-</div>
-<div class="paragraph">
-<div class="title">Request parameters</div>
-<p>The request body contains the <code>oldRole</code> and <code>newRole</code> objects:</p>
+<p>Updates a condition policy for a specified ID.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 9. Request parameters</caption>
 <colgroup>
 <col style="width: 15%;">
 <col style="width: 45%;">
@@ -6274,9 +7277,39 @@ data:
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>body</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The <code>memberReferences</code>, <code>group</code>, <code>namespace</code>, and <code>name</code> the new role to be created.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Request body</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>result</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Always has the value <code>CONDITIONAL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>roleEntityRef</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String entity reference to the RBAC role, such as <code>role:default/dev</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pluginId</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Corresponding plugin ID, such as <code>catalog</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>permissionMapping</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Array permission action, such as <code>['read', 'update', 'delete']</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>resourceType</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Resource type provided by the plugin, such as <code>catalog-entity</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>conditions</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Condition JSON with parameters or array parameters joined by criteria</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JSON</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
 </tr>
 </tbody>
@@ -6285,13 +7318,28 @@ data:
 <div class="title">Example request body (JSON)</div>
 <div class="content">
 <pre class="highlight"><code class="language-json" data-lang="json">{
-  "oldRole": {
-    "memberReferences": ["group:default/test"],
-    "name": "role:default/test_admin"
-  },
-  "newRole": {
-    "memberReferences": ["group:default/test", "user:default/test2"],
-    "name": "role:default/test_admin"
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {
+          "claims": ["group:default/team-a"]
+        }
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": ["Group"]
+        }
+      }
+    ]
   }
 }</code></pre>
 </div>
@@ -6299,115 +7347,19 @@ data:
 <div class="listingblock">
 <div class="title">Example response</div>
 <div class="content">
-<pre class="highlight"><code>200 OK</code></pre>
+<pre class="highlight"><code>200</code></pre>
 </div>
 </div>
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}?memberReferences=&lt;VALUE&gt;</dt>
+<dt class="hdlist1">[DELETE] /api/permission/roles/conditions/:id</dt>
 <dd>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>Deletes the specified user or group from a role in Developer Hub.</p>
+<p>Deletes a conditional policy for the specified ID.</p>
 </div>
-<table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 5. Request parameters</caption>
-<colgroup>
-<col style="width: 15%;">
-<col style="width: 45%;">
-<col style="width: 15%;">
-<col style="width: 25%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Description</th>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>memberReferences</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Associated group information</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
-</tr>
-</tbody>
-</table>
-<div class="listingblock">
-<div class="title">Example response</div>
-<div class="content">
-<pre class="highlight"><code>204</code></pre>
-</div>
-</div>
-</div>
-</div>
-</dd>
-<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}</dt>
-<dd>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p>Deletes a specified role from Developer Hub.</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 6. Request parameters</caption>
-<colgroup>
-<col style="width: 15%;">
-<col style="width: 45%;">
-<col style="width: 15%;">
-<col style="width: 25%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Description</th>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kind</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Kind of the entity</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>namespace</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Namespace of the entity</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Username related to the entity</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
-</tr>
-</tbody>
-</table>
 <div class="listingblock">
 <div class="title">Example response</div>
 <div class="content">
@@ -6674,7 +7626,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-19 19:42:42 UTC
+Last updated 2024-06-21 16:13:47 UTC
 </div>
 </div>
 </body>
