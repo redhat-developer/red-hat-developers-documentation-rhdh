@@ -150,7 +150,8 @@ for j in $jsons; do
         Required_Variables="$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml | grep "\${" | sed -r -e 's/.+: "\$\{(.+)\}".*/\1/')"
         if [[ ! $Required_Variables ]]; then Required_Variables="$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml | grep "\${" | sed -r -e 's/.+: "\$\{(.+)\}".*/\1/')"; fi
         for RV in $Required_Variables; do 
-            Required_Variables_="${Required_Variables_}\`$RV\`\n\n"
+            this_RV="$(echo "${RV}" | tr -d "\$\{\}\"")"
+            Required_Variables_="${Required_Variables_}\`$this_RV\`\n\n"
         done
         Required_Variables="${Required_Variables_}"
         # not currently used due to policy and support concern with upstream content linked from downstream doc
