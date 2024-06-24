@@ -1,0 +1,109 @@
+[id="proc-configuring-postgresql-instance-using-operator_{context}"]
+= Configuring an external PostgreSQL instance using the Operator
+
+You can configure an external PostgreSQL instance using the {product} Operator. By default, the Operator creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the {product-very-short} instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, Amazon Web Services (AWS) Relational Database Service (RDS) or Azure database.
+
+.Prerequisites
+
+* You are using a supported version of PostgreSQL. For more information, see the link:https://access.redhat.com/support/policy/updates/developerhub[Product life cycle page].
+* You have the following details:
+** `db-host`: Denotes your PostgreSQL instance Domain Name System (DNS) or IP address 
+** `db-port`: Denotes your PostgreSQL instance port number, such as `5432`
+** `username`: Denotes the user name to connect to your PostgreSQL instance
+** `password`: Denotes the password to connect to your PostgreSQL instance
+* You have installed the {product} Operator.
+* Optional: You have a CA certificate, Transport Layer Security (TLS) private key, and TLS certificate so that you can secure your database connection by using the TLS protocol. For more information, refer to your PostgreSQL vendor documentation.
+
+[NOTE]
+====
+By default, {product-short} uses a database for each plugin and automatically creates it if none is found. You might need the `Create Database` privilege in addition to `PSQL Database` privileges for configuring an external PostgreSQL instance.  
+====
+ 
+
+.Procedure
+
+. Optional: Create a certificate secret to configure your PostgreSQL instance with a TLS connection:
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: <crt-secret> <1>
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+  -----BEGIN CERTIFICATE-----
+  <ca-certificate-key> <2>
+ postgres-key.key: |-
+  -----BEGIN CERTIFICATE-----
+  <tls-private-key> <3>
+ postgres-crt.pem: |-    
+  -----BEGIN CERTIFICATE-----
+  <tls-certificate-key> <4>
+  # ...
+EOF
+----
+<1> Provide the name of the certificate secret.
+<2> Provide the CA certificate key.
+<3> Optional: Provide the TLS private key.
+<4> Optional: Provide the TLS certificate key.
+
+. Create a credential secret to connect with the PostgreSQL instance:
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: <cred-secret> <1>
+type: Opaque
+stringData: <2>
+ POSTGRES_PASSWORD: <password>
+ POSTGRES_PORT: "<db-port>"
+ POSTGRES_USER: <username>
+ POSTGRES_HOST: <db-host>
+ PGSSLMODE: <ssl-mode> # for TLS connection <3>
+ NODE_EXTRA_CA_CERTS: <abs-path-to-pem-file> # for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem <4>
+EOF
+----
+<1> Provide the name of the credential secret.
+<2> Provide credential data to connect with your PostgreSQL instance.
+<3> Optional: Provide the value based on the required link:https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNECT-SSLMODE[Secure Sockets Layer (SSL) mode].
+<4> Optional: Provide the value only if you need a TLS connection for your PostgreSQL instance.
+
+. Create a `Backstage` custom resource (CR):
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: <backstage-instance-name>
+spec:
+  database:
+    enableLocalDb: false <1>
+  application: 
+    extraFiles:
+      mountPath: <path> # e g /opt/app-root/src
+      secrets:
+        - name: <crt-secret> <2>
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key # key name as in <crt-secret> Secret
+    extraEnvs:
+      secrets:
+        - name: <cred-secret> <3>
+        # ... 
+----
+<1> Set the value of the `enableLocalDb` parameter to `false` to disable creating local PostgreSQL instances.
+<2> Provide the name of the certificate secret if you have configured a TLS connection. 
+<3> Provide the name of the credential secret that you created.
++
+[NOTE]
+====
+The environment variables listed in the `Backstage` CR work with the Operator default configuration. If you have changed the Operator default configuration, you must reconfigure the `Backstage` CR accordingly.
+====
+
+. Apply the `Backstage` CR to the namespace where you have deployed the {product-very-short} instance.
