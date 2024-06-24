@@ -1,0 +1,56 @@
+[id="proc-installing-rhdh-on-kubernetes-with-helm-cli_{context}"]
+= Installing {product} on Kubernetes with Helm CLI
+
+You can use the Helm CLI to install {product} on the following platforms:
+
+* {eks-brand-name} ({eks-short})
+* {aks-brand-name} ({aks-short})
+
+.Prerequisites
+* You have installed the link:https://kubernetes.io/docs/reference/kubectl/[`kubectl` CLI].
+* You have installed the link:https://helm.sh/docs/intro/install[Helm CLI].
+* You started a `kubectl` session, with `developer` or `admin` permissions, on a Kubernetes cluster.
+
+.Procedure
+. Add the OpenShift Helm Charts repository.
++
+----
+helm repo add openshift-helm-charts https://charts.openshift.io/
+----
+
+. Create and activate the _<rhdh>_ Kubernetes namespace:
++
+[subs="quotes+"]
+----
+NAMESPACE=_<rhdh>_
+kubectl create namespace ${NAMESPACE}
+kubectl config set-context --current --namespace=${NAMESPACE}
+----
+
+. Install the {product} Helm chart by running the following command:
++
+[subs="attributes+"]
+----
+helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
+----
+
+. Configure your {product-short} Helm chart instance with the {product-short} database password and router base URL values from your {ocp-short} cluster:
++
+[subs="attributes+"]
+----
+PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
+helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
+    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
+    --set global.postgresql.auth.password="$PASSWORD"
+----
+
+. Display the running {product-short} instance URL, by running the following command:
++
+----
+echo "https://redhat-developer-hub-$NAMESPACE.$CLUSTER_ROUTER_BASE"
+----
+
+.Verification
+* Open the running {product-short} instance URL in your browser to use {product-short}.
+
