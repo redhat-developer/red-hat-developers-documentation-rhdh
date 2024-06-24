@@ -1,0 +1,57 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-rhdh-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-admin-enabling-metrics-ocp-operator_{context}"]
+= Enabling metrics monitoring in a {product} Operator installation on an {ocp-short} cluster
+
+You can enable and view metrics for an Operator-installed {product} instance from the *Developer* perspective of the {ocp-short} web console.
+
+.Prerequisites
+
+* Your {ocp-short} cluster has link:https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html[monitoring for user-defined projects] enabled.
+* You have installed {product} on {ocp-short} using the {product} Operator.
+* You have installed the {oc-first}.
+
+.Procedure
+
+Currently, the {product} Operator does not support creating a `ServiceMonitor` custom resource (CR) by default. You must complete the following steps to create a `ServiceMonitor` CR to scrape metrics from the endpoint.
+
+. Create the `ServiceMonitor` CR as a YAML file:
++
+[source,yaml]
+----
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: <custom_resource_name> # <1>
+  namespace: <project_name> # <2>
+  labels:
+    app.kubernetes.io/instance: <custom_resource_name>
+    app.kubernetes.io/name: backstage
+spec:
+  namespaceSelector:
+    matchNames:
+      - <project_name>
+  selector:
+    matchLabels:
+      rhdh.redhat.com/app: backstage-<custom_resource_name>
+  endpoints:
+  - port: backend
+    path: '/metrics'
+----
+<1> Replace `<custom_resource_name>` with the name of your {product} CR.
+<2> Replace `<project_name>` with the name of the {ocp-short} project where your {product} instance is running.
+
+. Apply the `ServiceMonitor` CR by running the following command:
++
+[source,terminal]
+----
+oc apply -f <filename>
+----
+
+.Verification
+
+. From the *Developer* perspective in the {ocp-short} web console, select the *Observe* view.
+. Click the *Metrics* tab to view metrics for {product} pods.
