@@ -56,6 +56,28 @@ if [[ ! -d /tmp/backstage-showcase ]]; then
     popd >/dev/null || exit
 fi
 
+# thanks to https://stackoverflow.com/questions/42925485/making-a-script-that-transforms-sentences-to-title-case
+# shellcheck disable=SC2048 disable=SC2086
+titlecase() { 
+    for f in ${*} ; do \
+        case $f in 
+            # UPPERCASE these exceptions
+            aap|acr|cd|ocm|rbac) echo -n "${f^^} ";;
+            # MixedCase exceptions
+            argocd) echo -n "Argo CD ";;
+            github) echo -n "GitHub ";;
+            gitlab) echo -n "GitLab ";;
+            jfrog) echo -n "JFrog ";;
+            pagerduty) echo -n "PagerDuty ";;
+            servicenow) echo -n "ServiceNow ";;
+            sonarqube) echo -n "SonarQube ";;
+            techdocs) echo -n "TechDocs ";;
+            # Uppercase the first letter
+            *) echo -n "${f^} " ;;
+        esac;
+    done; echo;
+}
+
 # process 2 folders of json files
 declare -A adoc
 jsons=$(find /tmp/backstage-showcase/dynamic-plugins/wrappers/ /tmp/backstage-plugins/plugins/ -maxdepth 2 -name package.json | sort -V)
@@ -144,20 +166,22 @@ for j in $jsons; do
             -e "s@-backend@@g" \
         )"
         # echo " to $Name"
+        PrettyName="$(titlecase "${Name//-/ }")"
+
 
         # useful console output
-        for col in Name Role Plugin Version Support_Level Path Required_Variables Default; do
+        for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
             echo "Got $col = ${!col}"
         done
 
         # TODO could split out the front, back, and scaffolders into separate tables. Or split by support levels.
 
         # save in an array sorted by name, then role, with frontend before backend plugins (for consistency with 1.1 markup)
-        RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; fi
+        RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; Role="Backend"; else Role="Frontend"; fi
         if [[ $Plugin == *"scaffolder"* ]]; then RoleSort=3; fi
 
         # shellcheck disable=SC1087
-        adoc["$Name-$RoleSort-$Role-$Plugin"]="|$Name |$URL[$Plugin] |$Role |$Version |$Support_Level\n|$Path\na|\n$Required_Variables|$Default\n"
+        adoc["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |$URL[$Plugin] |$Role |$Version |$Support_Level\n|$Path\na|\n$Required_Variables|$Default\n"
     else
         (( tot-- )) || true
         echo "        Skip: not in backstage-showcase/dynamic-plugins.default.yaml !"
