@@ -1,22 +1,22 @@
 [id="proc-migrating-databases-to-an-external-server_{context}"]
 = Migrating local databases to an external database server
 
-By default, {product} hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured. You can migrate the data from an {product-very-short} instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS, Azure database, or Crunchy database. To migrate the data from each {product-very-short} instance one by one, you can use PostgreSQL utilities, such as link:https://www.postgresql.org/docs/current/app-pgdump.html[pg_dump] with link:https://www.postgresql.org/docs/current/app-psql.html[psql] or link:https://www.pgadmin.org/[pgAdmin]. 
+By default, {product} hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured in {product-short}. You can migrate the data from an {product-very-short} instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS, Azure database, or Crunchy database. To migrate the data from each {product-very-short} instance, you can use PostgreSQL utilities, such as link:https://www.postgresql.org/docs/current/app-pgdump.html[`pg_dump`] with link:https://www.postgresql.org/docs/current/app-psql.html[`psql`] or link:https://www.pgadmin.org/[`pgAdmin`]. 
 
 [NOTE]
 ====
-For quick migration, you can also use this link:https://github.com/janus-idp/operator/blob/main/hack/db_copy.sh[database copy script].
+For quick migration, you can also use the link:https://github.com/janus-idp/operator/blob/main/hack/db_copy.sh[database copy script].
 ====
 
 .Prerequisites
 
-* You have installed the link:https://www.postgresql.org/docs/current/app-pgdump.html[pg_dump] and link:https://www.postgresql.org/docs/current/app-psql.html[psql] utilities on your local machine.
-* For data export, you have the PGSQL user sufficient privileges to make a full dump of local databases.
-* For data import, you have the PGSQL user sufficient admin privileges to create an external database and populate it with database dumps.
+* You have installed the link:https://www.postgresql.org/docs/current/app-pgdump.html[`pg_dump`] and link:https://www.postgresql.org/docs/current/app-psql.html[`psql`] utilities on your local machine.
+* For data export, you have the PGSQL user privileges to make a full dump of local databases.
+* For data import, you have the PGSQL admin privileges to create an external database and populate it with database dumps.
 
 .Procedure
 
-. Configure port forwarding for the local PostgreSQL database pod by running the following command on a dedicated terminal: 
+. Configure port forwarding for the local PostgreSQL database pod by running the following command on a terminal: 
 +
 [source,terminal]
 ----
@@ -25,7 +25,7 @@ oc port-forward -n <your-namespace> <pgsql-pod-name> <forward-to-port>:<forward-
 Where:
 * The `<pgsql-pod-name>` variable denotes the name of a PostgreSQL pod with the format `backstage-psql--<_index>`.
 * The `<forward-to-port>` variable denotes the port of your choice to forward PostgreSQL data to.
-* The `<forward-from-port>` variable denotes the local PostgreSQL instance port, usually `5432`.
+* The `<forward-from-port>` variable denotes the local PostgreSQL instance port, such as `5432`.
 +
 .Example: Configuring port forwarding
 [source,terminal]
@@ -35,26 +35,25 @@ oc port-forward -n backstage backstage-psql-backstage1-0 15432:5432
 
 . Make a copy of the `db_copy.sh` script and edit the following details based on your configuration:
 
-* `to_host`: The destination host name, for example, `<db-instance-name>.rds.amazonaws.com`
-* `to_port`: The destination port that is usually `5432`
-* `to_user`: The destination server username, for example, `postgres`
-* `from_host`: The source host name that is usually `127.0.0.1`
-* `from_port`: The source port number, that is, the `<forward-to-port>` variable 
-* `from_user`: The source server username, for example, `postgres`
-* `allDB`: The name of databases to import in double quotes separated by spaces, for example, `("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")`
+* `to_host`: The destination host name, for example, `<db-instance-name>.rds.amazonaws.com`.
+* `to_port`: The destination port, such as `5432`.
+* `to_user`: The destination server username, for example, `postgres`.
+* `from_host`: The source host name, such as `127.0.0.1`.
+* `from_port`: The source port number, such as the `<forward-to-port>` variable. 
+* `from_user`: The source server username, for example, `postgres`.
+* `allDB`: The name of databases to import in double quotes separated by spaces, for example, `("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")`.
 
 . Create a destination database for copying the data:
 +
 [source,terminal]
 ----
-/bin/bash TO_PSW=<destination-db-password> /path/to/db_copy.sh
+/bin/bash TO_PSW=<destination-db-password> /path/to/db_copy.sh <1>
 ----
-Where,
-* The `<destination-db-password>` variable denotes the password to connect to the destination database.
+<1> The `<destination-db-password>` variable denotes the password to connect to the destination database.
 +
 [NOTE]
 ====
-You can stop port forwarding when copying of the data is complete. Also, if you are dealing with large databases, go to the link:https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-LARGE[site] and see the details to use the compression tools. 
+You can stop port forwarding when the copying of the data is complete. For more information about handling large databases and using the compression tools, see the link:https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-LARGE[Handling Large Databases] section on the PostgreSQL website.
 ====
 
 . Reconfigure your `Backstage` custom resource (CR). For more information, see link:{LinkAdminGuide}#proc-configuring-postgresql-instance-using-operator_admin-rhdh[Configuring an external PostgreSQL instance using the Operator]. 
