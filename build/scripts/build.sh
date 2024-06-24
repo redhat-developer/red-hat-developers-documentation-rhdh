@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2023 Red Hat, Inc.
+# Copyright (c) 2023-2024 Red Hat, Inc.
 # This program and the accompanying materials are made
 # available under the terms of the Eclipse Public License 2.0
 # which is available at https://www.eclipse.org/legal/epl-2.0/
@@ -31,15 +31,32 @@ echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}
 set -e
 for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
     d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}}; 
-    CMD="asciidoctor --backend=html5 -o index.html --section-numbers -a toc --failure-level ERROR --trace --warnings --destination-dir $d -a stylesdir=`pwd`/.asciidoctor -a stylesheet=docs.css $t";
-    echo "Building $t into $d ..."; 
-    echo "  $CMD"
+    CMD="asciidoctor \
+           --backend=html5 \
+           --destination-dir $d \
+           --failure-level ERROR \
+           --section-numbers \
+           --trace \
+           --warnings \
+           -a chapter-signifier=Chapter \
+           -a sectnumslevels=5 \
+           -a source-highlighter=coderay \
+           -a stylesdir=$(pwd)/.asciidoctor \
+           -a stylesheet=docs.css \
+           -a toc=left \
+           -a toclevels=5 \
+           -o index.html \
+           $t";
+    echo -e -n "\nBuilding $t into $d ...\n  "; 
+    echo "${CMD}" | sed -r -e "s/\  +/ \\\\\n    /g"
     $CMD
+    # shellcheck disable=SC2013
     for im in $(grep images/ "$d/index.html" | grep -E -v 'mask-image|background|fa-icons|jupumbra' | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do
         # echo "  Copy $im ...";
         IMDIR="$d/${im%/*}/"
         mkdir -p "${IMDIR}"; rsync -q "$im" "${IMDIR}";
     done
+    # shellcheck disable=SC2044
     for f in $(find "$d/" -type f); do echo "    $f"; done
     echo "<li><a href=${d/titles-generated\/${BRANCH}/.}>${d/titles-generated\/${BRANCH}\//}</a></li>" >> titles-generated/"${BRANCH}"/index.html;
 done
