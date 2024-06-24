@@ -1612,7 +1612,7 @@ section {
 <ul class="sectlevel2">
 <li><a href="#proc-configuring-postgresql-instance-using-operator_admin-rhdh">3.1. Configuring an external PostgreSQL instance using the Operator</a></li>
 <li><a href="#proc-configuring-postgresql-instance-using-helm_admin-rhdh">3.2. Configuring an external PostgreSQL instance using the Helm Chart</a></li>
-<li><a href="#proc-migrating-databases-to-an-external-server_admin-rhdh">3.3. Migrating local databases to an external database server</a></li>
+<li><a href="#proc-migrating-databases-to-an-external-server_admin-rhdh">3.3. Migrating local databases to an external database server using the Operator</a></li>
 </ul>
 </li>
 <li><a href="#enabling-authentication">Chapter 4. Enabling authentication in Red Hat Developer Hub</a>
@@ -3278,7 +3278,7 @@ upstream:
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-migrating-databases-to-an-external-server_admin-rhdh">3.3. Migrating local databases to an external database server</h3>
+<h3 id="proc-migrating-databases-to-an-external-server_admin-rhdh">3.3. Migrating local databases to an external database server using the Operator</h3>
 <div class="paragraph">
 <p>By default, Red Hat Developer Hub hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured in Developer Hub. You can migrate the data from an RHDH instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS, Azure database, or Crunchy database. To migrate the data from each RHDH instance, you can use PostgreSQL utilities, such as <a href="https://www.postgresql.org/docs/current/app-pgdump.html"><code>pg_dump</code></a> with <a href="https://www.postgresql.org/docs/current/app-psql.html"><code>psql</code></a> or <a href="https://www.pgadmin.org/"><code>pgAdmin</code></a>.</p>
 </div>
@@ -3290,7 +3290,7 @@ upstream:
 </td>
 <td class="content">
 <div class="paragraph">
-<p>For quick migration, you can also use the <a href="https://github.com/janus-idp/operator/blob/main/hack/db_copy.sh">database copy script</a>.</p>
+<p>The following procedure uses a <a href="https://github.com/janus-idp/operator/blob/1.2.x/hack/db_copy.sh">database copy script</a> to help you to do a quick migration.</p>
 </div>
 </td>
 </tr>
@@ -3326,7 +3326,7 @@ upstream:
 <div class="ulist">
 <ul>
 <li>
-<p>The <code>&lt;pgsql-pod-name&gt;</code> variable denotes the name of a PostgreSQL pod with the format <code>backstage-psql--&lt;_index&gt;</code>.</p>
+<p>The <code>&lt;pgsql-pod-name&gt;</code> variable denotes the name of a PostgreSQL pod with the format <code>backstage-psql-&lt;deployment-name&gt;-&lt;_index&gt;</code>.</p>
 </li>
 <li>
 <p>The <code>&lt;forward-to-port&gt;</code> variable denotes the port of your choice to forward PostgreSQL data to.</p>
@@ -3336,7 +3336,7 @@ upstream:
 <div class="listingblock">
 <div class="title">Example: Configuring port forwarding</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">oc port-forward -n backstage backstage-psql-backstage1-0 15432:5432</code></pre>
+<pre class="CodeRay highlight"><code data-lang="terminal">oc port-forward -n developer-hub backstage-psql-developer-hub-0 15432:5432</code></pre>
 </div>
 </div>
 </li>
@@ -3344,31 +3344,54 @@ upstream:
 </div>
 </li>
 <li>
-<p>Make a copy of the <code>db_copy.sh</code> script and edit the following details based on your configuration:</p>
-<div class="ulist">
-<ul>
+<p>Make a copy of the following <code>db_copy.sh</code> script and edit the details based on your configuration:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="script">#!/bin/bash
+
+to_host=&lt;db-service-host&gt; <b class="conum">(1)</b>
+to_port=5432 <b class="conum">(2)</b>
+to_user=postgres <b class="conum">(3)</b>
+
+from_host=127.0.0.1 <b class="conum">(4)</b>
+from_port=15432 <b class="conum">(5)</b>
+from_user=postgres <b class="conum">(6)</b>
+
+allDB=("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search") <b class="conum">(7)</b>
+
+for db in ${!allDB[@]};
+do
+  db=${allDB[$db]}
+  echo Copying database: $db
+  PGPASSWORD=$TO_PSW psql -h $to_host -p $to_port -U $to_user -c "create database $db;"
+  pg_dump -h $from_host -p $from_port -U $from_user -d $db | PGPASSWORD=$TO_PSW psql -h $to_host -p $to_port -U $to_user -d $db
+done</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
 <li>
-<p><code>to_host</code>: The destination host name, for example, <code>&lt;db-instance-name&gt;.rds.amazonaws.com</code>.</p>
+<p>The destination host name, for example, <code>&lt;db-instance-name&gt;.rds.amazonaws.com</code>.</p>
 </li>
 <li>
-<p><code>to_port</code>: The destination port, such as <code>5432</code>.</p>
+<p>The destination port, such as <code>5432</code>.</p>
 </li>
 <li>
-<p><code>to_user</code>: The destination server username, for example, <code>postgres</code>.</p>
+<p>The destination server username, for example, <code>postgres</code>.</p>
 </li>
 <li>
-<p><code>from_host</code>: The source host name, such as <code>127.0.0.1</code>.</p>
+<p>The source host name, such as <code>127.0.0.1</code>.</p>
 </li>
 <li>
-<p><code>from_port</code>: The source port number, such as the <code>&lt;forward-to-port&gt;</code> variable.</p>
+<p>The source port number, such as the <code>&lt;forward-to-port&gt;</code> variable.</p>
 </li>
 <li>
-<p><code>from_user</code>: The source server username, for example, <code>postgres</code>.</p>
+<p>The source server username, for example, <code>postgres</code>.</p>
 </li>
 <li>
-<p><code>allDB</code>: The name of databases to import in double quotes separated by spaces, for example, <code>("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")</code>.</p>
+<p>The name of databases to import in double quotes separated by spaces, for example, <code>("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")</code>.</p>
 </li>
-</ul>
+</ol>
 </div>
 </li>
 <li>
@@ -3435,8 +3458,11 @@ spec:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">oc -n backstage delete pvc &lt;local-psql-pvc-name&gt;</code></pre>
+<pre class="CodeRay highlight"><code data-lang="terminal">oc -n developer-hub delete pvc &lt;local-psql-pvc-name&gt;</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>where, the <code>&lt;local-psql-pvc-name&gt;</code> variable is in the <code>data-&lt;psql-pod-name&gt;</code> format.</p>
 </div>
 </td>
 </tr>
@@ -3445,6 +3471,35 @@ spec:
 </li>
 <li>
 <p>Apply the configuration changes.</p>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Verify that your RHDH instance is running and contains the migrated data by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">oc get pods -n &lt;your-namespace&gt;</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Check the output for the following details:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The <code>backstage-developer-hub-xxx</code> pod is in running state.</p>
+</li>
+<li>
+<p>The <code>backstage-psql-developer-hub-0</code> pod is not available.</p>
+<div class="paragraph">
+<p>You can also verify these details using the <strong>Topology</strong> view in the OpenShift Container Platform web console.</p>
+</div>
+</li>
+</ul>
+</div>
 </li>
 </ol>
 </div>
@@ -8529,7 +8584,7 @@ spec:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-24 06:32:55 UTC
+Last updated 2024-06-24 11:36:33 UTC
 </div>
 </div>
 </body>
