@@ -153,7 +153,8 @@ for j in $jsons; do
             Required_Variables_="${Required_Variables_}\`$RV\`\n\n"
         done
         Required_Variables="${Required_Variables_}"
-        URL="https://www.npmjs.com/package/$Plugin"
+        # not currently used due to policy and support concern with upstream content linked from downstream doc
+        # URL="https://www.npmjs.com/package/$Plugin" 
 
         # echo -n "Converting $Name"
         Name="$(echo "${Name}" | sed -r \
@@ -181,7 +182,7 @@ for j in $jsons; do
         if [[ $Plugin == *"scaffolder"* ]]; then RoleSort=3; fi
 
         # shellcheck disable=SC1087
-        adoc["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |$URL[$Plugin] |$Role |$Version |$Support_Level\n|$Path\na|\n$Required_Variables|$Default\n"
+        adoc["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |$Plugin |$Role |$Version |$Support_Level\n|$Path\na|\n$Required_Variables|$Default\n"
     else
         (( tot-- )) || true
         echo "        Skip: not in backstage-showcase/dynamic-plugins.default.yaml !"
