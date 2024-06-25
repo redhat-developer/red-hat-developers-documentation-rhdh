@@ -467,6 +467,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#con-breaking-changes_release-notes-rhdh">3. Breaking changes</a>
 <ul class="sectlevel2">
 <li><a href="#_guest-authentication-must-now-be-explicitly-enabled">3.1. Guest authentication must now be explicitly enabled</a></li>
+<li><a href="#_improved-validation-permission-policies-from-different-sources">3.2. Improved validation permission policies from different sources</a></li>
 </ul>
 </li>
 <li><a href="#con-relnotes-techpreview-features_release-notes-rhdh">4. Technology preview</a>
@@ -744,8 +745,10 @@ oc project &lt;your_namespace&gt;</code></pre>
 <div class="sect2">
 <h3 id="_guest-authentication-must-now-be-explicitly-enabled">3.1. Guest authentication must now be explicitly enabled</h3>
 <div class="paragraph">
-<p>In previous versions of Backstage, guest authentication was enabled and available by default until disabled. As of Red Hat Developer Hub 1.2, guest authentication needs to be explicitly enabled.
-The guest login is provided by a special authentication provider that must be explicitly enabled. This authentication provider should be used for <strong>development purposes only</strong> and is <strong>not intended for production</strong>, as it creates a default user that has user-level access to the Backstage instance. <a href="https://issues.redhat.com/browse/RHIDP-2043">(RHIDP-2043)</a></p>
+<p>In previous versions of Backstage, guest authentication was enabled by default. As of Red Hat Developer Hub 1.2, guest authentication is disabled by default and needs to be explicitly enabled for use.</p>
+</div>
+<div class="paragraph">
+<p>The guest login is provided by a special authentication provider that must be explicitly enabled. This authentication provider should be used for <strong>development purposes only</strong> and is <strong>not intended for production</strong>, as it creates a default user that has user-level access to the Backstage instance.</p>
 </div>
 <div class="ulist">
 <ul>
@@ -771,6 +774,18 @@ The guest login is provided by a special authentication provider that must be ex
 </div>
 </li>
 </ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_improved-validation-permission-policies-from-different-sources">3.2. Improved validation permission policies from different sources</h3>
+<div class="paragraph">
+<p>In this release, Developer Hub provides more strict validation on the source of permission policies and roles based on how you define the first role.</p>
+</div>
+<div class="paragraph">
+<p>This update improves the validation of the different sources of permission policies and roles and provides more consistent policy definition. If a permission policy or role with a new member does not match the originating role&#8217;s source, Developer Hub prevents any update to permissions. Sources include 'REST, 'CSV', 'Configuration', and 'legacy'.</p>
+</div>
+<div class="paragraph">
+<p>Before updating your Red Hat Developer Hub application, you should migrate all permission policies and roles to a single source based on their respective roles. This can be done by using the GET roles endpoint to review the source information and by querying the role-metadata table of the permission database. You can make updates to permission policies by using one of the following: REST API, CSV file, and the database.</p>
 </div>
 </div>
 </div>
@@ -804,7 +819,7 @@ The guest login is provided by a special authentication provider that must be ex
 <p>Red Hat Developer Hub incorporates various dynamic plugins. Red Hat fully supports certain plugins, while others are community-supported projects. Some plugins are enabled by default, while others require configuration and are consequently disabled by default.</p>
 </div>
 <div class="paragraph">
-<p>To get a comprehensive list of supported dynamic plugins, see the <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/administration_guide_for_red_hat_developer_hub/index#rhdh-supported-plugins">Dynamic plugins included in Red Hat Developer Hub</a> section in the <em>Administration guide</em>.</p>
+<p>To get a comprehensive list of supported dynamic plugins, see the <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.2/html-single/confuguring_plugins_in_red_hat_developer_hub/index#con-preinstalled-dynamic-plugins">Preinstalled dynamic plugins</a> section in the <em>Configuring plugins in Red Hat Developer Hub</em> guide.</p>
 </div>
 </div>
 </div>
@@ -883,13 +898,13 @@ The guest login is provided by a special authentication provider that must be ex
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>In earlier versions of Red Hat Developer Hub, defining conditional policies with a policy action of 'use' would result in an error.</p>
+<p>In earlier versions of Red Hat Developer Hub, defining conditional policies with a policy action of <code>use</code> would result in an error.</p>
 </div>
 <div class="paragraph">
 <p>This issue led to difficulties in defining conditional policies, hindering the configuration of permissions within the application.</p>
 </div>
 <div class="paragraph">
-<p>With this fix, you can now define conditional policies in Developer Hub with permission policy actions of 'use'.</p>
+<p>With this fix, you can now define conditional policies in Developer Hub with permission policy actions of <code>use</code>.</p>
 </div>
 </div>
 </div>
@@ -961,21 +976,21 @@ The guest login is provided by a special authentication provider that must be ex
 </div>
 </div>
 </dd>
-<dt class="hdlist1">Allow specifying image pull secrets in Custom Resource for the database</dt>
+<dt class="hdlist1">Allow specifying image pull secrets in custom resource for the database</dt>
 <dd>
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>In earlier versions of the Red Hat Developer Hub operator, specifying image pull secrets to pull container images from private repositories such as <code>registry.redhat.io</code> did not affect the Database image. This limitation prevented the use of a database image from <code>registry.redhat.io`</code> when deploying Developer Hub in non-OpenShift clusters like Amazon EKS or Azure AKS.</p>
+<p>In earlier versions of the Red Hat Developer Hub operator, specifying image pull secrets to pull container images from repositories such as <code>registry.redhat.io</code> did not affect the database image. This limitation prevented the use of a database image from <code>registry.redhat.io`</code> when deploying Developer Hub in Kubernetes clusters like Amazon EKS or Azure AKS.</p>
 </div>
 <div class="paragraph">
-<p>As a result, users were unable to deploy the database image from <code>registry.redhat.io</code> in non-OpenShift clusters, limiting deployment flexibility and compatibility.</p>
+<p>As a result, users were unable to deploy the database image from <code>registry.redhat.io</code> in Kubernetes clusters, limiting deployment flexibility and compatibility.</p>
 </div>
 <div class="paragraph">
 <p>This update fixes the issue by propagating the image pull secrets specified in the <code>spec.application.imagePullSecrets</code> Custom Resource field. You can now use these secrets can for both the Developer Hub and database images.</p>
 </div>
 <div class="paragraph">
-<p>With this fix, users can successfully use image pull secrets for both the Developer Hub and database images, allowing deployments from private repositories such as <code>registry.redhat.io</code> in non-OpenShift clusters like Amazon EKS or Azure AKS. This ensures greater deployment flexibility and compatibility across different environments.</p>
+<p>With this fix, users can successfully use image pull secrets for both the Developer Hub and database images, allowing deployments from repositories such as <code>registry.redhat.io</code> in Kubernetes clusters like Amazon EKS or Azure AKS. This ensures greater deployment flexibility and compatibility across different environments.</p>
 </div>
 </div>
 </div>
@@ -1049,13 +1064,77 @@ The guest login is provided by a special authentication provider that must be ex
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>In previous versions, there was an issue with the Developer Hub Operator upgrade process that prevented operator-backed Developer Hub instances from upgrading seamlessly when the Developer Hub Operator itself was upgraded. This occurred because the Operator, when trying to reconcile already-existing Developer Hub Custom Resources, was denied patching certain fields that are restricted or read-only by Kubernetes or OpenShift.</p>
+<p>In previous versions, there was an issue with the Developer Hub Operator upgrade process that prevented operator-backed Developer Hub instances from upgrading seamlessly when the Developer Hub Operator itself was upgraded. This occurred because the Operator, when trying to reconcile existing Developer Hub custom resources, was denied patching certain fields that are restricted or read-only by Kubernetes or OpenShift Container Platform.</p>
 </div>
 <div class="paragraph">
 <p>This issue led to a failure in reaching the desired state during the upgrade.</p>
 </div>
 <div class="paragraph">
 <p>In this update, the Operator has been refactored to overcome these issues by replacing objects forcibly when it is unable to patch them. However, as a known issue, users might need to re-create any custom labels or annotations on the underlying resources managed by the Developer Hub Operator after the upgrade.</p>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">Failed to List Cluster Resources in Janus IDP Backstage Plugin OCM Backend Dynamic</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>In previous versions, the OpenShift Cluster Manager (OCM) Plugin Readme file had no information on how to configure OCM on a Kubernetes cluster.</p>
+</div>
+<div class="paragraph">
+<p>Due to this missing information, users were unable to configure the OCM plugin to fetch clusters, resulting in the plugin&#8217;s inability to display clusters.</p>
+</div>
+<div class="paragraph">
+<p>In this release, the Readme file has been updated to include a link for configuring OCM on a Kubernetes cluster and also provides instructions to enable access to the OCM backend plugin when the RBAC permission framework is enabled.</p>
+</div>
+<div class="paragraph">
+<p>With these updates, users can now properly configure the OCM plugin to fetch and display clusters in the OCM front-end, ensuring the plugin operates as intended.</p>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">RBAC: Could not fetch catalog entities. Request failed with 403 Forbidden.</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Recent updates to Backstage required plugins that use service-to-service authentication to be updated to use the new <code>httpAuth</code> and <code>auth</code> services.</p>
+</div>
+<div class="paragraph">
+<p>Without these updates, the RBAC Backend plugin was unable to query information from other plugins. This update modifies the RBAC Backend plugin to use the new <code>httpAuth</code> and <code>auth</code> services for service-to-service authentication.</p>
+</div>
+<div class="paragraph">
+<p>With this fix, the RBAC Backend plugin can now successfully query information from other plugins without breaking.</p>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">RBAC role data out-of-sync when scaling horizontally</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>When scaling a Developer Hub instance, role data would become out of sync due to the in-memory cache not being shared between instances.</p>
+</div>
+<div class="paragraph">
+<p>This issue resulted in inconsistencies in role data across different instances.</p>
+</div>
+<div class="paragraph">
+<p>With this fix, scaling a Developer Hub instance will no longer lead to role data being out of sync.</p>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">Gitlab organization synchronization not working</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>Recent updates to the Gitlab plugin resulted in the failure to synchronize organization provider data.</p>
+</div>
+<div class="paragraph">
+<p>In this release, the issue is fixed by including a wrapper for the Gitlab plugin that exposes the Gitlab organization provider.</p>
 </div>
 </div>
 </div>
@@ -1097,7 +1176,7 @@ The guest login is provided by a special authentication provider that must be ex
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-25 20:23:16 UTC
+Last updated 2024-06-25 21:39:56 UTC
 </div>
 </div>
 </body>
