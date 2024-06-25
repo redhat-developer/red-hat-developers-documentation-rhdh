@@ -7216,16 +7216,26 @@ spec:
 <p>Permission policies in Red Hat Developer Hub are a set of rules to govern access to resources or functionalities. These policies state the authorization level that is granted to users based on their roles. The permission policies are implemented to maintain security and confidentiality within a given environment.</p>
 </div>
 <div class="paragraph">
-<p>You can define two types of permissions in Developer Hub including, resource type and basic permissions.</p>
+<p>You can define the following types of permissions in Developer Hub:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>resource type</p>
+</li>
+<li>
+<p>basic</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>There are two types of permissions available in Developer Hub including, resource type and basic permissions. The distinction between the two permission types depends on whether a permission includes a defined resource type.</p>
+<p>The distinction between the two permission types depend on whether a permission includes a defined resource type.</p>
 </div>
 <div class="paragraph">
-<p>You can define the resource type permission using either the associated resource type of the permission name. The following is an example of resource type permission definition:</p>
+<p>You can define the resource type permission using either the associated resource type or the permission name as shown in the following example:
+.Example resource type permission definition</p>
 </div>
 <div class="listingblock">
-<div class="title">Example resource type permission definition</div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="csv">p, role:default/myrole, catalog.entity.read, read, allow
 g, user:default/myuser, role:default/myrole
@@ -7235,7 +7245,7 @@ g, user:default/another-user, role:default/another-role</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The basic permission in Developer Hub are only defined using the associated name. The following is an example of basic permission definition:</p>
+<p>You can define the basic permission in Developer Hub using the permission name as shown in the following example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -7563,40 +7573,61 @@ g, user:default/myuser, role:default/myrole</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">permission:
+<pre class="CodeRay highlight"><code data-lang="yaml"># ...
+permission:
   enabled: true
   rbac:
     admin:
       superUsers:
-        - name: user:default/joeuser</code></pre>
+        - name: user:default/joeuser
+        # ...</code></pre>
 </div>
 </div>
 </div>
 <div class="sect4">
 <h5 id="con-rbac-config-permission-policies-external-file_assembly-rhdh-observability">Configuration of permission policies defined in an external file</h5>
 <div class="paragraph">
-<p>You can follow this approach of configuring the permission policies before starting the Red Hat Developer Hub. If permission policies are defined in an external file, then you can import the same file in the Developer Hub. The permission policies need to be defined in Casbin rules format. The format for permission policies is as follows:</p>
+<p>You can configure the permission policies before starting the Red Hat Developer Hub. If permission policies are defined in an external file, then you can import the same file in the Developer Hub. You must define the permission policies using the following Casbin rules format:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="format">---
+`p, &lt;ROLE&gt;, &lt;PERMISSION_NAME or PERMISSION_RESOURCE_TYPE&gt;, &lt;PERMISSION_POLICY_ACTION&gt;, &lt;ALLOW or DENY&gt;`
+---</code></pre>
+</div>
 </div>
 <div class="paragraph">
-<p><code>p, &lt;ROLE&gt;, &lt;PERMISSION_NAME or PERMISSION_RESOURCE_TYPE&gt;, &lt;PERMISSION_POLICY_ACTION&gt;, &lt;ALLOW or DENY&gt;</code></p>
+<p>You can define roles using the following Casbin rules format:</p>
 </div>
-<div class="paragraph">
-<p>The following is the format for roles:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="format">---
+`g, &lt;USER or GROUP&gt;, &lt;ROLE&gt;`
+---</code></pre>
 </div>
-<div class="paragraph">
-<p><code>g, &lt;USER or GROUP&gt;, &lt;ROLE&gt;</code></p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
 <div class="paragraph">
 <p>For information about the Casbin rules format, see <a href="https://casbin.org/docs/category/the-basics">Basics of Casbin rules</a>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>The following is an example of permission policies configuration:</p>
 </div>
 <div class="paragraph">
-<p><code>p, role:default/guests, catalog-entity, read, deny</code></p>
+<p><code>p, role:default/guests, catalog-entity, read, allow</code></p>
 </div>
 <div class="paragraph">
-<p><code>p, role:default/guests, catalog.entity.create, create, deny</code></p>
+<p><code>p, role:default/guests, catalog.entity.create, create, allow</code></p>
 </div>
 <div class="paragraph">
 <p><code>g, user:default/&lt;USER_TO_ROLE&gt;, role:default/guests</code></p>
@@ -7608,7 +7639,7 @@ g, user:default/myuser, role:default/myrole</code></pre>
 <p>If a defined permission does not contain an action associated with it, then add <code>use</code> as a policy. See the following example:</p>
 </div>
 <div class="paragraph">
-<p><code>p, role:default/guests, kubernetes.proxy, use, deny</code></p>
+<p><code>p, role:default/guests, kubernetes.proxy, use, allow</code></p>
 </div>
 <div class="paragraph">
 <p>You can define the <code>policy.csv</code> file path in the <code>app-config.yaml</code> file:</p>
@@ -7622,18 +7653,20 @@ g, user:default/myuser, role:default/myrole</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>There is an optional configuration value that enables reloading the CSV file without restarting the Developer Hub instance.</p>
+<p>You can use an optional configuration value that enables reloading the CSV file without restarting the Developer Hub instance.</p>
 </div>
 <div class="paragraph">
-<p>You can specify the <code>policyFileReload</code> option in the <code>app-config.yaml</code> file:</p>
+<p>Set the value of the <code>policyFileReload</code> option in the <code>app-config.yaml</code> file:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">permission:
+<pre class="CodeRay highlight"><code data-lang="yaml"># ...
+permission:
   enabled: true
   rbac:
     policies-csv-file: /some/path/rbac-policy.csv
-    policyFileReload: true</code></pre>
+    policyFileReload: true
+    # ...</code></pre>
 </div>
 </div>
 <div class="sect5">
@@ -8481,7 +8514,7 @@ data:
 <p><code>Authorization: Bearer $token</code></p>
 </div>
 <div class="paragraph">
-<p>For example, on the <strong>Homepage</strong> of the Developer Hub, you can navigate to the <strong>Network</strong> tab and search for the <code>query?term=</code> network call. Alternatively, you can go to the <strong>Catalog</strong> page and select any network call with <code>entity-facets</code> to acquire the Bearer token.</p>
+<p>For example, on the <strong>Homepage</strong> of the Developer Hub, you can navigate to the <strong>Network</strong> tab and search for the <code>query?term=</code> network call. Alternatively, you can go to the <strong>Catalog</strong> page and select any Catalog API network call to acquire the Bearer token.</p>
 </div>
 </div>
 </div>
@@ -8619,10 +8652,7 @@ data:
 <div class="openblock">
 <div class="content">
 <div class="paragraph">
-<p>Each permission policy and role created using the RBAC plugin is associated with a Source to maintain data consistency within the plugin. The plugin strictly allows manipulation of permission policies and roles based on their designated source information.</p>
-</div>
-<div class="paragraph">
-<p>There are four source locations for permission policies or roles, including:</p>
+<p>Each permission policy and role created using the RBAC plugin is associated with a source to maintain data consistency within the plugin. You can manipulate permission policies and roles based on the following designated source information:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -8644,7 +8674,7 @@ data:
 <p>Managing roles and permission policies originating from CSV files and REST API involves straightforward modification based on their initial source information.</p>
 </div>
 <div class="paragraph">
-<p>The Configuration file pertains to the default <code>role:default/rbac_admin</code> role provided by the RBAC plugin, which has limited permissions to create, read, update, and delete permission policies or roles, and to read catalog entities.</p>
+<p>The Configuration file pertains to the default <code>role:default/rbac_admin</code> role provided by the RBAC plugin. The default role has limited permissions to create, read, update, and delete permission policies or roles, and to read catalog entities.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -8664,7 +8694,7 @@ data:
 <p>The legacy source applies to policies and roles defined before RBAC backend plugin version <code>2.1.3</code>, and is the least restrictive among the source location options. You must update the permissions and roles in legacy source to use either REST API or the CSV file sources.</p>
 </div>
 <div class="paragraph">
-<p>You can use the GET requests to query roles and policies and determine the source information, if required.</p>
+<p>You can use the <code>GET</code> requests to query roles and policies and determine the source information, if required.</p>
 </div>
 </div>
 </div>
@@ -8838,7 +8868,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -8891,7 +8921,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -8947,7 +8977,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9006,7 +9036,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9104,7 +9134,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9176,7 +9206,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9188,7 +9218,7 @@ data:
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>permission</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Permission from a specific plugin, Resource type or name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Permission from a specific plugin, resource type, or name</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
 </tr>
@@ -9251,13 +9281,13 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>permission</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Permission from a specific plugin, Resource type or name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Permission from a specific plugin, resource type, or name</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
 </tr>
@@ -9335,7 +9365,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9359,7 +9389,7 @@ data:
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>permission</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Permission from a specific plugin, Resource type or name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Permission from a specific plugin, resource type, or name</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
 </tr>
@@ -9406,7 +9436,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9766,7 +9796,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9806,29 +9836,16 @@ data:
 <td class="tableblock halign-left valign-top"><p class="tableblock">JSON</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
 </tr>
-</tbody>
-</table>
-<div class="paragraph">
-<p>|<code>name</code>
-|Name of the role
-|String
-|Required</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 100%;">
-</colgroup>
-<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Name of the role</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>metadata.description</code></p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The description of the role</p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Optional</p></td>
 </tr>
 </tbody>
@@ -9883,7 +9900,7 @@ data:
 <th class="tableblock halign-left valign-top">Name</th>
 <th class="tableblock halign-left valign-top">Description</th>
 <th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Requirement</th>
+<th class="tableblock halign-left valign-top">Presence</th>
 </tr>
 </thead>
 <tbody>
@@ -9923,29 +9940,16 @@ data:
 <td class="tableblock halign-left valign-top"><p class="tableblock">JSON</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
 </tr>
-</tbody>
-</table>
-<div class="paragraph">
-<p>|<code>name</code>
-|Name of the role
-|String
-|Required</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 100%;">
-</colgroup>
-<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Name of the role</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>metadata.description</code></p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The description of the role</p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Optional</p></td>
 </tr>
 </tbody>
@@ -10837,7 +10841,7 @@ jobs:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-24 18:49:59 UTC
+Last updated 2024-06-25 12:41:54 UTC
 </div>
 </div>
 </body>
