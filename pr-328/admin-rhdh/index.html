@@ -6538,9 +6538,156 @@ helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/c
 <div class="paragraph">
 <p>You can deploy your Developer Hub on AKS using the Red Hat Developer Hub Operator.</p>
 </div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have an Azure account with active subscription.</p>
+</li>
+<li>
+<p>You have installed the <a href="https://learn.microsoft.com/en-us/cli/azure/install-azure-cli">Azure CLI</a>.</p>
+</li>
+<li>
+<p>You have installed the <a href="https://kubernetes.io/docs/reference/kubectl/"><code>kubectl</code> CLI</a>.</p>
+</li>
+<li>
+<p>You are logged into your cluster using <code>kubectl</code>, and have <code>developer</code> or <code>admin</code> permissions.</p>
+</li>
+<li>
+<p>You have installed Helm 3 or the latest.</p>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Comparison of AKS specifics with the base Developer Hub deployment</div>
+<ul>
+<li>
+<p><strong>Permissions issue</strong>: Developer Hub containers might encounter permission-related errors, such as <code>Permission denied</code> when attempting certain operations. This error can be addresssed by adjusting the <code>fsGroup</code> in the <code>PodSpec.securityContext</code>.</p>
+</li>
+<li>
+<p><strong>Ingress configuration</strong>: In AKS, configuring ingress is essential for accessing the installed Developer Hub instance. Accessing the Developer Hub instance requires enabling the Routing add-on, an NGINX-based Ingress Controller, using the following commands:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>az aks approuting enable --resource-group &lt;your_ResourceGroup&gt; --name &lt;your_ClusterName&gt;</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You might need to install the Azure CLI extension <code>aks-preview</code>. If the extension is not installed automatically, you might need to install it manually using the following command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>az extension add --upgrade -n aks-preview --allow-preview true</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>After you install the Ingress Controller, the 'app-routing-system' namespace with the Ingress Controller will be deployed in your cluster. Note the address of your Developer Hub application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the Developer Hub application, later referenced as <code>&lt;app_address&gt;</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">kubectl get svc nginx --namespace app-routing-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}'</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Namespace management</strong>: You can create a dedicated namespace for Developer Hub deployment in AKS using the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">kubectl create namespace &lt;your_namespace&gt;</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
 <div class="olist arabic">
 <div class="title">Procedure</div>
 <ol class="arabic">
+<li>
+<p>Log in to AKS by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">az login [--tenant=&lt;optional_directory_name&gt;]</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Create a resource group by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">az group create --name &lt;resource_group_name&gt; --location &lt;location&gt;</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You can list available regions by running the following command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">az account list-locations -o table</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>Create an AKS cluster by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">az aks create \
+--resource-group &lt;resource_group_name&gt; \
+--name &lt;cluster_name&gt; \
+--enable-managed-identity \
+--generate-ssh-keys</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can refer to <code>--help</code> for additional options.</p>
+</div>
+</li>
+<li>
+<p>Connect to your cluster by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>az aks get-credentials --resource-group &lt;resource_group_name&gt; --name &lt;cluster_name&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous command configures the Kubernetes client and sets the current context in the <code>kubeconfig</code> to point to your AKS cluster.</p>
+</div>
+</li>
 <li>
 <p>Obtain the Red Hat Developer Hub Operator manifest file, named <code>rhdh-operator-&lt;VERSION&gt;.yaml</code>, and modify the default configuration of <code>db-statefulset.yaml</code> and <code>deployment.yaml</code> by adding the following fragment:</p>
 <div class="openblock">
@@ -10497,7 +10644,7 @@ jobs:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-06-25 18:49:30 UTC
+Last updated 2024-06-25 18:52:52 UTC
 </div>
 </div>
 </body>
