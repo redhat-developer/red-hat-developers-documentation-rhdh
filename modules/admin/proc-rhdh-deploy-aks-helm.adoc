@@ -2,10 +2,10 @@
 //
 // * assemblies/assembly-rhdh-integration-aks.adoc
 
-[id="proc-rhdh-deploy-aks-using-operator_{context}"]
-= Deploying the {product} on {aks-name} ({aks-short}) using the Operator
+[id="proc-rhdh-deploy-aks-helm_{context}"]
+= Deploying {product} on {aks-name} ({aks-short}) using the Helm chart
 
-You can deploy your {product-short} on {aks-short} using the {product} Operator.
+You can deploy your {product-short} application on {aks-name} ({aks-short}) to access a comprehensive solution for building, testing, and deploying applications.
 
 .Prerequisites
 
@@ -102,160 +102,115 @@ az aks get-credentials --resource-group <resource_group_name> --name <cluster_na
 +
 The previous command configures the Kubernetes client and sets the current context in the `kubeconfig` to point to your AKS cluster.
 
-. Obtain the {product} Operator manifest file, named `rhdh-operator-<VERSION>.yaml`, and modify the default configuration of `db-statefulset.yaml` and `deployment.yaml` by adding the following fragment:
+. Open terminal and run the following command to add the Helm chart repository:
 +
---
-[source,yaml]
+[source,terminal]
 ----
-securityContext:
-  fsGroup: 300
+helm repo add openshift-helm-charts https://charts.openshift.io/
 ----
 
-Following is the specified locations in the manifests:
-
-[source]
-----
-db-statefulset.yaml: | spec.template.spec
-deployment.yaml: | spec.template.spec
-----
---
-
-. Apply the modified Operator manifest to your Kubernetes cluster:
+. Create and activate the _<rhdh>_ namespace:
 +
---
-[source,bash]
+[source,terminal,subs="quotes+"]
 ----
-kubectl apply -f rhdh-operator-<VERSION>.yaml
+DEPLOYMENT_NAME=_<redhat-developer-hub>_
+NAMESPACE=_<rhdh>_
+kubectl create namespace ${NAMESPACE}
+kubectl config set-context --current --namespace=${NAMESPACE}
 ----
 
-[NOTE]
-====
-Execution of the previous command is cluster-scoped and requires appropriate cluster privileges.
-====
---
-
-. Create an `ImagePull Secret` named `rhdh-pull-secret` using your Red Hat credentials to access images from the protected `registry.redhat.io` as shown in the following example:
+. Create a pull secret, which is used to pull the {product-short} images from the {company-name} Ecosystem, by running the following command:
 +
---
-[source,bash]
+[source,terminal]
 ----
-kubectl -n <your_namespace> create secret docker-registry rhdh-pull-secret \
+kubectl -n $NAMESPACE create secret docker-registry rhdh-pull-secret \
     --docker-server=registry.redhat.io \
     --docker-username=<redhat_user_name> \
     --docker-password=<redhat_password> \
     --docker-email=<email>
 ----
---
 
-. Create an Ingress manifest file, named `rhdh-ingress.yaml`, specifying your {product-short} service name as follows:
+. Create a file named `values.yaml` using the following template:
 +
---
 [source,yaml]
 ----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rhdh-ingress
-  namespace: <your_namespace>
-spec:
-  ingressClassName: webapprouting.kubernetes.azure.com
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backstage-<your-CR-name>
-                port:
-                  name: http-backend
+global:
+  host: <app_address>
+route:
+  enabled: false
+upstream:
+  ingress:
+    enabled: true
+    className: webapprouting.kubernetes.azure.com
+    host:
+  backstage:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
+    podSecurityContext:
+      fsGroup: 3000
+  postgresql:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
 ----
---
 
-. To deploy the created Ingress, run the following command:
+. To install {product-short} by using the Helm chart, run the following command:
 +
---
-[source]
+[source,terminal,subs="attributes+"]
 ----
-kubectl -n <your_namespace> apply -f rhdh-ingress.yaml
+helm -n $NAMESPACE install -f values.yaml $DEPLOYMENT_NAME openshift-helm-charts/redhat-developer-hub --version {product-chart-version}
 ----
---
 
-. Create a ConfigMap named `app-config-rhdh` containing the {product-short} configuration using the following example:
+. Verify the deployment status:
 +
---
-[source,yaml]
+[source,terminal]
 ----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config-rhdh
-data:
-  "app-config-rhdh.yaml": |
-    app:
-      title: Red Hat Developer Hub
-      baseUrl: https://<app_address>
-    backend:
-      auth:
-        keys:
-          - secret: "${BACKEND_SECRET}"
-      baseUrl: https://<app_address>
-      cors:
-        origin: https://<app_address>
+kubectl get deploy $DEPLOYMENT_NAME -n $NAMESPACE
 ----
---
 
-. Create a Secret named `secrets-rhdh` and add a key named `BACKEND_SECRET` with a `Base64-encoded` string value as shown in the following example:
+. Configure your {product-short} Helm chart instance with the {product-short} database password and router base URL values from your cluster:
 +
---
-[source,yaml]
+[source,terminal,subs="attributes+"]
 ----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: secrets-rhdh
-stringData:
-  BACKEND_SECRET: "xxx"
+PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
+helm upgrade $DEPLOYMENT_NAME -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
+    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
+    --set global.postgresql.auth.password="$PASSWORD"
 ----
---
 
-. Create a Custom Resource (CR) manifest file named `rhdh.yaml` and include the previously created `rhdh-pull-secret` as follows:
+. Display the running {product-short} instance URL, by running the following command:
 +
---
-[source,yaml]
+[source,terminal]
 ----
-apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
-metadata:
-  name: <your-rhdh-cr>
-spec:
-  application:
-    imagePullSecrets:
-      - rhdh-pull-secret
-    appConfig:
-      configMaps:
-        - name: "app-config-rhdh"
-    extraEnvs:
-      secrets:
-        - name: "secrets-rhdh"
+echo "https://$DEPLOYMENT_NAME-$NAMESPACE.$CLUSTER_ROUTER_BASE"
 ----
---
 
-. Apply the CR manifest to your namespace:
-+
---
-[source]
-----
-kubectl -n <your_namespace> apply -f rhdh.yaml
-----
---
+.Verification
 
-. Access the deployed {product-short} using the URL: `https://<app_address>`, where <app_address> is the Ingress address obtained earlier (for example, `https://108.141.70.228`).
-. Optional: To delete the CR, run the following command:
+* Open the running {product-short} instance URL in your browser to use {product-short}.
+
+.Upgrade
+
+* To upgrade the deployment, run the following command:
 +
---
-[source]
+[source,terminal,subs="attributes+"]
 ----
-kubectl -n <your_namespace> delete -f rhdh.yaml
+helm upgrade $DEPLOYMENT_NAME -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
 ----
---
+
+.Delete
+
+* To delete the deployment, run the following command:
++
+[source,terminal]
+----
+helm -n $NAMESPACE delete $DEPLOYMENT_NAME
+----
