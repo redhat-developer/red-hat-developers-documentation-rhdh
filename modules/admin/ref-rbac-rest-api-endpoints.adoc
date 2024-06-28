@@ -62,7 +62,7 @@ Creates a role in {product-short}.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`body`
 |The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
@@ -98,7 +98,7 @@ The request body contains the `oldRole` and `newRole` objects:
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`body`
 |The `memberReferences`, `group`, `namespace`, and `name` the new role to be created.
@@ -139,7 +139,7 @@ Deletes the specified user or group from a role in {product-short}.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`kind`
 |Kind of the entity
@@ -152,7 +152,7 @@ Deletes the specified user or group from a role in {product-short}.
 |Required
 
 |`name`
-|Username related to the entity
+|Name of the entity
 |String
 |Required
 
@@ -180,7 +180,7 @@ Deletes a specified role from {product-short}.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`kind`
 |Kind of the entity
@@ -193,7 +193,7 @@ Deletes a specified role from {product-short}.
 |Required
 
 |`name`
-|Username related to the entity
+|Name of the entity
 |String
 |Required
 |===
@@ -222,13 +222,19 @@ Returns permission policies list for all users.
     "entityReference": "role:default/test",
     "permission": "catalog-entity",
     "policy": "read",
-    "effect": "allow"
+    "effect": "allow",
+    "metadata": {
+      "source": "csv-file"
+    }
   },
   {
     "entityReference": "role:default/test",
     "permission": "catalog.entity.create",
     "policy": "use",
-    "effect": "allow"
+    "effect": "allow",
+    "metadata": {
+      "source": "csv-file"
+    }
   },
 ]
 ----
@@ -245,7 +251,7 @@ Returns permission policies related to the specified entity reference.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`kind`
 |Kind of the entity
@@ -258,7 +264,7 @@ Returns permission policies related to the specified entity reference.
 |Required
 
 |`name`
-|Username related to the entity
+|Name related to the entity
 |String
 |Required
 |===
@@ -271,13 +277,19 @@ Returns permission policies related to the specified entity reference.
     "entityReference": "role:default/test",
     "permission": "catalog-entity",
     "policy": "read",
-    "effect": "allow"
+    "effect": "allow",
+    "metadata": {
+      "source": "csv-file"
+    }
   },
   {
     "entityReference": "role:default/test",
     "permission": "catalog.entity.create",
     "policy": "use",
-    "effect": "allow"
+    "effect": "allow",
+    "metadata": {
+      "source": "csv-file"
+    }
   }
 ]
 ----
@@ -294,20 +306,20 @@ Creates a permission policy for a specified entity.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`entityReference`
-|Reference values of an entity including namespace and name
+|Reference values of an entity including `kind`, `namespace`, and `name`
 |String
 |Required
 
 |`permission`
-|Type of the permission
+|Permission from a specific plugin, resource type, or name
 |String
 |Required
 
 |`policy`
-|Read or write policy to the permission
+|Policy action for the permission, such as `create`, `read`, `update`, `delete`, or `use`
 |String
 |Required
 
@@ -320,12 +332,14 @@ Creates a permission policy for a specified entity.
 .Example request body (JSON)
 [source,json]
 ----
-{
+[
+  {
     "entityReference": "role:default/test",
     "permission": "catalog-entity",
     "policy": "read",
     "effect": "allow"
-}
+  }
+]
 ----
 
 .Example response
@@ -347,15 +361,15 @@ The request body contains the `oldPolicy` and `newPolicy` objects:
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`permission`
-|Type of the permission
+|Permission from a specific plugin, resource type, or name
 |String
 |Required
 
 |`policy`
-|Read or write policy to the permission
+|Policy action for the permission, such as `create`, `read`, `update`, `delete`, or `use`
 |String
 |Required
 
@@ -369,16 +383,30 @@ The request body contains the `oldPolicy` and `newPolicy` objects:
 [source,json]
 ----
 {
-    "oldPolicy": {
-        "permission": "catalog-entity",
-        "policy": "read",
-        "effect": "deny"
+  "oldPolicy": [
+    {
+      "permission": "catalog-entity",
+      "policy": "read",
+      "effect": "allow"
     },
-    "newPolicy": {
-        "permission": "policy-entity",
-        "policy": "read",
-        "effect": "allow"
+    {
+      "permission": "catalog.entity.create",
+      "policy": "create",
+      "effect": "allow"
     }
+  ],
+  "newPolicy": [
+    {
+      "permission": "catalog-entity",
+      "policy": "read",
+      "effect": "deny"
+    },
+    {
+      "permission": "policy-entity",
+      "policy": "read",
+      "effect": "allow"
+    }
+  ]
 }
 ----
 
@@ -400,7 +428,7 @@ Deletes a permission policy added to the specified entity.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`kind`
 |Kind of the entity
@@ -413,22 +441,58 @@ Deletes a permission policy added to the specified entity.
 |Required
 
 |`name`
-|Username related to the entity
+|Name related to the entity
 |String
 |Required
 
 |`permission`
-|Type of the permission
+|Permission from a specific plugin, resource type, or name
 |String
 |Required
 
 |`policy`
-|Read or write policy to the permission
+|Policy action for the permission, such as `create`, `read`, `update`, `delete`, or `use`
 |String
 |Required
 
 |`effect`
 |Indication of allowing or not allowing the policy
+|String
+|Required
+|===
+
+.Example response
+[source]
+----
+204 No Content
+----
+--
+
+[DELETE] /api/permission/policies/{kind}/{namespace}/{name}::
++
+--
+Deletes all permission policies added to the specified entity.
+
+.Request parameters
+[cols="15%,45%,15%,25%", frame="all", options="header"]
+|===
+|Name
+|Description
+|Type
+|Presence
+
+|`kind`
+|Kind of the entity
+|String
+|Required
+
+|`namespace`
+|Namespace of the entity
+|String
+|Required
+
+|`name`
+|Name related to the entity
 |String
 |Required
 |===
@@ -451,39 +515,47 @@ Returns permission policies for all static plugins.
 [
   {
     "pluginId": "catalog",
-      "policies": [
-        {
-          "permission": "catalog-entity",
-          "policy": "read"
-        },
-        {
-          "permission": "catalog.entity.create",
-          "policy": "create"
-        },
-        {
-          "permission": "catalog-entity",
-          "policy": "delete"
-        },
-        {
-          "permission": "catalog-entity",
-          "policy": "update"
-        },
-        {
-          "permission": "catalog.location.read",
-          "policy": "read"
-        },
-        {
-          "permission": "catalog.location.create",
-          "policy": "create"
-        },
-        {
-          "permission": "catalog.location.delete",
-          "policy": "delete"
-        }
-      ]
-    },
+    "policies": [
+      {
+        "isResourced": true,
+        "permission": "catalog-entity",
+        "policy": "read"
+      },
+      {
+        "isResourced": false,
+        "permission": "catalog.entity.create",
+        "policy": "create"
+      },
+      {
+        "isResourced": true,
+        "permission": "catalog-entity",
+        "policy": "delete"
+      },
+      {
+        "isResourced": true,
+        "permission": "catalog-entity",
+        "policy": "update"
+      },
+      {
+        "isResourced": false,
+        "permission": "catalog.location.read",
+        "policy": "read"
+      },
+      {
+        "isResourced": false,
+        "permission": "catalog.location.create",
+        "policy": "create"
+      },
+      {
+        "isResourced": false,
+        "permission": "catalog.location.delete",
+        "policy": "delete"
+      }
+    ]
+  },
   ...
 ]
+
 ----
 --
 
@@ -729,7 +801,7 @@ Creates a conditional policy for the specified role.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`result`
 |Always has the value `CONDITIONAL`
@@ -760,6 +832,16 @@ Creates a conditional policy for the specified role.
 |Condition JSON with parameters or array parameters joined by criteria
 |JSON
 |Required
+
+|`name`
+|Name of the role
+|String
+|Required
+
+|`metadata.description`
+|The description of the role
+|String
+|Optional
 |===
 
 .Example request body (JSON)
@@ -801,7 +883,7 @@ Updates a condition policy for a specified ID.
 |Name
 |Description
 |Type
-|Requirement
+|Presence
 
 |`result`
 |Always has the value `CONDITIONAL`
@@ -832,6 +914,16 @@ Updates a condition policy for a specified ID.
 |Condition JSON with parameters or array parameters joined by criteria
 |JSON
 |Required
+
+|`name`
+|Name of the role
+|String
+|Required
+
+|`metadata.description`
+|The description of the role
+|String
+|Optional
 |===
 
 .Example request body (JSON)
