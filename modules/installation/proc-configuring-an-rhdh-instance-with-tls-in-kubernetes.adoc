@@ -1,0 +1,104 @@
+[id="proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_{context}"]
+= Configuring an {product-very-short} instance with a TLS connection in Kubernetes
+
+You can configure an {product-very-short} instance with a Transport Layer Security (TLS) connection in your Kubernetes cluster, such as an Azure Red Hat OpenShift (ARO) cluster. You can also use a public Certificate Authority (CA)-signed certificate to secure your {product-very-short} instance.
+
+.Prerequisites
+
+* You have set up an Azure Red Hat OpenShift (ARO) cluster with a public CA-signed certificate. For more information about obtaining CA certificates, refer to your vendor documentation.
+* You have created a namespace and setup a service account with proper read permissions on resources. For more information, see link:https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control[Role-based access control].
+* You have obtained the secret and the service CA certificate associated with your service account.
+* You have created some resources and added labels to them so they can be discovered by the Kubernetes plugin. For more information, see link:https://backstage.io/docs/features/kubernetes/configuration#common-backstageiokubernetes-id-label[Common `backstage.io/kubernetes-id` label].
+
+.Procedure
+
+. Enable the Kubernetes plugins in the `dynamic-plugins-rhdh.yaml` ConfigMap file:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-kubernetes-backend-dynamic
+        disabled: false <1>
+      - package: ./dynamic-plugins/dist/backstage-plugin-kubernetes
+        disabled: false <2>
+        # ...  
+----
+<1> Set the value to `false` to enable the `backstage-plugin-kubernetes-backend-dynamic` plugin
+<2> Set the value to `false` to enable the `backstage-plugin-kubernetes` plugin.
+
+. Set the values in the kubernetes section of the `app-config-rhdh.yaml` ConfigMap file and configure the catalog sync options:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+  # ...
+  catalog:
+    rules:
+      - allow: [Component, System, API, Resource, Location]
+    providers:
+      kubernetes:
+        openshift:
+          cluster: openshift
+          processor:
+            namespaceOverride: default
+            defaultOwner: guests
+          schedule:
+            frequency:
+              seconds: 30
+            timeout:
+              seconds: 5
+  kubernetes:
+    serviceLocatorMethod:
+      type: 'multiTenant'
+    clusterLocatorMethods:
+      - type: 'config'
+        clusters:
+          - url: <target-cluster-api-server-url> <1>
+            name: openshift
+            authProvider: 'serviceAccount'
+            skipTLSVerify: false <2>
+            skipMetricsLookup: true
+            dashboardUrl: <target-cluster-console-url> <3>
+            dashboardApp: openshift
+            serviceAccountToken: <service-account-token> <4>
+            caData: <service-ca-base64-encoded> <5>
+            # ...
+----
+<1> The base URL to the Kubernetes control plane. You can run the `kubectl cluster-info` command to get the base URL.
+<2>  Set the value of this parameter to `false` to enable the verification of the TLS certificate.
+<3> Optional: The link to the Kubernetes dashboard managing the ARO cluster. 
+<4>  Optional: The service account token for using the `serviceAccount` authentication provider.
+<5> Set the value of the parameter to `service-ca-base64-encoded` data, which is a base64-encoded certificate authority bundle in the .PEM format. 
+
+. Save the configuration changes.
+
+.Verification
+
+. Run the RHDH application to import your catalog:
++
+[source,terminal]
+----
+kubectl -n rhdh-operator get pods -w
+----
+
+. Verify that the pod log shows no errors for your configuration.
+. Navigate to your catalog entity to view the resources that you created in a Kubernetes tab.
+
+[NOTE]
+====
+If you face any connection error, such as certificates errors, permissions or connection issues, you can view them in a message box on the same page or in the pod's logs.
+====
+
