@@ -34,26 +34,6 @@ data:
 <1> Set the value to `false` to enable the `backstage-plugin-kubernetes-backend-dynamic` plugin
 <2> Set the value to `false` to enable the `backstage-plugin-kubernetes` plugin.
 
-. Create a secret to configure your Kubernetes cluster with a public CA-signed certificate: 
-+
-[source,yaml]
-----
-cat <<EOF | oc -n <your-namespace> create -f -
-apiVersion: v1
-kind: Secret
-metadata:
- name: <crt-secret> <1>
-type: Opaque
-stringData:
- public-ca.pem: |-
-  -----BEGIN CERTIFICATE-----
-  <service-ca-base64-encoded> <2>
-  # ...
-EOF  
-----
-<1> Provide the name of the certificate secret.
-<2> Provide the CA certificate key.
-
 . Set the kubernetes cluster details and configure the catalog sync options in the `app-config-rhdh.yaml` ConfigMap file:
 +
 [source,yaml]
@@ -94,14 +74,14 @@ data:
             dashboardUrl: <target-cluster-console-url> <3>
             dashboardApp: openshift
             serviceAccountToken: <service-account-token> <4>
-            caData: <crt-secret> <5>
+            caData: ${K8S_CONFIG_CA_DATA} <5>
             # ...
 ----
 <1> The base URL to the Kubernetes control plane. You can run the `kubectl cluster-info` command to get the base URL.
 <2> Set the value of this parameter to `false` to enable the verification of the TLS certificate.
 <3> Optional: The link to the Kubernetes dashboard managing the ARO cluster. 
 <4> Optional: The service account token for using the `serviceAccount` authentication provider.
-<5> Provide the name of the certificate secret that you created. 
+<5> Pass the CA data using a `K8S_CONFIG_CA_DATA` environment variable that you can define in your `secrets-rhdh` secret.
 
 . Save the configuration changes.
 
