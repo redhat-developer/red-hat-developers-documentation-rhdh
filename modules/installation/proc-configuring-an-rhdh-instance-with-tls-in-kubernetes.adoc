@@ -1,7 +1,7 @@
 [id="proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_{context}"]
 = Configuring an {product-very-short} instance with a TLS connection in Kubernetes
 
-You can configure an {product-very-short} instance with a Transport Layer Security (TLS) connection in your Kubernetes cluster, such as an Azure Red Hat OpenShift (ARO) cluster. You can also use a public Certificate Authority (CA)-signed certificate to secure your {product-very-short} instance.
+You can configure an {product-very-short} instance with a Transport Layer Security (TLS) connection in a Kubernetes cluster, such as an Azure Red Hat OpenShift (ARO) cluster, any other cloud provider cluster, or your own cluster with proper configuration. However, You must use a public Certificate Authority (CA)-signed certificate to configure your Kubernetes cluster.
 
 .Prerequisites
 
@@ -33,6 +33,26 @@ data:
 ----
 <1> Set the value to `false` to enable the `backstage-plugin-kubernetes-backend-dynamic` plugin
 <2> Set the value to `false` to enable the `backstage-plugin-kubernetes` plugin.
+
+. Create a secret to configure your Kubernetes cluster with a public CA-signed certificate: 
++
+[source,yaml]
+----
+cat <<EOF | oc -n <your-namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: <crt-secret> <1>
+type: Opaque
+stringData:
+ public-ca.pem: |-
+  -----BEGIN CERTIFICATE-----
+  <service-ca-base64-encoded> <2>
+  # ...
+EOF  
+----
+<1> Provide the name of the certificate secret.
+<2> Provide the CA certificate key.
 
 . Set the kubernetes cluster details and configure the catalog sync options in the `app-config-rhdh.yaml` ConfigMap file:
 +
@@ -74,20 +94,20 @@ data:
             dashboardUrl: <target-cluster-console-url> <3>
             dashboardApp: openshift
             serviceAccountToken: <service-account-token> <4>
-            caData: <service-ca-base64-encoded> <5>
+            caData: <crt-secret> <5>
             # ...
 ----
 <1> The base URL to the Kubernetes control plane. You can run the `kubectl cluster-info` command to get the base URL.
-<2>  Set the value of this parameter to `false` to enable the verification of the TLS certificate.
+<2> Set the value of this parameter to `false` to enable the verification of the TLS certificate.
 <3> Optional: The link to the Kubernetes dashboard managing the ARO cluster. 
-<4>  Optional: The service account token for using the `serviceAccount` authentication provider.
-<5> Set the value of the parameter to a base64-encoded certificate authority bundle in the .PEM format. 
+<4> Optional: The service account token for using the `serviceAccount` authentication provider.
+<5> Provide the name of the certificate secret that you created. 
 
 . Save the configuration changes.
 
 .Verification
 
-. Run the RHDH application to import your catalog:
+. Run the {product-very-short} application to import your catalog:
 +
 [source,terminal]
 ----
@@ -95,10 +115,10 @@ kubectl -n rhdh-operator get pods -w
 ----
 
 . Verify that the pod log shows no errors for your configuration.
-. Navigate to your catalog entity to view the resources that you created in a Kubernetes tab.
+. Navigate to the *Catalog* section and check the component page in the {product-short} portal to verify that the connection with the cluster is established and the resources that you created are present.
 
 [NOTE]
 ====
-If you face any connection error, such as certificates errors, permissions or connection issues, you can view them in a message box on the same page or in the pod's logs.
+If you face any connection error, such as certificate errors, permissions or connection issues, you can view them in a message box on the same component page or in the pod's logs.
 ====
 
