@@ -1,0 +1,261 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-rhdh-integration-aks.adoc
+
+[id="proc-rhdh-deploy-aks-using-operator_{context}"]
+= Deploying the {product} on {aks-name} ({aks-short}) using the Operator
+
+You can deploy your {product-short} on {aks-short} using the {product} Operator.
+
+.Prerequisites
+
+* You have an Azure account with active subscription.
+* You have installed the https://learn.microsoft.com/en-us/cli/azure/install-azure-cli[Azure CLI].
+* You have installed the link:https://kubernetes.io/docs/reference/kubectl/[`kubectl` CLI].
+* You are logged into your cluster using `kubectl`, and have `developer` or `admin` permissions.
+* You have installed Helm 3 or the latest.
+
+.Comparison of AKS specifics with the base {product-short} deployment
+
+* *Permissions issue*: {product-short} containers might encounter permission-related errors, such as `Permission denied` when attempting certain operations. This error can be addresssed by adjusting the `fsGroup` in the `PodSpec.securityContext`.
+
+* *Ingress configuration*: In AKS, configuring ingress is essential for accessing the installed {product-short} instance. Accessing the {product-short} instance requires enabling the Routing add-on, an NGINX-based Ingress Controller, using the following command:
++
+[source]
+----
+az aks approuting enable --resource-group <your_ResourceGroup> --name <your_ClusterName>
+----
++
+[TIP]
+====
+You might need to install the Azure CLI extension `aks-preview`. If the extension is not installed automatically, you might need to install it manually using the following command:
+
+[source]
+----
+az extension add --upgrade -n aks-preview --allow-preview true
+----
+====
++
+[NOTE]
+====
+After you install the Ingress Controller, the `app-routing-system` namespace with the Ingress Controller will be deployed in your cluster. Note the address of your {product-short} application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the {product-short} application, later referenced as `<app_address>`.
+
+[source,terminal]
+----
+kubectl get svc nginx --namespace app-routing-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+----
+====
+
+* *Namespace management*: You can create a dedicated namespace for {product-short} deployment in AKS using the following command:
++
+[source,terminal]
+----
+kubectl create namespace <your_namespace>
+----
+
+.Procedure
+
+. Log in to {aks-short} by running the following command:
++
+[source,terminal]
+----
+az login [--tenant=<optional_directory_name>]
+----
+
+. Create a resource group by running the following command:
++
+[source,terminal]
+----
+az group create --name <resource_group_name> --location <location>
+----
++
+[TIP]
+====
+You can list available regions by running the following command:
+
+[source,terminal]
+----
+az account list-locations -o table
+----
+
+====
+
+. Create an {aks-short} cluster by running the following command:
++
+[source,terminal]
+----
+az aks create \
+--resource-group <resource_group_name> \
+--name <cluster_name> \
+--enable-managed-identity \
+--generate-ssh-keys
+----
++
+You can refer to `--help` for additional options.
+
+. Connect to your cluster by running the following command:
++
+[source]
+----
+az aks get-credentials --resource-group <resource_group_name> --name <cluster_name>
+----
++
+The previous command configures the Kubernetes client and sets the current context in the `kubeconfig` to point to your AKS cluster.
+
+. Obtain the {product} Operator manifest file, named `rhdh-operator-<VERSION>.yaml`, and modify the default configuration of `db-statefulset.yaml` and `deployment.yaml` by adding the following fragment:
++
+--
+[source,yaml]
+----
+securityContext:
+  fsGroup: 300
+----
+
+Following is the specified locations in the manifests:
+
+[source]
+----
+db-statefulset.yaml: | spec.template.spec
+deployment.yaml: | spec.template.spec
+----
+--
+
+. Apply the modified Operator manifest to your Kubernetes cluster:
++
+--
+[source,bash]
+----
+kubectl apply -f rhdh-operator-<VERSION>.yaml
+----
+
+[NOTE]
+====
+Execution of the previous command is cluster-scoped and requires appropriate cluster privileges.
+====
+--
+
+. Create an `ImagePull Secret` named `rhdh-pull-secret` using your Red Hat credentials to access images from the protected `registry.redhat.io` as shown in the following example:
++
+--
+[source,bash]
+----
+kubectl -n <your_namespace> create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<redhat_user_name> \
+    --docker-password=<redhat_password> \
+    --docker-email=<email>
+----
+--
+
+. Create an Ingress manifest file, named `rhdh-ingress.yaml`, specifying your {product-short} service name as follows:
++
+--
+[source,yaml]
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rhdh-ingress
+  namespace: <your_namespace>
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backstage-<your-CR-name>
+                port:
+                  name: http-backend
+----
+--
+
+. To deploy the created Ingress, run the following command:
++
+--
+[source]
+----
+kubectl -n <your_namespace> apply -f rhdh-ingress.yaml
+----
+--
+
+. Create a ConfigMap named `app-config-rhdh` containing the {product-short} configuration using the following example:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://<app_address>
+    backend:
+      auth:
+        keys:
+          - secret: "${BACKEND_SECRET}"
+      baseUrl: https://<app_address>
+      cors:
+        origin: https://<app_address>
+----
+--
+
+. Create a Secret named `secrets-rhdh` and add a key named `BACKEND_SECRET` with a `Base64-encoded` string value as shown in the following example:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets-rhdh
+stringData:
+  BACKEND_SECRET: "xxx"
+----
+--
+
+. Create a Custom Resource (CR) manifest file named `rhdh.yaml` and include the previously created `rhdh-pull-secret` as follows:
++
+--
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: <your-rhdh-cr>
+spec:
+  application:
+    imagePullSecrets:
+      - rhdh-pull-secret
+    appConfig:
+      configMaps:
+        - name: "app-config-rhdh"
+    extraEnvs:
+      secrets:
+        - name: "secrets-rhdh"
+----
+--
+
+. Apply the CR manifest to your namespace:
++
+--
+[source]
+----
+kubectl -n <your_namespace> apply -f rhdh.yaml
+----
+--
+
+. Access the deployed {product-short} using the URL: `https://<app_address>`, where <app_address> is the Ingress address obtained earlier (for example, `https://108.141.70.228`).
+. Optional: To delete the CR, run the following command:
++
+--
+[source]
+----
+kubectl -n <your_namespace> delete -f rhdh.yaml
+----
+--

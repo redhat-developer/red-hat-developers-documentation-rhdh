@@ -1,0 +1,54 @@
+[id="proc-install-external-dynamic-plugins-helm"]
+
+= Installing external dynamic plugins using a Helm chart
+
+The NPM registry contains external dynamic plugins that you can use for demonstration purposes. For example, the following community plugins are available in the `janus-idp` organization in the NPMJS repository:
+
+* Notifications (frontend and backend)
+* Kubernetes actions (scaffolder actions)
+
+To install the Notifications and Kubernetes actions plugins, include them in the Helm chart values in the `global.dynamic.plugins` list as shown in the following example:
+
+----
+global:
+  dynamic:
+    plugins:
+      - package: '@janus-idp/plugin-notifications-backend-dynamic@1.3.6'
+        # Integrity can be found at https://registry.npmjs.org/@janus-idp/plugin-notifications-backend-dynamic
+        integrity: 'sha512-Qd8pniy1yRx+x7LnwjzQ6k9zP+C1yex24MaCcx7dGDPT/XbTokwoSZr4baSSn8jUA6P45NUUevu1d629mG4JGQ=='
+      - package: '@janus-idp/plugin-notifications@1.1.12
+'
+        # https://registry.npmjs.org/@janus-idp/plugin-notifications
+
+        integrity: 'sha512-GCdEuHRQek3ay428C8C4wWgxjNpNwCXgIdFbUUFGCLLkBFSaOEw+XaBvWaBGtQ5BLgE3jQEUxa+422uzSYC5oQ=='
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              janus-idp.backstage-plugin-notifications:
+                appIcons:
+                  - name: notificationsIcon
+                    module: NotificationsPlugin
+                    importName: NotificationsActiveIcon
+                dynamicRoutes:
+                  - path: /notifications
+                    importName: NotificationsPage
+                    module: NotificationsPlugin
+                    menuItem:
+                      icon: notificationsIcon
+                      text: Notifications
+                    config:
+                      pollingIntervalMs: 5000   
+      - package: '@janus-idp/backstage-scaffolder-backend-module-kubernetes-dynamic@1.3.5'
+        # https://registry.npmjs.org/@janus-idp/backstage-scaffolder-backend-module-kubernetes-dynamic
+        integrity: 'sha512-19ie+FM3QHxWYPyYzE0uNdI5K8M4vGZ0SPeeTw85XPROY1DrIY7rMm2G0XT85L0ZmntHVwc9qW+SbHolPg/qRA=='
+          proxy:
+            endpoints:
+              /explore-backend-completed:
+                target: 'http://localhost:7017'
+      - package: '@dfatwork-pkgs/search-backend-module-explore-wrapped-dynamic@0.1.3-next.1'
+        # https://registry.npmjs.org/@dfatwork-pkgs/search-backend-module-explore-wrapped-dynamic
+        integrity: 'sha512-mv6LS8UOve+eumoMCVypGcd7b/L36lH2z11tGKVrt+m65VzQI4FgAJr9kNCrjUZPMyh36KVGIjYqsu9+kgzH5A=='
+      - package: '@dfatwork-pkgs/plugin-catalog-backend-module-test-dynamic@0.0.0'
+        # https://registry.npmjs.org/@dfatwork-pkgs/plugin-catalog-backend-module-test-dynamic
+        integrity: 'sha512-YsrZMThxJk7cYJU9FtAcsTCx9lCChpytK254TfGb3iMAYQyVcZnr5AA/AU+hezFnXLsr6gj8PP7z/mCZieuuDA=='
+---- 

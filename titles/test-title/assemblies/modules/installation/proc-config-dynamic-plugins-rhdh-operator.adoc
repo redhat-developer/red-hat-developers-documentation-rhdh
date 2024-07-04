@@ -1,0 +1,90 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-install-rhdh-ocp.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-config-dynamic-plugins-rhdh-operator_{context}"]
+= Configuring dynamic plugins with the {product} Operator
+
+You can store the configuration for dynamic plugins in a `ConfigMap` object that your `Backstage` custom resource (CR) can reference.
+
+[NOTE]
+====
+If the `pluginConfig` field references environment variables, you must define the variables in your `secrets-rhdh` secret.
+====
+
+.Procedure
+
+. From the {ocp-short} web console, select the *ConfigMaps* tab.
+. Click *Create ConfigMap*.
+. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via* and edit the file, if needed.
++
+.Example `ConfigMap` object using the GitHub dynamic plugin
+[source, yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic'
+        disabled: false
+        pluginConfig: {}
+----
+
+. Click *Create*.
+. Go to the *Topology* view.
+. Click on the overflow menu for the {product} instance that you want to use and select *Edit Backstage* to load the YAML view of the {product} instance.
++
+image::rhdh/operator-install-2.png[]
+
+. Add the `dynamicPluginsConfigMapName` field to your `Backstage` CR. For example:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: my-rhdh
+spec:
+  application:
+# ...
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+# ...
+----
+. Click *Save*.
+. Navigate back to the *Topology* view and wait for the {product} pod to start.
+. Click the *Open URL* icon to start using the {product} platform with the new configuration changes.
+
+.Verification
+
+* Ensure that the dynamic plugins configuration has been loaded, by appending `/api/dynamic-plugins-info/loaded-plugins` to your {product} root URL and checking the list of plugins:
++
+.Example list of plugins
+[source,json]
+----
+[
+  {
+    "name": "backstage-plugin-catalog-backend-module-github-dynamic",
+    "version": "0.5.2",
+    "platform": "node",
+    "role": "backend-plugin-module"
+  },
+  {
+    "name": "backstage-plugin-techdocs",
+    "version": "1.10.0",
+    "role": "frontend-plugin",
+    "platform": "web"
+  },
+  {
+    "name": "backstage-plugin-techdocs-backend-dynamic",
+    "version": "1.9.5",
+    "platform": "node",
+    "role": "backend-plugin"
+  },
+]
+----

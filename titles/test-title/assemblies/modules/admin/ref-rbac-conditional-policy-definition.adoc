@@ -1,0 +1,347 @@
+[id='ref-rbac-conditional-policy-definition_{context}']
+= Conditional policies definition
+
+You can access API endpoints for conditional policies in {product}. For example, to retrieve the available conditional rules, which can help you define these policies, you can access the `GET [api/plugins/condition-rules]` endpoint.
+
+The `api/plugins/condition-rules` returns the condition parameters schemas, for example:
+
+[source,json]
+----
+[
+   {
+      "pluginId": "catalog",
+      "rules": [
+         {
+            "name": "HAS_ANNOTATION",
+            "description": "Allow entities with the specified annotation",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "annotation": {
+                     "type": "string",
+                     "description": "Name of the annotation to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the annotation to match on"
+                  }
+               },
+               "required": [
+                  "annotation"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_LABEL",
+            "description": "Allow entities with the specified label",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "label": {
+                     "type": "string",
+                     "description": "Name of the label to match on"
+                  }
+               },
+               "required": [
+                  "label"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_METADATA",
+            "description": "Allow entities with the specified metadata subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities metadata to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "HAS_SPEC",
+            "description": "Allow entities with the specified spec subfield",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "key": {
+                     "type": "string",
+                     "description": "Property within the entities spec to match on"
+                  },
+                  "value": {
+                     "type": "string",
+                     "description": "Value of the given property to match on"
+                  }
+               },
+               "required": [
+                  "key"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_KIND",
+            "description": "Allow entities matching a specified kind",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "kinds": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of kinds to match at least one of"
+                  }
+               },
+               "required": [
+                  "kinds"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         },
+         {
+            "name": "IS_ENTITY_OWNER",
+            "description": "Allow entities owned by a specified claim",
+            "resourceType": "catalog-entity",
+            "paramsSchema": {
+               "type": "object",
+               "properties": {
+                  "claims": {
+                     "type": "array",
+                     "items": {
+                        "type": "string"
+                     },
+                     "description": "List of claims to match at least one on within ownedBy"
+                  }
+               },
+               "required": [
+                  "claims"
+               ],
+               "additionalProperties": false,
+               "$schema": "http://json-schema.org/draft-07/schema#"
+            }
+         }
+      ]
+   }
+   ... <another plugin condition parameter schemas>
+]
+----
+
+The RBAC backend API constructs a condition JSON object based on the previous condition schema.
+
+== Examples of conditional policies
+
+In {product}, you can define conditional policies with or without criteria. You can use the following examples to define the conditions based on your use case:
+
+A condition without criteria::
++
+--
+Consider a condition without criteria displaying catalogs only if user is a member of the owner group. To add this condition, you can use the catalog plugin schema `IS_ENTITY_OWNER` as follows:
+
+.Example condition without criteria
+[source,json]
+----
+{
+  "rule": "IS_ENTITY_OWNER",
+  "resourceType": "catalog-entity",
+  "params": {
+    "claims": ["group:default/team-a"]
+  }
+}
+----
+
+In the previous example, the only conditional parameter used is `claims`, which contains a list of user or group entity references.
+
+You can apply the previous example condition to the RBAC REST API by adding additional parameters as follows:
+
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["group:default/team-a"]
+    }
+  }
+}
+----
+--
+
+A condition with criteria::
++
+--
+Consider a condition with criteria, which displays catalogs only if user is a member of owner group OR displays list of all catalog user groups.
+
+To add the criteria, you can add another rule as `IS_ENTITY_KIND` in the condition as follows:
+
+.Example condition with criteria
+[source,json]
+----
+{
+  "anyOf": [
+    {
+      "rule": "IS_ENTITY_OWNER",
+      "resourceType": "catalog-entity",
+      "params": {
+        "claims": ["group:default/team-a"]
+      }
+    },
+    {
+      "rule": "IS_ENTITY_KIND",
+      "resourceType": "catalog-entity",
+      "params": {
+        "kinds": ["Group"]
+      }
+    }
+  ]
+}
+----
+
+[NOTE]
+====
+Running conditions in parallel during creation is not supported. Therefore, consider defining nested conditional policies based on the available criteria.
+====
+
+.Example of nested conditions
+[source,json]
+----
+{
+  "anyOf": [
+    {
+      "rule": "IS_ENTITY_OWNER",
+      "resourceType": "catalog-entity",
+      "params": {
+        "claims": ["group:default/team-a"]
+      }
+    },
+    {
+      "rule": "IS_ENTITY_KIND",
+      "resourceType": "catalog-entity",
+      "params": {
+        "kinds": ["Group"]
+      }
+    }
+  ],
+  "not": {
+    "rule": "IS_ENTITY_KIND",
+    "resourceType": "catalog-entity",
+    "params": { "kinds": ["Api"] }
+  }
+}
+----
+
+You can apply the previous example condition to the RBAC REST API by adding additional parameters as follows:
+
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {
+          "claims": ["group:default/team-a"]
+        }
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": ["Group"]
+        }
+      }
+    ]
+  }
+}
+----
+--
+
+The following examples can be used with {product-short} plugins. These examples can help you determine how to define conditional policies:
+
+.Conditional policy defined for Keycloak plugin
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["update", "delete"],
+  "conditions": {
+    "not": {
+      "rule": "HAS_ANNOTATION",
+      "resourceType": "catalog-entity",
+      "params": { "annotation": "keycloak.org/realm", "value": "<YOUR_REALM>" }
+    }
+  }
+}
+----
+
+The previous example of Keycloak plugin prevents users in the `role:default/developer` from updating or deleting users that are ingested into the catalog from the Keycloak plugin.
+
+[NOTE]
+====
+In the previous example, the annotation `keycloak.org/realm` requires the value of `<YOUR_REALM>`.
+====
+
+.Conditional policy defined for Quay plugin
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "scaffolder",
+  "resourceType": "scaffolder-action",
+  "permissionMapping": ["use"],
+  "conditions": {
+    "not": {
+      "rule": "HAS_ACTION_ID",
+      "resourceType": "scaffolder-action",
+      "params": { "actionId": "quay:create-repository" }
+    }
+  }
+}
+----
+
+The previous example of Quay plugin prevents the role `role:default/developer` from using the Quay scaffolder action. Note that `permissionMapping` contains `use`, signifying that `scaffolder-action` resource type permission does not have a permission policy.
+
+For more information about permissions in {product}, see xref:ref-rbac-permission-policies_{context}[].
+
+
+
+
+

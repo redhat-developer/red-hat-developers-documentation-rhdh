@@ -1,0 +1,216 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-rhdh-integration-aks.adoc
+
+[id="proc-rhdh-deploy-aks-helm_{context}"]
+= Deploying {product} on {aks-name} ({aks-short}) using the Helm chart
+
+You can deploy your {product-short} application on {aks-name} ({aks-short}) to access a comprehensive solution for building, testing, and deploying applications.
+
+.Prerequisites
+
+* You have an Azure account with active subscription.
+* You have installed the https://learn.microsoft.com/en-us/cli/azure/install-azure-cli[Azure CLI].
+* You have installed the link:https://kubernetes.io/docs/reference/kubectl/[`kubectl` CLI].
+* You are logged into your cluster using `kubectl`, and have `developer` or `admin` permissions.
+* You have installed Helm 3 or the latest.
+
+.Comparison of AKS specifics with the base {product-short} deployment
+
+* *Permissions issue*: {product-short} containers might encounter permission-related errors, such as `Permission denied` when attempting certain operations. This error can be addresssed by adjusting the `fsGroup` in the `PodSpec.securityContext`.
+
+* *Ingress configuration*: In AKS, configuring ingress is essential for accessing the installed {product-short} instance. Accessing the {product-short} instance requires enabling the Routing add-on, an NGINX-based Ingress Controller, using the following command:
++
+[source]
+----
+az aks approuting enable --resource-group <your_ResourceGroup> --name <your_ClusterName>
+----
++
+[TIP]
+====
+You might need to install the Azure CLI extension `aks-preview`. If the extension is not installed automatically, you might need to install it manually using the following command:
+
+[source]
+----
+az extension add --upgrade -n aks-preview --allow-preview true
+----
+====
++
+[NOTE]
+====
+After you install the Ingress Controller, the `app-routing-system` namespace with the Ingress Controller will be deployed in your cluster. Note the address of your {product-short} application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the {product-short} application, later referenced as `<app_address>`.
+
+[source,terminal]
+----
+kubectl get svc nginx --namespace app-routing-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+----
+====
+
+* *Namespace management*: You can create a dedicated namespace for {product-short} deployment in AKS using the following command:
++
+[source,terminal]
+----
+kubectl create namespace <your_namespace>
+----
+
+.Procedure
+
+. Log in to {aks-short} by running the following command:
++
+[source,terminal]
+----
+az login [--tenant=<optional_directory_name>]
+----
+
+. Create a resource group by running the following command:
++
+[source,terminal]
+----
+az group create --name <resource_group_name> --location <location>
+----
++
+[TIP]
+====
+You can list available regions by running the following command:
+
+[source,terminal]
+----
+az account list-locations -o table
+----
+
+====
+
+. Create an {aks-short} cluster by running the following command:
++
+[source,terminal]
+----
+az aks create \
+--resource-group <resource_group_name> \
+--name <cluster_name> \
+--enable-managed-identity \
+--generate-ssh-keys
+----
++
+You can refer to `--help` for additional options.
+
+. Connect to your cluster by running the following command:
++
+[source]
+----
+az aks get-credentials --resource-group <resource_group_name> --name <cluster_name>
+----
++
+The previous command configures the Kubernetes client and sets the current context in the `kubeconfig` to point to your AKS cluster.
+
+. Open terminal and run the following command to add the Helm chart repository:
++
+[source,terminal]
+----
+helm repo add openshift-helm-charts https://charts.openshift.io/
+----
+
+. Create and activate the _<rhdh>_ namespace:
++
+[source,terminal,subs="quotes+"]
+----
+DEPLOYMENT_NAME=_<redhat-developer-hub>_
+NAMESPACE=_<rhdh>_
+kubectl create namespace ${NAMESPACE}
+kubectl config set-context --current --namespace=${NAMESPACE}
+----
+
+. Create a pull secret, which is used to pull the {product-short} images from the {company-name} Ecosystem, by running the following command:
++
+[source,terminal]
+----
+kubectl -n $NAMESPACE create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<redhat_user_name> \
+    --docker-password=<redhat_password> \
+    --docker-email=<email>
+----
+
+. Create a file named `values.yaml` using the following template:
++
+[source,yaml]
+----
+global:
+  host: <app_address>
+route:
+  enabled: false
+upstream:
+  ingress:
+    enabled: true
+    className: webapprouting.kubernetes.azure.com
+    host:
+  backstage:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
+    podSecurityContext:
+      fsGroup: 3000
+  postgresql:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
+----
+
+. To install {product-short} by using the Helm chart, run the following command:
++
+[source,terminal,subs="attributes+"]
+----
+helm -n $NAMESPACE install -f values.yaml $DEPLOYMENT_NAME openshift-helm-charts/redhat-developer-hub --version {product-chart-version}
+----
+
+. Verify the deployment status:
++
+[source,terminal]
+----
+kubectl get deploy $DEPLOYMENT_NAME -n $NAMESPACE
+----
+
+. Configure your {product-short} Helm chart instance with the {product-short} database password and router base URL values from your cluster:
++
+[source,terminal,subs="attributes+"]
+----
+PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
+helm upgrade $DEPLOYMENT_NAME -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
+    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
+    --set global.postgresql.auth.password="$PASSWORD"
+----
+
+. Display the running {product-short} instance URL, by running the following command:
++
+[source,terminal]
+----
+echo "https://$DEPLOYMENT_NAME-$NAMESPACE.$CLUSTER_ROUTER_BASE"
+----
+
+.Verification
+
+* Open the running {product-short} instance URL in your browser to use {product-short}.
+
+.Upgrade
+
+* To upgrade the deployment, run the following command:
++
+[source,terminal,subs="attributes+"]
+----
+helm upgrade $DEPLOYMENT_NAME -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
+----
+
+.Delete
+
+* To delete the deployment, run the following command:
++
+[source,terminal]
+----
+helm -n $NAMESPACE delete $DEPLOYMENT_NAME
+----

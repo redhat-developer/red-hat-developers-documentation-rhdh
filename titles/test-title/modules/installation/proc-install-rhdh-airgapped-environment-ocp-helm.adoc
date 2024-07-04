@@ -1,0 +1,140 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-install-rhdh-ocp.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-install-rhdh-airgapped-environment-ocp-helm_{context}"]
+= Installing {product} using the Helm Chart in an air-gapped environment
+
+An air-gapped environment, also known as an air-gapped network or isolated network, ensures security by physically segregating the system or network. This isolation is established to prevent unauthorized access, data transfer, or communication between the air-gapped system and external sources.
+
+You can install {product} in an air-gapped environment to ensure security and meet specific regulatory requirements.
+
+To install {product-short} in an air-gapped environment, you must have access to the `registry.redhat.io` and the registry for the air-gapped environment.
+
+.Prerequisites
+
+* You have installed an {ocp-brand-name} {ocp-version-min} or later.
+* You have access to the `registry.redhat.io`.
+* You have access to the {ocp-brand-name} image registry of your cluster. For more information about exposing the image registry, see the {ocp-brand-name} documentation about https://docs.openshift.com/container-platform/{ocp-version}/registry/securing-exposing-registry.html[Exposing the registry].
+* You have installed the `oc` command line tool on your workstation.
+* You have installed the `podman` command line tools on your workstation.
+* You you have an account in https://developers.redhat.com/[{rhdeveloper-name}] portal.
+
+.Procedure
+
+. Log in to your {ocp-short} account using the `oc` command line tool, by running the following command:
++
+[source,terminal]
+----
+oc login -u <user> -p <password> https://api.<hostname>:6443
+----
+
+. Log in to the {ocp-short} image registry using the `podman` command line tool, by running the following command:
++
+[source,terminal]
+----
+podman login -u kubeadmin -p $(oc whoami -t) default-route-openshift-image-registry.<hostname>
+----
++
+[NOTE]
+====
+You can run the following commands to get the full host name of the {ocp-short} image registry, and then use the host name in a command to log in:
+
+[source,terminal]
+----
+REGISTRY_HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+----
+
+[source,terminal]
+----
+podman login -u kubeadmin -p $(oc whoami -t) $REGISTRY_HOST
+----
+====
+
+. Log in to the `registry.redhat.io` in `podman` by running the following command:
++
+[source,terminal]
+----
+podman login registry.redhat.io
+----
++
+For more information about registry authentication, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+
+. Pull {product-short} and PostgreSQL images from https://catalog.redhat.com/software/containers/search[{company-name} Image registry] to your workstation, by running the following commands:
++
+[source,terminal]
+----
+podman pull registry.redhat.io/rhdh/rhdh-hub-rhel9:{product-chart-version}
+----
++
+[source,terminal]
+----
+podman pull registry.redhat.io/rhel9/postgresql-15:latest
+----
+
+. Push both images to the internal {ocp-short} image registry by running the following commands:
++
+[source,terminal]
+----
+podman push --remove-signatures registry.redhat.io/rhdh/rhdh-hub-rhel9:{product-chart-version} default-route-openshift-image-registry.<hostname>/<project_name>/rhdh-hub-rhel9:{product-chart-version}
+----
++
+[source,terminal]
+----
+podman push --remove-signatures registry.redhat.io/rhel9/postgresql-15:latest default-route-openshift-image-registry.<hostname>/<project_name>/postgresql-15:latest
+----
++
+For more information about pushing images directly to the {ocp-short} image registry, see https://access.redhat.com/solutions/6959306[How do I push an Image directly into the OpenShift 4 registry].
++
+[IMPORTANT]
+====
+If an x509 error occurs, verify that you have link:https://access.redhat.com/solutions/6088891[installed the CA certificate used for {ocp-short} routes on your system].
+====
+
+. Use the following command to verify that both images are present in the internal {ocp-short} registry:
++
+[source,terminal]
+----
+oc get imagestream -n <project_name>
+----
+
+. Enable local image lookup for both images by running the following commands:
++
+[source,terminal]
+----
+oc set image-lookup postgresql-15
+----
++
+[source,terminal]
+----
+oc set image-lookup  rhdh-hub-rhel9
+----
+
+. Go to *YAML view* and update the `image` section for `backstage` and `postgresql` using the following values:
++
+--
+.Example values for Developer Hub image
+[source,yaml]
+----
+upstream:
+  backstage:
+    image:
+      registry: ""
+      repository: rhdh-hub-rhel9
+      tag: latest
+----
+
+.Example values for PostgreSQL image
+[source,yaml]
+----
+upstream:
+  postgresql:
+    image:
+      registry: ""
+      repository: postgresql-15
+      tag: latest
+----
+--
+
+. Install the {product} using Helm chart. For more information about installing {product-short}, see xref:proc-install-rhdh-ocp-helm_assembly-install-rhdh-ocp[].

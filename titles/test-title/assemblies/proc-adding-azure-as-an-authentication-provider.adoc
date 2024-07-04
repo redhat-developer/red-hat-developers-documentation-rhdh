@@ -1,0 +1,80 @@
+[id='proc-adding-azure-as-an-authentication-provider_{context}']
+= Enabling the Microsoft Azure authentication provider
+
+{product} includes a Microsoft Azure authentication provider that can authenticate users by using OAuth.
+
+.Procedure
+. To allow {product-short} to authenticate with Microsoft Azure, create an OAuth Application in Microsoft Azure.
+
+.. Go to link:https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade[*Azure Portal > App registrations*], and create an *App Registration* for {product-short}.
+
+.. On your *App registration* overview page, add a new *Web platform configuration*, with the configuration:
+
+*Redirect URI*:: Enter the backend authentication URI set in {product-short}: `pass:c,a,q[https://_<APP_FQDN>_/api/auth/microsoft/handler/frame]`
+*Front-channel logout URL*:: Leave blank.
+*Implicit grant and hybrid flows*:: Leave all checkboxes cleared.
+
+.. On the *API permissions* tab, click *Add Permission*, then add the following *Delegated permission* for the
+*Microsoft Graph API*:
+
+`email`:::
+`offline_access`:::
+`openid`:::
+`profile`:::
+`User.Read`:::
+(Optional)::: Optional custom scopes of the Microsoft Graph API that you define both here and in the {product-short} configuration (`app-config-rhdh.yaml`).
+
+NOTE: Your company might require you to grant admin consent for these permissions.
+Even if your company does not require admin consent, you might do so as it means users do not need to individually consent the first time they access backstage.
+To grant admin consent, a directory admin must go to the link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/user-admin-consent-overview[admin consent] page and click *Grant admin consent for COMPANY NAME*.
+
+.. Go to the *Certificates & Secrets* page, then the *Client secrets* tab, and create a new client secret.
+Save the *Client secret* for the next step.
+
+. Add your Microsoft Azure credentials in your {product-short} secrets.
+
+.. Edit your {product-short} secrets, such as `secrets-rhdh`.
+
+.. Add the following key/value pairs:
++
+* `AUTH_AZURE_CLIENT_ID`: Enter the *Application ID* that you generated on Microsoft Azure.
+* `AUTH_AZURE_CLIENT_SECRET`: Enter the *Client secret* that you generated on Microsoft Azure.
+* `AUTH_AZURE_TENANT_ID`: Enter your *Tenant ID* on Microsoft Azure.
+
+. Set up the Microsoft Azure authentication provider in your {product-short} custom configuration.
++
+Edit your custom {product-short} config map, such as `app-config-rhdh`.
++
+In the `app-config-rhdh.yaml` content, add the `microsoft` provider configuration under the root `auth` configuration, and enable the `microsoft` provider for sign-in:
++
+.`app-config-rhdh.yaml` fragment
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        # domainHint: ${AUTH_AZURE_TENANT_ID} # <1>
+        # additionalScopes: # <2>
+          # - Mail.Send
+signInPage: microsoft # <3>
+----
++
+<1>  Optional for single-tenant applications. You can reduce login friction for users with accounts in multiple tenants by automatically filtering out accounts from other tenants. If you want to use this parameter for a single-tenant application, uncomment and enter the tenant ID. If your application registration is multi-tenant, leave this parameter blank. For more information, see link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy[Home Realm Discovery].
+<2> Optional for additional scopes. To add scopes for the application registration, uncomment and enter the list of scopes that you want to add.
+The default and mandatory value is `['user.read']`.
+<3> To enable the Microsoft Azure provider as default sign-in provider.
+
+[NOTE]
+====
+Optional for environments with restrictions on outgoing access, such as firewall rules. If your environment has outgoing access restrictions make sure your Backstage backend has access to the following hosts:
+
+* `login.microsoftonline.com`: To get and exchange authorization codes and access tokens.
+
+* `graph.microsoft.com`: To fetch user profile information (as seen in this source code).
+If this host is unreachable, users might see an _Authentication failed, failed to fetch user profile_ error when they attempt to log in.
+====

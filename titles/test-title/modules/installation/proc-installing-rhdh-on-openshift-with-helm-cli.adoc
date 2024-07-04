@@ -1,0 +1,48 @@
+[id="proc-installing-rhdh-on-openshift-with-helm-cli_{context}"]
+= Installing {product} on {ocp-brand-name} with Helm CLI
+
+You can use the Helm CLI to install {product} on {ocp-brand-name}.
+
+.Prerequisites
+* You have installed the `oc` command line tool on your workstation.
+* You are logged in to your OpenShift Container Platform account.
+* A user with the OpenShift Container Platform admin role has configured the appropriate roles and permissions within your project to create an application. For more information about OpenShift Container Platform roles, see [Using RBAC to define and apply permissions](https://docs.openshift.com/container-platform/4.15/authentication/using-rbac.html).
+* You have created a project in OpenShift Container Platform. For more information about creating a project in OpenShift Container Platform, see [Red Hat OpenShift Container Platform documentation](https://docs.openshift.com/container-platform/4.15/applications/projects/working-with-projects.html#odc-creating-projects-using-developer-perspective_projects).
+* You have installed the link:https://helm.sh/docs/intro/install[Helm CLI].
+
+.Procedure
+. Create and activate the _<rhdh>_ {ocp-short} project:
++
+[subs="quotes+"]
+----
+NAMESPACE=_<rhdh>_
+oc new-project ${NAMESPACE} || oc project ${NAMESPACE}
+----
+
+. Install the {product} Helm chart:
++
+[subs="attributes+"]
+----
+helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz
+----
+
+. Configure your {product-short} Helm chart instance with the {product-short} database password and router base URL values from your {ocp-short} cluster:
++
+[subs="attributes+"]
+----
+PASSWORD=$(oc get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
+CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
+helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
+    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
+    --set global.postgresql.auth.password="$PASSWORD"
+----
+
+. Display the running {product-short} instance URL:
++
+----
+echo "https://redhat-developer-hub-$NAMESPACE.$CLUSTER_ROUTER_BASE"
+----
+
+.Verification
+* Open the running {product-short} instance URL in your browser to use {product-short}.
+
