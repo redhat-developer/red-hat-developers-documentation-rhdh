@@ -6,9 +6,43 @@ You can configure an {product-very-short} instance with a Transport Layer Securi
 .Prerequisites
 
 * You have set up an Azure Red Hat OpenShift (ARO) cluster with a public CA-signed certificate. For more information about obtaining CA certificates, refer to your vendor documentation.
-* You have created a namespace and setup a service account with proper read permissions on resources. For more information, see link:https://backstage.io/docs/features/kubernetes/configuration#role-based-access-control[Role-based access control].
+* You have created a namespace and setup a service account with proper read permissions on resources.
++
+.Example: Kubernetes manifest for role-based access control
+[source,yaml]
+----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backstage-read-only
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - pods
+      - configmaps
+      - services
+      - deployments
+      - replicasets
+      - horizontalpodautoscalers
+      - ingresses
+      - statefulsets
+      - limitranges
+      - resourcequotas
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - watch
+#...
+----
+
 * You have obtained the secret and the service CA certificate associated with your service account.
-* You have created some resources and added labels to them so they can be discovered by the Kubernetes plugin. For more information, see link:https://backstage.io/docs/features/kubernetes/configuration#common-backstageiokubernetes-id-label[Common `backstage.io/kubernetes-id` label].
+* You have created some resources and added annotations to them so they can be discovered by the Kubernetes plugin. You can apply these Kuberenetes annotations:
+
+** `backstage.io/kubernetes-id` to label components
+** `backstage.io/kubernetes-namespace` to label namespaces
+
 
 .Procedure
 
@@ -33,6 +67,11 @@ data:
 ----
 <1> Set the value to `false` to enable the `backstage-plugin-kubernetes-backend-dynamic` plugin
 <2> Set the value to `false` to enable the `backstage-plugin-kubernetes` plugin.
++
+[NOTE]
+====
+The `backstage-plugin-kubernetes` plugin is currently in link:https://access.redhat.com/support/offerings/techpreview[Technology Preview]. As an alternative, you can use the `./dynamic-plugins/dist/backstage-plugin-topology-dynamic` plugin, which is Generally Available (GA).
+====
 
 . Set the kubernetes cluster details and configure the catalog sync options in the `app-config-rhdh.yaml` ConfigMap file:
 +
