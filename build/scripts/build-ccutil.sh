@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 # Utility script build html previews with referenced images
-# Requires: asciidoctor - see https://docs.asciidoctor.org/asciidoctor/latest/install/linux-packaging/
+# Requires: Podman - see https://podman.io
 # input: titles/
 # output: titles-generated/ and titles-generated/$BRANCH/
 
