@@ -1,9 +1,22 @@
 [id='proc-customize-rhdh-homepage_{context}']
 = Customizing the Home page in {product}
 
-To access the Home page in {product}, the base URL must include the `/developer-hub` proxy. You can configure the Home page by passing the data into the `app-config.yaml` file as a proxy. You can provide data to the Home page by using the following sources:
+To access the Home page in {product}, the base URL must include the `/developer-hub` proxy. You can configure the Home page by passing the data into the `app-config.yaml` file as a proxy. You can provide data to the Home page from the following sources:
 
-* JSON files hosted on GitHub or GitLab. To access the data from the JSON files, add the following code to the `app-config.yaml` file:
+* JSON files hosted on GitHub or GitLab.
+* A dedicated service that provides the Home page data in JSON format using an API.
+
+== Using hosted JSON files to provide data to the Learning Paths
+
+.Prerequisites
+
+You have installed {product} by using either the Operator or Helm chart. For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
+
+.Procedure
+
+To access the data from the JSON files, complete the following step:
+
+* Add the following code to the `app-config.yaml` file:
 +
 [source,yaml]
 ----
@@ -22,10 +35,13 @@ proxy:
 	<HEADER_KEY>: <HEADER_VALUE> # optional and can be passed as needed i.e Authorization can be passed for private GitHub repo and PRIVATE-TOKEN can be passed for private GitLab repo
 ----
 
-* A separate service that provides the Home page data in JSON format using an API. When using a separate service, you can do the following:
-** Use the same service to provide the data to all configurable {product-short} pages or use a different service for each page.
-** Use the https://github.com/redhat-developer/red-hat-developer-hub-customization-provider[`red-hat-developer-hub-customization-provider`] as an example service, which provides data for both the Home and Tech Radar pages. The `red-hat-developer-hub-customization-provider` service provides the same data as default {product-short} data. You can fork the `red-hat-developer-hub-customization-provider` service repository from GitHub and modify it with your own data, if required.
-** Deploy the `red-hat-developer-hub-customization-provider` service and the {product-short} Helm chart on the same cluster.
+== Using a dedicated service to provide data to the Learning Paths
+
+When using a dedicated service, you can do the following:
+
+* Use the same service to provide the data to all configurable {product-short} pages or use a different service for each page.
+* Use the https://github.com/redhat-developer/red-hat-developer-hub-customization-provider[`red-hat-developer-hub-customization-provider`] as an example service, which provides data for both the Home and Tech Radar pages. The `red-hat-developer-hub-customization-provider` service provides the same data as default {product-short} data. You can fork the `red-hat-developer-hub-customization-provider` service repository from GitHub and modify it with your own data, if required.
+* Deploy the `red-hat-developer-hub-customization-provider` service and the {product-short} Helm chart on the same cluster.
 
 .Prerequisites
 
@@ -39,20 +55,16 @@ To use a separate service to provide the Home page data, complete the following 
 . Enter the URL of your Git repository into the *Git Repo URL* field.
 +
 --
-To use the `red-hat-developer-hub-customization-provider` service, add the URL for the https://github.com/redhat-developer/red-hat-developer-hub-customization-provider[red-hat-developer-hub-customization-provider] repository.
+To use the `red-hat-developer-hub-customization-provider` service, add the URL for the https://github.com/redhat-developer/red-hat-developer-hub-customization-provider[red-hat-developer-hub-customization-provider] repository or your fork of the repository containing your customizations.
 --
 
-[NOTE]
-====
-The `rhdh-customization-provider` service contains the 8080 port.
-====
-
-. On the *General* tab, rename the value in the *Name* field to *rhdh-customization-provider* and click *Create*.
+. On the *General* tab, enter *red-hat-developer-hub-customization-provider* in the *Name* field and click *Create*.
 . On the *Advanced Options* tab, copy the value from the *Target Port*.
 +
---
+[NOTE]
+====
 The *Target Port* automatically generates a Kubernetes or {ocp-short} service to communicate with.
---
+====
 +
 . Add the following code to the `app-config-rhdh.yaml` file:
 +
@@ -72,7 +84,12 @@ where `HOMEPAGE_DATA_URL` is defined as `pass:c[http://<SERVICE_NAME>:8080]`, fo
 +
 [NOTE]
 ====
-You can replace the `HOMEPAGE_DATA_URL` by adding the URL to `rhdh-secrets` or directly replacing it in your custom ConfigMap.
+The `red-hat-developer-hub-customization-provider` service contains the 8080 port by default. If you are using a custom port, you can specify it with the 'PORT' environmental variable in the `app-config-rhdh.yaml` file.
+====
++
+[NOTE]
+====
+You can replace the `HOMEPAGE_DATA_URL` by adding the URL to `rhdh-secrets` or by directly replacing it in your custom ConfigMap.
 ====
 +
 . Delete the {product-short} pod to ensure that the new configurations are loaded correctly.

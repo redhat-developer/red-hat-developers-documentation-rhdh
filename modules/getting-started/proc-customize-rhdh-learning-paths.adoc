@@ -1,10 +1,31 @@
 [id='proc-customize-rhdh-learning-paths_{context}']
 = Customizing the Learning Paths in {product}
 
+In {product}, you can configure Learning Paths by passing the data into the `app-config.yaml` file as a proxy. The base Tech Radar URL must include the `/developer-hub/learning-paths` proxy.
 
-In {product}, you can configure Learning Paths by passing the data into the `app-config.yaml` file as a proxy. You can provide data to the Learning Path using the following sources:
+[NOTE]
+====
+Due to the use of overlapping `pathRewrites` for both the `learning-path` and `homepage` quick access proxies, you must create the `learning-paths` configuration (`^api/proxy/developer-hub/learning-paths`) before you create the `homepage` configuration (`^/api/proxy/developer-hub`).
 
-* JSON files hosted on GitHub or GitLab. To access the data from the JSON files, add the following code to the `app-config.yaml` file:
+For more information about customizing the Home page in {product}, see xref:proc-customize-rhdh-homepage_rhdh-getting-started[Customizing the Home page in {product}].
+====
+
+You can provide data to the Learning Path from the following sources:
+
+* JSON files hosted on GitHub or GitLab.
+* A dedicated service that provides the Learning Path data in JSON format using an API.
+
+== Using hosted JSON files to provide data to the Learning Paths
+
+.Prerequisites
+
+You have installed {product} by using either the Operator or Helm chart. For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
+
+.Procedure
+
+To access the data from the JSON files, complete the following step:
+
+* Add the following code to the `app-config.yaml` file:
 +
 [source,yaml]
 ----
@@ -20,4 +41,39 @@ proxy:
       secure: true
 ----
 
-//* A separate service that provides the Learning Path data in JSON format using an API.
+== Using a dedicated service to provide data to the Learning Paths
+
+.Prerequisites
+
+* You have installed the {product} using Helm chart. For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
+
+.Procedure
+
+To use a dedicated service to provide the Learning Path data, complete the following steps:
+
+. Add the following code to the `app-config-rhdh.yaml` file:
++
+[source,yaml]
+----
+   proxy:
+      endpoints:
+        # Other Proxies
+        '/developer-hub/learning-paths':
+          target: ${LEARNING_PATH_DATA_URL}
+          changeOrigin: true
+          # Change to "false" in case of using self hosted cluster with a self-signed certificate
+          secure: true
+----
+where the `LEARNING_PATH_DATA_URL` is defined as `pass:c[http://<SERVICE_NAME>/learning-paths]`, for example, `pass:c[http://rhdh-customization-provider/learning-paths]`.
++
+[NOTE]
+====
+You can define the `LEARNING_PATH_DATA_URL` by adding it to `rhdh-secrets` or by directly replacing it with its value in your custom ConfigMap.
+====
++
+[NOTE]
+====
+Ensure that the API request call returns the response in JSON format.
+====
++
+. Delete the {product-short} pod to ensure that the new configurations are loaded correctly.
