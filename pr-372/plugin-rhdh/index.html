@@ -1671,6 +1671,20 @@ section {
 </li>
 </ul>
 </li>
+<li><a href="#rhdh-argocd">2.11. Installation and Configuration of ArgoCD</a>
+<ul class="sectlevel3">
+<li><a href="#_for-administrators-5">2.11.1. For Administrators</a>
+<ul class="sectlevel4">
+<li><a href="#_installation-2">Installation</a></li>
+</ul>
+</li>
+<li><a href="#_for-users-5">2.11.2. For Users</a>
+<ul class="sectlevel4">
+<li><a href="#_loading-the-plugin-in-backstage-showcase-application">Loading the Plugin in Backstage Showcase Application</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -3687,12 +3701,319 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="rhdh-argocd">2.11. Installation and Configuration of ArgoCD</h3>
+<div class="paragraph">
+<p>You can use the ArgoCD plugin to visualize Continuous Delivery (CD) pipeline runs in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, author of the pipeline run, commit message, and the container image promoted to production.</p>
+</div>
+<div class="sect3">
+<h4 id="_for-administrators-5">2.11.1. For Administrators</h4>
+<div class="sect4">
+<h5 id="_installation-2">Installation</h5>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>From the root directory, run the following command to install the backend plugin:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">yarn workspace app add @roadiehq/backstage-plugin-argo-cd-backend</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Create a plugin file for the ArgoCD backend in your <code>packages/backend/src/plugins/</code> directory:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="typescript">// packages/backend/src/plugins/argocd.ts
+
+import { createRouter } from '@roadiehq/backstage-plugin-argo-cd-backend';
+import { PluginEnvironment } from '../types';
+export default async function createPlugin({
+  logger,
+  config,
+}: PluginEnvironment) {
+  return await createRouter({ logger, config });
+}</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Expose the APIs for the ArgoCD backend by modifying your backend router:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="typescript">// packages/backend/src/index.ts
+
+import argocd from './plugins/argocd';
+...
+
+const argocdEnv = useHotMemoize(module, () =&gt; createEnv('argocd'));
+...
+apiRouter.use('/argocd', await argocd(argocdEnv));</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Add ArgoCD instance information to your <code>app.config.yaml</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="typescript">argocd:
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
+        - name: argoInstance2
+          url: https://argoInstance2.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedures</div>
+<ol class="arabic">
+<li>
+<p>Install the Frontend Plugin by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">yarn workspace app add @janus-idp/backstage-plugin-argocd</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Update the EntityPage.tsx file to add the deployment summary and lifecycle components:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="typescript">// packages/app/src/components/catalog/EntityPage.tsx
+import {
+  ArgocdDeploymentSummary,
+  ArgocdDeploymentLifecycle,
+  isArgocdConfigured,
+} from '@janus-idp/backstage-plugin-argocd';
+
+const overviewContent = (
+  &lt;Grid container spacing={3} alignItems="stretch"&gt;
+    ...
+    &lt;EntitySwitch&gt;
+      &lt;EntitySwitch.Case if={e =&gt; Boolean(isArgocdConfigured(e))}&gt;
+        &lt;Grid item sm={12}&gt;
+          &lt;ArgocdDeploymentSummary /&gt;
+        &lt;/Grid&gt;
+      &lt;/EntitySwitch.Case&gt;
+    &lt;/EntitySwitch&gt;
+    ...
+  &lt;/Grid&gt;
+);
+
+
+const cicdcontent = (
+    &lt;EntitySwitch&gt;
+        {/* ... */}
+        {/* highlight-add-start */}
+        ...
+          &lt;EntitySwitch.Case if={e =&gt; Boolean(isArgocdConfigured(e))}&gt;
+            &lt;Grid item sm={12}&gt;
+              &lt;ArgocdDeploymentLifecycle /&gt;
+            &lt;/Grid&gt;
+          &lt;/EntitySwitch.Case&gt;
+        {/* highlight-add-end */}
+    &lt;/EntitySwitch&gt;
+);</code></pre>
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Enable ArgoCD features by adding the following annotations to the entity&#8217;s <code>catalog-info.yaml</code> file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">annotations:
+  ...
+
+  argocd/app-selector: 'rht-gitops.com/janus-argocd=quarkus-app'</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>To switch between ArgoCD instances add the following annotations to the entity&#8217;s <code>catalog-info.yaml</code> file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml"> annotations:
+   ...
+    argocd/instance-name: 'argoInstance2'</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If you do not set these annotations, the plugin defaults to the first ArgoCD instance configured in <code>app.config.yaml</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_for-users-5">2.11.2. For Users</h4>
+<div class="ulist">
+<div class="title">Procedures</div>
+<ul>
+<li>
+<p>Use the following configuration to install the ArgoCD plugin into Red Hat Developer Hub or Janus IDP through Helm:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic
+        disabled: false
+        pluginConfig:
+          argocd:
+            username: "${ARGOCD_USERNAME}"
+            password: "${ARGOCD_PASSWORD}"
+            appLocatorMethods:
+              - type: 'config'
+                instances:
+                  - name: argoInstance1
+                    url: "${ARGOCD_INSTANCE1_URL}"
+                    token: "${ARGOCD_AUTH_TOKEN}"
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-argocd
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              janus-idp.backstage-plugin-argocd:
+                mountPoints:
+                  - mountPoint: entity.page.overview/cards
+                    importName: ArgocdDeploymentSummary
+                    config:
+                      layout:
+                        gridColumnEnd:
+                          lg: "span 8"
+                          xs: "span 12"
+                      if:
+                        allOf:
+                          - isArgocdAvailable
+                  - mountPoint: entity.page.cd/cards
+                    importName: ArgocdDeploymentLifecycle
+                    config:
+                      layout:
+                        gridColumn: '1 / -1'
+                      if:
+                        allOf:
+                          - isArgocdConfigured</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="sect4">
+<h5 id="_loading-the-plugin-in-backstage-showcase-application">Loading the Plugin in Backstage Showcase Application</h5>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Export Dynamic Plugin Assets by running the following commands:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">yarn install
+yarn tsc
+yarn build
+yarn export-dynamic</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This will build and create the static assets for the plugin and put them inside the <code>dist-scalprum</code> folder:</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>Package and copy <code>dist-scalprum</code> folder assets to the <code>dynamic-plugins-root</code> folder in the showcase application:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sh">pkg=../plugins/argocd
+archive=$(npm pack $pkg)
+tar -xzf "$archive" &amp;&amp; rm "$archive"
+mv package $(echo $archive | sed -e 's:\.tgz$::')</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Add the extension point inside the <code>app-config.yaml</code> or <code>app-config.local.yaml</code> file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">dynamicPlugins:
+  frontend:
+    janus-idp.backstage-plugin-argocd:
+      mountPoints:
+        - mountPoint: entity.page.overview/cards
+          importName: ArgocdDeploymentSummary
+          config:
+            layout:
+              gridColumnEnd:
+                lg: 'span 8'
+                xs: 'span 12'
+            if:
+              allOf:
+                - isArgocdAvailable
+        - mountPoint: entity.page.cd/cards
+          importName: ArgocdDeploymentLifecycle
+          config:
+            layout:
+              gridColumn: '1 / -1'
+            if:
+              allOf:
+                - isArgocdConfigured</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information on dynamic plugins, refer <a href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.2/html/configuring_plugins_in_red_hat_developer_hub/rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-16 05:55:27 UTC
+Last updated 2024-07-16 06:00:56 UTC
 </div>
 </div>
 </body>
