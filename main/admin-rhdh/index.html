@@ -1602,6 +1602,7 @@ section {
 <li><a href="#proc-install-rhdh-ocp-operator_assembly-installing-rhdh-on-ocp-by-using-the-operator">Deploying Red Hat Developer Hub on OpenShift Container Platform using the Operator</a></li>
 <li><a href="#proc-add-custom-app-config-file-ocp-operator_assembly-installing-rhdh-on-ocp-by-using-the-operator">Adding a custom application configuration file to OpenShift Container Platform using the Operator</a></li>
 <li><a href="#proc-config-dynamic-plugins-rhdh-operator_assembly-installing-rhdh-on-ocp-by-using-the-operator">Configuring dynamic plugins with the Red Hat Developer Hub Operator</a></li>
+<li><a href="#proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_assembly-installing-rhdh-on-ocp-by-using-the-operator">Configuring an RHDH instance with a TLS connection in Kubernetes</a></li>
 <li><a href="#proc-install-rhdh-airgapped-environment-ocp-operator_assembly-installing-rhdh-on-ocp-by-using-the-operator">Installing Red Hat Developer Hub using the Operator in an air-gapped environment</a></li>
 </ul>
 </li>
@@ -2345,6 +2346,218 @@ spec:
 </div>
 </li>
 </ul>
+</div>
+</div>
+<div class="sect4">
+<h5 id="proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_assembly-installing-rhdh-on-ocp-by-using-the-operator">Configuring an RHDH instance with a TLS connection in Kubernetes</h5>
+<div class="paragraph">
+<p>You can configure an RHDH instance with a Transport Layer Security (TLS) connection in a Kubernetes cluster, such as an Azure Red Hat OpenShift (ARO) cluster, any cluster from a supported cloud provider, or your own cluster with proper configuration. However, You must use a public Certificate Authority (CA)-signed certificate to configure your Kubernetes cluster.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have set up an Azure Red Hat OpenShift (ARO) cluster with a public CA-signed certificate. For more information about obtaining CA certificates, refer to your vendor documentation.</p>
+</li>
+<li>
+<p>You have created a namespace and setup a service account with proper read permissions on resources.</p>
+<div class="listingblock">
+<div class="title">Example: Kubernetes manifest for role-based access control</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backstage-read-only
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - pods
+      - configmaps
+      - services
+      - deployments
+      - replicasets
+      - horizontalpodautoscalers
+      - ingresses
+      - statefulsets
+      - limitranges
+      - resourcequotas
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - watch
+#...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>You have obtained the secret and the service CA certificate associated with your service account.</p>
+</li>
+<li>
+<p>You have created some resources and added annotations to them so they can be discovered by the Kubernetes plugin. You can apply these Kubernetes annotations:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>backstage.io/kubernetes-id</code> to label components</p>
+</li>
+<li>
+<p><code>backstage.io/kubernetes-namespace</code> to label namespaces</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Enable the Kubernetes plugins in the <code>dynamic-plugins-rhdh.yaml</code> file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-kubernetes-backend-dynamic
+        disabled: false <b class="conum">(1)</b>
+      - package: ./dynamic-plugins/dist/backstage-plugin-kubernetes
+        disabled: false <b class="conum">(2)</b>
+        # ...</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Set the value to <code>false</code> to enable the <code>backstage-plugin-kubernetes-backend-dynamic</code> plugin.</p>
+</li>
+<li>
+<p>Set the value to <code>false</code> to enable the <code>backstage-plugin-kubernetes</code> plugin.</p>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The <code>backstage-plugin-kubernetes</code> plugin is currently in <a href="https://access.redhat.com/support/offerings/techpreview">Technology Preview</a>. As an alternative, you can use the <code>./dynamic-plugins/dist/backstage-plugin-topology-dynamic</code> plugin, which is Generally Available (GA).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>Set the kubernetes cluster details and configure the catalog sync options in the <code>app-config-rhdh.yaml</code> file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+  # ...
+  catalog:
+    rules:
+      - allow: [Component, System, API, Resource, Location]
+    providers:
+      kubernetes:
+        openshift:
+          cluster: openshift
+          processor:
+            namespaceOverride: default
+            defaultOwner: guests
+          schedule:
+            frequency:
+              seconds: 30
+            timeout:
+              seconds: 5
+  kubernetes:
+    serviceLocatorMethod:
+      type: 'multiTenant'
+    clusterLocatorMethods:
+      - type: 'config'
+        clusters:
+          - url: &lt;target-cluster-api-server-url&gt; <b class="conum">(1)</b>
+            name: openshift
+            authProvider: 'serviceAccount'
+            skipTLSVerify: false <b class="conum">(2)</b>
+            skipMetricsLookup: true
+            dashboardUrl: &lt;target-cluster-console-url&gt; <b class="conum">(3)</b>
+            dashboardApp: openshift
+            serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN} <b class="conum">(4)</b>
+            caData: ${K8S_CONFIG_CA_DATA} <b class="conum">(5)</b>
+            # ...</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>The base URL to the Kubernetes control plane. You can run the <code>kubectl cluster-info</code> command to get the base URL.</p>
+</li>
+<li>
+<p>Set the value of this parameter to <code>false</code> to enable the verification of the TLS certificate.</p>
+</li>
+<li>
+<p>Optional: The link to the Kubernetes dashboard managing the ARO cluster.</p>
+</li>
+<li>
+<p>Optional: Pass the service account token using a <code>K8S_SERVICE_ACCOUNT_TOKEN</code> environment variable that you can define in your <code>secrets-rhdh</code> secret.</p>
+</li>
+<li>
+<p>Pass the CA data using a <code>K8S_CONFIG_CA_DATA</code> environment variable that you can define in your <code>secrets-rhdh</code> secret.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Save the configuration changes.</p>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Run the RHDH application to import your catalog:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n rhdh-operator get pods -w</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Verify that the pod log shows no errors for your configuration.</p>
+</li>
+<li>
+<p>Go to <strong>Catalog</strong> and check the component page in the Developer Hub instance to verify the cluster connection and the presence of your created resources.</p>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If you encounter connection errors, such as certificate issues or permissions, check the message box in the component page or view the logs of the pod.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 <div class="sect4">
@@ -6001,7 +6214,7 @@ upstream:
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The following procedure uses a <a href="https://github.com/janus-idp/operator/blob/1.2.x/hack/db_copy.sh">database copy script</a> to do a quick migration.</p>
+<p>The following procedure uses a database copy script to do a quick migration.</p>
 </div>
 </td>
 </tr>
@@ -10939,7 +11152,7 @@ jobs:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-11 19:16:29 UTC
+Last updated 2024-07-16 10:13:56 UTC
 </div>
 </div>
 </body>
