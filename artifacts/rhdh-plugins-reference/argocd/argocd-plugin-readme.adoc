@@ -1,322 +1,114 @@
-= ArgoCD plugin for {product}
+= Enabling and configuring Argo CD plugin
 
-The ArgoCD plugin represents the current status of an application in your Backstage Catalog.
+You can use the Argo CD plugin to visualize the Continuous Delivery (CD) workflows in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, commit message, author of the commit, container image promoted to environment and deployment history.
 
-== For administrators
+== For Administrators
 
-=== Installing the ArgoCD plugin
-
-The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the `@redhat` scoped packages:
-
-[source]
-----
-# update your .npmrc or .yarnrc file
-yarn config set "@redhat:registry" https://npm.registry.redhat.com
-# then pull a package 
-yarn add @redhat/backstage-plugin-quay
-----
-
-For more information, see link:https://docs.npmjs.com/cli/v9/configuring-npm/npmrc[npm docs]. 
-
-Creating a `.npmrc` file ensures that all the packages are scoped under `@redhat` and are fetched from link:https://npm.registry.redhat.com/[Red Hat's NPM registry], while the rest dependencies remain sourced from other link:registry.npmjs.org[registry]. 
+=== Enabling Argo CD plugin
 
 .Prerequisites
 
-* Your Backstage application is installed and deployed.
+* Add Argo CD instance information to your `app-config.yaml` configmap:
 
-.Procedure
-
-. In the `backstage/packages/app` project, add the ArgoCD plugin as a `package.json` dependency as follows:
 +
---
-[source,console]
+[source,typescript]
 ----
-cd packages/app
-yarn add @redhat/backstage-plugin-argo-cd
+argocd:
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
+        - name: argoInstance2
+          url: https://argoInstance2.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
 ----
---
 
-. In the `app-config.yaml` file available in the root directory, add `argo-cd` to the proxy object as follows:
+* Add the following annotation to the entity’s `catalog-info.yaml` file to identify the Argo CD applications.
+
 +
---
 [source,yaml]
 ----
-proxy:
+annotations:
   ...
+  # The label that Argo CD uses to fetch all the applications. The format to be used is label.key=label.value. For example, rht-gitops.com/janus-argocd=quarkus-app.
 
-  '/argocd/api':
-    # url to the api of your hosted argoCD instance
-    target: https://159.65.209.132/api/v1/
-    changeOrigin: true
-    # this line is required if your hosted argoCD instance has self-signed certificate
-    secure: false
-    headers:
-      Cookie:
-        $env: ARGOCD_AUTH_TOKEN
-
-
-# optional: this will link to your argoCD web UI for each argoCD application
-argocd:
-  baseUrl: https://my-argocd-web-ui.com
+  argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}' 
 ----
 
-Also, you can optionally add the base URL for your ArgoCD web UI in the previous code.
---
+* (Optional) Add the following annotation to the entity’s `catalog-info.yaml` file to switch between Argo CD instances:
 
-. Add the ArgoCD plugin to the list of plugins using the following code:
 +
---
-[source]
+[source,yaml]
 ----
-// packages/app/src/plugins.ts
-export { argocdPlugin } from '@redhat/backstage-plugin-argo-cd';
-----
---
+ annotations:
+   ...
+    # The Argo CD instance name used in `app-config.yaml`.
 
-. Add the ArgoCD plugin to the `entitityPage.tsx` file as follows:
+    argocd/instance-name: '${ARGOCD_INSTANCE}' 
+----
+
 +
---
-[source]
-----
-// packages/app/src/components/catalog/EntityPage.tsx
-import {
-  EntityArgoCDHistoryCard,
-  isArgocdAvailable,
-} from '@redhat/backstage-plugin-argo-cd';
-
-
-const overviewContent = (
-  <Grid container spacing={3} alignItems="stretch">
-    ...
-    <EntitySwitch>
-      <EntitySwitch.Case if={e => Boolean(isArgocdAvailable(e))}>
-        <Grid item sm={6}>
-          <EntityArgoCDHistoryCard />
-        </Grid>
-      </EntitySwitch.Case>
-    </EntitySwitch>
-    ...
-  </Grid>
-);
-----
---
-
-. To use the ArgoCD plugin for your component in Backstage, add an annotation to the YAML config file of a component:
-+
---
-`argocd/app-name: <app-name>`
-
-To select multiple ArgoCD applications for a component, use labels as follows:
-
-`argocd/app-selector: <app-selector>`
-
 [NOTE]
 ====
-You can either use annotations or labels for a component.
+If you do not set this annotation, the Argo CD plugin defaults to the first Argo CD instance configured in `app-config.yaml`.
 ====
---
 
-. Send a GET HTTP request to ArgoCD’s `/session` endpoint using the username and password to acquire your authentication key.
-
-.  Add the acquired authentication key to the environment variables for your Backstage backend server as follows:
-+
---
-`ARGOCD_AUTH_TOKEN="argocd.token=<auth-token>"`
---
-
-== Support for multiple ArgoCD instances in Backstage
-
-There are two options to support multiple ArgoCD instances in Backstage, including:
-
-* Adding proxy configuration for each ArgoCD instance
-* Using the ArgoCD backend plugin
-
-.Option 1: Adding proxy configuration for each ArgoCD instance
-
-. To create multiple components that fetch data from different ArgoCD instances, add a proxy configuration for each instance as shown in the following example:
-+
---
-[source,yaml]
-----
-proxy:
-  ...
-
-  '/argocd/api':
-    target: https://<someAddress>/api/v1/
-    changeOrigin: true
-    secure: false
-    headers:
-      Cookie:
-        $env: ARGOCD_AUTH_TOKEN
-
-  '/argocd/api2':
-    target: https://<otherAddress>/api/v1/
-    changeOrigin: true
-    secure: false
-    headers:
-      Cookie:
-        $env: ARGOCD_AUTH_TOKEN2
-
-----
---
-
-. Add the required authentication tokens to environment variables, such as `ARGOCD_AUTH_TOKEN2`.
-+
---
-After adding the authentication tokens, add the URL to the desired proxy path in the following component definition annotations:
-
-`argocd/proxy-url: '/argocd/api2'`
-
-The `argocd/proxy-url` annotation defaults to `'/argocd/api'`. Therefore, `argocd/proxy-url` is not required if there is a single proxy configuration.
---
-
-.Option 2: Using the ArgoCD backend plugin
-
-. To create multiple components that fetch data from different ArgoCD instances, set the ArgoCD instance URL dynamically by adding the following configuration to `app-config.yaml` file:
-+
---
-[source,yaml]
-----
-argocd:
-  username: ${ARGOCD_USERNAME}
-  password: ${ARGOCD_PASSWORD}
-  waitCycles: 25
-  appLocatorMethods:
-    - type: 'config'
-      instances:
-        - name: argoInstance1
-          url: https://argoInstance1.com
-          token: ${ARGOCD_AUTH_TOKEN} # optional
-        - name: argoInstance2
-          url: https://argoInstance2.com
-          # dedicated username/password for this instance
-          username: ${ARGOCD_USERNAME_INSTANCE_2} # optional
-          password: ${ARGOCD_PASSWORD_INSTANCE_2} # optional
-
-----
-
-A loop is created between deleting ArgoCD project and application to check the deletion of application occurring before the deletion of the project. If waitCycles is set to 25, then the loop can last for 75 seconds before erroring out.
-
-With the previous configuration, the ArgoCD plugin fetches the ArgoCD instances an application is deployed to and use the ArgoCD backend plugin (`backstage-plugin-argo-cd-backend`) to reach out to each ArgoCD instance based on the following mapping:
-
-* Add the required authentication tokens to environment variables, such as `ARGOCD_USERNAME` and `ARGOCD_PASSWORD` inside the argocd object. These authentication tokens are used as credentials for all ArgoCD instances by default.
-+
-[source]
-----
-argocd:
-  username: ${ARGOCD_USERNAME}
-  password: ${ARGOCD_PASSWORD}
-  appLocatorMethods:
-    - type: 'config'
-      instances:
-        - name: argoInstance1
-          url: https://argoInstance1.com
-        - name: argoInstance2
-          url: https://argoInstance2.com
-----
-
-* Define a username and password for each ArgoCD instance. This mapping has higher priority than the previous option.
-+
-[source]
-----
-argocd:
-  username: ${ARGOCD_USERNAME}
-  password: ${ARGOCD_PASSWORD}
-  appLocatorMethods:
-    - type: 'config'
-      instances:
-        - name: argoInstance1
-          url: https://argoInstance1.com
-        - name: argoInstance2
-          url: https://argoInstance2.com
-          # dedicated username/password for this instance
-          username: ${ARGOCD_USERNAME_INSTANCE_2}
-          password: ${ARGOCD_PASSWORD_INSTANCE_2}
-----
-
-* Define a token for each instance. This mapping has higher priority than both options mentioned previously.
-+
-[source]
-----
-argocd:
-  username: ${ARGOCD_USERNAME}
-  password: ${ARGOCD_PASSWORD}
-  appLocatorMethods:
-    - type: 'config'
-      instances:
-        - name: argoInstance1
-          url: https://argoInstance1.com
-          token: ${ARGOCD_AUTH_TOKEN} # Token to use to instance 1
-----
---
-
-=== Permissions in ArgoCD plugin
-
-Setting permissions for ArgoCD user account not only reduces the scope but also reduces the functionality of the backend. If you scope the permissions for read-only, then actions including creating, deleting, and resyncing the application will not be available. 
-
-The error handling in ArgoCD is designed to alert you when proper permissions are not in place.
-
-=== Self-signed certificates in ArgoCD plugin
-
-By default, the ArgoCD server generates a self-signed certificate. Once you install the ArgoCD plugin, the deployment of argocd-server can be patched to be insecure using the following command:
-
-[source,console]
-----
-kubectl patch deployment argocd-server --type "json" -p '[{"op":"add","path":"/spec/template/spec/containers/0/command/-","value":"--insecure"}]'
-----
-
-Also, you can use Helm to install the ArgoCD plugin and be insecure by default:
-
-[source,console]
-----
-helm upgrade --install argocd argo/argo-cd \
-  --version 3.33.5 \
-  --set 'server.extraArgs={--insecure}'
-----
-
-== For users
-
-=== Using ArgoCD plugin in {product}
-
-The ArgoCD plugin displays the current state of an application in Backstage Catalog.
-
-.Prerequisites
-
-* Your Backstage application is installed and running.
-* You have installed the ArgoCD plugin. For installation steps, see <<Installation>>.
+.Procedures
 
 .Procedure
 
-. Open your Backstage application and go to the *Catalog* page.
-. In the *OVERVIEW* tab, you can see the ArgoCD overview card at the bottom.
+. Add the following to your dynamic-plugins ConfigMap to enable the Argo CD plugin.
 +
---
+[source,yaml]
+----
+global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic
+        disabled: false
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-argocd
+        disabled: false
+----
 
-image::argo-cd-plugin-overview-card.png[ArgoCD overview card]
+== For Users
 
-The ArgoCD overview card displays application information including *NAME*, *INSTANCE*, *SYNC STATUS*, *HEALTH STATUS*, and *LAST SYNCED*.
---
+.Prerequisites
 
-. To view the detailed application information, select an application from the ArgoCD overview card.
+* You have enabled the Argo CD plugin in {product} {product-very-short}.
+
+.Procedures
+
+. On the {product-very-short} platform, navigate to the *Catalog* and select an appropriate component.
+
+. Select *CD* tab to view insights into deployments managed by Argo CD. 
+
 +
---
-A pop-up containing detailed information about the application appears, along with a link to ArgoCD dashboard.
+image::rhdh-plugins-reference/argocd.png[CD tab Argo CD]
 
-image::argo-cd-plugin-overview-card-details.png[ArgoCD overview card]
---
+. For deployment details:
 
-. To view the ArgoCD history, go to the *CD* tab in the Catalog.
 +
---
+* Select an appropriate card to view the deployment details (for example, commit message, author name, and deployment history) in a sidebar.
 
-image::argo-cd-plugin-history.png[ArgoCD overview card]
++
+image::rhdh-plugins-reference/sidebar.png[Sidebar]
 
-The *ArgoCD history* page contains history of application instances along with other information, such as deploy details, author name, message that author added, and revision ID.
---
++ 
+* Select the link icon (image:rhdh-plugins-reference/link.svg[width=13px, height=13px, align=center]) to open the deployment details in Argo CD.
+
+. Select the *Overview* tab and navigate to the Deployment summary section to review the summary of your application's deployment across namespaces. Additionally, select an appropriate Argo CD app to open the deployment details in Argo CD, or select a commit from the Revision column to review the changes in GitLab or GitHub.
+
++
+image::rhdh-plugins-reference/deployment_summary.png[Deployment summary]
 
 
+[role="_additional-resources"]
+.Additional resources
 
-
-
-
-
+* For more information on dynamic plugins, refer link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.2/html/configuring_plugins_in_red_hat_developer_hub/rhdh-installing-dynamic-plugins[Dynamic plugin installation].
