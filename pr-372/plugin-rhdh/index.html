@@ -1678,11 +1678,7 @@ section {
 <li><a href="#_installation-2">Installation</a></li>
 </ul>
 </li>
-<li><a href="#_for-users-5">2.11.2. For Users</a>
-<ul class="sectlevel4">
-<li><a href="#_loading-the-plugin-in-backstage-showcase-application">Loading the Plugin in Backstage Showcase Application</a></li>
-</ul>
-</li>
+<li><a href="#_for-users-5">2.11.2. For Users</a></li>
 </ul>
 </li>
 </ul>
@@ -3704,7 +3700,7 @@ When you use the label selector, the mentioned labels must be present on the res
 <div class="sect2">
 <h3 id="rhdh-argocd">2.11. Installation and Configuration of ArgoCD</h3>
 <div class="paragraph">
-<p>You can use the ArgoCD plugin to visualize Continuous Delivery (CD) pipeline runs in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, author of the pipeline run, commit message, and the container image promoted to production.</p>
+<p>You can use the ArgoCD plugin to visualize the Continuous Delivery (CD) workflows in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, commit message, author of the commit, container image promoted to environment and deployment history.</p>
 </div>
 <div class="sect3">
 <h4 id="_for-administrators-5">2.11.1. For Administrators</h4>
@@ -3826,8 +3822,7 @@ const cicdcontent = (
 );</code></pre>
 </div>
 </div>
-<div class="ulist">
-<ul>
+</li>
 <li>
 <p>Enable ArgoCD features by adding the following annotations to the entity&#8217;s <code>catalog-info.yaml</code> file:</p>
 <div class="listingblock">
@@ -3835,21 +3830,32 @@ const cicdcontent = (
 <pre class="CodeRay highlight"><code data-lang="yaml">annotations:
   ...
 
-  argocd/app-selector: 'rht-gitops.com/janus-argocd=quarkus-app'</code></pre>
+  argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}' <b class="conum">(1)</b></code></pre>
 </div>
 </div>
-</li>
+<div class="colist arabic">
+<ol>
 <li>
-<p>To switch between ArgoCD instances add the following annotations to the entity&#8217;s <code>catalog-info.yaml</code> file:</p>
+<p>The label that is available in your application. ArgoCD enables the Applications with this label. For example, rht-gitops.com/janus-argocd=quarkus-app&gt;.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>(Optional) To switch between ArgoCD instances add the following annotations to the entity&#8217;s <code>catalog-info.yaml</code> file:</p>
+</li>
+</ol>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml"> annotations:
    ...
-    argocd/instance-name: 'argoInstance2'</code></pre>
+    argocd/instance-name: '${ARGOCD_INSTANCE}' <b class="conum">(2)</b></code></pre>
 </div>
 </div>
 </li>
-</ul>
+<li>
+<p>The ArgoCD instance name.</p>
+</li>
+</ol>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -3873,10 +3879,10 @@ const cicdcontent = (
 <div class="sect3">
 <h4 id="_for-users-5">2.11.2. For Users</h4>
 <div class="ulist">
-<div class="title">Procedures</div>
+<div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>Use the following configuration to install the ArgoCD plugin into Red Hat Developer Hub or Janus IDP through Helm:</p>
+<p>Use the following configuration to install the ArgoCD plugin into Red Hat Developer Hub using Helm:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">global:
@@ -3885,60 +3891,27 @@ const cicdcontent = (
       - dynamic-plugins.default.yaml
     plugins:
       - package: ./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic
-        disabled: false
-        pluginConfig:
-          argocd:
-            username: "${ARGOCD_USERNAME}"
-            password: "${ARGOCD_PASSWORD}"
-            appLocatorMethods:
-              - type: 'config'
-                instances:
-                  - name: argoInstance1
-                    url: "${ARGOCD_INSTANCE1_URL}"
-                    token: "${ARGOCD_AUTH_TOKEN}"
-      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-argocd
-        disabled: false
-        pluginConfig:
-          dynamicPlugins:
-            frontend:
-              janus-idp.backstage-plugin-argocd:
-                mountPoints:
-                  - mountPoint: entity.page.overview/cards
-                    importName: ArgocdDeploymentSummary
-                    config:
-                      layout:
-                        gridColumnEnd:
-                          lg: "span 8"
-                          xs: "span 12"
-                      if:
-                        allOf:
-                          - isArgocdAvailable
-                  - mountPoint: entity.page.cd/cards
-                    importName: ArgocdDeploymentLifecycle
-                    config:
-                      layout:
-                        gridColumn: '1 / -1'
-                      if:
-                        allOf:
-                          - isArgocdConfigured</code></pre>
+        disabled: false</code></pre>
 </div>
 </div>
 </li>
 </ul>
 </div>
-<div class="sect4">
-<h5 id="_loading-the-plugin-in-backstage-showcase-application">Loading the Plugin in Backstage Showcase Application</h5>
 <div class="olist arabic">
+<div class="title">Procedures</div>
 <ol class="arabic">
 <li>
-<p>Export Dynamic Plugin Assets by running the following commands:</p>
-<div class="listingblock">
+<p>On the RHDH platform, navigate to the <strong>Catalog</strong> and select an appropriate component that you have moved to production.</p>
+</li>
+<li>
+<p>Select <strong>CD</strong> tab to view insights into deployments managed by ArgoCD plugin.</p>
+<div class="imageblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">yarn install
-yarn tsc
-yarn build
-yarn export-dynamic</code></pre>
+<img src="images/rhdh-plugins-reference/argocd.png" alt="CD tab ArgoCD">
 </div>
+</div>
+</li>
+</ol>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -3948,52 +3921,16 @@ yarn export-dynamic</code></pre>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>This will build and create the static assets for the plugin and put them inside the <code>dist-scalprum</code> folder:</p>
+<p>For additional deployment details, select an appropriate card or select the link icon (<span class="image"><img src="images/rhdh-plugins-reference/link.svg" alt="link" width="12px" height="12px"></span> to open the deployment details in <strong>argo</strong>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-</li>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>Package and copy <code>dist-scalprum</code> folder assets to the <code>dynamic-plugins-root</code> folder in the showcase application:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="sh">pkg=../plugins/argocd
-archive=$(npm pack $pkg)
-tar -xzf "$archive" &amp;&amp; rm "$archive"
-mv package $(echo $archive | sed -e 's:\.tgz$::')</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Add the extension point inside the <code>app-config.yaml</code> or <code>app-config.local.yaml</code> file:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">dynamicPlugins:
-  frontend:
-    janus-idp.backstage-plugin-argocd:
-      mountPoints:
-        - mountPoint: entity.page.overview/cards
-          importName: ArgocdDeploymentSummary
-          config:
-            layout:
-              gridColumnEnd:
-                lg: 'span 8'
-                xs: 'span 12'
-            if:
-              allOf:
-                - isArgocdAvailable
-        - mountPoint: entity.page.cd/cards
-          importName: ArgocdDeploymentLifecycle
-          config:
-            layout:
-              gridColumn: '1 / -1'
-            if:
-              allOf:
-                - isArgocdConfigured</code></pre>
-</div>
-</div>
+<p>(Optional) Alternatively, select <strong>Overview</strong> tab, and then from Deployment summary section, select an appropriate application to open the deployment details in <strong>argo</strong>.</p>
 </li>
 </ol>
 </div>
@@ -4010,10 +3947,9 @@ mv package $(echo $archive | sed -e 's:\.tgz$::')</code></pre>
 </div>
 </div>
 </div>
-</div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-16 06:00:56 UTC
+Last updated 2024-07-17 12:29:59 UTC
 </div>
 </div>
 </body>
