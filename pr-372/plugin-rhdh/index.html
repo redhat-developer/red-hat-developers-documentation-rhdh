@@ -1671,11 +1671,11 @@ section {
 </li>
 </ul>
 </li>
-<li><a href="#rhdh-argocd">2.11. Installation and Configuration of Argo CD plugin</a>
+<li><a href="#rhdh-argocd">2.11. Enabling and configuring Argo CD plugin</a>
 <ul class="sectlevel3">
 <li><a href="#_for-administrators-5">2.11.1. For Administrators</a>
 <ul class="sectlevel4">
-<li><a href="#_installation-2">Installation</a></li>
+<li><a href="#_enabling-argo-cd-plugin">Enabling Argo CD plugin</a></li>
 </ul>
 </li>
 <li><a href="#_for-users-5">2.11.2. For Users</a></li>
@@ -3698,59 +3698,19 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-argocd">2.11. Installation and Configuration of Argo CD plugin</h3>
+<h3 id="rhdh-argocd">2.11. Enabling and configuring Argo CD plugin</h3>
 <div class="paragraph">
 <p>You can use the Argo CD plugin to visualize the Continuous Delivery (CD) workflows in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, commit message, author of the commit, container image promoted to environment and deployment history.</p>
 </div>
 <div class="sect3">
 <h4 id="_for-administrators-5">2.11.1. For Administrators</h4>
 <div class="sect4">
-<h5 id="_installation-2">Installation</h5>
+<h5 id="_enabling-argo-cd-plugin">Enabling Argo CD plugin</h5>
 <div class="ulist">
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>From the root directory, run the following command to install the backend plugin:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">yarn workspace app add @roadiehq/backstage-plugin-argo-cd-backend</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Create a plugin file for the Argo CD backend in your <code>packages/backend/src/plugins/</code> directory:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="typescript">// packages/backend/src/plugins/argocd.ts
-
-import { createRouter } from '@roadiehq/backstage-plugin-argo-cd-backend';
-import { PluginEnvironment } from '../types';
-export default async function createPlugin({
-  logger,
-  config,
-}: PluginEnvironment) {
-  return await createRouter({ logger, config });
-}</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Expose the APIs for the Argo CD backend by modifying your backend router:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="typescript">// packages/backend/src/index.ts
-
-import argocd from './plugins/argocd';
-...
-
-const argocdEnv = useHotMemoize(module, () =&gt; createEnv('argocd'));
-...
-apiRouter.use('/argocd', await argocd(argocdEnv));</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Add Argo CD instance information to your <code>app.config.yaml</code>:</p>
+<p>Add Argo CD instance information to your <code>app.config.yaml</code> file:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="typescript">argocd:
@@ -3768,94 +3728,28 @@ apiRouter.use('/argocd', await argocd(argocdEnv));</code></pre>
 </div>
 </div>
 </li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedures</div>
-<ol class="arabic">
 <li>
-<p>Install the Frontend Plugin by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">yarn workspace app add @janus-idp/backstage-plugin-argocd</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Update the EntityPage.tsx file to add the deployment summary and lifecycle components:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="typescript">// packages/app/src/components/catalog/EntityPage.tsx
-import {
-  ArgocdDeploymentSummary,
-  ArgocdDeploymentLifecycle,
-  isArgocdConfigured,
-} from '@janus-idp/backstage-plugin-argocd';
-
-const overviewContent = (
-  &lt;Grid container spacing={3} alignItems="stretch"&gt;
-    ...
-    &lt;EntitySwitch&gt;
-      &lt;EntitySwitch.Case if={e =&gt; Boolean(isArgocdConfigured(e))}&gt;
-        &lt;Grid item sm={12}&gt;
-          &lt;ArgocdDeploymentSummary /&gt;
-        &lt;/Grid&gt;
-      &lt;/EntitySwitch.Case&gt;
-    &lt;/EntitySwitch&gt;
-    ...
-  &lt;/Grid&gt;
-);
-
-
-const cicdcontent = (
-    &lt;EntitySwitch&gt;
-        {/* ... */}
-        {/* highlight-add-start */}
-        ...
-          &lt;EntitySwitch.Case if={e =&gt; Boolean(isArgocdConfigured(e))}&gt;
-            &lt;Grid item sm={12}&gt;
-              &lt;ArgocdDeploymentLifecycle /&gt;
-            &lt;/Grid&gt;
-          &lt;/EntitySwitch.Case&gt;
-        {/* highlight-add-end */}
-    &lt;/EntitySwitch&gt;
-);</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Enable Argo CD features by adding the following annotations to the entity&#8217;s <code>catalog-info.yaml</code> file:</p>
+<p>Add the following annotation to the entity’s <code>catalog-info.yaml</code> file to identify the Argo CD applications.</p>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">annotations:
   ...
+  # The label that Argo CD uses to fetch all the applications. The format to be used is label.key=label.value. For example, rht-gitops.com/janus-argocd=quarkus-app.
 
-  argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}' <b class="conum">(1)</b></code></pre>
+  argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}'</code></pre>
 </div>
 </div>
-<div class="colist arabic">
-<ol>
-<li>
-<p>The label that Argo CD uses to fetch all the applications. The format to be used is label.key=label.value. For example, rht-gitops.com/janus-argocd=quarkus-app.</p>
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>(Optional) To switch between Argo CD instances add the following annotations to the entity&#8217;s <code>catalog-info.yaml</code> file:</p>
 </li>
-</ol>
-</div>
+<li>
+<p>(Optional) Add the following annotation to the entity’s <code>catalog-info.yaml</code> file to switch between Argo CD instances:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml"> annotations:
    ...
-    argocd/instance-name: '${ARGOCD_INSTANCE}' <b class="conum">(2)</b></code></pre>
+    # The Argo CD instance name used in `app.config.yaml`.
+
+    argocd/instance-name: '${ARGOCD_INSTANCE}'</code></pre>
 </div>
-</div>
-</li>
-<li>
-<p>The Argo CD instance name used in <code>app.config.yaml</code>.</p>
-</li>
-</ol>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -3865,24 +3759,20 @@ const cicdcontent = (
 </td>
 <td class="content">
 <div class="paragraph">
-<p>If you do not set these annotations, the plugin defaults to the first Argo CD instance configured in <code>app.config.yaml</code>.</p>
+<p>If you do not set these annotations, the Argo CD plugin defaults to the first Argo CD instance configured in <code>app.config.yaml</code>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 </li>
-</ol>
+</ul>
 </div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_for-users-5">2.11.2. For Users</h4>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
 <li>
-<p>Use the following configuration to enable the Argo CD plugin into Red Hat Developer Hub:</p>
+<p>Add the following to your dynamic-plugins ConfigMap to enable the Argo CD plugin.</p>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">global:
@@ -3896,6 +3786,18 @@ const cicdcontent = (
         disabled: false</code></pre>
 </div>
 </div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_for-users-5">2.11.2. For Users</h4>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have enabled the Argo CD plugin in Red Hat Developer Hub RHDH.</p>
 </li>
 </ul>
 </div>
@@ -3914,24 +3816,28 @@ const cicdcontent = (
 </div>
 </li>
 <li>
-<p>For deployment details or summary:</p>
+<p>For deployment details:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Select an appropriate card. The system displays the deployment details in a sidebar.</p>
+<p>Select an appropriate card. The system displays the deployment details (for example, commit history, author name, and deployment history) in a sidebar.</p>
+<div class="paragraph">
+<p>+
+image::rhdh-plugins-reference/sidebar.png[Sidebar]</p>
+</div>
 </li>
 <li>
-<p>Select the link icon (<span class="image"><img src="images/rhdh-plugins-reference/link.svg" alt="link" width="12px" height="12px"></span>) to open the deployment details in Argo CD.</p>
+<p>Select the link icon (<span class="image"><img src="images/rhdh-plugins-reference/link.svg" alt="link" width="13px" height="13px"></span>) to open the deployment details in Argo CD.</p>
+</li>
+</ul>
+</div>
 </li>
 <li>
-<p>Select <strong>Overview</strong> tab, and then from Deployment summary section, select an appropriate application to open the deployment details in Argo CD.</p>
+<p>Select the <strong>Overview</strong> tab and navigate to the Deployment summary section to review the summary of your application&#8217;s deployment across namespaces. Additionally, select an appropriate Argo CD app to open the deployment details in Argo CD, or select a commit from the Revision column to review the changes in GitLab or GitHub.</p>
 <div class="imageblock">
 <div class="content">
 <img src="images/rhdh-plugins-reference/deployment_summary.png" alt="Deployment summary">
 </div>
-</div>
-</li>
-</ul>
 </div>
 </li>
 </ol>
@@ -3951,7 +3857,7 @@ const cicdcontent = (
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-18 13:02:22 UTC
+Last updated 2024-07-19 13:09:54 UTC
 </div>
 </div>
 </body>
