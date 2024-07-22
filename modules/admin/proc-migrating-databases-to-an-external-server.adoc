@@ -1,11 +1,11 @@
 [id="proc-migrating-databases-to-an-external-server_{context}"]
 = Migrating local databases to an external database server using the Operator
 
-By default, {product} hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured in {product-short}. You can migrate the data from an {product-very-short} instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS, Azure database, or Crunchy database. To migrate the data from each {product-very-short} instance, you can use PostgreSQL utilities, such as link:https://www.postgresql.org/docs/current/app-pgdump.html[`pg_dump`] with link:https://www.postgresql.org/docs/current/app-psql.html[`psql`] or link:https://www.pgadmin.org/[`pgAdmin`]. 
+By default, {product} hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured in {product-short}. You can migrate the data from an {product-very-short} instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS, Azure database, or Crunchy database. To migrate the data from each {product-very-short} instance, you can use PostgreSQL utilities, such as link:https://www.postgresql.org/docs/current/app-pgdump.html[`pg_dump`] with link:https://www.postgresql.org/docs/current/app-psql.html[`psql`] or link:https://www.pgadmin.org/[`pgAdmin`].
 
 [NOTE]
 ====
-The following procedure uses a link:https://github.com/janus-idp/operator/blob/1.2.x/hack/db_copy.sh[database copy script] to do a quick migration. 
+The following procedure uses a database copy script to do a quick migration.
 ====
 
 .Prerequisites
@@ -16,7 +16,7 @@ The following procedure uses a link:https://github.com/janus-idp/operator/blob/1
 
 .Procedure
 
-. Configure port forwarding for the local PostgreSQL database pod by running the following command on a terminal: 
+. Configure port forwarding for the local PostgreSQL database pod by running the following command on a terminal:
 +
 [source,terminal]
 ----
@@ -61,7 +61,7 @@ done
 <2> The destination port, such as `5432`.
 <3> The destination server username, for example, `postgres`.
 <4> The source host name, such as `127.0.0.1`.
-<5> The source port number, such as the `<forward-to-port>` variable. 
+<5> The source port number, such as the `<forward-to-port>` variable.
 <6> The source server username, for example, `postgres`.
 <7> The name of databases to import in double quotes separated by spaces, for example, `("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")`.
 
@@ -78,7 +78,7 @@ done
 You can stop port forwarding when the copying of the data is complete. For more information about handling large databases and using the compression tools, see the link:https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-LARGE[Handling Large Databases] section on the PostgreSQL website.
 ====
 
-. Reconfigure your `Backstage` custom resource (CR). For more information, see link:{LinkAdminGuide}#proc-configuring-postgresql-instance-using-operator_admin-rhdh[Configuring an external PostgreSQL instance using the Operator]. 
+. Reconfigure your `Backstage` custom resource (CR). For more information, see link:{LinkAdminGuide}#proc-configuring-postgresql-instance-using-operator_admin-rhdh[Configuring an external PostgreSQL instance using the Operator].
 . Check that the following code is present at the end of your `Backstage` CR after reconfiguration:
 +
 [source,yaml]
@@ -86,17 +86,17 @@ You can stop port forwarding when the copying of the data is complete. For more 
 # ...
 spec:
   database:
-    enableLocalDb: false 
+    enableLocalDb: false
   application:
-  # ... 
+  # ...
     extraFiles:
       secrets:
-        - name: <crt-secret> 
+        - name: <crt-secret>
           key: postgres-crt.pem # key name as in <crt-secret> Secret
     extraEnvs:
       secrets:
-        - name: <cred-secret> 
-# ...        
+        - name: <cred-secret>
+# ...
 ----
 +
 [NOTE]
