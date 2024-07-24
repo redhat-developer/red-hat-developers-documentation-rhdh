@@ -193,11 +193,13 @@ for j in $jsons; do
         # echo " to $Name"
         PrettyName="$(titlecase "${Name//-/ }")"
 
-        # RHIDP-3203 to be confirmed this logic is correct - frontend plugins don't use the -dynamic path suffix
-        # if [[ $Role != *"backend"* ]]; then
-        #     echo "DEBUG] Remove -dynamic suffix from path for $Role plugin"
-        #     Path="${Path/-dynamic/}"
-        # fi
+        # RHIDP-3203 just use the .package value from /tmp/backstage-showcase/dynamic-plugins.default.yaml as the Path
+        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+        if [[ $Path2 ]]; then 
+            Path=$Path2
+        else
+            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        fi
 
         # useful console output
         for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
