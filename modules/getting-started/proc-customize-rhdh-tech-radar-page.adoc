@@ -1,13 +1,34 @@
 [id='proc-customize-rhdh-tech-radar-page_{context}']
-= Customizing the Tech Radar page in the {product}
+= Customizing the Tech Radar page in {product}
 
-In {product}, the Tech Radar page is not enabled using the dynamic plugin feature in the Helm Chart.
+In {product}, the Tech Radar page is provided by the `tech-radar` dynamic plugin, which is disabled by default. For information about enabling dynamic plugins in {product} see link:{LinkPluginsGuide}[Configuring plugins in {product}].
 
-Similar to Home page customization, the base Tech Radar URL must include the `/developer-hub/tech-radar` proxy. You can provide the Tech Radar page data using the following ways:
+In {product}, you can configure Learning Paths by passing the data into the `app-config.yaml` file as a proxy. The base Tech Radar URL must include the `/developer-hub/tech-radar` proxy.
 
-* Using JSON files that are hosted or GitHub or GitLab. To access the data from the JSON files, you can add the following code in the `app-config.yaml` file:
+[NOTE]
+====
+Due to the use of overlapping `pathRewrites` for both the `tech-radar` and `homepage` quick access proxies, you must create the `tech-radar` configuration (`^api/proxy/developer-hub/tech-radar`) before you create the `homepage` configuration (`^/api/proxy/developer-hub`).
+
+For more information about customizing the Home page in {product}, see xref:proc-customize-rhdh-homepage_rhdh-getting-started[Customizing the Home page in {product}].
+====
+
+You can provide data to the Tech Radar page from the following sources:
+
+* JSON files hosted on GitHub or GitLab.
+* A dedicated service that provides the Tech Radar data in JSON format using an API.
+
+== Using hosted JSON files to provide data to the Tech Radar page
+
+.Prerequisites
+
+You have installed {product} by using either the Operator or Helm chart. For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
+
+.Procedure
+
+To access the data from the JSON files, complete the following step:
+
+* Add the following code to the `app-config.yaml` file:
 +
---
 [source,yaml]
 ----
 proxy:
@@ -27,25 +48,26 @@ proxy:
 	<HEADER_KEY>: <HEADER_VALUE> # optional and can be passed as needed i.e Authorization can be passed for private GitHub repo and PRIVATE-TOKEN can be passed for private GitLab repo
 ----
 
-[NOTE]
-====
-As overlapping exist between the `pathRewrites` that are used for the `tech-radar` and `homepage` quick access proxies, the configuration for the `tech-radar` (`^api/proxy/developer-hub/tech-radar`) must exist before the configuration for the `homepage` (`^/api/proxy/developer-hub`).
+== Using a dedicated service to provide data to the Tech Radar page
 
-For more information about customizing the Home page in {product}, see xref:proc-customize-rhdh-homepage_rhdh-getting-started[].
-====
---
+When using a dedicated service, you can do the following:
 
-* Using a separate service that provides the Tech Radar data in JSON format using an API.
+* Use the same service to provide the data to all configurable {product-short} pages or use a different service for each page.
+* Use the https://github.com/redhat-developer/red-hat-developer-hub-customization-provider[`red-hat-developer-hub-customization-provider`] as an example service, which provides data for both the Home and Tech Radar pages. The `red-hat-developer-hub-customization-provider` service provides the same data as default {product-short} data. You can fork the `red-hat-developer-hub-customization-provider` service repository from GitHub and modify it with your own data, if required.
+* Deploy the `red-hat-developer-hub-customization-provider` service and the {product-short} Helm chart on the same cluster.
 
 .Prerequisites
 
-* You have installed the {product} using Helm Chart. For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
+* You have installed the {product} using Helm Chart.
+//For more information, see xref:proc-install-rhdh_{context}[].
+//replace with link to the installation guide.
 
 .Procedure
 
+To use a separate service to provide the Tech Radar data, complete the following steps:
+
 . Add the following code to the `app-config-rhdh.yaml` file:
 +
---
 [source,yaml]
 ----
 proxy:
@@ -57,17 +79,11 @@ proxy:
       # Change to "false" in case of using self hosted cluster with a self-signed certificate
       secure: true
 ----
-
-Ensure that the API request call returns the response in JSON format.
---
-
-. Define the `TECHRADAR_DATA_URL`` as `pass:c[http://<SERVICE_NAME>/tech-radar]`, for example `pass:c[http://rhdh-customization-provider/tech-radar]`.
+where the `TECHRADAR_DATA_URL` is defined as `pass:c[http://<SERVICE_NAME>/tech-radar]`, for example, `pass:c[http://rhdh-customization-provider/tech-radar]`.
 +
---
 [NOTE]
 ====
-You can define the `TECHRADAR_DATA_URL`  either by adding it to `rhdh-secrets` or directly replacing it with its value in your custom ConfigMap.
+You can define the `TECHRADAR_DATA_URL` by adding it to `rhdh-secrets` or by directly replacing it with its value in your custom ConfigMap.
 ====
---
-
-. Delete the {product-short} Pod to pull in the changes.
++
+. Delete the {product-short} pod to ensure that the new configurations are loaded correctly.
