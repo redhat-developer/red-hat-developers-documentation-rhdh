@@ -449,13 +449,14 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#proc-viewing-installed-plugins_plugin-rhdh">2.1. Viewing installed plugins</a></li>
 <li><a href="#con-preinstalled-dynamic-plugins">2.2. Preinstalled dynamic plugins</a></li>
-<li><a href="#con-install-dynamic-plugin-helm_plugin-rhdh">2.3. Installation of dynamic plugins using the Helm chart</a></li>
-<li><a href="#proc-using-custom-npm-registry">2.4. Using a custom NPM registry for dynamic plugin packages</a></li>
-<li><a href="#con-basic-config-dynamic-plugins">2.5. Basic configuration of dynamic plugins</a></li>
-<li><a href="#rhdh-aap">2.6. Installation and configuration of Ansible Automation Platform</a></li>
-<li><a href="#rhdh-keycloak_plugin-rhdh">2.7. Installation and configuration of Keycloak</a></li>
-<li><a href="#rhdh-nexus">2.8. Installation and configuration of Nexus Repository Manager</a></li>
-<li><a href="#installation-and-configuration-tekton">2.9. Installation and configuration of Tekton</a></li>
+<li><a href="#proc-config-dynamic-plugins-rhdh-operator_plugin-rhdh">2.3. Configuring dynamic plugins with the Red Hat Developer Hub Operator</a></li>
+<li><a href="#con-install-dynamic-plugin-helm_plugin-rhdh">2.4. Installation of dynamic plugins using the Helm chart</a></li>
+<li><a href="#proc-using-custom-npm-registry">2.5. Using a custom NPM registry for dynamic plugin packages</a></li>
+<li><a href="#con-basic-config-dynamic-plugins">2.6. Basic configuration of dynamic plugins</a></li>
+<li><a href="#rhdh-aap">2.7. Installation and configuration of Ansible Automation Platform</a></li>
+<li><a href="#rhdh-keycloak_plugin-rhdh">2.8. Installation and configuration of Keycloak</a></li>
+<li><a href="#rhdh-nexus">2.9. Installation and configuration of Nexus Repository Manager</a></li>
+<li><a href="#installation-and-configuration-tekton">2.10. Installation and configuration of Tekton</a></li>
 </ul>
 </li>
 </ul>
@@ -1364,7 +1365,138 @@ See also this <a href="https://backstage.io/docs/features/techdocs/how-to-guides
 </div>
 </div>
 <div class="sect2">
-<h3 id="con-install-dynamic-plugin-helm_plugin-rhdh">2.3. Installation of dynamic plugins using the Helm chart</h3>
+<h3 id="proc-config-dynamic-plugins-rhdh-operator_plugin-rhdh">2.3. Configuring dynamic plugins with the Red Hat Developer Hub Operator</h3>
+<div class="paragraph">
+<p>You can store the configuration for dynamic plugins in a <code>ConfigMap</code> object that your <code>Backstage</code> custom resource (CR) can reference.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If the <code>pluginConfig</code> field references environment variables, you must define the variables in your <code>secrets-rhdh</code> secret.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>From the OpenShift Container Platform web console, select the <strong>ConfigMaps</strong> tab.</p>
+</li>
+<li>
+<p>Click <strong>Create ConfigMap</strong>.</p>
+</li>
+<li>
+<p>From the <strong>Create ConfigMap</strong> page, select the <strong>YAML view</strong> option in <strong>Configure via</strong> and edit the file, if needed.</p>
+<div class="listingblock">
+<div class="title">Example <code>ConfigMap</code> object using the GitHub dynamic plugin</div>
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic'
+        disabled: false
+        pluginConfig:
+          catalog:
+            providers:
+              github:
+                organization: "${GITHUB_ORG}"
+                schedule:
+                  frequency: { minutes: 1 }
+                  timeout: { minutes: 1 }
+                  initialDelay: { seconds: 100 }</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Go to the <strong>Topology</strong> view.</p>
+</li>
+<li>
+<p>Click on the overflow menu for the Red Hat Developer Hub instance that you want to use and select <strong>Edit Backstage</strong> to load the YAML view of the Red Hat Developer Hub instance.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/operator-install-2.png" alt="operator install 2">
+</div>
+</div>
+</li>
+<li>
+<p>Add the <code>dynamicPluginsConfigMapName</code> field to your <code>Backstage</code> CR. For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-yaml" data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: my-rhdh
+spec:
+  application:
+# ...
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Save</strong>.</p>
+</li>
+<li>
+<p>Navigate back to the <strong>Topology</strong> view and wait for the Red Hat Developer Hub pod to start.</p>
+</li>
+<li>
+<p>Click the <strong>Open URL</strong> icon to start using the Red Hat Developer Hub platform with the new configuration changes.</p>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Verification</div>
+<ul>
+<li>
+<p>Ensure that the dynamic plugins configuration has been loaded, by appending <code>/api/dynamic-plugins-info/loaded-plugins</code> to your Red Hat Developer Hub root URL and checking the list of plugins:</p>
+<div class="listingblock">
+<div class="title">Example list of plugins</div>
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">[
+  {
+    "name": "backstage-plugin-catalog-backend-module-github-dynamic",
+    "version": "0.5.2",
+    "platform": "node",
+    "role": "backend-plugin-module"
+  },
+  {
+    "name": "backstage-plugin-techdocs",
+    "version": "1.10.0",
+    "role": "frontend-plugin",
+    "platform": "web"
+  },
+  {
+    "name": "backstage-plugin-techdocs-backend-dynamic",
+    "version": "1.9.5",
+    "platform": "node",
+    "role": "backend-plugin"
+  },
+]</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="con-install-dynamic-plugin-helm_plugin-rhdh">2.4. Installation of dynamic plugins using the Helm chart</h3>
 <div class="paragraph">
 <p>You can deploy a Developer Hub instance using a Helm chart, which is a flexible installation method. With the Helm chart, you can sideload dynamic plugins into your Developer Hub instance without having to recompile your code or rebuild the container.</p>
 </div>
@@ -1412,7 +1544,7 @@ See also this <a href="https://backstage.io/docs/features/techdocs/how-to-guides
 </table>
 </div>
 <div class="sect3">
-<h4 id="proc-obtaining-integrity-checksum">2.3.1. Obtaining the integrity checksum</h4>
+<h4 id="proc-obtaining-integrity-checksum">2.4.1. Obtaining the integrity checksum</h4>
 <div class="paragraph">
 <p>To obtain the integrity checksum, enter the following command:</p>
 </div>
@@ -1423,7 +1555,7 @@ See also this <a href="https://backstage.io/docs/features/techdocs/how-to-guides
 </div>
 </div>
 <div class="sect3">
-<h4 id="ref-example-dynamic-plugin-helm-installations">2.3.2. Example Helm chart configurations for dynamic plugin installations</h4>
+<h4 id="ref-example-dynamic-plugin-helm-installations">2.4.2. Example Helm chart configurations for dynamic plugin installations</h4>
 <div class="paragraph">
 <p>The following examples demonstrate how to configure the Helm chart for specific types of dynamic plugin installations.</p>
 </div>
@@ -1477,7 +1609,7 @@ See also this <a href="https://backstage.io/docs/features/techdocs/how-to-guides
 </div>
 </div>
 <div class="sect3">
-<h4 id="proc-install-external-dynamic-plugins-helm">2.3.3. Installing external dynamic plugins using a Helm chart</h4>
+<h4 id="proc-install-external-dynamic-plugins-helm">2.4.3. Installing external dynamic plugins using a Helm chart</h4>
 <div class="paragraph">
 <p>The NPM registry contains external dynamic plugins that you can use for demonstration purposes. For example, the following community plugins are available in the <code>janus-idp</code> organization in the NPMJS repository:</p>
 </div>
@@ -1542,7 +1674,7 @@ See also this <a href="https://backstage.io/docs/features/techdocs/how-to-guides
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-using-custom-npm-registry">2.4. Using a custom NPM registry for dynamic plugin packages</h3>
+<h3 id="proc-using-custom-npm-registry">2.5. Using a custom NPM registry for dynamic plugin packages</h3>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -1579,7 +1711,7 @@ stringData:
 </div>
 </div>
 <div class="sect2">
-<h3 id="con-basic-config-dynamic-plugins">2.5. Basic configuration of dynamic plugins</h3>
+<h3 id="con-basic-config-dynamic-plugins">2.6. Basic configuration of dynamic plugins</h3>
 <div class="paragraph">
 <p>Some dynamic plugins require environment variables to be set. If a mandatory environment variable is not set, and the plugin is enabled, then the application might fail at startup.</p>
 </div>
@@ -1606,7 +1738,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-aap">2.6. Installation and configuration of Ansible Automation Platform</h3>
+<h3 id="rhdh-aap">2.7. Installation and configuration of Ansible Automation Platform</h3>
 <div class="paragraph">
 <p>The Ansible Automation Platform (AAP) plugin synchronizes the accessible templates including job templates and workflow job templates from AAP into your Developer Hub catalog.</p>
 </div>
@@ -1634,7 +1766,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </table>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators">2.6.1. For administrators</h4>
+<h4 id="_for-administrators">2.7.1. For administrators</h4>
 <div class="sect4">
 <h5 id="_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</h5>
 <div class="paragraph">
@@ -1727,7 +1859,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users">2.6.2. For users</h4>
+<h4 id="_for-users">2.7.2. For users</h4>
 <div class="sect4">
 <h5 id="_accessing-templates-from-aap-in-developer-hub">Accessing templates from AAP in Developer Hub</h5>
 <div class="paragraph">
@@ -1802,7 +1934,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-keycloak_plugin-rhdh">2.7. Installation and configuration of Keycloak</h3>
+<h3 id="rhdh-keycloak_plugin-rhdh">2.8. Installation and configuration of Keycloak</h3>
 <div class="paragraph">
 <p>The Keycloak backend plugin, which integrates Keycloak into Developer Hub, has the following capabilities:</p>
 </div>
@@ -1817,7 +1949,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators-2">2.7.1. For administrators</h4>
+<h4 id="_for-administrators-2">2.8.1. For administrators</h4>
 <div class="sect4">
 <h5 id="_installation">Installation</h5>
 <div class="paragraph">
@@ -2034,7 +2166,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users-2">2.7.2. For users</h4>
+<h4 id="_for-users-2">2.8.2. For users</h4>
 <div class="sect4">
 <h5 id="_import-of-users-and-groups-in-developer-hub-using-the-keycloak-plugin">Import of users and groups in Developer Hub using the Keycloak plugin</h5>
 <div class="paragraph">
@@ -2090,7 +2222,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-nexus">2.8. Installation and configuration of Nexus Repository Manager</h3>
+<h3 id="rhdh-nexus">2.9. Installation and configuration of Nexus Repository Manager</h3>
 <div class="paragraph">
 <p>The Nexus Repository Manager plugin displays the information about your build artifacts in your Developer Hub application. The build artifacts are available in the Nexus Repository Manager.</p>
 </div>
@@ -2118,7 +2250,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </table>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators-3">2.8.1. For administrators</h4>
+<h4 id="_for-administrators-3">2.9.1. For administrators</h4>
 <div class="sect4">
 <h5 id="_installing-and-configuring-the-nexus-repository-manager-plugin">Installing and configuring the Nexus Repository Manager plugin</h5>
 <div class="paragraph">
@@ -2192,7 +2324,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users-3">2.8.2. For users</h4>
+<h4 id="_for-users-3">2.9.2. For users</h4>
 <div class="sect4">
 <h5 id="_using-the-nexus-repository-manager-plugin-in-developer-hub">Using the Nexus Repository Manager plugin in Developer Hub</h5>
 <div class="paragraph">
@@ -2236,12 +2368,12 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect2">
-<h3 id="installation-and-configuration-tekton">2.9. Installation and configuration of Tekton</h3>
+<h3 id="installation-and-configuration-tekton">2.10. Installation and configuration of Tekton</h3>
 <div class="paragraph">
 <p>You can use the Tekton plugin to visualize the results of CI/CD pipeline runs on your Kubernetes or OpenShift clusters. The plugin allows users to visually see high level status of all associated tasks in the pipeline for their applications.</p>
 </div>
 <div class="sect3">
-<h4 id="_for-administrators-4">2.9.1. For administrators</h4>
+<h4 id="_for-administrators-4">2.10.1. For administrators</h4>
 <div class="sect4">
 <h5 id="installing-tekton-plugin">Installation</h5>
 <div class="ulist">
@@ -2433,7 +2565,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 </div>
 <div class="sect3">
-<h4 id="_for-users-4">2.9.2. For users</h4>
+<h4 id="_for-users-4">2.10.2. For users</h4>
 <div class="sect4">
 <h5 id="using-tekton-plugin">Using the Tekton plugin in RHDH</h5>
 <div class="paragraph">
@@ -2485,7 +2617,7 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-25 09:33:10 UTC
+Last updated 2024-07-25 09:53:31 UTC
 </div>
 </div>
 </body>
