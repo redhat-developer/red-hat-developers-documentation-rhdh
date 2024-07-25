@@ -1,106 +1,12 @@
-// Module included in the following assemblies:
-//
-// * assemblies/assembly-rhdh-integration-aks.adoc
+// Module included in the following assemblies
+// assembly-install-rhdh-aks.adoc
 
-[id="proc-rhdh-deploy-aks-using-operator_{context}"]
-= Deploying the {product} on {aks-name} ({aks-short}) using the Operator
+[id='proc-rhdh-deploy-aks-operator_{context}']
+= Deploying {product-short} on {aks-short} with the Operator
 
 You can deploy your {product-short} on {aks-short} using the {product} Operator.
 
-.Prerequisites
-
-* You have an Azure account with active subscription.
-* You have installed the https://learn.microsoft.com/en-us/cli/azure/install-azure-cli[Azure CLI].
-* You have installed the link:https://kubernetes.io/docs/reference/kubectl/[`kubectl` CLI].
-* You are logged into your cluster using `kubectl`, and have `developer` or `admin` permissions.
-* You have installed Helm 3 or the latest.
-
-.Comparison of AKS specifics with the base {product-short} deployment
-
-* *Permissions issue*: {product-short} containers might encounter permission-related errors, such as `Permission denied` when attempting certain operations. This error can be addresssed by adjusting the `fsGroup` in the `PodSpec.securityContext`.
-
-* *Ingress configuration*: In AKS, configuring ingress is essential for accessing the installed {product-short} instance. Accessing the {product-short} instance requires enabling the Routing add-on, an NGINX-based Ingress Controller, using the following command:
-+
-[source]
-----
-az aks approuting enable --resource-group <your_ResourceGroup> --name <your_ClusterName>
-----
-+
-[TIP]
-====
-You might need to install the Azure CLI extension `aks-preview`. If the extension is not installed automatically, you might need to install it manually using the following command:
-
-[source]
-----
-az extension add --upgrade -n aks-preview --allow-preview true
-----
-====
-+
-[NOTE]
-====
-After you install the Ingress Controller, the `app-routing-system` namespace with the Ingress Controller will be deployed in your cluster. Note the address of your {product-short} application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the {product-short} application, later referenced as `<app_address>`.
-
-[source,terminal]
-----
-kubectl get svc nginx --namespace app-routing-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-----
-====
-
-* *Namespace management*: You can create a dedicated namespace for {product-short} deployment in AKS using the following command:
-+
-[source,terminal]
-----
-kubectl create namespace <your_namespace>
-----
-
 .Procedure
-
-. Log in to {aks-short} by running the following command:
-+
-[source,terminal]
-----
-az login [--tenant=<optional_directory_name>]
-----
-
-. Create a resource group by running the following command:
-+
-[source,terminal]
-----
-az group create --name <resource_group_name> --location <location>
-----
-+
-[TIP]
-====
-You can list available regions by running the following command:
-
-[source,terminal]
-----
-az account list-locations -o table
-----
-
-====
-
-. Create an {aks-short} cluster by running the following command:
-+
-[source,terminal]
-----
-az aks create \
---resource-group <resource_group_name> \
---name <cluster_name> \
---enable-managed-identity \
---generate-ssh-keys
-----
-+
-You can refer to `--help` for additional options.
-
-. Connect to your cluster by running the following command:
-+
-[source]
-----
-az aks get-credentials --resource-group <resource_group_name> --name <cluster_name>
-----
-+
-The previous command configures the Kubernetes client and sets the current context in the `kubeconfig` to point to your AKS cluster.
 
 . Obtain the {product} Operator manifest file, named `rhdh-operator-<VERSION>.yaml`, and modify the default configuration of `db-statefulset.yaml` and `deployment.yaml` by adding the following fragment:
 +

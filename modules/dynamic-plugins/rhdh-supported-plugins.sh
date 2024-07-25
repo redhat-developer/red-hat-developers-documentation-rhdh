@@ -6,6 +6,8 @@
 
 # TODO generate rhdh-supported-plugins.json for consumption by other tools?
 
+SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+
 usage() {
   cat <<EOF
 Generate updated table of dynamic plugins from content in janus-idp/backstage-plugins and backstage-showcase repos, 
@@ -31,7 +33,7 @@ EOF
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    '--clean') rm -fr /tmp/backstage-plugins /tmp/backstage-showcase;;
+    '--clean') rm -fr /tmp/plugin-versions.txt /tmp/backstage-plugins /tmp/backstage-showcase;;
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x 
     '-h'|'--help') usage;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
@@ -78,6 +80,15 @@ titlecase() {
     done; echo;
 }
 
+# generate a list of plugin:version mapping from the following files
+    # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
+    # * packages/app/package.json#.dependencies
+    # * packages/backend/package.json#.dependencies
+    pluginVersFile=/tmp/plugin-versions.txt
+    jq -r '.peerDependencies' /tmp/backstage-showcase/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > $pluginVersFile
+    jq -r '.dependencies' /tmp/backstage-showcase/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> $pluginVersFile
+    cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out $pluginVersFile
+
 # process 2 folders of json files
 declare -A adoc
 jsons=$(find /tmp/backstage-showcase/dynamic-plugins/wrappers/ /tmp/backstage-plugins/plugins/ -maxdepth 2 -name package.json | sort -V)
@@ -94,8 +105,6 @@ for j in $jsons; do
 
     # extract content
     Name=$(jq -r '.name' "$j")
-    Version=$(jq -r '.version' "$j")
-    Role=$(jq -r '.backstage.role' "$j")
 
     # backstage-plugin-catalog-backend-module-bitbucket-cloud => @backstage/plugin-catalog-backend-module-bitbucket-cloud
     Plugin="${Name}"
@@ -120,6 +129,20 @@ for j in $jsons; do
     # shellcheck disable=SC2016
     found_in_default_config2=$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml)
     if [[ $found_in_default_config1 ]] || [[ $found_in_default_config2 ]] || [[ "$j" == *"/wrappers/"* ]]; then
+
+        Role=$(jq -r '.backstage.role' "$j")
+
+        Version=$(jq -r '.version' "$j")
+        # check this version against other references to the plugin in 
+        # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
+        # * packages/app/package.json#.dependencies
+        # * packages/backend/package.json#.dependencies
+        echo "[DEBUG] Check version of $Name is really $Version ..."
+        match=$(grep "\"$Name\": \"" $pluginVersFile || true)
+        if [[ $match ]]; then
+            Version=$(echo "${match}" | sed -r -e "s/.+\": \"([0-9.]+)\"/\1/")
+            echo "[DEBUG] Updated version = $Version"
+        fi
 
         # default to community unless it's a RH-authored plugin
         Support_Level="Community Support"
@@ -170,6 +193,13 @@ for j in $jsons; do
         # echo " to $Name"
         PrettyName="$(titlecase "${Name//-/ }")"
 
+        # RHIDP-3203 just use the .package value from /tmp/backstage-showcase/dynamic-plugins.default.yaml as the Path
+        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+        if [[ $Path2 ]]; then 
+            Path=$Path2
+        else
+            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        fi
 
         # useful console output
         for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
@@ -245,6 +275,16 @@ done
 echo -e "|===" >> "${0/.sh/.adoc}" 
 
 echo -e "$adocFooter" >> "${0/.sh/.adoc}" 
+
+# summary of changes since last time
+SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+SCRIPT=${0##${SCRIPT_DIR}}
+pushd "$SCRIPT_DIR" >/dev/null || exit
+    updates=$(git diff "${SCRIPT/.sh/.adoc}"| grep -E -v "\+\+|\@\@" | grep "+")
+    if [[ $updates ]]; then
+        echo "$(echo "$updates" | wc -l) Changes include:"; echo "$updates"
+    fi
+popd >/dev/null || exit
 
 # cleanup
 # rm -fr /tmp/backstage-plugins /tmp/backstage-showcase
