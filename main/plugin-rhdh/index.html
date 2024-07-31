@@ -1671,6 +1671,16 @@ section {
 </li>
 </ul>
 </li>
+<li><a href="#rhdh-argocd">2.11. Enabling and configuring Argo CD plugin</a>
+<ul class="sectlevel3">
+<li><a href="#_for-administrators-5">2.11.1. For Administrators</a>
+<ul class="sectlevel4">
+<li><a href="#_enabling-argo-cd-plugin">Enabling Argo CD plugin</a></li>
+</ul>
+</li>
+<li><a href="#_for-users-5">2.11.2. For Users</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -3836,12 +3846,168 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="rhdh-argocd">2.11. Enabling and configuring Argo CD plugin</h3>
+<div class="paragraph">
+<p>You can use the Argo CD plugin to visualize the Continuous Delivery (CD) workflows in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, commit message, author of the commit, container image promoted to environment and deployment history.</p>
+</div>
+<div class="sect3">
+<h4 id="_for-administrators-5">2.11.1. For Administrators</h4>
+<div class="sect4">
+<h5 id="_enabling-argo-cd-plugin">Enabling Argo CD plugin</h5>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>Add Argo CD instance information to your <code>app-config.yaml</code> configmap:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="typescript">argocd:
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
+        - name: argoInstance2
+          url: https://argoInstance2.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Add the following annotation to the entity’s <code>catalog-info.yaml</code> file to identify the Argo CD applications.</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">annotations:
+  ...
+  # The label that Argo CD uses to fetch all the applications. The format to be used is label.key=label.value. For example, rht-gitops.com/janus-argocd=quarkus-app.
+
+  argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}'</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>(Optional) Add the following annotation to the entity’s <code>catalog-info.yaml</code> file to switch between Argo CD instances:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml"> annotations:
+   ...
+    # The Argo CD instance name used in `app-config.yaml`.
+
+    argocd/instance-name: '${ARGOCD_INSTANCE}'</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If you do not set this annotation, the Argo CD plugin defaults to the first Argo CD instance configured in <code>app-config.yaml</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Add the following to your dynamic-plugins ConfigMap to enable the Argo CD plugin.</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic
+        disabled: false
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-argocd
+        disabled: false</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_for-users-5">2.11.2. For Users</h4>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have enabled the Argo CD plugin in Red Hat Developer Hub RHDH.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedures</div>
+<ol class="arabic">
+<li>
+<p>On the RHDH platform, navigate to the <strong>Catalog</strong> and select an appropriate component.</p>
+</li>
+<li>
+<p>Select <strong>CD</strong> tab to view insights into deployments managed by Argo CD.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/argocd.png" alt="CD tab Argo CD">
+</div>
+</div>
+</li>
+<li>
+<p>For deployment details:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Select an appropriate card to view the deployment details (for example, commit message, author name, and deployment history) in a sidebar.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/sidebar.png" alt="Sidebar">
+</div>
+</div>
+</li>
+<li>
+<p>Select the link icon (<span class="image"><img src="images/rhdh-plugins-reference/link.svg" alt="link" width="13px" height="13px"></span>) to open the deployment details in Argo CD.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Select the <strong>Overview</strong> tab and navigate to the Deployment summary section to review the summary of your application&#8217;s deployment across namespaces. Additionally, select an appropriate Argo CD app to open the deployment details in Argo CD, or select a commit from the Revision column to review the changes in GitLab or GitHub.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/deployment_summary.png" alt="Deployment summary">
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information on dynamic plugins, refer <a href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.2/html/configuring_plugins_in_red_hat_developer_hub/rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-26 14:34:55 UTC
+Last updated 2024-07-31 12:46:05 UTC
 </div>
 </div>
 </body>
