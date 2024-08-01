@@ -1611,19 +1611,10 @@ section {
 </li>
 <li><a href="#proc-using-custom-npm-registry">2.5. Using a custom NPM registry for dynamic plugin packages</a></li>
 <li><a href="#con-basic-config-dynamic-plugins">2.6. Basic configuration of dynamic plugins</a></li>
-<li><a href="#rhdh-aap">2.7. Installation and configuration of Ansible Automation Platform</a>
+<li><a href="#rhdh-ansible">2.7. Installing and using Ansibe plug-ins for Red Hat Developer Hub</a>
 <ul class="sectlevel3">
-<li><a href="#_for-administrators">2.7.1. For administrators</a>
-<ul class="sectlevel4">
-<li><a href="#_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</a></li>
-<li><a href="#_log-lines-for-aap-backend-plugin-troubleshoot">Log lines for AAP Backend plugin troubleshoot</a></li>
-</ul>
-</li>
-<li><a href="#_for-users">2.7.2. For users</a>
-<ul class="sectlevel4">
-<li><a href="#_accessing-templates-from-aap-in-developer-hub">Accessing templates from AAP in Developer Hub</a></li>
-</ul>
-</li>
+<li><a href="#_for-administrators">2.7.1. For administrators</a></li>
+<li><a href="#_for-users">2.7.2. For users</a></li>
 </ul>
 </li>
 <li><a href="#rhdh-keycloak_plugin-rhdh">2.8. Installation and configuration of Keycloak</a>
@@ -1669,6 +1660,16 @@ section {
 <li><a href="#using-tekton-plugin">Using the Tekton plugin in RHDH</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li><a href="#rhdh-argocd">2.11. Enabling and configuring Argo CD plugin</a>
+<ul class="sectlevel3">
+<li><a href="#_for-administrators-5">2.11.1. For administrators</a>
+<ul class="sectlevel4">
+<li><a href="#_enabling-argo-cd-plugin">Enabling Argo CD plugin</a></li>
+</ul>
+</li>
+<li><a href="#_for-users-5">2.11.2. For Users</a></li>
 </ul>
 </li>
 </ul>
@@ -2962,9 +2963,10 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 </div>
 <div class="sect2">
-<h3 id="rhdh-aap">2.7. Installation and configuration of Ansible Automation Platform</h3>
+<h3 id="rhdh-ansible">2.7. Installing and using Ansibe plug-ins for Red Hat Developer Hub</h3>
 <div class="paragraph">
-<p>The Ansible Automation Platform (AAP) plugin synchronizes the accessible templates including job templates and workflow job templates from AAP into your Developer Hub catalog.</p>
+<p>Ansible plug-ins for Red Hat Developer Hub deliver an Ansible-specific portal experience with curated learning paths,
+push-button content creation, integrated development tools, and other opinionated resources.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -2974,7 +2976,7 @@ When installing some dynamic plugin containing large files, if the installation 
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The Ansible Automation Platform plugin is a Technology Preview feature only.</p>
+<p>The Ansible plug-ins are a Technology Preview feature only.</p>
 </div>
 <div class="paragraph">
 <p>Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.</p>
@@ -2991,169 +2993,16 @@ When installing some dynamic plugin containing large files, if the installation 
 </div>
 <div class="sect3">
 <h4 id="_for-administrators">2.7.1. For administrators</h4>
-<div class="sect4">
-<h5 id="_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</h5>
 <div class="paragraph">
-<p>The AAP backend plugin allows you to configure one or multiple providers using your <code>app-config.yaml</code> configuration file in Developer Hub.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>Your Developer Hub application is installed and running.</p>
-</li>
-<li>
-<p>You have created an account in Ansible Automation Platform.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<div class="title">Installation</div>
-<p>The AAP backend plugin is pre-loaded in Developer Hub with basic configuration properties. To enable it, set the <code>disabled</code> property to <code>false</code> as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">global:
-  dynamic:
-    includes:
-      - dynamic-plugins.default.yaml
-    plugins:
-      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-aap-backend-dynamic
-        disabled: false</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<div class="title">Basic configuration</div>
-<p>To enable the AAP plugin, you must set the following environment variables:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>AAP_BASE_URL</code>: Base URL of the service</p>
-</li>
-<li>
-<p><code>AAP AUTH TOKEN</code>: Authentication token for the service</p>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Advanced configuration</div>
-<ol class="arabic">
-<li>
-<p>You can use the <code>aap</code> marker to configure the <code>app-config.yaml</code> file of Developer Hub as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">   catalog:
-     providers:
-       aap:
-         dev:
-           baseUrl: $(AAP_BASE_URL)
-           authorization: 'Bearer ${AAP_AUTH_TOKEN}'
-           owner: &lt;owner&gt;
-           system: &lt;system&gt;
-           schedule: # optional; same options as in TaskScheduleDefinition
-             # supports cron, ISO duration, "human duration" as used in code
-             frequency: { minutes: 1 }
-             # supports ISO duration, "human duration" as used in code
-             timeout: { minutes: 1 }</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect4">
-<h5 id="_log-lines-for-aap-backend-plugin-troubleshoot">Log lines for AAP Backend plugin troubleshoot</h5>
-<div class="paragraph">
-<p>When you start your Developer Hub application, you can see the following log lines:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="log">[1] 2023-02-13T15:26:09.356Z catalog info Discovered ResourceEntity API type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.423Z catalog info Discovered ResourceEntity Red Hat Event (DEV, v1.2.0) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
-[1] 2023-02-13T15:26:09.819Z catalog info Applying the mutation with 3 entities type=plugin target=AapResourceEntityProvider:dev</code></pre>
-</div>
-</div>
+<p>To install and configure the Ansible plugins, see
+<a href="https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.4/html/installing_ansible_plug-ins_for_red_hat_developer_hub/index"><em>Installing Ansible plug-ins for Red Hat Developer Hub</em></a>.</p>
 </div>
 </div>
 <div class="sect3">
 <h4 id="_for-users">2.7.2. For users</h4>
-<div class="sect4">
-<h5 id="_accessing-templates-from-aap-in-developer-hub">Accessing templates from AAP in Developer Hub</h5>
 <div class="paragraph">
-<p>When you have configured the AAP backend plugin successfully, it synchronizes the templates including job templates and workflow job templates from AAP and displays them on the Developer Hub Catalog page as Resources.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>Your Developer Hub application is installed and running.</p>
-</li>
-<li>
-<p>You have installed the AAP backend plugin. For installation and configuration instructions, see <a href="#_installing-and-configuring-the-aap-backend-plugin">Installing and configuring the AAP Backend plugin</a>.</p>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Open your Developer Hub application and Go to the <strong>Catalog</strong> page.</p>
-</li>
-<li>
-<p>Select <strong>Resource</strong> from the <strong>Kind</strong> drop-down and <strong>job template</strong> or <strong>workflow job template</strong> from the <strong>Type</strong> drop-down on the left side of the page.</p>
-<div class="openblock">
-<div class="content">
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh-plugins-reference/aap-backend-plugin-user1.png" alt="aap-backend-plugin-backstage">
-</div>
-</div>
-<div class="paragraph">
-<p>A list of all the available templates from AAP appears on the page.</p>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Select a template from the list.</p>
-<div class="openblock">
-<div class="content">
-<div class="paragraph">
-<p>The <strong>OVERVIEW</strong> tab appears containing different cards, such as:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>About</strong>: Provides detailed information about the template.</p>
-</li>
-<li>
-<p><strong>Relations</strong>: Displays the visual representation of the template and associated aspects.</p>
-</li>
-<li>
-<p><strong>Links</strong>: Contains links to the AAP dashboard and the details page of the template.</p>
-</li>
-<li>
-<p><strong>Has subcomponents</strong>: Displays a list of associated subcomponents.</p>
-</li>
-</ul>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh-plugins-reference/aap-backend-plugin-user2.png" alt="aap-backend-plugin-backstage-details">
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
-</div>
+<p>To use the Ansible plugins, see
+<a href="https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.4/html/using_ansible_plug-ins_for_red_hat_developer_hub/index"><em>Using Ansible plug-ins for Red Hat Developer Hub</em></a>.</p>
 </div>
 </div>
 </div>
@@ -3836,12 +3685,165 @@ When you use the label selector, the mentioned labels must be present on the res
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="rhdh-argocd">2.11. Enabling and configuring Argo CD plugin</h3>
+<div class="paragraph">
+<p>You can use the Argo CD plugin to visualize the Continuous Delivery (CD) workflows in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, commit message, author of the commit, container image promoted to environment and deployment history.</p>
+</div>
+<div class="sect3">
+<h4 id="_for-administrators-5">2.11.1. For administrators</h4>
+<div class="sect4">
+<h5 id="_enabling-argo-cd-plugin">Enabling Argo CD plugin</h5>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>Add Argo CD instance information to your <code>app-config.yaml</code> configmap as shown in the following example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="typescript">argocd:
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
+        - name: argoInstance2
+          url: https://argoInstance2.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Add the following annotation to the entity’s <code>catalog-info.yaml</code> file to identify the Argo CD applications.</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">annotations:
+  ...
+  # The label that Argo CD uses to fetch all the applications. The format to be used is label.key=label.value. For example, rht-gitops.com/janus-argocd=quarkus-app.
+
+  argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}'</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>(Optional) Add the following annotation to the entity’s <code>catalog-info.yaml</code> file to switch between Argo CD instances as shown in the following example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml"> annotations:
+   ...
+    # The Argo CD instance name used in `app-config.yaml`.
+
+    argocd/instance-name: '${ARGOCD_INSTANCE}'</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If you do not set this annotation, the Argo CD plugin defaults to the first Argo CD instance configured in <code>app-config.yaml</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Add the following to your dynamic-plugins ConfigMap to enable the Argo CD plugin.</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic
+        disabled: false
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-argocd
+        disabled: false</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_for-users-5">2.11.2. For Users</h4>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have enabled the Argo CD plugin in Red Hat Developer Hub RHDH.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedures</div>
+<ol class="arabic">
+<li>
+<p>Select the <strong>Catalog</strong> tab and choose the component that you want to use.</p>
+</li>
+<li>
+<p>Select the <strong>CD</strong> tab to view insights into deployments managed by Argo CD.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/argocd.png" alt="CD tab Argo CD">
+</div>
+</div>
+</li>
+<li>
+<p>Select an appropriate card to view the deployment details (for example, commit message, author name, and deployment history).</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/sidebar.png" alt="Sidebar">
+</div>
+</div>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Click the link icon (<span class="image"><img src="images/rhdh-plugins-reference/link.svg" alt="link" width="13px" height="13px"></span>) to open the deployment details in Argo CD.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Select the <strong>Overview</strong> tab and navigate to the Deployment summary section to review the summary of your application&#8217;s deployment across namespaces. Additionally, select an appropriate Argo CD app to open the deployment details in Argo CD, or select a commit ID from the Revision column to review the changes in GitLab or GitHub.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh-plugins-reference/deployment_summary.png" alt="Deployment summary">
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information on dynamic plugins, see <a href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.2/html/configuring_plugins_in_red_hat_developer_hub/rhdh-installing-dynamic-plugins">Dynamic plugin installation</a>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-08-01 17:10:49 UTC
+Last updated 2024-08-01 19:27:17 UTC
 </div>
 </div>
 </body>
