@@ -88,7 +88,9 @@ titlecase() {
     cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out $pluginVersFile
 
 # create arrays of adoc and csv content
-declare -A adoc
+declare -A adoc1
+declare -A adoc2
+declare -A adoc3
 declare -A csv
 
 # process 2 folders of json files
@@ -208,14 +210,23 @@ for j in $jsons; do
             echo "Got $col = ${!col}"
         done
 
-        # TODO could split out the front, back, and scaffolders into separate tables. Or split by support levels.
 
         # save in an array sorted by name, then role, with frontend before backend plugins (for consistency with 1.1 markup)
         RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; Role="Backend"; else Role="Frontend"; fi
         if [[ $Plugin == *"scaffolder"* ]]; then RoleSort=3; fi
 
-        # shellcheck disable=SC1087
-        adoc["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |$Plugin |$Role |$Version |$Support_Level\n|$Path\na|\n$Required_Variables|$Default\n"
+        # TODO include missing data fields for Provider and Description - see https://issues.redhat.com/browse/RHIDP-3496 and https://issues.redhat.com/browse/RHIDP-3440
+
+        # split into three tables based on support level
+        if [[ ${Support_Level} == "Production" ]]; then 
+            adoc1["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName - $Role |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables|$Default\n"
+        elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then 
+            adoc2["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName - $Role |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables|$Default\n"
+        else
+            adoc3["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName - $Role |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables|$Default\n"
+        fi
+
+        # NOTE: csv is not split into separate tables at this point
         csv["$Name-$RoleSort-$Role-$Plugin"]="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
     else
         (( tot-- )) || true
@@ -224,62 +235,30 @@ for j in $jsons; do
     echo
 done
 
-# markup content 2 ways, write to file
-adocHeader=$(cat <<EOF
-[id="rhdh-supported-plugins"]
-= Preinstalled dynamic plugin descriptions and details
-
-// This page is generated! Do not edit the .adoc file, but instead run rhdh-supported-plugins.sh to regen this page from the latest plugin metadata.
-// cd /path/to/rhdh-documentation; ./modules/dynamic-plugins/rhdh-supported-plugins.sh; ./build/scripts/build.sh; google-chrome titles-generated/main/plugin-rhdh/index.html
-
-[IMPORTANT]
-====
-Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
-
-For more information on Red Hat Technology Preview features, see https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Scope].
-
-Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the https://access.redhat.com/policy/developerhub-support-policy[Red Hat Developer Support Policy] page.
-====
-
-There are $tot plugins available in {product}. See the following table for more information:
-
-[dynamic-plugins-matrix]
-.Dynamic plugins support matrix
-
-[%header,cols=8*]
-|===
-|*Name* |*Plugin* |*Role* |*Version* |*Support Level*
-|*Path* |*Required Variables* |*Default*
-EOF
-)
-
-adocFooter=$(cat <<EOF
-[NOTE]
-====
-* To configure Keycloak, see xref:rhdh-keycloak_{context}[Installation and configuration of Keycloak].
-
-* To configure Techdocs, see http://backstage.io/docs/features/techdocs/configuration[reference documentation]. After experimenting with basic setup, use CI/CD to generate docs and an external cloud storage when deploying TechDocs for production use-case.
-See also this https://backstage.io/docs/features/techdocs/how-to-guides#how-to-migrate-from-techdocs-basic-to-recommended-deployment-approach[recommended deployment approach].
-====
-EOF
-)
-
-# echo sorted by array keys - see above for how that's set up
-sorted=()
-while IFS= read -rd '' key; do
-    sorted+=( "$key" )
-done < <(printf '%s\0' "${!adoc[@]}" | sort -z)
-# set up page header and open the table
+# create .csv file with header
 echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
-echo -e "$adocHeader" > "${0/.sh/.adoc}"
-for key in "${sorted[@]}"; do
-    echo -e "${adoc[$key]}" >> "${0/.sh/.adoc}" 
-    echo -e "${csv[$key]}" >>  "${0/.sh/.csv}" 
-done
-# close the table
-echo -e "|===" >> "${0/.sh/.adoc}" 
 
-echo -e "$adocFooter" >> "${0/.sh/.adoc}" 
+# append to .csv and .adocN files
+rm -f "${0/.sh/.adoc1}"
+sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc1[@]}" | sort -z)
+for key in "${sorted[@]}"; do echo -e "${adoc1[$key]}" >> "${0/.sh/.adoc1}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+
+rm -f "${0/.sh/.adoc2}"
+sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc2[@]}" | sort -z)
+for key in "${sorted[@]}"; do echo -e "${adoc2[$key]}" >> "${0/.sh/.adoc2}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+
+rm -f "${0/.sh/.adoc3}"
+sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc3[@]}" | sort -z)
+for key in "${sorted[@]}"; do echo -e "${adoc3[$key]}" >> "${0/.sh/.adoc3}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+
+# merge the content from the three .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
+adocfile1="${0/.sh/.adoc1}"
+adocfile2="${0/.sh/.adoc2}"
+adocfile3="${0/.sh/.adoc3}"
+sed -e "/%%TABLE_CONTENT_1%%/{r $adocfile1" -e 'd}' \
+    -e "/%%TABLE_CONTENT_2%%/{r $adocfile2" -e 'd}' \
+    -e "/%%TABLE_CONTENT_3%%/{r $adocfile3" -e 'd}' \
+    "${0/.sh/.template.adoc}" > "${0/.sh/.adoc}"
 
 # summary of changes since last time
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
@@ -292,4 +271,5 @@ pushd "$SCRIPT_DIR" >/dev/null || exit
 popd >/dev/null || exit
 
 # cleanup
-# rm -fr /tmp/backstage-plugins /tmp/backstage-showcase
+rm -f "${0/.sh/.adoc1}" "${0/.sh/.adoc2}" "${0/.sh/.adoc3}"
+# rm -fr /tmp/backstage-plugins /tmp/backstage-showcase 
