@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.16">
-<title>Installing Red Hat Developer Hub on OpenShift Container Platform</title>
+<title>Authentication</title>
 <style>
 /* Red Hat Fonts */
 @font-face {
@@ -1585,24 +1585,28 @@ section {
 
 </style>
 </head>
-<body id="title-install-rhdh-ocp" class="book toc2 toc-left">
+<body id="title-authentication" class="book toc2 toc-left">
 <div id="header">
-<h1>Installing Red Hat Developer Hub on OpenShift Container Platform</h1>
+<h1>Authentication</h1>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#assembly-install-rhdh-ocp">Chapter 1. Installing Red Hat Developer Hub on OpenShift Container Platform</a>
+<li><a href="#enabling-authentication">Chapter 1. Enabling authentication in Red Hat Developer Hub</a>
 <ul class="sectlevel2">
-<li><a href="#assembly-install-rhdh-ocp-operator">1.1. Installing Red Hat Developer Hub on OpenShift Container Platform with the Operator</a>
+<li><a href="#proc-adding-azure-as-an-authentication-provider_title-authentication">1.1. Enabling the Microsoft Azure authentication provider</a></li>
+<li><a href="#assembly-auth-provider-github">1.2. GitHub authentication provider</a>
 <ul class="sectlevel3">
-<li><a href="#proc-install-operator_assembly-install-rhdh-ocp-operator">1.1.1. Installing the Red Hat Developer Hub Operator</a></li>
-<li><a href="#proc-install-rhdh-ocp-operator_assembly-install-rhdh-ocp-operator">1.1.2. Deploying Red Hat Developer Hub on OpenShift Container Platform with the Operator</a></li>
+<li><a href="#con-github-app-overview">1.2.1. GitHub App​ overview</a></li>
+<li><a href="#proc-registering-github-app">1.2.2. Registering a GitHub​ App</a></li>
+<li><a href="#proc-configuring-github-app">1.2.3. Configuring a GitHub App in Developer Hub</a></li>
+<li><a href="#proc-adding-github-to-frontend">1.2.4. Adding the GitHub provider to the Developer Hub front end​</a></li>
 </ul>
 </li>
-<li><a href="#assembly-install-rhdh-ocp-helm">1.2. Installing Red Hat Developer Hub on OpenShift Container Platform with the Helm chart</a>
+<li><a href="#assembly-auth-provider-oidc">1.3. OpenID Connect authentication provider</a>
 <ul class="sectlevel3">
-<li><a href="#proc-install-rhdh-ocp-helm-gui_assembly-install-rhdh-ocp-helm">1.2.1. Deploying Developer Hub from the OpenShift Container Platform web console with the Helm Chart</a></li>
-<li><a href="#proc-install-rhdh-ocp-helm-cli_assembly-install-rhdh-ocp-helm">1.2.2. Deploying Developer Hub on OpenShift Container Platform with the Helm CLI</a></li>
+<li><a href="#con-oidc-configration_title-authentication">1.3.1. Overview of using the OIDC authentication provider in Developer Hub</a></li>
+<li><a href="#proc-configuring-keycloak-with-oidc_title-authentication">1.3.2. Configuring Keycloak with the OIDC authentication provider</a></li>
+<li><a href="#proc-migrating-oauth2-proxy-to-oidc_title-authentication">1.3.3. Migrating from OAuth2 Proxy with Keycloak to OIDC in Developer Hub</a></li>
 </ul>
 </li>
 </ul>
@@ -1611,543 +1615,643 @@ section {
 </div>
 </div>
 <div id="content">
-<div class="sect1">
-<h2 id="assembly-install-rhdh-ocp">Chapter 1. Installing Red Hat Developer Hub on OpenShift Container Platform</h2>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>You can install Red Hat Developer Hub on OpenShift Container Platform by using one of the following installers:</p>
+<p>As a Red Hat Developer Hub platform engineer, you can manage authentication of other users to meet the specific needs of your organization.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="enabling-authentication">Chapter 1. Enabling authentication in Red Hat Developer Hub</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Authentication within Red Hat Developer Hub facilitates user sign-in, identification, and access to external resources.
+It supports multiple authentication providers.</p>
+</div>
+<div class="paragraph">
+<p>Authentication providers are typically used in the following ways:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>The Red Hat Developer Hub Operator</strong></p>
-<div class="ulist">
-<ul>
-<li>
-<p>Ready for immediate use in OpenShift Container Platform after an administrator installs it with OperatorHub</p>
+<p>One provider for sign-in and identification.</p>
 </li>
 <li>
-<p>Uses Operator Lifecycle Management (OLM) to manage automated subscription updates on OpenShift Container Platform</p>
-</li>
-<li>
-<p>Requires preinstallation of Operator Lifecycle Management (OLM) to manage automated subscription updates on Kubernetes</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p><strong>The Red Hat Developer Hub Helm chart</strong></p>
-<div class="ulist">
-<ul>
-<li>
-<p>Ready for immediate use in both OpenShift Container Platform and Kubernetes</p>
-</li>
-<li>
-<p>Requires manual installation and management</p>
-</li>
-</ul>
-</div>
+<p>Additional providers for accessing external resources.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Use the installation method that best meets your needs and preferences.</p>
+<p>The Red Hat Developer Hub supports the following authentication providers:</p>
 </div>
-<div class="ulist">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p>For more information about choosing an installation method, see <a href="https://www.redhat.com/en/technologies/cloud-computing/openshift/helm">Helm Charts vs. Operators</a></p>
-</li>
-<li>
-<p>For more information about the Operator method, see <a href="https://docs.openshift.com/container-platform/4.15/operators/understanding/olm-what-operators-are.html">Understanding Operators</a>.</p>
-</li>
-<li>
-<p>For more information about the Helm chart method, see <a href="https://docs.openshift.com/container-platform/4.15/applications/working_with_helm_charts/understanding-helm.html">Understanding Helm</a>.</p>
-</li>
-</ul>
-</div>
-<div class="sect2">
-<h3 id="assembly-install-rhdh-ocp-operator">1.1. Installing Red Hat Developer Hub on OpenShift Container Platform with the Operator</h3>
-<div class="paragraph">
-<p>You can install Red Hat Developer Hub on OpenShift Container Platform by using the Red Hat Developer Hub Operator in the OpenShift Container Platform console.</p>
-</div>
-<div class="sect3">
-<h4 id="proc-install-operator_assembly-install-rhdh-ocp-operator">1.1.1. Installing the Red Hat Developer Hub Operator</h4>
-<div class="paragraph">
-<p>As an administrator, you can install the Red Hat Developer Hub Operator. Authorized users can use the Operator to install Red Hat Developer Hub on the following platforms:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Red Hat OpenShift Container Platform (OpenShift Container Platform)</p>
-</li>
-<li>
-<p>Amazon Elastic Kubernetes Service (EKS)</p>
-</li>
-<li>
-<p>Microsoft Azure Kubernetes Service (AKS)</p>
-</li>
-</ul>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Microsoft Azure</dt>
+<dd>
+<p><code>microsoft</code></p>
+</dd>
+<dt class="hdlist1">GitHub</dt>
+<dd>
+<p><code>github</code></p>
+</dd>
+<dt class="hdlist1">Keycloak</dt>
+<dd>
+<p><code>oidc</code></p>
+</dd>
+</dl>
 </div>
 <div class="paragraph">
-<p>OpenShift Container Platform is currently supported from version 4.12 to 4.15. See also the <a href="https://access.redhat.com/support/policy/updates/developerhub">Red Hat Developer Hub Life Cycle</a>.</p>
-</div>
-<div class="paragraph">
-<p>Containers are available for the following CPU architectures:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>AMD64 and Intel 64 (x86_64)</p>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>You are logged in as an administrator on the OpenShift Container Platform web console.</p>
-</li>
-<li>
-<p>You have configured the appropriate roles and permissions within your project to create or access an application. For more information, see the <a href="https://docs.openshift.com/container-platform/4.15/applications/index.html">Red Hat OpenShift Container Platform documentation on Building applications</a>.</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Important</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>For enhanced security, better control over the Operator lifecycle, and preventing potential privilege escalation, install the Red Hat Developer Hub Operator in a dedicated default <code>rhdh-operator</code> namespace. You can restrict other users' access to the Operator resources through role bindings or cluster role bindings.</p>
-</div>
-<div class="paragraph">
-<p>You can also install the Operator in another namespace by creating the necessary resources, such as an Operator group. For more information, see <a href="https://docs.openshift.com/container-platform/latest/operators/admin/olm-adding-operators-to-cluster.html#olm-installing-global-namespaces_olm-adding-operators-to-a-cluster">Installing global Operators in custom namespaces</a>.</p>
-</div>
-<div class="paragraph">
-<p>However, if the Red Hat Developer Hub Operator shares a namespace with other Operators, then it shares the same update policy as well, preventing the customization of the update policy. For example, if one Operator is set to manual updates, the Red Hat Developer Hub Operator update policy is also set to manual. For more information, see <a href="https://docs.openshift.com/container-platform/latest/operators/understanding/olm/olm-colocation.html#olm-colocation-namespaces_olm-colocation">Colocation of Operators in a namespace</a>.</p>
-</div>
-</td>
-</tr>
-</table>
+<p>For each provider that you want to use, follow the dedicated procedure to complete the following tasks:</p>
 </div>
 <div class="olist arabic">
-<div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>In the <strong>Administrator</strong> perspective of the OpenShift Container Platform web console, click <strong>Operators &gt; OperatorHub</strong>.</p>
+<p>Set up the shared secret that the authentication provider and Red Hat Developer Hub require to communicate.</p>
 </li>
 <li>
-<p>In the <strong>Filter by keyword</strong> box, enter Developer Hub and click the <strong>Red Hat Developer Hub</strong> Operator card.</p>
-</li>
-<li>
-<p>On the <strong>Red Hat Developer Hub Operator</strong> page, click <strong>Install</strong>.</p>
-</li>
-<li>
-<p>On the <strong>Install Operator</strong> page, use the <strong>Update channel</strong> drop-down menu to select the update channel that you want to use:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The <strong>fast</strong> channel provides y-stream (x.y) and z-stream (x.y.z) updates, for example, updating from version 1.1 to 1.2, or from 1.1.0 to 1.1.1.</p>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Important</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The <code>fast</code> channel includes all of the updates available for a particular version. Any update might introduce unexpected changes in your Red Hat Developer Hub deployment. Check the release notes for details about any potentially breaking changes.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>The <strong>fast-1.1</strong> channel only provides z-stream updates, for example, updating from version 1.1.1 to 1.1.2. If you want to update the Red Hat Developer Hub y-version in the future, for example, updating from 1.1 to 1.2, you must switch to the <strong>fast</strong> channel manually.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>On the <strong>Install Operator</strong> page, choose the <strong>Update approval</strong> strategy for the Operator:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>If you choose the <strong>Automatic</strong> option, the Operator is updated without requiring manual confirmation.</p>
-</li>
-<li>
-<p>If you choose the <strong>Manual</strong> option, a notification opens when a new update is released in the update channel. The update must be manually approved by an administrator before installation can begin.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Click <strong>Install</strong>.</p>
+<p>Configure Red Hat Developer Hub to use the authentication provider.</p>
 </li>
 </ol>
 </div>
-<div class="ulist">
-<div class="title">Verification</div>
-<ul>
-<li>
-<p>To view the installed Red Hat Developer Hub Operator, click <strong>View Operator</strong>.</p>
-</li>
-</ul>
-</div>
-<div class="ulist _additional-resources">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p><a href="#proc-install-rhdh-ocp-operator_assembly-install-rhdh-ocp-operator">Deploying Red Hat Developer Hub on OpenShift Container Platform with the Operator</a></p>
-</li>
-<li>
-<p><a href="https://docs.openshift.com/container-platform/4.15/operators/admin/olm-adding-operators-to-cluster.html#olm-installing-from-operatorhub-using-web-console_olm-adding-operators-to-a-cluster">Installing from OperatorHub using the web console</a></p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect3">
-<h4 id="proc-install-rhdh-ocp-operator_assembly-install-rhdh-ocp-operator">1.1.2. Deploying Red Hat Developer Hub on OpenShift Container Platform with the Operator</h4>
+<div class="sect2">
+<h3 id="proc-adding-azure-as-an-authentication-provider_title-authentication">1.1. Enabling the Microsoft Azure authentication provider</h3>
 <div class="paragraph">
-<p>As a developer, you can deploy a Red Hat Developer Hub instance on OpenShift Container Platform by using the <strong>Developer Catalog</strong> in the Red Hat OpenShift Container Platform web console. This deployment method uses the Red Hat Developer Hub Operator.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>A cluster administrator has installed the Red Hat Developer Hub Operator. For more information, see <a href="#proc-install-operator_assembly-install-rhdh-ocp-operator">Installing the Red Hat Developer Hub Operator</a>.</p>
-</li>
-<li>
-<p>You have added a custom configuration file to OpenShift Container Platform. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">Adding a custom configuration file to OpenShift Container Platform</a>.</p>
-</li>
-</ul>
+<p>Red Hat Developer Hub includes a Microsoft Azure authentication provider that can authenticate users by using OAuth.</p>
 </div>
 <div class="olist arabic">
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>Create a project in OpenShift Container Platform for your Red Hat Developer Hub instance, or select an existing project.</p>
-<div class="admonitionblock tip">
+<p>To allow Developer Hub to authenticate with Microsoft Azure, create an OAuth Application in Microsoft Azure.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"><strong>Azure Portal &gt; App registrations</strong></a>, and create an <strong>App Registration</strong> for Developer Hub.</p>
+</li>
+<li>
+<p>On your <strong>App registration</strong> overview page, add a new <strong>Web platform configuration</strong>, with the configuration:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Redirect URI</strong></dt>
+<dd>
+<p>Enter the backend authentication URI set in Developer Hub: <code>https://<em>&lt;APP_FQDN&gt;</em>/api/auth/microsoft/handler/frame</code></p>
+</dd>
+<dt class="hdlist1"><strong>Front-channel logout URL</strong></dt>
+<dd>
+<p>Leave blank.</p>
+</dd>
+<dt class="hdlist1"><strong>Implicit grant and hybrid flows</strong></dt>
+<dd>
+<p>Leave all checkboxes cleared.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>On the <strong>API permissions</strong> tab, click <strong>Add Permission</strong>, then add the following <strong>Delegated permission</strong> for the
+<strong>Microsoft Graph API</strong>:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>email</code></dt>
+<dt class="hdlist1"><code>offline_access</code></dt>
+<dt class="hdlist1"><code>openid</code></dt>
+<dt class="hdlist1"><code>profile</code></dt>
+<dt class="hdlist1"><code>User.Read</code></dt>
+<dt class="hdlist1">(Optional)</dt>
+<dd>
+<p>Optional custom scopes of the Microsoft Graph API that you define both here and in the Developer Hub configuration (<code>app-config-rhdh.yaml</code>).</p>
+</dd>
+</dl>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<div class="title">Tip</div>
+<div class="title">Note</div>
+</td>
+<td class="content">
+Your company might require you to grant admin consent for these permissions.
+Even if your company does not require admin consent, you might do so as it means users do not need to individually consent the first time they access backstage.
+To grant admin consent, a directory admin must go to the <a href="https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/user-admin-consent-overview">admin consent</a> page and click <strong>Grant admin consent for COMPANY NAME</strong>.
+</td>
+</tr>
+</table>
+</div>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Go to the <strong>Certificates &amp; Secrets</strong> page, then the <strong>Client secrets</strong> tab, and create a new client secret.
+Save the <strong>Client secret</strong> for the next step.</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Add your Microsoft Azure credentials in your Developer Hub secrets.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Edit your Developer Hub secrets, such as <code>secrets-rhdh</code>.</p>
+</li>
+<li>
+<p>Add the following key/value pairs:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>AUTH_AZURE_CLIENT_ID</code>: Enter the <strong>Application ID</strong> that you generated on Microsoft Azure.</p>
+</li>
+<li>
+<p><code>AUTH_AZURE_CLIENT_SECRET</code>: Enter the <strong>Client secret</strong> that you generated on Microsoft Azure.</p>
+</li>
+<li>
+<p><code>AUTH_AZURE_TENANT_ID</code>: Enter your <strong>Tenant ID</strong> on Microsoft Azure.</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Set up the Microsoft Azure authentication provider in your Developer Hub custom configuration.</p>
+<div class="paragraph">
+<p>Edit your custom Developer Hub config map, such as <code>app-config-rhdh</code>.</p>
+</div>
+<div class="paragraph">
+<p>In the <code>app-config-rhdh.yaml</code> content, add the <code>microsoft</code> provider configuration under the root <code>auth</code> configuration, and enable the <code>microsoft</code> provider for sign-in:</p>
+</div>
+<div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        # domainHint: ${AUTH_AZURE_TENANT_ID} # <b class="conum">(1)</b>
+        # additionalScopes: # <b class="conum">(2)</b>
+          # - Mail.Send
+signInPage: microsoft # <b class="conum">(3)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Optional for single-tenant applications. You can reduce login friction for users with accounts in multiple tenants by automatically filtering out accounts from other tenants. If you want to use this parameter for a single-tenant application, uncomment and enter the tenant ID. If your application registration is multi-tenant, leave this parameter blank. For more information, see <a href="https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy">Home Realm Discovery</a>.</p>
+</li>
+<li>
+<p>Optional for additional scopes. To add scopes for the application registration, uncomment and enter the list of scopes that you want to add.
+The default and mandatory value is <code>['user.read']</code>.</p>
+</li>
+<li>
+<p>To enable the Microsoft Azure provider as default sign-in provider.</p>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>For more information about creating a project in OpenShift Container Platform, see <a href="https://docs.openshift.com/container-platform/4.15/applications/projects/working-with-projects.html#creating-a-project-using-the-web-console_projects">Creating a project by using the web console</a> in the Red Hat OpenShift Container Platform documentation.</p>
+<p>Optional for environments with restrictions on outgoing access, such as firewall rules. If your environment has outgoing access restrictions make sure your Backstage backend has access to the following hosts:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>login.microsoftonline.com</code>: To get and exchange authorization codes and access tokens.</p>
+</li>
+<li>
+<p><code>graph.microsoft.com</code>: To fetch user profile information (as seen in this source code).
+If this host is unreachable, users might see an <em>Authentication failed, failed to fetch user profile</em> error when they attempt to log in.</p>
+</li>
+</ul>
 </div>
 </td>
 </tr>
 </table>
 </div>
+</div>
+<div class="sect2">
+<h3 id="assembly-auth-provider-github">1.2. GitHub authentication provider</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub uses a built-in GitHub authentication provider to authenticate users in GitHub or GitHub Enterprise.</p>
+</div>
+<div class="sect3">
+<h4 id="con-github-app-overview">1.2.1. GitHub App​ overview</h4>
+<div class="paragraph">
+<p>GitHub Apps are generally preferred to OAuth apps because they use fine-grained permissions, give more control over which repositories the application can access, and use short-lived tokens. For more information, see <a href="https://docs.github.com/en/apps/overview">GitHub Apps overview</a> in the GitHub documentation.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-registering-github-app">1.2.2. Registering a GitHub​ App</h4>
+<div class="paragraph">
+<p>In a GitHub App, you configure the allowed scopes as part of that application, therefore, you must verify the scope that your plugins require. The scope information is available in the plugin README files.</p>
+</div>
+<div class="paragraph">
+<p>To add GitHub authentication, complete the steps in <a href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">Registering a GitHub App</a> on the GitHub website.</p>
+</div>
+<div class="paragraph">
+<p>Use the following examples to enter the information about your production environment into the required fields on the <strong>Register new GitHub App</strong> page:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Application name: Red Hat Developer Hub</p>
 </li>
 <li>
-<p>From the <strong>Developer</strong> perspective on the OpenShift Container Platform web console, click <strong>+Add</strong>.</p>
+<p>Homepage URL:  <code>https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;</code></p>
 </li>
 <li>
-<p>From the <strong>Developer Catalog</strong> panel, click <strong>Operator Backed</strong>.</p>
+<p>Authorization callback URL: <code>https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;/api/auth/github/handler/frame</code></p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+The Homepage URL points to the Developer Hub front end, while the authorization callback URL points to the authentication provider backend.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-configuring-github-app">1.2.3. Configuring a GitHub App in Developer Hub</h4>
+<div class="paragraph">
+<p>To add GitHub authentication for Developer Hub, you must configure the GitHub App in your <code>app-config.yaml</code> file.</p>
+</div>
+<div class="paragraph">
+<p>The GitHub authentication provider uses the following configuration keys:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>clientId</code>: the client ID that you generated on GitHub. For example: b59241722e3c3b4816e2</p>
 </li>
 <li>
-<p>In the <strong>Filter by keyword</strong> box, enter <em>Developer Hub</em> and click the <strong>Red Hat Developer Hub</strong> card.</p>
+<p><code>clientSecret</code>: the client secret tied to the generated client ID.</p>
+</li>
+<li>
+<p><code>enterpriseInstanceUrl</code> (optional): the base URL for a GitHub Enterprise instance. For example: <code>https://ghe.&lt;company&gt;.com</code>. The <code>enterpriseInstanceUrl</code> is only needed for GitHub Enterprise.</p>
+</li>
+<li>
+<p><code>callbackUrl</code> (optional): the callback URL that GitHub uses when initiating an OAuth flow. For example: https://your-intermediate-service.com/handler. The <code>callbackUrl</code> is only needed if Developer Hub is not the immediate receiver, such as in cases when you use one OAuth app for many Developer Hub instances.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>To configure the GitHub App, add the provider configuration to your <code>app-config.yaml</code> file under the root auth configuration. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+ environment: production
+ providers:
+   github:
+     production:
+       clientId: ${GITHUB_APP_CLIENT_ID}
+       clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+       ## uncomment if using GitHub Enterprise
+       # enterpriseInstanceUrl: ${GITHUB_URL}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-adding-github-to-frontend">1.2.4. Adding the GitHub provider to the Developer Hub front end​</h4>
+<div class="paragraph">
+<p>To add the provider to the front end, add the sign in configuration to your <code>app-config.yaml</code> file. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">signInPage: github</code></pre>
+</div>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For information about authenticating Backstage access with GitHub, see <a href="https://backstage.io/docs/integrations/github/github-apps/">GitHub Authentication Provider</a> in the community documentation.</p>
+</li>
+<li>
+<p>For information about adding the provider to the Backstage front end, see <a href="https://github.com/janus-idp/backstage-showcase/blob/main/showcase-docs/getting-started.md">Enabling authentication in Showcase</a> in the community documentation.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="assembly-auth-provider-oidc">1.3. OpenID Connect authentication provider</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub uses the OpenID Connect (OIDC) authentication provider to authenticate with third-party services that support the OIDC protocol.</p>
+</div>
+<div class="sect3">
+<h4 id="con-oidc-configration_title-authentication">1.3.1. Overview of using the OIDC authentication provider in Developer Hub</h4>
+<div class="paragraph">
+<p>You can configure the OIDC authentication provider in Developer Hub by updating your <code>app-config.yaml</code> file under the root auth configuration. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  environment: production
+  # Providing an auth.session.secret will enable session support in the auth-backend
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
+        prompt: ${AUTH_OIDC_PROMPT} # Recommended to use auto
+        ## Uncomment for additional configuration options
+        # callbackUrl: ${AUTH_OIDC_CALLBACK_URL}
+        # tokenEndpointAuthMethod: ${AUTH_OIDC_TOKEN_ENDPOINT_METHOD}
+        # tokenSignedResponseAlg: ${AUTH_OIDC_SIGNED_RESPONSE_ALG}
+        # scope: ${AUTH_OIDC_SCOPE}
+        ## Declarative resolvers to override the default resolver: `emailLocalPartMatchingUserEntityName`
+        ## The authentication provider tries each sign-in resolver until it succeeds, and fails if none succeed. Uncomment the resolvers that you want to use.
+        # signIn:
+        #   resolvers:
+        #     - resolver: preferredUsernameMatchingUserEntityName
+        #     - resolver: emailMatchingUserEntityProfileEmail
+        #     - resolver: emailLocalPartMatchingUserEntityName
+signInPage: oidc</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="proc-configuring-keycloak-with-oidc_title-authentication">1.3.2. Configuring Keycloak with the OIDC authentication provider</h4>
+<div class="paragraph">
+<p>Red Hat Developer Hub includes an OIDC authentication provider that can authenticate users by using Keycloak.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The user that you create in Keycloak must also be available in the Developer Hub catalog.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In Keycloak, create a new realm, for example <code>RHDH</code>.</p>
+</li>
+<li>
+<p>Add a new user.</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Username</strong></dt>
+<dd>
+<p>Username for the user, for example: <code>rhdhuser</code></p>
+</dd>
+<dt class="hdlist1"><strong>Email</strong></dt>
+<dd>
+<p>Email address of the user.</p>
+</dd>
+<dt class="hdlist1"><strong>First name</strong></dt>
+<dd>
+<p>First name of the user.</p>
+</dd>
+<dt class="hdlist1"><strong>Last name</strong></dt>
+<dd>
+<p>Last name of the user.</p>
+</dd>
+<dt class="hdlist1"><strong>Email verified</strong></dt>
+<dd>
+<p>Toggle to <strong>On</strong>.</p>
+</dd>
+</dl>
+</div>
 </li>
 <li>
 <p>Click <strong>Create</strong>.</p>
 </li>
 <li>
-<p>Add custom configurations for the Red Hat Developer Hub instance.</p>
+<p>Navigate to the <strong>Credentials</strong> tab.</p>
 </li>
 <li>
-<p>On the <strong>Create Backstage</strong> page, click <strong>Create</strong></p>
+<p>Click <strong>Set password</strong>.</p>
+</li>
+<li>
+<p>Enter the <strong>Password</strong> for the user account and toggle <strong>Temporary</strong> to <strong>Off</strong>.</p>
+</li>
+<li>
+<p>Create a new Client ID, for example, <code>RHDH</code>.</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><strong>Client authentication</strong></dt>
+<dd>
+<p>Toggle to <strong>On</strong>.</p>
+</dd>
+<dt class="hdlist1"><strong>Valid redirect URIs</strong></dt>
+<dd>
+<p>Set to the OIDC handler URL, for example, <code><a href="https://&lt;RHDH_URL&gt;/api/auth/oidc/handler/frame" class="bare">https://&lt;RHDH_URL&gt;/api/auth/oidc/handler/frame</a></code>.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>Navigate to the <strong>Credentials</strong> tab and copy the <strong>Client secret</strong>.</p>
+</li>
+<li>
+<p>Save the Client ID and the Client Secret for the next step.</p>
+</li>
+<li>
+<p>In Developer Hub, add your Keycloak credentials in your Developer Hub secrets.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Edit your Developer Hub secrets, such as secrets-rhdh.</p>
+</li>
+<li>
+<p>Add the following key/value pairs:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>AUTH_KEYCLOAK_CLIENT_ID</code></dt>
+<dd>
+<p>Enter the Client ID that you generated in Keycloak, such as <code>RHDH</code>.</p>
+</dd>
+<dt class="hdlist1"><code>AUTH_KEYCLOAK_CLIENT_SECRET</code></dt>
+<dd>
+<p>Enter the Client Secret that you generated in Keycloak.</p>
+</dd>
+</dl>
+</div>
 </li>
 </ol>
 </div>
-<div class="paragraph">
-<div class="title">Verification</div>
-<p>After the pods are ready, you can access the Red Hat Developer Hub platform by opening the URL.</p>
+</li>
+<li>
+<p>Set up the OIDC authentication provider in your Developer Hub custom configuration.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Edit your custom Developer Hub ConfigMap, such as <code>app-config-rhdh</code>.</p>
+</li>
+<li>
+<p>In the <code>app-config-rhdh.yaml</code> content, add the <code>oidc</code> provider configuration under the root <code>auth</code> configuration, and enable the <code>oidc</code> provider for sign-in:</p>
+<div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+      clientId: ${AUTH_KEYCLOAK_CLIENT_ID}
+      clientSecret: ${AUTH_KEYCLOAK_CLIENT_SECRET}
+      metadataUrl: ${KEYCLOAK_BASE_URL}/auth/realms/${KEYCLOAK_REALM}
+      prompt: ${KEYCLOAK_PROMPT} # recommended to use auto
+      <mark> Uncomment for additional configuration options
+      #callbackUrl: ${KEYCLOAK_CALLBACK_URL}
+      #tokenEndpointAuthMethod: ${KEYCLOAK_TOKEN_ENDPOINT_METHOD}
+      #tokenSignedResponseAlg: ${KEYCLOAK_SIGNED_RESPONSE_ALG}
+      #scope: ${KEYCLOAK_SCOPE}
+      </mark> If you are using the keycloak-backend plugin, use the <code>preferredUsernameMatchingUserEntityName</code> resolver to avoid a login error.
+      signIn:
+        resolvers:
+          - resolver: preferredUsernameMatchingUserEntityName
+signInPage: oidc</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</li>
+</ol>
 </div>
 <div class="olist arabic">
+<div class="title">Verification</div>
 <ol class="arabic">
 <li>
-<p>Confirm that the pods are ready by clicking the pod in the <strong>Topology</strong> view and confirming the <strong>Status</strong> in the <strong>Details</strong> panel. The pod status is <strong>Active</strong> when the pod is ready.</p>
+<p>Restart your <code>backstage-developer-hub</code> application to apply the changes.</p>
 </li>
 <li>
-<p>From the <strong>Topology</strong> view, click the <strong>Open URL</strong> icon on the Developer Hub pod.</p>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh/operator-install-1.png" alt="operator install 1">
-</div>
-</div>
+<p>Your Developer Hub sign-in page displays <strong>Sign in using OIDC</strong>.</p>
 </li>
 </ol>
 </div>
-<div id="additional-resources_proc-install-rhdh-ocp-operator" class="ulist _additional-resources">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p><a href="https://docs.openshift.com/container-platform/4.15/applications/index.html">OpenShift Container Platform - Building applications overview</a></p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="assembly-install-rhdh-ocp-helm">1.2. Installing Red Hat Developer Hub on OpenShift Container Platform with the Helm chart</h3>
-<div class="paragraph">
-<p>You can install Red Hat Developer Hub on OpenShift Container Platform by using the Helm chart with one of the following methods:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The OpenShift Container Platform console</p>
-</li>
-<li>
-<p>The Helm CLI</p>
-</li>
-</ul>
 </div>
 <div class="sect3">
-<h4 id="proc-install-rhdh-ocp-helm-gui_assembly-install-rhdh-ocp-helm">1.2.1. Deploying Developer Hub from the OpenShift Container Platform web console with the Helm Chart</h4>
+<h4 id="proc-migrating-oauth2-proxy-to-oidc_title-authentication">1.3.3. Migrating from OAuth2 Proxy with Keycloak to OIDC in Developer Hub</h4>
 <div class="paragraph">
-<p>You can use a Helm chart to install Developer Hub on the Red Hat OpenShift Container Platform web console.</p>
-</div>
-<div class="paragraph">
-<p>Helm is a package manager on OpenShift Container Platform that provides the following features:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Applies regular application updates using custom hooks</p>
-</li>
-<li>
-<p>Manages the installation of complex applications</p>
-</li>
-<li>
-<p>Provides charts that you can host on public and private servers</p>
-</li>
-<li>
-<p>Supports rolling back to previous application versions</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The Red Hat Developer Hub Helm chart is available in the Helm catalog on OpenShift Dedicated and OpenShift Container Platform.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>You are logged in to your OpenShift Container Platform account.</p>
-</li>
-<li>
-<p>A user with the OpenShift Container Platform <code>admin</code> role has configured the appropriate roles and permissions within your project to create an application. For more information about OpenShift Container Platform roles, see <a href="https://docs.openshift.com/container-platform/4.15/authentication/using-rbac.html">Using RBAC to define and apply permissions</a>.</p>
-</li>
-<li>
-<p>You have created a project in OpenShift Container Platform. For more information about creating a project in OpenShift Container Platform, see <a href="https://docs.openshift.com/container-platform/4.15/applications/projects/working-with-projects.html#odc-creating-projects-using-developer-perspective_projects">Red Hat OpenShift Container Platform documentation</a>.</p>
-</li>
-</ul>
+<p>If you are using OAuth2 Proxy as an authentication provider with Keycloak, and you want to migrate to OIDC, you can update your authentication provider configuration to use OIDC.</p>
 </div>
 <div class="olist arabic">
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>From the <strong>Developer</strong> perspective on the Developer Hub web console, click <strong>+Add</strong>.</p>
+<p>In Keycloak, update the valid redirect URI to <code><a href="https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame" class="bare">https://&lt;rhdh_url&gt;/api/auth/oidc/handler/frame</a></code>. Make sure to replace <code>&lt;rhdh_url&gt;</code> with your Developer Hub application URL, such as, <code>my.rhdh.example.com</code>.</p>
 </li>
 <li>
-<p>From the <strong>Developer Catalog</strong> panel, click <strong>Helm Chart</strong>.</p>
+<p>Replace the <code>oauth2Proxy</code> configuration values in the <code>auth</code> section of your <code>app-config.yaml</code> file with the <code>oidc</code> configuration values.</p>
 </li>
 <li>
-<p>In the <strong>Filter by keyword</strong> box, enter <em>Developer Hub</em> and click the <strong>Red Hat Developer Hub</strong> card.</p>
+<p>Update the <code>signInPage</code> configuration value from <code>oauth2Proxy</code> to <code>oidc</code>.</p>
+<div class="paragraph">
+<p>The following example shows the <code>auth.providers</code> and <code>signInPage</code> configuration for <code>oauth2Proxy</code> prior to migrating the authentication provider to <code>oidc</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  environment: production
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oauth2Proxy: {}
+signInPage: oauth2Proxy</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The following example shows the <code>auth.providers</code> and <code>signInPage</code> configuration after migrating the authentication provider to <code>oidc</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  environment: production
+  session:
+    secret: ${SESSION_SECRET}
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${KEYCLOAK_METADATA_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        prompt: ${KEYCLOAK_PROMPT} # recommended to use auto
+signInPage: oidc</code></pre>
+</div>
+</div>
 </li>
 <li>
-<p>From the Red Hat Developer Hub page, click <strong>Create</strong>.</p>
-</li>
-<li>
-<p>From your cluster, copy the OpenShift Container Platform router host (for example: <code>apps.&lt;clusterName&gt;.com</code>).</p>
-</li>
-<li>
-<p>Select the radio button to configure the Developer Hub instance with either the form view or YAML view. The Form view is selected by default.</p>
+<p>Remove the OAuth2 Proxy sidecar container and update the <code>upstream.service</code> section of your Helm chart’s <code>values.yaml</code> file as follows:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Using <strong>Form view</strong></p>
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>To configure the instance with the Form view, go to <strong>Root Schema</strong> &#8594; <strong>global</strong> &#8594; <strong>Enable service authentication within Backstage instance</strong> and paste your OpenShift Container Platform router host into the field on the form.</p>
+<p><code>service.ports.backend</code>: <code>7007</code></p>
 </li>
-</ol>
+<li>
+<p><code>service.ports.targetPort</code>: <code>backend</code></p>
+<div class="paragraph">
+<p>The following example shows the <code>service</code> configuration for <code>oauth2Proxy</code> prior to migrating the authentication provider to <code>oidc</code>:</p>
 </div>
-</li>
-<li>
-<p>Using <strong>YAML view</strong></p>
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>To configure the instance with the YAML view, paste your OpenShift Container Platform router hostname in the <code>global.clusterRouterBase</code> parameter value as shown in the following example:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">global:
-  auth:
-    backend:
-      enabled: true
-  clusterRouterBase: apps.&lt;clusterName&gt;.com
-  # other Red Hat Developer Hub Helm Chart configurations</code></pre>
+<pre class="CodeRay highlight"><code data-lang="yaml">service:
+  ports:
+    name: http-backend
+    backend: 4180
+    targetPort: oauth2Proxy</code></pre>
 </div>
 </div>
-</li>
-</ol>
+<div class="paragraph">
+<p>The following example shows the <code>service</code> configuration after migrating the authentication provider to <code>oidc</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">service:
+  ports:
+    name: http-backend
+    backend: 7007
+    targetPort: backend</code></pre>
+</div>
 </div>
 </li>
 </ul>
 </div>
 </li>
 <li>
-<p>Edit the other values if needed.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The information about the host is copied and can be accessed by the Developer Hub backend.</p>
-</div>
-<div class="paragraph">
-<p>When an OpenShift Container Platform route is generated automatically, the host value for the route is inferred and the same host information is sent to the Developer Hub. Also, if the Developer Hub is present on a custom domain by setting the host manually using values, the custom host takes precedence.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>Click <strong>Create</strong> and wait for the database and Developer Hub to start.</p>
-</li>
-<li>
-<p>Click the <strong>Open URL</strong> icon to start using the Developer Hub platform.</p>
-<div class="imageblock">
-<div class="content">
-<img src="images/rhdh/rhdh-helm-install.png" alt="rhdh helm install">
-</div>
-</div>
+<p>Upgrade the Developer Hub Helm chart.</p>
 </li>
 </ol>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Your <code>developer-hub</code> pod might be in a <code>CrashLoopBackOff</code> state if the Developer Hub container cannot access the configuration files. This error is indicated by the following log:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="log">Loaded config from app-config-from-configmap.yaml, env
-...
-2023-07-24T19:44:46.223Z auth info Configuring "database" as KeyStore provider type=plugin
-Backend failed to start up Error: Missing required config value at 'backend.database.client'</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>To resolve the error, verify the configuration files.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect3">
-<h4 id="proc-install-rhdh-ocp-helm-cli_assembly-install-rhdh-ocp-helm">1.2.2. Deploying Developer Hub on OpenShift Container Platform with the Helm CLI</h4>
-<div class="paragraph">
-<p>You can use the Helm CLI to install Red Hat Developer Hub on Red Hat OpenShift Container Platform.</p>
-</div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>You have installed the OpenShift CLI (<code>oc</code>) on your workstation.</p>
-</li>
-<li>
-<p>You are logged in to your OpenShift Container Platform account.</p>
-</li>
-<li>
-<p>A user with the OpenShift Container Platform admin role has configured the appropriate roles and permissions within your project to create an application. For more information about OpenShift Container Platform roles, see <a href="https://docs.openshift.com/container-platform/4.15/authentication/using-rbac.html">Using RBAC to define and apply permissions</a>.</p>
-</li>
-<li>
-<p>You have created a project in OpenShift Container Platform. For more information about creating a project in OpenShift Container Platform, see <a href="https://docs.openshift.com/container-platform/4.15/applications/projects/working-with-projects.html#odc-creating-projects-using-developer-perspective_projects">Red Hat OpenShift Container Platform documentation</a>.</p>
-</li>
-<li>
-<p>You have installed the Helm CLI tool.</p>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Create and activate the <em>&lt;rhdh&gt;</em> OpenShift Container Platform project:</p>
-<div class="listingblock">
-<div class="content">
-<pre>NAMESPACE=&lt;em&gt;&lt;rhdh&gt;&lt;/em&gt;
-oc new-project ${NAMESPACE} || oc project ${NAMESPACE}</pre>
-</div>
-</div>
-</li>
-<li>
-<p>Install the Red Hat Developer Hub Helm chart:</p>
-<div class="listingblock">
-<div class="content">
-<pre>helm upgrade redhat-developer-hub -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz</pre>
-</div>
-</div>
-</li>
-<li>
-<p>Configure your Developer Hub Helm chart instance with the Developer Hub database password and router base URL values from your OpenShift Container Platform cluster:</p>
-<div class="listingblock">
-<div class="content">
-<pre>PASSWORD=$(oc get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
-CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
-helm upgrade redhat-developer-hub -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz" \
-    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
-    --set global.postgresql.auth.password="$PASSWORD"</pre>
-</div>
-</div>
-</li>
-<li>
-<p>Display the running Developer Hub instance URL:</p>
-<div class="listingblock">
-<div class="content">
-<pre>echo "https://redhat-developer-hub-$NAMESPACE.$CLUSTER_ROUTER_BASE"</pre>
-</div>
-</div>
-</li>
-</ol>
-</div>
-<div class="ulist">
-<div class="title">Verification</div>
-<ul>
-<li>
-<p>Open the running Developer Hub instance URL in your browser to use Developer Hub.</p>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p><a href="https://docs.openshift.com/container-platform/4.16/applications/working_with_helm_charts/installing-helm.html">Installing Helm</a></p>
-</li>
-</ul>
 </div>
 </div>
 </div>
