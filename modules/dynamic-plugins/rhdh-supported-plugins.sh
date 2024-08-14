@@ -219,11 +219,11 @@ for j in $jsons; do
 
         # split into three tables based on support level
         if [[ ${Support_Level} == "Production" ]]; then 
-            adoc1["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName - $Role |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables|$Default\n"
+            adoc1["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables"
         elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then 
-            adoc2["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName - $Role |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables|$Default\n"
+            adoc2["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables"
         else
-            adoc3["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName - $Role |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables|$Default\n"
+            adoc3["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables"
         fi
 
         # NOTE: csv is not split into separate tables at this point
