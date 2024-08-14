@@ -219,11 +219,11 @@ for j in $jsons; do
 
         # split into three tables based on support level
         if [[ ${Support_Level} == "Production" ]]; then 
-            adoc1["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables"
+            adoc1["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
         elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then 
-            adoc2["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables"
+            adoc2["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
         else
-            adoc3["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |https://npmjs.com/package/$Plugin/v/$Version[$Plugin] |$Version \n|$Path\n\n$Required_Variables"
+            adoc3["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
         fi
 
         # NOTE: csv is not split into separate tables at this point
@@ -258,6 +258,9 @@ adocfile3="${0/.sh/.adoc3}"
 sed -e "/%%TABLE_CONTENT_1%%/{r $adocfile1" -e 'd}' \
     -e "/%%TABLE_CONTENT_2%%/{r $adocfile2" -e 'd}' \
     -e "/%%TABLE_CONTENT_3%%/{r $adocfile3" -e 'd}' \
+    -e "s/\%\%COUNT_1\%\%/${#adoc1[@]}/" \
+    -e "s/\%\%COUNT_2\%\%/${#adoc2[@]}/" \
+    -e "s/\%\%COUNT_3\%\%/${#adoc3[@]}/" \
     "${0/.sh/.template.adoc}" > "${0/.sh/.adoc}"
 
 # summary of changes since last time
