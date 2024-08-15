@@ -100,6 +100,10 @@ tot=0
 for j in $jsons; do 
     (( tot++ )) || true
 done
+
+# string listing the enabled-by-default plugins to add to con-preinstalled-dynamic-plugins.template.adoc
+ENABLED_PLUGINS="/tmp/ENABLED_PLUGINS.txt"; rm -f $ENABLED_PLUGINS; touch $ENABLED_PLUGINS
+
 for j in $jsons; do 
     (( c++ )) || true
     echo "[$c/$tot] Processing $j ..."
@@ -169,7 +173,17 @@ for j in $jsons; do
         if [[ ! $disabled ]]; then disabled=$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path) | .disabled' /tmp/backstage-showcase/dynamic-plugins.default.yaml); fi
         # echo "Using Path = $Path got disabled = $disabled"
         # null or false == enabled by default
-        Default="Enabled"; if [[ $disabled == "true" ]]; then Default="Disabled"; fi
+        Default="Enabled"
+        if [[ $disabled == "true" ]]; then 
+            Default="Disabled"
+        else
+            # see https://issues.redhat.com/browse/RHIDP-3187 - only Production-level support (GA) plugins should be enabled by default 
+            if [[ $Support_Level == "Production" ]]; then
+                echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
+            else
+                echo "[ERROR]: $Plugin should not be enabled by default as its support level is $Support_Level!" | tee -a ${ENABLED_PLUGINS}.errors
+            fi
+        fi
 
         # compute Required_Variables from dynamic-plugins.default.yaml - look for all caps params
         # shellcheck disable=SC2016
@@ -209,7 +223,6 @@ for j in $jsons; do
         for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
             echo "Got $col = ${!col}"
         done
-
 
         # save in an array sorted by name, then role, with frontend before backend plugins (for consistency with 1.1 markup)
         RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; Role="Backend"; else Role="Frontend"; fi
@@ -263,6 +276,10 @@ sed -e "/%%TABLE_CONTENT_1%%/{r $adocfile1" -e 'd}' \
     -e "s/\%\%COUNT_3\%\%/${#adoc3[@]}/" \
     "${0/.sh/.template.adoc}" > "${0/.sh/.adoc}"
 
+# inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
+sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd}' \
+    "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.template.adoc}" > "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.adoc}"
+
 # summary of changes since last time
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 SCRIPT=${0##${SCRIPT_DIR}}
@@ -273,6 +290,9 @@ pushd "$SCRIPT_DIR" >/dev/null || exit
     fi
 popd >/dev/null || exit
 
+# see https://issues.redhat.com/browse/RHIDP-3187 - only GA plugins should be enabled by default 
+cat "${ENABLED_PLUGINS}.errors"
+
 # cleanup
-rm -f "${0/.sh/.adoc1}" "${0/.sh/.adoc2}" "${0/.sh/.adoc3}"
+rm -f "${0/.sh/.adoc1}" "${0/.sh/.adoc2}" "${0/.sh/.adoc3}" "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
 # rm -fr /tmp/backstage-plugins /tmp/backstage-showcase 
