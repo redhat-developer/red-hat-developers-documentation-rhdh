@@ -4,8 +4,6 @@
 # https://github.com/janus-idp/backstage-plugins/tree/main/plugins/ */package.json
 # https://github.com/janus-idp/backstage-showcase/tree/main/dynamic-plugins/wrappers/ */json
 
-# TODO generate rhdh-supported-plugins.json for consumption by other tools?
-
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
 usage() {
@@ -89,8 +87,11 @@ titlecase() {
     jq -r '.dependencies' /tmp/backstage-showcase/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> $pluginVersFile
     cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out $pluginVersFile
 
-# process 2 folders of json files
+# create arrays of adoc and csv content
 declare -A adoc
+declare -A csv
+
+# process 2 folders of json files
 jsons=$(find /tmp/backstage-showcase/dynamic-plugins/wrappers/ /tmp/backstage-plugins/plugins/ -maxdepth 2 -name package.json | sort -V)
 c=0
 tot=0
@@ -177,6 +178,7 @@ for j in $jsons; do
             Required_Variables_="${Required_Variables_}\`$this_RV\`\n\n"
         done
         Required_Variables="${Required_Variables_}"
+        Required_Variables_CSV=$(echo -e "$Required_Variables" | tr -s "\n" ";")
         # not currently used due to policy and support concern with upstream content linked from downstream doc
         # URL="https://www.npmjs.com/package/$Plugin" 
 
@@ -214,6 +216,7 @@ for j in $jsons; do
 
         # shellcheck disable=SC1087
         adoc["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |$Plugin |$Role |$Version |$Support_Level\n|$Path\na|\n$Required_Variables|$Default\n"
+        csv["$Name-$RoleSort-$Role-$Plugin"]="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
     else
         (( tot-- )) || true
         echo "        Skip: not in backstage-showcase/dynamic-plugins.default.yaml !"
@@ -267,9 +270,11 @@ while IFS= read -rd '' key; do
     sorted+=( "$key" )
 done < <(printf '%s\0' "${!adoc[@]}" | sort -z)
 # set up page header and open the table
+echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
 echo -e "$adocHeader" > "${0/.sh/.adoc}"
 for key in "${sorted[@]}"; do
     echo -e "${adoc[$key]}" >> "${0/.sh/.adoc}" 
+    echo -e "${csv[$key]}" >>  "${0/.sh/.csv}" 
 done
 # close the table
 echo -e "|===" >> "${0/.sh/.adoc}" 

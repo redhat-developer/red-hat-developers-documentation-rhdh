@@ -43,14 +43,14 @@ for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TIT
     rm -rfv "$dest" || true
     mv -f "$d/build/tmp/en-US/html-single/" "$dest"
     # shellcheck disable=SC2013
-    for im in $(grep images/ "$d/index.html" | grep -E -v 'mask-image|background|fa-icons|jupumbra' | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do
+    for im in $(grep images/ "$dest/index.html" | grep -E -v 'mask-image|background|fa-icons|jupumbra' | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do
         # echo "  Copy $im ...";
-        IMDIR="$d/${im%/*}/"
+        IMDIR="$dest/${im%/*}/"
         mkdir -p "${IMDIR}"; rsync -q "$im" "${IMDIR}";
     done
     # shellcheck disable=SC2044
-    for f in $(find "$d/" -type f); do echo "    $f"; done
-    echo "<li><a href=${d/titles-generated\/${BRANCH}/.}>${d/titles-generated\/${BRANCH}\//}</a></li>" >> titles-generated/"${BRANCH}"/index.html;
+    # for f in $(find "$dest/" -type f); do echo "    $f"; done
+    echo "<li><a href=${dest/titles-generated\/${BRANCH}/.}>${dest/titles-generated\/${BRANCH}\//}</a></li>" >> titles-generated/"${BRANCH}"/index.html;
 done
 echo "</ul></body></html>" >> titles-generated/"${BRANCH}"/index.html
 
