@@ -284,14 +284,14 @@ sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd}' \
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 SCRIPT=${0##${SCRIPT_DIR}}
 pushd "$SCRIPT_DIR" >/dev/null || exit
-    updates=$(git diff "${SCRIPT/.sh/.adoc}"| grep -E -v "\+\+|\@\@" | grep "+")
+    updates=$(git diff "${SCRIPT/.sh/.adoc}"| grep -E -v "\+\+|@@" | grep "+")
     if [[ $updates ]]; then
         echo "$(echo "$updates" | wc -l) Changes include:"; echo "$updates"
     fi
 popd >/dev/null || exit
 
 # see https://issues.redhat.com/browse/RHIDP-3187 - only GA plugins should be enabled by default 
-cat "${ENABLED_PLUGINS}.errors"
+if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then cat "${ENABLED_PLUGINS}.errors"; fi
 
 # cleanup
 rm -f "${0/.sh/.adoc1}" "${0/.sh/.adoc2}" "${0/.sh/.adoc3}" "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
