@@ -251,30 +251,35 @@ done
 # create .csv file with header
 echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
 
+num_plugins=()
 # append to .csv and .adocN files
 rm -f "${0/.sh/.adoc1}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc1[@]}" | sort -z)
-for key in "${sorted[@]}"; do echo -e "${adoc1[$key]}" >> "${0/.sh/.adoc1}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+for key in "${sorted[@]}"; do echo -e "${adoc1[$key]}" >> "${0/.sh/.ref-rh-supported-plugins}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+num_plugins+=(${#adoc1[@]})
 
 rm -f "${0/.sh/.adoc2}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc2[@]}" | sort -z)
-for key in "${sorted[@]}"; do echo -e "${adoc2[$key]}" >> "${0/.sh/.adoc2}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+for key in "${sorted[@]}"; do echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+num_plugins+=(${#adoc2[@]})
 
 rm -f "${0/.sh/.adoc3}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc3[@]}" | sort -z)
-for key in "${sorted[@]}"; do echo -e "${adoc3[$key]}" >> "${0/.sh/.adoc3}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+for key in "${sorted[@]}"; do echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+num_plugins+=(${#adoc3[@]})
 
 # merge the content from the three .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
-adocfile1="${0/.sh/.adoc1}"
-adocfile2="${0/.sh/.adoc2}"
-adocfile3="${0/.sh/.adoc3}"
-sed -e "/%%TABLE_CONTENT_1%%/{r $adocfile1" -e 'd}' \
-    -e "/%%TABLE_CONTENT_2%%/{r $adocfile2" -e 'd}' \
-    -e "/%%TABLE_CONTENT_3%%/{r $adocfile3" -e 'd}' \
-    -e "s/\%\%COUNT_1\%\%/${#adoc1[@]}/" \
-    -e "s/\%\%COUNT_2\%\%/${#adoc2[@]}/" \
-    -e "s/\%\%COUNT_3\%\%/${#adoc3[@]}/" \
-    "${0/.sh/.template.adoc}" > "${0/.sh/.adoc}"
+count=0
+for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins; do
+    this_num_plugins=${num_plugins[$count]}
+    (( count = count + 1 ))
+    echo "[$count] Processing $d ..."
+    adocfile="${0/.sh/.${d}}"
+    sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd}' \
+        -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
+        "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
+    rm -f "$adocfile"
+done
 
 # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
 sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd}' \
@@ -282,9 +287,8 @@ sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd}' \
 
 # summary of changes since last time
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
-SCRIPT=${0##${SCRIPT_DIR}}
 pushd "$SCRIPT_DIR" >/dev/null || exit
-    updates=$(git diff "${SCRIPT/.sh/.adoc}"| grep -E -v "\+\+|@@" | grep "+")
+    updates=$(git diff "ref*plugins.adoc"| grep -E -v "\+\+|@@" | grep "+")
     if [[ $updates ]]; then
         echo "$(echo "$updates" | wc -l) Changes include:"; echo "$updates"
     fi
@@ -294,5 +298,5 @@ popd >/dev/null || exit
 if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then cat "${ENABLED_PLUGINS}.errors"; fi
 
 # cleanup
-rm -f "${0/.sh/.adoc1}" "${0/.sh/.adoc2}" "${0/.sh/.adoc3}" "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
+rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
 # rm -fr /tmp/backstage-plugins /tmp/backstage-showcase 
