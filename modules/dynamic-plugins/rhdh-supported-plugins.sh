@@ -134,9 +134,27 @@ for j in $jsons; do
     # shellcheck disable=SC2016
     found_in_default_config1=$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml)
     # shellcheck disable=SC2016
-    found_in_default_config2=$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml)
-    if [[ $found_in_default_config1 ]] || [[ $found_in_default_config2 ]] || [[ "$j" == *"/wrappers/"* ]]; then
+    found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml)
+    # echo "[DEBUG] default configs:"
+    # echo "   $found_in_default_config2" | jq -r '.package'
+    # echo "   $found_in_default_config1" | jq -r '.package'
+    # echo "   /wrappers/ == $j"
 
+    Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+    if [[ $Path2 ]]; then 
+        Path=$Path2
+        echo "[DEBUG] check path - $Name :: got $Path2"
+    else
+        Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        echo "[DEBUG] check path - $Name :: got $Path"
+    fi
+    if [[ ! $Path ]]; then 
+        continue
+    elif [[ $Path ]] || [[ "$j" == *"/wrappers/"* ]]; then
+
+        # RHIDP-3203 just use the .package value from /tmp/backstage-showcase/dynamic-plugins.default.yaml as the Path
+
+        
         Role=$(jq -r '.backstage.role' "$j")
 
         Version=$(jq -r '.version' "$j")
@@ -204,20 +222,14 @@ for j in $jsons; do
             -e "s@.+(-plugin-catalog-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
             -e "s@.+(-scaffolder-backend-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
             -e "s@.+(-scaffolder-backend-module|-scaffolder-backend|backstage-plugin)-(.+)@\2@g" \
+            -e "s@(backstage-community-plugin-)@@g" \
             -e "s@(backstage-plugin)-(.+)@\2@g" \
             -e "s@(.+)(-backstage-plugin)@\1@g" \
             -e "s@-backend@@g" \
         )"
         # echo " to $Name"
+        Name="$(echo "${Name}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
         PrettyName="$(titlecase "${Name//-/ }")"
-
-        # RHIDP-3203 just use the .package value from /tmp/backstage-showcase/dynamic-plugins.default.yaml as the Path
-        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-        if [[ $Path2 ]]; then 
-            Path=$Path2
-        else
-            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
-        fi
 
         # useful console output
         for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
