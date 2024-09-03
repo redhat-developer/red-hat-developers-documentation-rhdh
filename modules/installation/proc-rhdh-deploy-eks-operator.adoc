@@ -25,7 +25,7 @@ You can install the {product-short} Operator on {eks-short} using the https://ol
 . Run the following command in your terminal to create the `rhdh-operator` namespace where the Operator is installed:
 +
 --
-[source]
+[source,terminal]
 ----
 kubectl create namespace rhdh-operator
 ----
@@ -34,7 +34,7 @@ kubectl create namespace rhdh-operator
 . Create a pull secret using the following command:
 +
 --
-[source]
+[source,terminal]
 ----
 kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
     --docker-server=registry.redhat.io \
@@ -53,7 +53,7 @@ The created pull secret is used to pull the {product-short} images from the {com
 . Create a `CatalogSource` resource that contains the Operators from the {company-name} Ecosystem:
 +
 --
-[source,subs="attributes+"]
+[source,yaml,subs="attributes+"]
 ----
 cat <<EOF | kubectl -n rhdh-operator apply -f -
 apiVersion: operators.coreos.com/v1alpha1
@@ -73,7 +73,7 @@ EOF
 . Create an `OperatorGroup` resource as follows:
 +
 --
-[source]
+[source,yaml]
 ----
 cat <<EOF | kubectl apply -n rhdh-operator -f -
 apiVersion: operators.coreos.com/v1
@@ -87,7 +87,7 @@ EOF
 . Create a `Subscription` resource using the following code:
 +
 --
-[source,subs="attributes+"]
+[source,yaml,subs="attributes+"]
 ----
 cat <<EOF | kubectl apply -n rhdh-operator -f -
 apiVersion: operators.coreos.com/v1alpha1
@@ -109,7 +109,7 @@ EOF
 . Run the following command to verify that the created Operator is running:
 +
 --
-[source]
+[source,yaml]
 ----
 kubectl -n rhdh-operator get pods -w
 ----
@@ -120,7 +120,7 @@ If the operator pod shows `ImagePullBackOff` status, then you might need permiss
 ====
 You can include the required secret name in the `deployment.spec.template.spec.imagePullSecrets` list and verify the deployment name using `kubectl get deployment -n rhdh-operator` command:
 
-[source]
+[source,yaml]
 ----
 kubectl -n rhdh-operator patch deployment \
     rhdh.fast --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
@@ -133,7 +133,7 @@ kubectl -n rhdh-operator patch deployment \
 .. Edit the `backstage-default-config` ConfigMap in the `rhdh-operator` namespace using the following command:
 +
 --
-[source]
+[source,yaml]
 ----
 kubectl -n rhdh-operator edit configmap backstage-default-config
 ----
@@ -142,7 +142,7 @@ kubectl -n rhdh-operator edit configmap backstage-default-config
 .. Locate the `db-statefulset.yaml` string and add the `fsGroup` to its `spec.template.spec.securityContext`, as shown in the following example:
 +
 --
-[source]
+[source,yaml]
 ----
   db-statefulset.yaml: |
     apiVersion: apps/v1
@@ -163,7 +163,7 @@ kubectl -n rhdh-operator edit configmap backstage-default-config
 .. Locate the `deployment.yaml` string and add the `fsGroup` to its specification, as shown in the following example:
 +
 --
-[source]
+[source,yaml]
 ----
   deployment.yaml: |
     apiVersion: apps/v1
@@ -181,7 +181,7 @@ kubectl -n rhdh-operator edit configmap backstage-default-config
 .. Locate the `service.yaml` string and change the `type` to `NodePort` as follows:
 +
 --
-[source]
+[source,yaml]
 ----
   service.yaml: |
     apiVersion: v1
@@ -210,7 +210,7 @@ Wait for a few minutes until the changes are automatically applied to the operat
 . Clone the Operator repository to your local machine using the following command:
 +
 --
-[source]
+[source,yaml]
 ----
 git clone --depth=1 https://github.com/redhat-developer/rhdh-operator.git rhdh-operator && cd rhdh-operator
 ----
@@ -219,7 +219,7 @@ git clone --depth=1 https://github.com/redhat-developer/rhdh-operator.git rhdh-o
 . Run the following command and generate the deployment manifest:
 +
 --
-[source]
+[source,yaml]
 ----
 make deployment-manifest
 ----
@@ -230,7 +230,7 @@ The previous command generates a file named `rhdh-operator-<VERSION>.yaml`, whic
 . Run the following command to apply replacements in the generated deployment manifest:
 +
 --
-[source]
+[source,yaml]
 ----
 sed -i "s/backstage-operator/rhdh-operator/g" rhdh-operator-*.yaml
 sed -i "s/backstage-system/rhdh-operator/g" rhdh-operator-*.yaml
@@ -242,7 +242,7 @@ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operator-
 .. Locate the `db-statefulset.yaml` string and add the `fsGroup` to its `spec.template.spec.securityContext`, as shown in the following example:
 +
 --
-[source]
+[source,yaml]
 ----
    db-statefulset.yaml: |
     apiVersion: apps/v1
@@ -263,7 +263,7 @@ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operator-
 .. Locate the `deployment.yaml` string and add the `fsGroup` to its specification, as shown in the following example:
 +
 --
-[source]
+[source,yaml]
 ----
   deployment.yaml: |
     apiVersion: apps/v1
@@ -281,7 +281,7 @@ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operator-
 .. Locate the `service.yaml` string and change the `type` to `NodePort` as follows:
 +
 --
-[source]
+[source,yaml]
 ----
   service.yaml: |
     apiVersion: v1
@@ -296,7 +296,7 @@ sed -i "s/backstage-controller-manager/rhdh-controller-manager/g" rhdh-operator-
 .. Replace the default images with the images that are pulled from the {company-name} Ecosystem:
 +
 --
-[source,subs="attributes+"]
+[source,yaml,subs="attributes+"]
 ----
 sed -i "s#gcr.io/kubebuilder/kube-rbac-proxy:.*#registry.redhat.io/openshift4/ose-kube-rbac-proxy:v{ocp-version}#g" rhdh-operator-*.yaml
 
@@ -349,7 +349,7 @@ spec:
 . Apply the manifest to deploy the operator using the following command:
 +
 --
-[source]
+[source,yaml]
 ----
 kubectl apply -f rhdh-operator-VERSION.yaml
 ----
@@ -358,7 +358,7 @@ kubectl apply -f rhdh-operator-VERSION.yaml
 . Run the following command to verify that the Operator is running:
 +
 --
-[source]
+[source,yaml]
 ----
 kubectl -n rhdh-operator get pods -w
 ----
