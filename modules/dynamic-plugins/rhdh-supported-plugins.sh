@@ -68,6 +68,7 @@ titlecase() {
             github) echo -n "GitHub ";;
             gitlab) echo -n "GitLab ";;
             jfrog) echo -n "JFrog ";;
+            msgraph) echo -n "MS Graph ";;
             pagerduty) echo -n "PagerDuty ";;
             servicenow) echo -n "ServiceNow ";;
             sonarqube) echo -n "SonarQube ";;
