@@ -1,0 +1,80 @@
+[id='proc-rbac-config-conditional-policy-file_{context}']
+= Configuring conditional policies defined in an external file
+
+You can configure and manage conditional policies that are defined in an external file.
+
+.Prerequisites
+* You are logged in to your {ocp-short} account using the {ocp-short} web console.
+* You have defined conditional policies in a YAML file, which includes role references, permission mappings, and conditions.
++
+--
+The following is an example of a YAML file defining conditional policies:
+
+[source,yaml]
+----
+---
+result: CONDITIONAL
+roleEntityRef: 'role:default/test'
+pluginId: catalog
+resourceType: catalog-entity
+permissionMapping:
+  - read
+  - update
+conditions:
+  rule: IS_ENTITY_OWNER
+  resourceType: catalog-entity
+  params:
+    claims:
+      - 'group:default/team-a'
+      - 'group:default/team-b'
+---
+result: CONDITIONAL
+roleEntityRef: 'role:default/test'
+pluginId: catalog
+resourceType: catalog-entity
+permissionMapping:
+  - delete
+conditions:
+  rule: IS_ENTITY_OWNER
+  resourceType: catalog-entity
+  params:
+    claims:
+      - 'group:default/team-a'
+----
+--
+* You have defined tiles and associated policies in a CSV file that serves as a basis for creating roles and permissions.
++
+For more information, see xref:ref-rbac-conditional-policy-definition_title-authorization[].
+
+.Procedure
+
+. In {ocp-short}, open `app-config.yaml` file and specify the path to both the `conditionalPoliciesFile` and the `policies-csv-file` as shown in the following example:
++
+--
+.Example `app-config.yaml` file
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    conditionalPoliciesFile: /some/path/conditional-policies.yaml
+    policies-csv-file: /some/path/rbac-policy.csv
+----
+--
+
+. To enable automatic reloading of the policy file without restarting the application, add the `policyFileReload` option and set it to `true`:
++
+--
+.Example `app-config.yaml` file 
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    conditionalPoliciesFile: /some/path/conditional-policies.yaml
+    policies-csv-file: /some/path/rbac-policy.csv
+    policyFileReload: true
+----
+--
+
+. Optional: Define nested conditional policies in the YAML file as needed.
