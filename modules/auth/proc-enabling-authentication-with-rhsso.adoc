@@ -1,0 +1,71 @@
+[id="enabling-authentication-with-rhsso"]
+= Enabling authentication with Red Hat Single-Sign On (RHSSO)
+
+To authenticate users with Red Hat SSO (RHSSO), enable the OpenID Connect (OIDC) authentication provider in {product}.
+
+You might use this authentication provider to authenticate with other third-party services that support the OIDC protocol.
+
+.Prerequisites
+* You added a custom {product-short} application configuration, and have sufficient permissions to modify it.
+See link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html/administration_guide_for_red_hat_developer_hub/assembly-add-custom-app-file-openshift_admin-rhdh[Adding a custom application configuration file to {product-short}].
+* You have sufficient permissions in RHSSO to create and manage a realm.
+
+.Procedure
+. To allow Developer Hub to authenticate with RHSSO, complete the steps in RHSSO:
+.. Create a new realm, such as __<{product-very-short}>__.
+.. In this realm, add a new user, such as __<rhdhuser>__, and toggle **Email verified** to `On`.
+.. To set a password for this user, navigate to the **Credentials** tab, click **Set password**, enter the **Password**, and toggle **Temporary** to `Off`.
+.. Create a new Client ID, such as __<{product-very-short}>__.
+*** **Client authentication**: Toggle to On.
+*** **Valid redirect URIs**: Set to the OIDC handler URL: `https://__<RHDH_URL>__/api/auth/oidc/handler/frame`.
+.. Navigate to the **Credentials** tab and copy the **Client secret**.
+.. Save the **Client ID** and the **Client Secret** values for the next step.
+
+. Add your RHSSO credentials in your Developer Hub secrets.
+.. Edit your Developer Hub secrets, such as secrets-rhdh, and add the following key/value pairs:
++
+`AUTH_OIDC_CLIENT_ID`:: Enter the Client ID that you generated in Keycloak, such as `RHDH`.
+`AUTH_OIDC_CLIENT_SECRET`:: Enter the Client Secret that you generated in Keycloak.
+`AUTH_OIDC_METADATA_URL`:: Enter your RHSSO realm base URL, such as: __<your_rhsso_URL>__/auth/realms/__<{product-very-short}>__
+. Set up the GitHub authentication provider in your {product-short} custom configuration.
+Edit your custom Developer Hub config map, such as `app-config-rhdh`.
+In the `app-config-rhdh.yaml` content, add the `oidc` provider configuration,
+and enable the `oidc` provider for sign-in:
++
+.`app-config-rhdh.yaml` fragment
+[source,yaml]
+----
+auth:
+  environment: production # <1>
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
+        prompt: auto
+        ## Uncomment for additional configuration options
+        # callbackUrl: ${AUTH_OIDC_CALLBACK_URL}
+        # tokenEndpointAuthMethod: ${AUTH_OIDC_TOKEN_ENDPOINT_METHOD}
+        # tokenSignedResponseAlg: ${AUTH_OIDC_SIGNED_RESPONSE_ALG}
+        # scope: ${AUTH_OIDC_SCOPE}
+        ## Declarative resolvers to override the default resolver: `emailLocalPartMatchingUserEntityName`
+        ## The authentication provider tries each sign-in resolver until it succeeds, and fails if none succeed. Uncomment the resolvers that you want to use.
+        # signIn:
+        #   resolvers:
+        #     - resolver: preferredUsernameMatchingUserEntityName
+        #     - resolver: emailMatchingUserEntityProfileEmail
+        #     - resolver: emailLocalPartMatchingUserEntityName
+signInPage: oidc # <2>
+dangerouslyAllowSignInWithoutUserInCatalog: true # <3>
+----
++
+<1> Mark the environment as `production` to hide the Guest login in the {product-short} home page.
+<2> To enable the OIDC provider as default sign-in provider.
+<3> To enable authentication without requiring to provision the user catalog.
+
+.Verification
+. Go to the {product-short} login page.
+. Your {product-short} sign-in page displays *Sign in using OIDC* and the Guest user sign-in is disabled.
+. Log in with OIDC.
+
