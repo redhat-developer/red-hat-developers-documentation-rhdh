@@ -2,7 +2,7 @@
 
 <!--- If your changes apply to the latest released and/or in-development version of RHDH, open your PR against the `main` branch and cherrypick your PR to any released branches that you want to apply your changes to. --->
 
-**IMPORTANT: PRs may ONLY be merged by the merge-master or their nominated backup**
+**IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
 
 **Version(s):**
 <!--- Specify the version(s) of RHDH that your PR applies to. -->
