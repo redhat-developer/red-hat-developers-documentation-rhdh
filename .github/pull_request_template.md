@@ -2,6 +2,8 @@
 
 <!--- If your changes apply to the latest released and/or in-development version of RHDH, open your PR against the `main` branch and cherrypick your PR to any released branches that you want to apply your changes to. --->
 
+**IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
+
 **Version(s):**
 <!--- Specify the version(s) of RHDH that your PR applies to. -->
 
@@ -15,6 +17,7 @@
 - [ ] SME: @ mention assignee
 - [ ] QE: @ mention assignee
 - [ ] Docs review: @ mention assignee
+- [ ] Additional review: @mention assignee (by writer)
 <!--- SME approval is required to merge a PR unless the changes are made by a subject matter expert. --->
 <!--- QE approval is required to merge a PR unless there are no technical changes to the content. --->
 <!--- Docs team approval is required for ALL PRs. --->
