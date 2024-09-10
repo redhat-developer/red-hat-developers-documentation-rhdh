@@ -78,3 +78,41 @@ permission:
 --
 
 . Optional: Define nested conditional policies in the YAML file as needed.
++
+--
+.Example for nested conditional policies
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {"claims": ["$ownerRef"]}
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {"kinds": ["Group"]}
+      },
+      {
+        "not": {
+          "rule": "IS_ENTITY_KIND",
+          "resourceType": "catalog-entity",
+          "params": { "kinds": ["Api"] }
+        }
+      }
+    ],
+  }
+}
+----
+
+In the previous example, the `role:default/developer` is granted the condition to delete catalog entities only if they are the entity owner or if the catalog entity belongs to a group. However, this condition does not apply if the catalog entity is an API.
+--
+
