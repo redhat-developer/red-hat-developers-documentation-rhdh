@@ -2349,10 +2349,10 @@ data:
 </ul>
 </div>
 <div class="paragraph">
-<p>The following is an example of a conditional policy object with an alias:</p>
+<p>The following are examples of conditional policy object with aliases:</p>
 </div>
 <div class="listingblock">
-<div class="title">Example conditional policy object with an alias</div>
+<div class="title">Example conditional policy object with <code>$currentUser</code> alias</div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="json">{
   "result": "CONDITIONAL",
@@ -2365,6 +2365,25 @@ data:
     "resourceType": "catalog-entity",
     "params": {
       "claims": ["$currentUser"]
+    }
+  }
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example conditional policy object with <code>$ownerRefs</code> alias</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["$ownerRef"]
     }
   }
 }</code></pre>
@@ -2862,6 +2881,46 @@ conditions:
 </li>
 <li>
 <p>Optional: Define nested conditional policies in the YAML file as needed.</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example for nested conditional policies</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {"claims": ["$ownerRef"]}
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {"kinds": ["Group"]}
+      },
+      {
+        "not": {
+          "rule": "IS_ENTITY_KIND",
+          "resourceType": "catalog-entity",
+          "params": { "kinds": ["Api"] }
+        }
+      }
+    ],
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the previous example, the <code>role:default/developer</code> is granted the condition to delete catalog entities only if they are the entity owner or if the catalog entity belongs to a group. However, this condition does not apply if the catalog entity is an API.</p>
+</div>
+</div>
+</div>
 </li>
 </ol>
 </div>
@@ -4627,7 +4686,7 @@ conditions:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-10 12:38:34 UTC
+Last updated 2024-09-10 13:05:38 UTC
 </div>
 </div>
 </body>
