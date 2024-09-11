@@ -1,0 +1,97 @@
+// Module included in the following assembly:
+// assembly-audit-log.adoc
+
+[id="ref-audit-log-file-rotation-overview_{context}"]
+= Audit log file rotation in {product}
+
+Logging to a rotating file in {product} is helpful for persistent storage of audit logs.
+
+Persistent storage ensures that the file remains intact even after a pod is restarted. Audit log file rotation creates a new file at regular intervals, with only new data being written to the latest file.
+
+Default settings::
+
+Audit logging to a rotating file is disabled by default. When it is enabled, the default behavior changes to:
+
+* Rotate logs at midnight (local system timezone).
+* Log file format: `redhat-developer-hub-audit-%DATE%.log`.
+* Log files are stored in `/var/log/redhat-developer-hub/audit`.
+* No automatic log file deletion.
+* No gzip compression of archived logs.
+* No file size limit.
+
+Audit logs are written in the `/var/log/redhat-developer-hub/audit` directory.
+
+Log file names::
+
+Audit log file names are in the following format:
+
+`redhat-developer-hub-audit-%DATE%.log`
+
+where `%DATE%` is the format specified in `auditLog.rotateFile.dateFormat`. You can customize file names when you configure file rotation.
+
+File rotation date and frequency::
+
+Supported `auditLog.rotateFile.frequency` options include:
+
+* `daily`: Rotate daily at 00:00 local time
+* `Xm`: Rotate every `X` minutes (where X is a number between 0 and 59)
+* `Xh`: Rotate every `X` hours (where X is a number between 0 and 23)
+* `test`: Rotate every 1 minute
+* `custom`: Use `dateFormat` to set the rotation frequency (default if frequency is not specified)
+
+If `frequency` is set to `Xh`, `Xm` or `test`, the `dateFormat` setting must be configured in a format that includes the specified time component. Otherwise, the rotation might not work as expected.
+
+For example, use `dateFormat: 'YYYY-MM-DD-HH` for hourly rotation, and `dateFormat: 'YYYY-MM-DD-HH-mm` for minute rotation.
+
+.Example minute rotation:
+[source,yaml]
+----
+auditLog:
+  rotateFile:
+    # If you want to rotate the file every 17 minutes
+    dateFormat: 'YYYY-MM-DD-HH-mm'
+    frequency: '17m'
+----
+
+The `dateFormat` setting configures both the `%DATE%` in `logFileName` and the file rotation frequency if `frequency` is set to `custom`. The default format is `YYYY-MM-DD`, meaning daily rotation. Supported values are based on link:https://momentjs.com/docs/#/displaying/format/[Moment.js formats].
+
+If the `frequency` is set to `custom`, then rotations take place when the date string, which is represented in the specified `dateFormat`, changes.
+
+Archive and delete::
+
+By default, log files are not archived or deleted.
+
+Enable and configure audit file rotation::
+
+If you are an administrator of {product-short}, you can enable file rotation for audit logs, and configure the file log location, name format, frequency,  log file size, retention policy, and archiving.
+
+.Example audit log file rotation configuration
+[source,yaml]
+----
+auditLog:
+  rotateFile:
+    enabled: true <1>
+    logFileDirPath: /custom-path <2>
+    logFileName: custom-audit-log-%DATE%.log <3>
+    frequency: '12h' <4>
+    dateFormat: 'YYYY-MM-DD' <5>
+    utc: false <6>
+    maxSize: 100m <7>
+    maxFilesOrDays: 14 <8>
+    zippedArchive: true <9>
+----
+<1> Set `enabled` to `true` to use audit log file rotation. By default, it is set to `false`.
+<2> Absolute path to the log file. The specified directory is created automatically if it does not exist.
+<3> Default log file name format.
+<4> If no frequency is specified, then the default file rotation occurs daily at 00:00 local time.
+<5> Default date format.
+<6> Set `utc` to `true` to use UTC time for `dateFormat` instead of local time.
+<7> Sets a maximum file size limit for the audit log. In this example, the maximum size is 100m.
+<8> If set to number of files, for example `14`, then it deletes the oldest log when there are more than 14 log files. If set to number of days, for example `5d`, then it deletes logs older than 5 days.
+<9> Archive and compress rotated logs using `gzip`. The default value is `false`.
+
+[NOTE]
+====
+* By default, log files are not archived or deleted. If log deletion is enabled, then a `.<sha256 hash>-audit.json` is generated in the directory where the logs are to track generated logs. Any log file not contained in the directory is not subject to automatic deletion.
+* A new `.<sha256 hash>-audit.json` file is generated each time the backend starts, which causes previous audit logs to stop being tracked or deleted, except for those still in use by the current backend.
+====
