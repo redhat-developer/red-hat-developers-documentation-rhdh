@@ -1,0 +1,54 @@
+[id='proc-customize-rhdh-sidebar-menuitems_{context}']
+= Customizing the sidebar navigation menu items for your {product-short} instance
+
+You can customize the sidebar menu items in your `app-config-rhdh.yaml` file using the following attributes:
+
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    <package_name>: # same as `scalprum.name` key in plugin's `package.json`
+      menuItems: # optional, allows you to configure plugin menu items in the main sidebar navigation
+        <menu_item_name>: # unique name in the plugin menu items list <1>
+          icon: fooIcon # optional, same as `menuItem.icon` in `dynamicRoutes` <2>
+          title: Foo Plugin Page # optional, same as `menuItem.text` in `dynamicRoutes` <3>
+          priority: 10 # optional, defines the order of menu items in the sidebar <4>
+          parent: favorites # optional, defines parent-child relationships for nested menu items <5>
+----
+
+<1> This attribute represents a unique name in the main sidebar navigation. It can denote either a standalone menu item or a parent menu item. If the attribute represents a plugin menu item, If this attribute represents a plugin menu item, the name of the attribute must match with the corresponding path in `dynamicRoutes.path`. For example, if `dynamicRoutes.path` defines `path: /my-plugin`, then `menu_item_name` must be defined as `my-plugin`.
+
+<2> This optional attribute specifies the icon for the menu item. You can use default icons or extend the icon set with dynamic plugins. {product-short} also provides additional icons in its internal library. If the icon is already defined in the `dynamicRoutes` configuration under `menuItem.icon`, it can be removed from the in the `menuItems` configuration.
+
+<3> This optional attribute specifies the title of the menu item. It can be removed if the title is already specified in the `dynamicRoutes` configuration under `menuItem.text`.
+
+<4> This optional attribute sets the order in which menu items appear in the sidebar. The default priority is 0, which places the item at the bottom of the list. A higher priority value places the item higher in the sidebar.
+
+<5> This optional attribute specifies the parent menu item under which the current item is nested. If this attribute is used, the parent menu item must be defined elsewhere in the `menuItems` configuration of any enabled plugin.
+
+The following is an example of menuItems configuration in `app-config-rhdh.yaml` file:
+
+.Example `menuItems` configuration
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    <package_name>:
+      dynamicRoutes:
+        - path: /my-plugin
+          module: CustomModule
+          importName: FooPluginPage
+          menuItem:
+            icon: fooIcon
+            text: Foo Plugin Page
+      menuItems:
+        my-plugin: # matches `path` in `dynamicRoutes`
+          priority: 10 # controls order of plugins under the parent menu item
+          parent: favorites # nests this plugin under the `favorites` parent menu item
+        favorites: # configuration for the parent menu item
+          icon: favorite # icon from RHDH system icons
+          title: Favorites # title for the parent menu item
+          priority: 100 # controls the order of this top-level menu item
+----
+
+
