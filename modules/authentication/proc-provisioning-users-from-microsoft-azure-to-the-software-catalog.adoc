@@ -6,3 +6,92 @@
 * You xref:proc-adding-azure-as-an-authentication-provider_{context}[enabled authentication with Microsoft Azure].
 
 .Procedure
+
+* To enable Microsoft Azure member discovery, add the following YAML configuration at the same indentation level as the app attribute, and below the signInPage attribute:
++
+.`app-config.yaml` fragment
+[source,yaml]
+----
+dangerouslyAllowSignInWithoutUserInCatalog: false # <1>
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        target: https://graph.microsoft.com/v1.0
+        authority: https://login.microsoftonline.com
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+
+        queryMode: basic # basic | advanced <2>
+        # Optional configuration block
+        user:
+          # Optional parameter to include the expanded resource or collection referenced
+          # by a single relationship (navigation property) in your results.
+          # Only one relationship can be expanded in a single request.
+          # See https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter
+          # Can be combined with userGroupMember[...] instead of userFilter.
+          expand: manager
+          # Optional filter for user, see Microsoft Graph API for the syntax
+          # See https://docs.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0#properties
+          # and for the syntax https://docs.microsoft.com/en-us/graph/query-parameters#filter-parameter
+          # This and userGroupMemberFilter are mutually exclusive, only one can be specified
+          filter: accountEnabled eq true and userType eq 'member'
+          # Set to false to not load user photos.
+          loadPhotos: true
+          # See  https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0
+          select: ['id', 'displayName', 'description']
+        # Optional configuration block
+        userGroupMember:
+          # Optional filter for users, use group membership to get users.
+          # (Filtered groups and fetch their members.)
+          # This and userFilter are mutually exclusive, only one can be specified
+          # See https://docs.microsoft.com/en-us/graph/search-query-parameter
+          filter: "displayName eq 'Backstage Users'"
+          # Optional search for users, use group membership to get users.
+          # (Search for groups and fetch their members.)
+          # This and userFilter are mutually exclusive, only one can be specified
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
+        # Optional configuration block
+        group:
+          # Optional parameter to include the expanded resource or collection referenced
+          # by a single relationship (navigation property) in your results.
+          # Only one relationship can be expanded in a single request.
+          # See https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter
+          # Can be combined with userGroupMember[...] instead of userFilter.
+          expand: member
+          # Optional filter for group, see Microsoft Graph API for the syntax
+          # See https://docs.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0#properties
+          filter: securityEnabled eq false and mailEnabled eq true and groupTypes/any(c:c+eq+'Unified')
+          # Optional search for groups, see Microsoft Graph API for the syntax
+          # See https://docs.microsoft.com/en-us/graph/search-query-parameter
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
+          # Optional select for groups, this will allow you work with schemaExtensions
+          # in order to add extra information to your groups that can be used on your custom groupTransformers
+          # See  https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0
+          select: ['id', 'displayName', 'description']
+        schedule: # optional; same options as in TaskScheduleDefinition
+          # supports cron, ISO duration, "human duration" as used in code
+          frequency: { hours: 1 }
+          # supports ISO duration, "human duration" as used in code
+          timeout: { minutes: 50 }
+          # supports ISO duration, "human duration" as used in code
+          initialDelay: { seconds: 15},
+----
++
+<1> Allow authentication only for user present in the {product-short} software catalog.
+<2> Optional mode for querying which defaults to "basic".
+By default, the Microsoft Graph API only provides the basic feature set for querying.
+Certain features are limited to advanced querying capabilities.
+See link:https://docs.microsoft.com/en-us/graph/aad-advanced-queries[Microsoft Azure Advanced queries].
+
+.Verification
+
+. Check the console logs to verify the synchronization has been completed.
++
+.Successful synchronization example:
+[source,json]
+----
+----
+
+. Log in with a Microsoft Azure account.
