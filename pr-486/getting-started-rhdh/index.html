@@ -1674,8 +1674,14 @@ section {
 </ul>
 </li>
 <li><a href="#con-audit-log-file-rotation_assembly-audit-log">9.3. File rotating for Red Hat Developer Hub</a>
+<ul class="sectlevel3">
+<li><a href="#_default-settings">9.3.1. Default settings</a></li>
+<li><a href="#_log-file-names">9.3.2. Log file names</a></li>
+<li><a href="#_file-rotation-date-and-frequency">9.3.3. File rotation date and frequency</a>
 <ul class="sectlevel4">
 <li><a href="#proc-audit-log-file-rotating_assembly-audit-log">Configure file rotating for Red Hat Developer Hub</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -5276,30 +5282,15 @@ data:
 <div class="sect2">
 <h3 id="con-audit-log-file-rotation_assembly-audit-log">9.3. File rotating for Red Hat Developer Hub</h3>
 <div class="paragraph">
-<p>Logging to a rotating file in Red Hat Developer Hub is helpful for persistent storage as it enables persistent audit logs.</p>
+<p>Logging to a rotating file in Red Hat Developer Hub is helpful for persistent storage for persistent audit logs.</p>
 </div>
 <div class="paragraph">
 <p>Developer Hub supports audit logging for both the catalog and scaffolder. Audit logs can be identified by the <code>isAuditLog: true</code> field.</p>
 </div>
+<div class="sect3">
+<h4 id="_default-settings">9.3.1. Default settings</h4>
 <div class="paragraph">
-<div class="title">Default settings</div>
-<p>By default, the audit logger logs to the console. To disable this, update your <code>app-config.yaml</code> with:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
-  console:
-    enabled: false</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>By default, the audit logs are written in the <code>/var/log/redhat-developer-hub/audit</code> directory.</p>
-</div>
-<div class="paragraph">
-<p>Audit logging to a rotating file is disabled by default.</p>
-</div>
-<div class="paragraph">
-<p>When it is enabled, the default behavior is:</p>
+<p>Audit logging to a rotating file is disabled by default. When it is enabled, the default behavior changes to:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -5324,10 +5315,19 @@ data:
 </ul>
 </div>
 <div class="paragraph">
-<p>By default, the audit log file names are in the following format: <code>redhat-developer-hub-audit-%DATE%.log</code> where <code>%DATE%</code> is the format specified in [<code>auditLog.rotateFile.dateFormat</code>](#configuring-the-file-rotation-frequency).</p>
+<p>Audit logs are written in the <code>/var/log/redhat-developer-hub/audit</code> directory.</p>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_log-file-names">9.3.2. Log file names</h4>
 <div class="paragraph">
-<p>Supported <code>frequency</code> options include:</p>
+<p>Audit log file names are in the following format: <code>redhat-developer-hub-audit-%DATE%.log</code> where <code>%DATE%</code> is the format specified in [<code>auditLog.rotateFile.dateFormat</code>](#configuring-the-file-rotation-frequency). You can customize file names when you configure file rotation.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_file-rotation-date-and-frequency">9.3.3. File rotation date and frequency</h4>
+<div class="paragraph">
+<p>Supported <code>auditLog.rotateFile.frequency</code> options include:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -5361,7 +5361,7 @@ data:
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
   rotateFile:
-    # If you want rotations to occur every week for some reason and at the start of each month. Example `%DATE$` = '2025-Jul-Week 30'
+    # If you want rotations to occur every week and at the start of each month. Example `%DATE$` = '2025-Jul-Week 30'
     dateFormat: 'YYYY-MMM-[Week] ww'</code></pre>
 </div>
 </div>
@@ -5379,7 +5379,15 @@ data:
 <div class="sect4">
 <h5 id="proc-audit-log-file-rotating_assembly-audit-log">Configure file rotating for Red Hat Developer Hub</h5>
 <div class="paragraph">
-<p>When you enable audit logging to a rotating file in Red Hat Developer Hub, you enable persistent audit logs.</p>
+<p>You can enable file rotation for audit logs in Red Hat Developer Hub, and configure the file log location, name format, log file size, and archiving.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisite</div>
+<ul>
+<li>
+<p>You are an administrator of Developer Hub.</p>
+</li>
+</ul>
 </div>
 <div class="olist arabic">
 <div class="title">Procedure</div>
@@ -5400,25 +5408,35 @@ data:
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
   rotateFile:
-    logFileDirPath: /custom-path</code></pre>
+    logFileDirPath: /custom-path #<b class="conum">(1)</b></code></pre>
 </div>
 </div>
-<hr>
-<div class="ulist">
-<ul>
+<div class="colist arabic">
+<ol>
 <li>
 <p>An absolute path is recommended.</p>
 </li>
-<li>
-<p>The specified directory will be created automatically if it does not exist.
----</p>
-</li>
-</ul>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The specified directory will be created automatically if it does not exist.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </li>
 <li>
 <p>Customize the log file name format:</p>
 <div class="listingblock">
+<div class="title">Example default log file name format</div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
   rotateFile:
@@ -5429,31 +5447,42 @@ data:
 <li>
 <p>Configure file rotation frequency:</p>
 <div class="listingblock">
+<div class="title">Example of file rotation frequency</div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
   rotateFile:
     frequency: '12h' # Default: `custom`
     dateFormat: 'YYYY-MM-DD' # Default: `YYYY-MM-DD`
-    utc: false # Default: `false`
+    utc: false # Default: `false` #<b class="conum">(1)</b>
     maxSize: 100m # Default: undefined</code></pre>
 </div>
 </div>
-<hr>
-<div class="ulist">
-<ul>
+<div class="colist arabic">
+<ol>
 <li>
+<p>Set to <code>utc</code> to <code>true</code> to use UTC time for <code>dateFormat</code> instead of local time.</p>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
 <p>The default file rotation occurs daily at 00:00 local time.</p>
-</li>
-<li>
-<p>To use UTC time for <code>dateFormat</code> instead of local time, set <code>utc</code> to <code>true</code>.
----</p>
-</li>
-</ul>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </li>
 <li>
-<p>Set a maxmium log file size:</p>
+<p>Set a maximum log file size:</p>
 <div class="listingblock">
+<div class="title">Example of maximum log file size</div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
   rotateFile:
@@ -5462,7 +5491,7 @@ data:
 </div>
 </li>
 <li>
-<p>Configure a retention policy by number of files to keep or by number of days to retain:</p>
+<p>Configure a retention policy by the number of files to keep or by the number of days to retain:</p>
 <div class="listingblock">
 <div class="title">Example yaml number of files</div>
 <div class="content">
@@ -5479,10 +5508,19 @@ data:
     maxFilesOrDays: 5d # Deletes logs older than 5 days</code></pre>
 </div>
 </div>
-<hr>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>If log deletion is enabled, a <code>.&lt;sha256 hash&gt;-audit.json</code> will be generated in the directory where the logs are to track generated logs. Any log file not contained in it will not be subject to automatic deletion.
----</p>
+<p>If log deletion is enabled, a <code>.&lt;sha256 hash&gt;-audit.json</code> is generated in the directory where the logs are to track generated logs. Any log file not contained in it is not be subject to automatic deletion.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </li>
 <li>
@@ -5502,9 +5540,10 @@ data:
 </div>
 </div>
 </div>
+</div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-11 19:27:47 UTC
+Last updated 2024-09-12 10:09:44 UTC
 </div>
 </div>
 </body>
