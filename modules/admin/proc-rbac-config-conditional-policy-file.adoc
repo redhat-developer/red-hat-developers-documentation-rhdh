@@ -1,7 +1,7 @@
 [id='proc-rbac-config-conditional-policy-file_{context}']
 = Configuring conditional policies defined in an external file
 
-You can configure and manage conditional policies that are defined in an external file.
+You can configure and manage conditional policies that are defined in an external file. To define conditional policies, you can directly edit the configuration files and pass them to {product-short}, instead of using the {product-short} web UI or API. You can configure {product-short} to use these files instead of the default files.
 
 .Prerequisites
 * You are logged in to your {ocp-short} account using the {ocp-short} web console.
@@ -42,13 +42,45 @@ conditions:
       - 'group:default/team-a'
 ----
 --
-* You have defined roles and associated policies in a CSV file that serves as a basis for creating roles and permissions.
+* You have defined roles and associated policies in a CSV file that serves as a basis for creating roles and permissions. Ensure that you mount the CSV file to {product-short}.
 +
-For more information, see xref:ref-rbac-conditional-policy-definition_title-authorization[].
+For more information, see xref:ref-rbac-conditional-policy-definition_title-authorization[] and xref:con-rbac-config-permission-policies-external-file_title-authorization[].
 
 .Procedure
 
-. In {ocp-short}, open `app-config.yaml` file and specify the path to both the `conditionalPoliciesFile` and the `policies-csv-file` as shown in the following example:
+. In {ocp-short}, create a ConfigMap to hold the policies as shown in the following example:
++
+--
+.Example ConfigMap
+[source, yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rbac-conditional-policy
+  namespace: rhdh
+data:
+  rbac-policy.yaml: |
+    p, role:default/guests, catalog-entity, read, allow
+
+    result: CONDITIONAL
+    roleEntityRef: 'role:default/test'
+    pluginId: catalog
+    resourceType: catalog-entity
+    permissionMapping:
+      - read
+      - update
+    conditions:
+      rule: IS_ENTITY_OWNER
+      resourceType: catalog-entity
+      params:
+        claims:
+          - 'group:default/team-a'
+          - 'group:default/team-b'
+----
+--
+
+. Open `app-config.yaml` file and specify the path to both the `conditionalPoliciesFile` and `policies-csv-file` as shown in the following example:
 +
 --
 .Example `app-config.yaml` file
