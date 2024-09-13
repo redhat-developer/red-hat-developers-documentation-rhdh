@@ -2783,7 +2783,7 @@ data:
 <div class="sect2">
 <h3 id="proc-rbac-config-conditional-policy-file_title-authorization">3.2. Configuring conditional policies defined in an external file</h3>
 <div class="paragraph">
-<p>You can configure and manage conditional policies that are defined in an external file.</p>
+<p>You can configure and manage conditional policies that are defined in an external file. To define conditional policies, you can directly edit the configuration files and pass them to Developer Hub, instead of using the Developer Hub web UI or API. You can configure Developer Hub to use these files instead of the default files.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
@@ -2834,9 +2834,9 @@ conditions:
 </div>
 </li>
 <li>
-<p>You have defined roles and associated policies in a CSV file that serves as a basis for creating roles and permissions.</p>
+<p>You have defined roles and associated policies in a CSV file that serves as a basis for creating roles and permissions. Ensure that you mount the CSV file to Developer Hub.</p>
 <div class="paragraph">
-<p>For more information, see <a href="#ref-rbac-conditional-policy-definition_title-authorization">Conditional policies definition</a>.</p>
+<p>For more information, see <a href="#ref-rbac-conditional-policy-definition_title-authorization">Conditional policies definition</a> and <a href="#con-rbac-config-permission-policies-external-file_title-authorization">Configuration of permission policies defined in an external file</a>.</p>
 </div>
 </li>
 </ul>
@@ -2845,7 +2845,42 @@ conditions:
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>In OpenShift Container Platform, open <code>app-config.yaml</code> file and specify the path to both the <code>conditionalPoliciesFile</code> and the <code>policies-csv-file</code> as shown in the following example:</p>
+<p>In OpenShift Container Platform, create a ConfigMap to hold the policies as shown in the following example:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example ConfigMap</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rbac-conditional-policy
+  namespace: rhdh
+data:
+  rbac-policy.yaml: |
+    p, role:default/guests, catalog-entity, read, allow
+
+    result: CONDITIONAL
+    roleEntityRef: 'role:default/test'
+    pluginId: catalog
+    resourceType: catalog-entity
+    permissionMapping:
+      - read
+      - update
+    conditions:
+      rule: IS_ENTITY_OWNER
+      resourceType: catalog-entity
+      params:
+        claims:
+          - 'group:default/team-a'
+          - 'group:default/team-b'</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Open <code>app-config.yaml</code> file and specify the path to both the <code>conditionalPoliciesFile</code> and <code>policies-csv-file</code> as shown in the following example:</p>
 <div class="openblock">
 <div class="content">
 <div class="listingblock">
@@ -4702,7 +4737,7 @@ conditions:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-13 07:45:29 UTC
+Last updated 2024-09-13 07:56:52 UTC
 </div>
 </div>
 </body>
