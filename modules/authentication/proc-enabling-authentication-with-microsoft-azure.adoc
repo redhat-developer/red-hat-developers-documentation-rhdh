@@ -52,35 +52,71 @@ To grant admin consent, a directory admin must go to the link:https://learn.micr
 
 . Set up the Microsoft Azure authentication provider in your {product-short} custom configuration, such as `app-config-rhdh`:
 +
+--
 .`app-config-rhdh.yaml` fragment
 [source,yaml,subs="+quotes,+attributes"]
 ----
 auth:
-  environment: production # <1>
+  environment: production
   providers:
     microsoft:
       production:
         clientId: ${AUTH_AZURE_CLIENT_ID}
         clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
         tenantId: ${AUTH_AZURE_TENANT_ID}
-        # domainHint: ${AUTH_AZURE_TENANT_ID} # <2>
-        # additionalScopes: # <3>
-        #   - Mail.Send
-signInPage: microsoft # <4>
-dangerouslyAllowSignInWithoutUserInCatalog: true # <5>
+signInPage: microsoft
+dangerouslyAllowSignInWithoutUserInCatalog: true
 ----
-+
-<1> Marking the environment as production hides the **Guest** login in the {product-short} home page.
-<2> Optional for single-tenant applications.
+
+`environment: production`::
+Mark the environment as production to hide the **Guest** login in the {product-short} home page.
+
+`clientId`, `clientSecret` and `tenantId`::
+Use your OpenShift secrets.
+
+`signInPage: microsoft`::
+Enable the Microsoft Azure provider as default sign-in provider.
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::
+Enable authentication without provisioning users to the software catalog.
+
+Optional: Consider adding following optional  fields:
+
+`domainHint`::
+Optional for single-tenant applications.
 You can reduce login friction for users with accounts in multiple tenants by automatically filtering out accounts from other tenants.
 If you want to use this parameter for a single-tenant application, uncomment and enter the tenant ID.
 If your application registration is multi-tenant, leave this parameter blank.
 For more information, see link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy[Home Realm Discovery].
-<3> Optional for additional scopes.
++
+.`app-config-rhdh.yaml` fragment with optional `domainHint field
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        domainHint: ${AUTH_AZURE_TENANT_ID}
+----
+
+`additionalScopes`::
+Optional for additional scopes.
 To add scopes for the application registration, uncomment and enter the list of scopes that you want to add.
 The default and mandatory value is `['user.read']`.
-<4> To enable the Microsoft Azure provider as default sign-in provider.
-<5> To enable authentication without provisioning users to the software catalog.
++
+.`app-config-rhdh.yaml` fragment with optional `additionalScopes` field
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        additionalScopes:
+           - Mail.Send
+----
+--
 
 [NOTE]
 ====
