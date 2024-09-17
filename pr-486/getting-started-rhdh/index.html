@@ -5333,10 +5333,10 @@ data:
 <p><code>daily</code>: Rotate daily at 00:00 local time</p>
 </li>
 <li>
-<p><code>Xm</code>: Rotate every X minutes</p>
+<p><code>Xm</code>: Rotate every X minutes (where X is a number between 0 and 59)</p>
 </li>
 <li>
-<p><code>Xh</code>: Rotate every X hours</p>
+<p><code>Xh</code>: Rotate every X hours (where X is a number between 0 and 23)</p>
 </li>
 <li>
 <p><code>test</code>: Rotate every 1 minute</p>
@@ -5347,29 +5347,26 @@ data:
 </ul>
 </div>
 <div class="paragraph">
-<p>The <code>dateFormat</code> setting configures both the <code>%DATE%</code> in <code>logFileName</code> and the file rotation frequency if <code>frequency</code> is set to <code>custom</code>. The default format is <code>YYYY-MM-DD</code>, meaning daily rotation. Supported values are based on [Moment.js formats](<a href="https://momentjs.com/docs/#/displaying/format/" class="bare">https://momentjs.com/docs/#/displaying/format/</a>).</p>
+<p>If <code>frequency</code> is set to <code>Xh</code>, <code>Xm</code> or <code>test</code>, the <code>dateFormat</code> setting must be configured in a format that includes the specified time component. Otherwise, the rotation will not work as expected.</p>
+</div>
+<div class="paragraph">
+<p>For example, use <code>dateFormat: 'YYYY-MM-DD-HH'</code> for hourly rotation, and <code>dateFormat: 'YYYY-MM-DD-HH-mm'</code> for minute rotation.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example minute rotation:</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
+  rotateFile:
+    # If you want to rotate the file every 17 minutes
+    dateFormat: 'YYYY-MM-DD-HH-mm'
+    frequency: '17m'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>dateFormat</code> setting configures both the %DATE% in logFileName and the file rotation frequency if <code>frequency</code> is set to <code>custom</code>. The default format is <code>YYYY-MM-DD</code>, meaning daily rotation. Supported values are based on [Moment.js formats](<a href="https://momentjs.com/docs/#/displaying/format/" class="bare">https://momentjs.com/docs/#/displaying/format/</a>).</p>
 </div>
 <div class="paragraph">
 <p>If <code>frequency</code> is set to <code>custom</code>, then rotations will take place when the date string, represented in the specified <code>dateFormat</code>, changes.</p>
-</div>
-<div class="paragraph">
-<p>Examples:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
-  rotateFile:
-    # If you want rotations to occur every week and at the start of each month. Example `%DATE$` = '2025-Jul-Week 30'
-    dateFormat: 'YYYY-MMM-[Week] ww'</code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
-  rotateFile:
-    # If you want to rotate the file at noon and midnight
-    dateFormat: 'YYYY-MM-DD-A'</code></pre>
-</div>
 </div>
 </div>
 <div class="sect3">
@@ -5410,7 +5407,7 @@ data:
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
   rotateFile:
-    logFileDirPath: /custom-path #<b class="conum">(1)</b></code></pre>
+    logFileDirPath: /custom-path <b class="conum">(1)</b></code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -5517,8 +5514,15 @@ data:
 <div class="title">Note</div>
 </td>
 <td class="content">
-<div class="paragraph">
-<p>If log deletion is enabled, a <code>.&lt;sha256 hash&gt;-audit.json</code> is generated in the directory where the logs are to track generated logs. Any log file not contained in it is not be subject to automatic deletion.</p>
+<div class="ulist">
+<ul>
+<li>
+<p>If log deletion is enabled, a <code>.&lt;sha256 hash&gt;-audit.json</code> is generated in the directory where the logs are to track generated logs. Any log file not contained in the directory is not subject to automatic deletion.</p>
+</li>
+<li>
+<p>A new <code>.&lt;sha256 hash&gt;-audit.json</code> file is generated each time the backend starts, which causes previous audit logs to stop being tracked or deleted, except for those still in use by the current backend.</p>
+</li>
+</ul>
 </div>
 </td>
 </tr>
@@ -5544,7 +5548,7 @@ data:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-13 13:04:56 UTC
+Last updated 2024-09-17 17:15:06 UTC
 </div>
 </div>
 </body>
