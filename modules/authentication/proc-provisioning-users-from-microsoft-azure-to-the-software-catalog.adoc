@@ -9,11 +9,12 @@
 
 * To enable Microsoft Azure member discovery, edit your custom Developer Hub config map, such as app-config-rhdh, and add following lines to the app-config-rhdh.yaml content:
 +
+--
 [id=microsoftGraphOrgProviderId]
 .`app-config.yaml` fragment with mandatory `microsoftGraphOrg` fields
 [source,yaml]
 ----
-dangerouslyAllowSignInWithoutUserInCatalog: false # <1>
+dangerouslyAllowSignInWithoutUserInCatalog: false
 catalog:
   providers:
     microsoftGraphOrg:
@@ -24,11 +25,23 @@ catalog:
         clientId: ${AUTH_AZURE_CLIENT_ID}
         clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
 ----
-<1> Allow authentication only for user present in the {product-short} software catalog.
 
-+
-Optional: Consider adding following optional fields:
-+
+`dangerouslyAllowSignInWithoutUserInCatalog: false`::
+ Allow authentication only for users present in the {product-short} software catalog.
+
+`target: https://graph.microsoft.com/v1.0`::
+Defines the MSGraph API endpoint the provider is connecting to.
+You might change this to use a different version, such as the link:https://learn.microsoft.com/en-us/graph/api/overview?view=graph-rest-beta#call-the-beta-endpoint[beta endpoint].
+`authority: https://login.microsoftonline.com`::
+Defines the authority used.
+Change the value to use a different link:https://learn.microsoft.com/en-us/graph/deployments#app-registration-and-token-service-root-endpoints[authority],
+such as Azure US government.
+
+`tenandId`, `clientId` and `clientSecret`::
+Use your OpenShift secrets.
+
+Optional: Consider adding following optional `microsoftGraphOrg.providerId` fields:
+
 [id=queryMode]
 `queryMode: basic | advanced`:: By default, the Microsoft Graph API only provides the `basic` feature set for querying.
 Certain features require `advanced` querying capabilities.
@@ -43,11 +56,9 @@ catalog:
       providerId:
         queryMode: advanced
 ----
-+
-`user` block::
-+
+
 [id=userExpand]
-`user.expand`:::
+`user.expand`::
 To include the expanded resource or collection  referenced by a single relationship (navigation property) in your results.
 Only one relationship can be expanded in a single request.
 See https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter[Microsoft Graph query expand parameter].
@@ -63,9 +74,9 @@ catalog:
         user:
           expand: manager
 ----
-+
+
 [id=userFilter]
-`user.filter`:::
+`user.filter`::
 To filter users.
 See link:https://docs.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0#properties[Microsoft Graph API] and link:https://docs.microsoft.com/en-us/graph/query-parameters#filter-parameter[Microsoft Graph API query filter parameters syntax].
 This and xref:userGroupMemberFilter[] are mutually exclusive, only one can be specified.
@@ -80,9 +91,9 @@ catalog:
         user:
           filter: accountEnabled eq true and userType eq 'member'
 ----
-+
+
 [id=userLoadPhotos]
-`user.loadPhotos: true | false`:::
+`user.loadPhotos: true | false`::
 Load photos by default.
 Set to `false` to not load user photos.
 +
@@ -94,11 +105,11 @@ catalog:
     microsoftGraphOrg:
       providerId:
         user:
-          loadPhotos: true # <3>
+          loadPhotos: true
 ----
-+
+
 [id=userSelect]
-`user.select`:::
+`user.select`::
 Define the link:https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0[Microsoft Graph resource types] to retrieve.
 +
 .`app-config.yaml` fragment with optional `user.select` field
@@ -111,14 +122,10 @@ catalog:
         user:
           select: ['id', 'displayName', 'description']
 ----
-+
-`userGroupMember` block::
-To use group membership to get users.
-This and xref:userFilter[] are mutually exclusive, only one can be specified.
-See link:https://docs.microsoft.com/en-us/graph/search-query-parameter[].
-+
+
 [id="userGroupMemberFilter"]
 `userGroupMember.filter`:::
+To use group membership to get users.
 To filter groups and fetch their members.
 This and xref:userFilter[] are mutually exclusive, only one can be specified.
 +
@@ -132,9 +139,10 @@ catalog:
         userGroupMember:
           filter: "displayName eq 'Backstage Users'"
 ----
-+
+
 [id="userGroupMemberSearch"]
-`userGroupMember.search`:::
+`userGroupMember.search`::
+To use group membership to get users.
 To search for groups and fetch their members.
 This and xref:userFilter[] are mutually exclusive, only one can be specified.
 +
@@ -148,12 +156,9 @@ catalog:
         userGroupMember:
           search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
 ----
-+
-`group` block::
-To search groups.
-+
+
 [id=groupExpand]
-`group.expand`:::
+`group.expand`::
 Optional parameter to include the expanded resource or collection referenced by a single relationship (navigation property) in your results.
 Only one relationship can be expanded in a single request.
 See https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter
@@ -169,9 +174,9 @@ catalog:
         group:
           expand: member
 ----
-+
+
 [id=groupFilter]
-`group.filter`:::
+`group.filter`::
 To filter groups.
 See link:https://docs.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0#properties[Microsoft Graph API query group syntax].
 +
@@ -185,9 +190,9 @@ catalog:
         group:
           filter: securityEnabled eq false and mailEnabled eq true and groupTypes/any(c:c+eq+'Unified')
 ----
-+
+
 [id=groupSearch]
-`group.search`:::
+`group.search`::
 To search for groups.
 See link:https://docs.microsoft.com/en-us/graph/search-query-parameter[Microsoft Graph API query search parameter].
 +
@@ -201,9 +206,9 @@ catalog:
         group:
           search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
 ----
-+
+
 [id=groupSelect]
-`group.select`:::
+`group.select`::
 To define the link:https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0[Microsoft Graph resource types] to retrieve.
 +
 .`app-config.yaml` fragment with optional `group.select` field
@@ -216,11 +221,8 @@ catalog:
         group:
           select: ['id', 'displayName', 'description']
 ----
-+
-`schedule` block::
-To specify custom schedule.
-+
-`schedule.frequency`:::
+
+`schedule.frequency`::
 To specify custom schedule frequency.
 Supports cron, ISO duration, and "human duration" as used in code.
 +
@@ -234,8 +236,8 @@ catalog:
         schedule:
           frequency: { hours: 1 }
 ----
-+
-`schedule.timeout`:::
+
+`schedule.timeout`::
 To specify custom timeout.
 Supports ISO duration and "human duration" as used in code.
 +
@@ -249,8 +251,8 @@ catalog:
         schedule:
           timeout: { minutes: 50 }
 ----
-+
-`schedule.initialDelay`:::
+
+`schedule.initialDelay`::
 To specify custom initial delay.
 Supports ISO duration and "human duration" as used in code.
 +
@@ -264,6 +266,7 @@ catalog:
         schedule:
           initialDelay: { seconds: 15}
 ----
+--
 
 .Verification
 
