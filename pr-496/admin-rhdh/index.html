@@ -1674,6 +1674,11 @@ section {
 </li>
 </ul>
 </li>
+<li><a href="#assembly-rhdh-operator-deployment_assembly-admin-templates">Chapter 9. Red Hat Developer Hub Operator deployment</a>
+<ul class="sectlevel2">
+<li><a href="#con-rhdh-operator-deployment-config_assembly-rhdh-operator-deployment">9.1. Red Hat Developer Hub Operator deployment configuration</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -4695,10 +4700,95 @@ jobs:
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="assembly-rhdh-operator-deployment_assembly-admin-templates">Chapter 9. Red Hat Developer Hub Operator deployment</h2>
+<div class="sectionbody">
+<!-- toc disabled -->
+<div class="sect2">
+<h3 id="con-rhdh-operator-deployment-config_assembly-rhdh-operator-deployment">9.1. Red Hat Developer Hub Operator deployment configuration</h3>
+<div class="paragraph">
+<p>Since v1alpha2 (Operator version 0.3.0), the Backstage Custom Resource Definition (CRD) contains <code>spec.deployment</code>. This allows for patching the Backstage Deployment resource with fields defined in <code>spec.deployment.patch</code>, which contains a fragment of the <code>apps.Deployment</code> object.</p>
+</div>
+<div class="paragraph">
+<p>This patching is performed by strategic merge patch using Kustomize&#8217;s library.</p>
+</div>
+<div class="paragraph">
+<p>For example, the following specification fragment will:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Set an additional volume named <code>my-volume</code> and mount it to <code>/my/path</code> of the Backstage container.</p>
+</li>
+<li>
+<p>Replace existed <code>dynamic-plugins-root</code> volume.</p>
+</li>
+<li>
+<p>Set the CPU request for Backstage containers to 250m.</p>
+</li>
+<li>
+<p>Set the label <code>my=true</code> for the Backstage Pod.</p>
+</li>
+<li>
+<p>Adds another <code>my-sidecar</code> container.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>It is assumed that the Backstage container name as defined in the default configuration is <code>backstage-backend</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">Example <code>spec.deployment</code></div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          metadata:
+            labels:
+              my: true
+          spec:
+            containers:
+              - name: backstage-backend
+                volumeMounts:
+                  - mountPath: /my/path
+                    name: my-volume
+                resources:
+                  requests:
+                    cpu: 250m
+              - name: my-sidecar
+                image: quay.io/my-org/my-sidecar:latest
+            volumes:
+              - ephemeral:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: "special"
+                name: my-volume
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-18 14:51:27 UTC
+Last updated 2024-09-18 14:58:05 UTC
 </div>
 </div>
 </body>
