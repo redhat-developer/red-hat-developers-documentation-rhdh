@@ -217,7 +217,7 @@ for j in $jsons; do
         # not currently used due to policy and support concern with upstream content linked from downstream doc
         # URL="https://www.npmjs.com/package/$Plugin" 
 
-        echo -n "Converting $Name"
+        # echo -n "Converting $Name"
         Name="$(echo "${Name}" | sed -r \
             -e "s@(pagerduty)-.+@\1@g" \
             -e "s@.+(-plugin-scaffolder-backend-module|backstage-scaffolder-backend-module)-(.+)@\2@g" \
@@ -231,7 +231,7 @@ for j in $jsons; do
         )"
         Name="$(echo "${Name}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
         PrettyName="$(titlecase "${Name//-/ }")"
-        echo " to $Name and $PrettyName"
+        # echo " to $Name and $PrettyName"
 
         # useful console output
         for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
