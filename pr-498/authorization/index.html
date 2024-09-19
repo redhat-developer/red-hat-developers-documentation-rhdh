@@ -1613,6 +1613,7 @@ section {
 <li><a href="#_examples-of-conditional-policies">3.1.1. Examples of conditional policies</a></li>
 </ul>
 </li>
+<li><a href="#proc-rbac-config-conditional-policy-file_title-authorization">3.2. Configuring conditional policies defined in an external file</a></li>
 </ul>
 </li>
 <li><a href="#proc-rbac-ui-manage-roles_title-authorization">Chapter 4. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</a>
@@ -2333,7 +2334,81 @@ data:
 </div>
 </div>
 </dd>
+<dt class="hdlist1">Conditional policy aliases</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>The RBAC backend plugin (<code>backstage-plugin-rbac-backend</code>) supports the use of aliases in conditional policy rule parameters. The conditional policy aliases are dynamically replaced with the corresponding values during policy evaluation. Each alias in conditional policy is prefixed with a <code>$</code> sign indicating its special function.</p>
+</div>
+<div class="paragraph">
+<p>The supported conditional aliases include:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>$currentUser</code>: This alias is replaced with the user entity reference for the user who requests access to the resource. For example, if user Tom from the default namespace requests access, <code>$currentUser</code> becomes <code>user:default/tom</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</dd>
 </dl>
+</div>
+<div class="listingblock">
+<div class="title">Example conditional policy object with <code>$currentUser</code> alias</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["$currentUser"]
+    }
+  }
+}</code></pre>
+</div>
+</div>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><code>$ownerRefs</code>: This alias is replaced with ownership references, usually as an array that includes the user entity reference and the user&#8217;s parent group entity reference. For example, for user Tom from team-a, <code>$ownerRefs</code> becomes <code>['user:default/tom', 'group:default/team-a']</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Example conditional policy object with <code>$ownerRefs</code> alias</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="json">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["$ownerRefs"]
+    }
+  }
+}</code></pre>
+</div>
+</div>
+<div class="openblock">
+<div class="content">
+
+</div>
 </div>
 <div class="sect2">
 <h3 id="ref-rbac-conditional-policy-definition_title-authorization">3.1. Conditional policies definition</h3>
@@ -2719,6 +2794,202 @@ data:
 <div class="paragraph">
 <p>For more information about permissions in Red Hat Developer Hub, see <a href="#ref-rbac-permission-policies_title-authorization">Permission policies in Red Hat Developer Hub</a>.</p>
 </div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-rbac-config-conditional-policy-file_title-authorization">3.2. Configuring conditional policies defined in an external file</h3>
+<div class="paragraph">
+<p>You can configure and manage conditional policies that are defined in an external file. To define conditional policies, you can directly edit the configuration files and pass them to Developer Hub, instead of using the Developer Hub web UI or API. You can configure Developer Hub to use these files instead of the default files.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You are logged in to your OpenShift Container Platform account using the OpenShift Container Platform web console.</p>
+</li>
+<li>
+<p>You have defined roles and associated policies in a CSV file that serves as a basis for creating roles and permissions. Ensure that you mount the CSV file to Developer Hub.</p>
+<div class="paragraph">
+<p>For more information, see <a href="#ref-rbac-conditional-policy-definition_title-authorization">Conditional policies definition</a> and <a href="#con-rbac-config-permission-policies-external-file_title-authorization">Configuration of permission policies defined in an external file</a>.</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Define conditional policies in a YAML file, which includes role references, permission mappings, and conditions.</p>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>The following is an example of a YAML file defining conditional policies:</p>
+</div>
+<div class="listingblock">
+<div class="title">Example YAML file defining conditional policies</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">---
+result: CONDITIONAL
+roleEntityRef: 'role:default/test'
+pluginId: catalog
+resourceType: catalog-entity
+permissionMapping:
+  - read
+  - update
+conditions:
+  rule: IS_ENTITY_OWNER
+  resourceType: catalog-entity
+  params:
+    claims:
+      - 'group:default/team-a'
+      - 'group:default/team-b'
+---
+result: CONDITIONAL
+roleEntityRef: 'role:default/test'
+pluginId: catalog
+resourceType: catalog-entity
+permissionMapping:
+  - delete
+conditions:
+  rule: IS_ENTITY_OWNER
+  resourceType: catalog-entity
+  params:
+    claims:
+      - 'group:default/team-a'</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>In OpenShift Container Platform, create a ConfigMap to hold the policies as shown in the following example:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example ConfigMap</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rbac-conditional-policy
+  namespace: rhdh
+data:
+  rbac-policy.yaml: |
+    p, role:default/guests, catalog-entity, read, allow
+
+    result: CONDITIONAL
+    roleEntityRef: 'role:default/test'
+    pluginId: catalog
+    resourceType: catalog-entity
+    permissionMapping:
+      - read
+      - update
+    conditions:
+      rule: IS_ENTITY_OWNER
+      resourceType: catalog-entity
+      params:
+        claims:
+          - 'group:default/team-a'
+          - 'group:default/team-b'</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Open <code>app-config.yaml</code> file and specify the path to <code>conditionalPoliciesFile</code> as shown in the following example:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>app-config.yaml</code> file</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    conditionalPoliciesFile: /some/path/conditional-policies.yaml</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>To enable automatic reloading of the policy file without restarting the application, add the <code>policyFileReload</code> option and set it to <code>true</code>:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>app-config.yaml</code> file</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    conditionalPoliciesFile: /some/path/conditional-policies.yaml
+    policies-csv-file: /some/path/rbac-policy.csv
+    policyFileReload: true</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Optional: Define nested conditional policies in the YAML file as needed.</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example for nested conditional policies</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "rule": "IS_ENTITY_KIND",
+          "resourceType": "catalog-entity",
+          "params": {
+            "kinds": [
+              "group"
+            ]
+          }
+        },
+        {
+          "rule": "IS_ENTITY_OWNER",
+          "resourceType": "catalog-entity",
+          "params": {
+            "claims": [
+              "$ownerRefs"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "not": {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": [
+            "api"
+          ]
+        }
+      }
+    }
+  ]
+}
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the previous example, the <code>role:default/developer</code> is granted the condition to delete catalog entities only if they are the entity owner or if the catalog entity belongs to a group. However, this condition does not apply if the catalog entity is an API.</p>
+</div>
+</div>
+</div>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -4626,7 +4897,7 @@ user:default/dev,John Leavy,dev@redhat.com,"Thu, 22 Aug 2024 16:27:41 GMT"</code
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-16 11:27:39 UTC
+Last updated 2024-09-19 12:15:08 UTC
 </div>
 </div>
 </body>
