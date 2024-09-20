@@ -1674,9 +1674,9 @@ section {
 </li>
 </ul>
 </li>
-<li><a href="#assembly-rhdh-operator-deployment_assembly-admin-templates">Chapter 9. Red Hat Developer Hub Operator deployment</a>
+<li><a href="#assembly-rhdh-deployment_assembly-admin-templates">Chapter 9. Configuring the Red Hat Developer Hub deployment</a>
 <ul class="sectlevel2">
-<li><a href="#con-rhdh-operator-deployment-config_assembly-rhdh-operator-deployment">9.1. Red Hat Developer Hub Operator deployment configuration</a></li>
+<li><a href="#con-rhdh-deployment-config_assembly-rhdh-deployment">9.1. Red Hat Developer Hub deployment configuration</a></li>
 </ul>
 </li>
 </ul>
@@ -4701,16 +4701,13 @@ jobs:
 </div>
 </div>
 <div class="sect1">
-<h2 id="assembly-rhdh-operator-deployment_assembly-admin-templates">Chapter 9. Red Hat Developer Hub Operator deployment</h2>
+<h2 id="assembly-rhdh-deployment_assembly-admin-templates">Chapter 9. Configuring the Red Hat Developer Hub deployment</h2>
 <div class="sectionbody">
 <!-- toc disabled -->
 <div class="sect2">
-<h3 id="con-rhdh-operator-deployment-config_assembly-rhdh-operator-deployment">9.1. Red Hat Developer Hub Operator deployment configuration</h3>
+<h3 id="con-rhdh-deployment-config_assembly-rhdh-deployment">9.1. Red Hat Developer Hub deployment configuration</h3>
 <div class="paragraph">
-<p>Since v1alpha2 (Operator version 0.3.0), the Backstage Custom Resource Definition (CRD) contains <code>spec.deployment</code>. This allows for patching the Backstage Deployment resource with fields defined in <code>spec.deployment.patch</code>, which contains a fragment of the <code>apps.Deployment</code> object.</p>
-</div>
-<div class="paragraph">
-<p>This patching is performed by strategic merge patch using Kustomize&#8217;s library.</p>
+<p>As of 1.3, the Red Hat Developer Hub operator exposes a new <code>rhdh.redhat.com/v1alpha2</code> API Version of its Custom Resource Definition (CRD). This CRD exposes a generic <code>spec.deployment.patch</code> field, which gives you full control over the RHDH Deployment resource. This field can be a fragment of the standard <code>apps.Deployment</code> Kubernetes object.</p>
 </div>
 <div class="paragraph">
 <p>For example, the following specification fragment will:</p>
@@ -4718,19 +4715,19 @@ jobs:
 <div class="ulist">
 <ul>
 <li>
-<p>Set an additional volume named <code>my-volume</code> and mount it to <code>/my/path</code> of the Backstage container.</p>
+<p>Add an additional volume named <code>my-volume</code> and mount it under <code>/my/path</code> in the Developer Hub application container.</p>
 </li>
 <li>
-<p>Replace existed <code>dynamic-plugins-root</code> volume.</p>
+<p>Replace the default <code>dynamic-plugins-root</code> volume with a persistent volume claim (PVC) named <code>dynamic-plugins-root</code>. Note the <code>$patch: replace</code> directive, otherwise a new volume will be added.</p>
 </li>
 <li>
-<p>Set the CPU request for Backstage containers to 250m.</p>
+<p>Set the CPU request for the Developer Hub application container to 250m.</p>
 </li>
 <li>
-<p>Set the label <code>my=true</code> for the Backstage Pod.</p>
+<p>Set the label <code>my=true</code> for the Developer Hub Pod.</p>
 </li>
 <li>
-<p>Adds another <code>my-sidecar</code> container.</p>
+<p>Add a new <code>my-sidecar</code> sidecar container into the Developer Hub Pod.</p>
 </li>
 </ul>
 </div>
@@ -4742,7 +4739,7 @@ jobs:
 </td>
 <td class="content">
 <div class="paragraph">
-<p>It is assumed that the Backstage container name as defined in the default configuration is <code>backstage-backend</code>.</p>
+<p>To learn more about merging, see [Strategic Merge Patch](<a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format" class="bare">https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format</a>).</p>
 </div>
 </td>
 </tr>
@@ -4751,7 +4748,11 @@ jobs:
 <div class="listingblock">
 <div class="title">Example <code>spec.deployment</code></div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">spec:
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
   deployment:
     patch:
       spec:
@@ -4788,7 +4789,7 @@ jobs:
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-18 15:06:36 UTC
+Last updated 2024-09-20 13:26:04 UTC
 </div>
 </div>
 </body>
