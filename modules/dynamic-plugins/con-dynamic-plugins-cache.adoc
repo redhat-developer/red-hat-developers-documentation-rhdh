@@ -1,0 +1,81 @@
+[id="con-dynamic-plugin-cache_{context}"]
+
+= Dynamic Plugins Cache
+
+== Overview
+
+The dynamic plugins cache feature in {product} ({product-very-short}) optimizes the installation process of dynamic plugins and reduces platform boot time. This feature caches previously installed plugins, eliminating the need to re-download them on subsequent boots if their configuration hasn't changed.
+
+== How It Works
+
+. The system calculates a checksum of each plugin's YAML configuration (excluding `pluginConfig`).
+. This checksum is stored in a file named `dynamic-plugin-config.hash` within the plugin's directory.
+. During boot, if a plugin's package reference matches the previous installation and the checksum is unchanged, the download is skipped.
+. Plugins that have been disabled since the previous boot are automatically removed.
+
+== Configuration
+
+=== Persistent Storage
+
+For the cache to function correctly, the plugins directory `dynamic-plugins-root`  must be a persistent volume. 
+
+==== Helm Chart Installation
+
+When using the Helm chart for installation, a persistent volume called `dynamic-plugins-root` is automatically created if it doesn't exist.
+
+==== Operator-based Installation
+
+For operator-based installations, you must manually create the PersistentVolumeClaim (PVC). Here's an example configuration:
+
+[source,yaml]
+----
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-root
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+
+apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: rhdh
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root
+----
+
+[NOTE]
+Future versions of the operator are planned to automatically create the PVC.
+
+=== Plugin Configuration
+
+To configure a dynamic plugin, use the following YAML structure in your configuration file:
+
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    forceDownload: false
+    package: 'oci://quay.io/example-org/example-plugin:v1.0.0!internal-backstage-plugin-example'
+----
+
+TODO: not sure if the above is need, maybe replace with a canoncial example
+
+==== Optional Parameters
+
+- `forceDownload`: Set to `true` to force a reinstall of the plugin, bypassing the cache. Default is `false`.
