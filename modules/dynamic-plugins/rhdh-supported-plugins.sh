@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# script to generate rhdh-supported-plugins.adoc from content in 
+# script to generate rhdh-supported-plugins.adoc from content in
 # https://github.com/janus-idp/backstage-plugins/tree/main/plugins/ */package.json
 # https://github.com/janus-idp/backstage-showcase/tree/main/dynamic-plugins/wrappers/ */json
 
