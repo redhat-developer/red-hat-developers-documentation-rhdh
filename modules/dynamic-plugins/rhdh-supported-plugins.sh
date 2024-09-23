@@ -9,7 +9,7 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 usage() {
   cat <<EOF
 Generate updated table of dynamic plugins from content in janus-idp/backstage-plugins and backstage-showcase repos, 
-for the specified branch. Uses template files and merges content into them.
+for the specified branch
 
 Requires:
 * jq 1.6+
