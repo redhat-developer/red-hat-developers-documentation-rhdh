@@ -91,14 +91,15 @@ jobs:
           keep_files: true
           publish_dir: ./titles-generated
 
-      - name: PR comment with doc preview
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.RHDH_BOT_TOKEN }}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'PR Preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${{ github.event.number }}/' 
-            });
+      - name: PR comment with doc preview, replacing existing comments with a new one each time
+        shell: bash
+        run: |
+          PR_NUM="${{ github.event.number }}"
+          # for a given PR, check for existing comments from rhdh-bot; select the last one (if more than one)
+          if [[ $(gh api repos/{owner}/{repo}/issues/${PR_NUM}/comments | jq '.[]|select(.user.login=="rhdh-bot")|.id' | tail -1) ]]; then 
+            # edit that comment:
+            gh pr comment ${PR_NUM} --edit-last --body "Updated preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${PR_NUM}/ @ $(date "+%x %X")"
+          else
+            # or create a new one:
+            gh pr comment ${PR_NUM} --body "Preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${PR_NUM}/"
+          fi
