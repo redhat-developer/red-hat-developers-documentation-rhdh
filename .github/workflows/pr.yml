@@ -97,12 +97,13 @@ jobs:
           GH_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
         run: |
           PR_NUM="${{ github.event.number }}"
-          gh repo set-default ${{ github.repository_owner }}/${{ github.event.repository.name }}
+          ORG_REPO="${{ github.repository_owner }}/${{ github.event.repository.name }}""
+          gh repo set-default "${ORG_REPO}"
           # for a given PR, check for existing comments from rhdh-bot; select the last one (if more than one)
-          if [[ $(gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/issues/${PR_NUM}/comments -q 'map(select(.user.login=="rhdh-bot"))|last|.id') ]]; then 
+          if [[ $(gh api "repos/${ORG_REPO}/issues/${PR_NUM}/comments" -q 'map(select(.user.login=="rhdh-bot"))|last|.id') ]]; then 
             # edit that comment:
-            gh pr comment ${PR_NUM} --edit-last --body "Updated preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${PR_NUM}/ @ $(date "+%x %X")"
+            gh pr comment ${PR_NUM} -R "${ORG_REPO}" --edit-last --body "Updated preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${PR_NUM}/ @ $(date "+%x %X")"
           else
             # or create a new one:
-            gh pr comment ${PR_NUM} --body "Preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${PR_NUM}/"
+            gh pr comment ${PR_NUM} -R "${ORG_REPO}" --body "Preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${PR_NUM}/"
           fi
