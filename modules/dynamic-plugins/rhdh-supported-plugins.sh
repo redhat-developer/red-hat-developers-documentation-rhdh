@@ -117,7 +117,7 @@ for j in $jsons; do
     # backstage-plugin-catalog-backend-module-bitbucket-cloud => @backstage/plugin-catalog-backend-module-bitbucket-cloud
     Plugin="${Name}"
     if [[ $Plugin != "@"* ]]; then # don't update janus-idp/backstage-plugins plugin names
-        Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/')"
+        Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' -e 's|backstage/community-|backstage-community/|')"
     fi
 
     # "dynamic-plugins/wrappers/backstage-plugin-catalog-backend-module-bitbucket-cloud" ==> ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-bitbucket-cloud-dynamic
@@ -144,10 +144,10 @@ for j in $jsons; do
     Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
     if [[ $Path2 ]]; then 
         Path=$Path2
-        echo "[DEBUG] check path - $Name :: got $Path2"
+        # echo "[DEBUG] check path - $Name :: got $Path2"
     else
         Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
-        echo "[DEBUG] check path - $Name :: got $Path"
+        # echo "[DEBUG] check path - $Name :: got $Path"
     fi
     if [[ ! $Path ]]; then 
         continue
@@ -219,6 +219,7 @@ for j in $jsons; do
 
         # echo -n "Converting $Name"
         Name="$(echo "${Name}" | sed -r \
+            -e "s@(pagerduty)-.+@\1@g" \
             -e "s@.+(-plugin-scaffolder-backend-module|backstage-scaffolder-backend-module)-(.+)@\2@g" \
             -e "s@.+(-plugin-catalog-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
             -e "s@.+(-scaffolder-backend-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
@@ -228,9 +229,9 @@ for j in $jsons; do
             -e "s@(.+)(-backstage-plugin)@\1@g" \
             -e "s@-backend@@g" \
         )"
-        # echo " to $Name"
         Name="$(echo "${Name}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
         PrettyName="$(titlecase "${Name//-/ }")"
+        # echo " to $Name and $PrettyName"
 
         # useful console output
         for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
