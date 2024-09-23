@@ -97,8 +97,9 @@ jobs:
           GH_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
         run: |
           PR_NUM="${{ github.event.number }}"
+          gh repo set-default ${{ github.repository_owner }}/${{ github.event.repository.name }}
           # for a given PR, check for existing comments from rhdh-bot; select the last one (if more than one)
-          if [[ $(gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/issues/${PR_NUM}/comments | jq '.[]|select(.user.login=="rhdh-bot")|.id' | tail -1) ]]; then 
+          if [[ $(gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/issues/${PR_NUM}/comments -q 'map(select(.user.login=="rhdh-bot"))|last|.id') ]]; then 
             # edit that comment:
             gh pr comment ${PR_NUM} --edit-last --body "Updated preview: https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${PR_NUM}/ @ $(date "+%x %X")"
           else
