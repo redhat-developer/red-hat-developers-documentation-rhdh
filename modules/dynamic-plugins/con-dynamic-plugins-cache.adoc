@@ -1,31 +1,21 @@
 [id="con-dynamic-plugin-cache_{context}"]
 
-= Dynamic Plugins Cache
+= Dynamic plugins cache
+The dynamic plugins cache feature in {product} ({product-very-short}) optimizes the installation process of dynamic plugins and reduces platform boot time. This feature caches previously installed plugins, eliminating the need to re-download them on subsequent boots if their configuration has not changed.
 
-== Overview
+When you enable dynamic plugins cache, the feature works as follows:
 
-The dynamic plugins cache feature in {product} ({product-very-short}) optimizes the installation process of dynamic plugins and reduces platform boot time. This feature caches previously installed plugins, eliminating the need to re-download them on subsequent boots if their configuration hasn't changed.
+* The system calculates a checksum of each plugin's YAML configuration (excluding `pluginConfig`).
+* This checksum is stored in a file named `dynamic-plugin-config.hash` within the plugin's directory.
+* During boot, if a plugin's package reference matches the previous installation and the checksum is unchanged, the download is skipped.
+* Plugins that have been disabled since the previous boot are automatically removed.
 
-== How It Works
+== Enabling the dynamic plugins cache
+To enable the dynamic plugins cache in RHDH, the plugins directory `dynamic-plugins-root` must be a persistent volume. 
 
-. The system calculates a checksum of each plugin's YAML configuration (excluding `pluginConfig`).
-. This checksum is stored in a file named `dynamic-plugin-config.hash` within the plugin's directory.
-. During boot, if a plugin's package reference matches the previous installation and the checksum is unchanged, the download is skipped.
-. Plugins that have been disabled since the previous boot are automatically removed.
+For Helm chart installations, a persistent volume named `dynamic-plugins-root` is automatically created.
 
-== Configuration
-
-=== Persistent Storage
-
-For the cache to function correctly, the plugins directory `dynamic-plugins-root`  must be a persistent volume. 
-
-==== Helm Chart Installation
-
-When using the Helm chart for installation, a persistent volume called `dynamic-plugins-root` is automatically created if it doesn't exist.
-
-==== Operator-based Installation
-
-For operator-based installations, you must manually create the PersistentVolumeClaim (PVC). Here's an example configuration:
+For operator-based installations, you must manually create the PersistentVolumeClaim (PVC) as follows:
 
 [source,yaml]
 ----
@@ -60,22 +50,17 @@ spec:
 ----
 
 [NOTE]
-Future versions of the operator are planned to automatically create the PVC.
+Future versions of the RHDH operator are planned to automatically create the PVC.
 
-=== Plugin Configuration
+== Configuring the dynamic plugins cache
+You can set the following optional dynamic plugin cache parameters:
 
-To configure a dynamic plugin, use the following YAML structure in your configuration file:
-
+* `forceDownload`: Set to `true` to force a reinstall of the plugin, bypassing the cache. Default is `false`. For example, modify your `app-config.yaml` file as follows:
++
 [source,yaml]
 ----
 plugins:
   - disabled: false
-    forceDownload: false
+    forceDownload: true
     package: 'oci://quay.io/example-org/example-plugin:v1.0.0!internal-backstage-plugin-example'
 ----
-
-TODO: not sure if the above is need, maybe replace with a canoncial example
-
-==== Optional Parameters
-
-- `forceDownload`: Set to `true` to force a reinstall of the plugin, bypassing the cache. Default is `false`.
