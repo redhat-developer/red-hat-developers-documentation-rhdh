@@ -61,8 +61,9 @@ fi
 titlecase() { 
     for f in ${*} ; do \
         case $f in 
+            aap) echo -n "Ansible Automation Platform (AAP) ";;
             # UPPERCASE these exceptions
-            aap|acr|cd|ocm|rbac) echo -n "${f^^} ";;
+            acr|cd|ocm|rbac) echo -n "${f^^} ";;
             # MixedCase exceptions
             argocd) echo -n "Argo CD ";;
             github) echo -n "GitHub ";;
