@@ -1600,6 +1600,7 @@ section {
 <li><a href="#assembly-authenticating-with-rhsso">Chapter 2. Authenticating with Red Hat Single Sign-On (RHSSO)</a>
 <ul class="sectlevel2">
 <li><a href="#enabling-authentication-with-rhsso">2.1. Enabling authentication with Red Hat Single-Sign On (RHSSO)</a></li>
+<li><a href="#provisioning-users-from-rhsso-to-the-software-catalog">2.2. Provisioning users from Red Hat Single-Sign On (RHSSO) to the software catalog</a></li>
 </ul>
 </li>
 <li><a href="#assembly-auth-provider-github">Chapter 3. Enabling the GitHub authentication provider</a>
@@ -1940,6 +1941,173 @@ dangerouslyAllowSignInWithoutUserInCatalog: true # <b class="conum">(4)</b></cod
 </ol>
 </div>
 </div>
+<div class="sect2">
+<h3 id="provisioning-users-from-rhsso-to-the-software-catalog">2.2. Provisioning users from Red Hat Single-Sign On (RHSSO) to the software catalog</h3>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You <a href="proc-enabling-authentication-with-rhsso.html">enabled authentication with RHSSO</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<div class="title">Procedure</div>
+<p>.
+* To enable RHSSO member discovery, edit your custom Developer Hub config map, such as app-config-rhdh, and add following lines to the app-config-rhdh.yaml content:</p>
+</div>
+<div class="paragraph">
+<p>+</p>
+</div>
+<div class="openblock">
+<div class="content">
+<div id="keycloakOrgProviderId" class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with mandatory <code>keycloakOrg</code> fields</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">dangerouslyAllowSignInWithoutUserInCatalog: false
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        baseUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>baseUrl</code></dt>
+<dd>
+<p>RHSSO server URL.</p>
+</dd>
+<dt class="hdlist1"><code>clientId</code></dt>
+<dd>
+<p>Your Developer Hub application client ID in RHSSO.</p>
+</dd>
+<dt class="hdlist1"><code>clientSecret</code></dt>
+<dd>
+<p>Your Developer Hub application client secret in RHSSO.</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>Optional: Consider adding following optional  fields:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>realm</code></dt>
+<dd>
+<p>Realm to synchronize.
+Default value: <code>master</code>.</p>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with optional <code>realm</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        realm: master</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>loginRealm</code></dt>
+<dd>
+<p>Realm used to authenticate.
+Default value: <code>master</code>.</p>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with optional <code>loginRealm</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        loginRealm: master</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>userQuerySize</code></dt>
+<dd>
+<p>User number to query simultaneously.
+Default value: <code>100</code>.</p>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with optional <code>userQuerySize</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        userQuerySize: 100</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>groupQuerySize</code></dt>
+<dd>
+<p>Group number to query simultaneously.
+Default value: <code>100</code>.</p>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with optional <code>groupQuerySize</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        groupQuerySize: 100</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>schedule.frequency</code></dt>
+<dd>
+<p>To specify custom schedule frequency.
+Supports cron, ISO duration, and "human duration" as used in code.</p>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with optional <code>schedule.frequency</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          frequency: { hours: 1 }</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>schedule.timeout</code></dt>
+<dd>
+<p>To specify custom timeout.
+Supports ISO duration and "human duration" as used in code.</p>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with optional <code>schedule.timeout</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          timeout: { minutes: 50 }</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>schedule.initialDelay</code></dt>
+<dd>
+<p>To specify custom initial delay.
+Supports ISO duration and "human duration" as used in code.</p>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with optional <code>schedule.initialDelay</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          initialDelay: { seconds: 15}</code></pre>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -2238,7 +2406,7 @@ If this host is unreachable, users might see an <em>Authentication failed, faile
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-25 07:15:00 UTC
+Last updated 2024-09-25 08:46:57 UTC
 </div>
 </div>
 </body>
