@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.16">
-<title>Installing Red Hat Developer Hub on Microsoft Azure Kubernetes Service</title>
+<title>Installing Red Hat Developer Hub on OpenShift Dedicated on Google Cloud Platform</title>
 <style>
 /* Red Hat Fonts */
 @font-face {
@@ -1585,27 +1585,22 @@ section {
 
 </style>
 </head>
-<body id="title-install-rhdh-aks" class="book toc2 toc-left">
+<body id="title-install-rhdh-osd-gcp" class="book toc2 toc-left">
 <div id="header">
-<h1>Installing Red Hat Developer Hub on Microsoft Azure Kubernetes Service</h1>
+<h1>Installing Red Hat Developer Hub on OpenShift Dedicated on Google Cloud Platform</h1>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#assembly-install-rhdh-aks">Chapter 1. Installing Red Hat Developer Hub on Azure Kubernetes Service (AKS)</a>
-<ul class="sectlevel2">
-<li><a href="#proc-rhdh-deploy-aks-operator_assembly-install-rhdh-aks">1.1. Deploying Developer Hub on AKS with the Operator</a></li>
-<li><a href="#proc-rhdh-deploy-aks-helm_assembly-install-rhdh-aks">1.2. Deploying Developer Hub on AKS with the Helm chart</a></li>
-</ul>
-</li>
+<li><a href="#proc-install-rhdh-osd-gcp-operator_title-install-rhdh-osd-gcp">Chapter 1. Installing Red Hat Developer Hub on OpenShift Dedicated on GCP using the Operator</a></li>
+<li><a href="#proc-install-rhdh-osd-gcp-helm_title-install-rhdh-osd-gcp">Chapter 2. Installing Red Hat Developer Hub on OpenShift Dedicated on GCP using the Helm Chart</a></li>
 </ul>
 </div>
 </div>
 <div id="content">
-<div class="sect1">
-<h2 id="assembly-install-rhdh-aks">Chapter 1. Installing Red Hat Developer Hub on Azure Kubernetes Service (AKS)</h2>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>You can install Red Hat Developer Hub on Microsoft Azure Kubernetes Service (AKS) using one of the following methods:</p>
+<p>You can install Developer Hub on OpenShift Dedicated on Google Cloud Platform (GCP) using one of the following methods:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -1617,301 +1612,25 @@ section {
 </li>
 </ul>
 </div>
-<div class="sect2">
-<h3 id="proc-rhdh-deploy-aks-operator_assembly-install-rhdh-aks">1.1. Deploying Developer Hub on AKS with the Operator</h3>
+</div>
+</div>
+<div class="sect1">
+<h2 id="proc-install-rhdh-osd-gcp-operator_title-install-rhdh-osd-gcp">Chapter 1. Installing Red Hat Developer Hub on OpenShift Dedicated on GCP using the Operator</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>You can deploy your Developer Hub on AKS using the Red Hat Developer Hub Operator.</p>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Obtain the Red Hat Developer Hub Operator manifest file, named <code>rhdh-operator-&lt;VERSION&gt;.yaml</code>, and modify the default configuration of <code>db-statefulset.yaml</code> and <code>deployment.yaml</code> by adding the following fragment:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">securityContext:
-  fsGroup: 300</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Following is the specified locations in the manifests:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">db-statefulset.yaml: | spec.template.spec
-deployment.yaml: | spec.template.spec</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Apply the modified Operator manifest to your Kubernetes cluster:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">kubectl apply -f rhdh-operator-&lt;VERSION&gt;.yaml</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Execution of the previous command is cluster-scoped and requires appropriate cluster privileges.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create an <code>ImagePull Secret</code> named <code>rhdh-pull-secret</code> using your Red Hat credentials to access images from the protected <code>registry.redhat.io</code> as shown in the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">kubectl -n &lt;your_namespace&gt; create secret docker-registry rhdh-pull-secret \
-    --docker-server=registry.redhat.io \
-    --docker-username=&lt;redhat_user_name&gt; \
-    --docker-password=&lt;redhat_password&gt; \
-    --docker-email=&lt;email&gt;</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create an Ingress manifest file, named <code>rhdh-ingress.yaml</code>, specifying your Developer Hub service name as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rhdh-ingress
-  namespace: &lt;your_namespace&gt;
-spec:
-  ingressClassName: webapprouting.kubernetes.azure.com
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backstage-&lt;your-CR-name&gt;
-                port:
-                  name: http-backend</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>To deploy the created Ingress, run the following command:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; apply -f rhdh-ingress.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a ConfigMap named <code>app-config-rhdh</code> containing the Developer Hub configuration using the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config-rhdh
-data:
-  "app-config-rhdh.yaml": |
-    app:
-      title: Red Hat Developer Hub
-      baseUrl: https://&lt;app_address&gt;
-    backend:
-      auth:
-        keys:
-          - secret: "${BACKEND_SECRET}"
-      baseUrl: https://&lt;app_address&gt;
-      cors:
-        origin: https://&lt;app_address&gt;</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a Secret named <code>secrets-rhdh</code> and add a key named <code>BACKEND_SECRET</code> with a <code>Base64-encoded</code> string value as shown in the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: v1
-kind: Secret
-metadata:
-  name: secrets-rhdh
-stringData:
-  BACKEND_SECRET: "xxx"</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a Custom Resource (CR) manifest file named <code>rhdh.yaml</code> and include the previously created <code>rhdh-pull-secret</code> as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
-metadata:
-  name: &lt;your-rhdh-cr&gt;
-spec:
-  application:
-    imagePullSecrets:
-      - rhdh-pull-secret
-    appConfig:
-      configMaps:
-        - name: "app-config-rhdh"
-    extraEnvs:
-      secrets:
-        - name: "secrets-rhdh"</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Apply the CR manifest to your namespace:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; apply -f rhdh.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Access the deployed Developer Hub using the URL: <code><a href="https://&lt;app_address&gt" class="bare">https://&lt;app_address&gt</a>;</code>, where &lt;app_address&gt; is the Ingress address obtained earlier (for example, <code><a href="https://108.141.70.228" class="bare">https://108.141.70.228</a></code>).</p>
-</li>
-<li>
-<p>Optional: To delete the CR, run the following command:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; delete -f rhdh.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect2">
-<h3 id="proc-rhdh-deploy-aks-helm_assembly-install-rhdh-aks">1.2. Deploying Developer Hub on AKS with the Helm chart</h3>
-<div class="paragraph">
-<p>You can deploy your Developer Hub application on Azure Kubernetes Service (AKS) to access a comprehensive solution for building, testing, and deploying applications.</p>
+<p>You can install Developer Hub on OpenShift Dedicated on GCP using the Red Hat Developer Hub Operator.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have a Microsoft Azure account with active subscription.</p>
+<p>You have a valid GCP account.</p>
 </li>
 <li>
-<p>You have installed the <a href="https://learn.microsoft.com/en-us/cli/azure/install-azure-cli">Azure CLI</a>.</p>
+<p>Your OpenShift Dedicated cluster is running on GCP. For more information, see <a href="https://docs.redhat.com/en/documentation/openshift_dedicated/4/html/installing_accessing_and_deleting_openshift_dedicated_clusters/osd-creating-a-cluster-on-gcp">Creating a cluster on GCP</a> in Red Hat OpenShift Dedicated documentation.</p>
 </li>
 <li>
-<p>You have installed the <a href="https://kubernetes.io/docs/reference/kubectl/"><code>kubectl</code> CLI</a>.</p>
-</li>
-<li>
-<p>You are logged into your cluster using <code>kubectl</code>, and have <code>developer</code> or <code>admin</code> permissions.</p>
-</li>
-<li>
-<p>You have installed Helm 3 or the latest.</p>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Comparison of AKS specifics with the base Developer Hub deployment</div>
-<ul>
-<li>
-<p><strong>Permissions issue</strong>: Developer Hub containers might encounter permission-related errors, such as <code>Permission denied</code> when attempting certain operations. This error can be addresssed by adjusting the <code>fsGroup</code> in the <code>PodSpec.securityContext</code>.</p>
-</li>
-<li>
-<p><strong>Ingress configuration</strong>: In AKS, configuring ingress is essential for accessing the installed Developer Hub instance. Accessing the Developer Hub instance requires enabling the Routing add-on, an NGINX-based Ingress Controller, using the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks approuting enable --resource-group &lt;your_ResourceGroup&gt; --name &lt;your_ClusterName&gt;</code></pre>
-</div>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>You might need to install the Azure CLI extension <code>aks-preview</code>. If the extension is not installed automatically, you might need to install it manually using the following command:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az extension add --upgrade -n aks-preview --allow-preview true</code></pre>
-</div>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>After you install the Ingress Controller, the <code>app-routing-system</code> namespace with the Ingress Controller will be deployed in your cluster. Note the address of your Developer Hub application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the Developer Hub application, later referenced as <code>&lt;app_address&gt;</code>.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl get svc nginx --namespace app-routing-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}'</code></pre>
-</div>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p><strong>Namespace management</strong>: You can create a dedicated namespace for Developer Hub deployment in AKS using the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl create namespace &lt;your_namespace&gt;</code></pre>
-</div>
-</div>
+<p>You have administrator access to OpenShift Dedicated cluster and GCP project.</p>
 </li>
 </ul>
 </div>
@@ -1919,164 +1638,25 @@ spec:
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>Log in to AKS by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az login [--tenant=&lt;optional_directory_name&gt;]</code></pre>
-</div>
-</div>
+<p>In the <strong>Administrator</strong> perspective of the OpenShift Container Platform web console, click <strong>Operators &gt; OperatorHub</strong>.</p>
 </li>
 <li>
-<p>Create a resource group by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az group create --name &lt;resource_group_name&gt; --location &lt;location&gt;</code></pre>
-</div>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>You can list available regions by running the following command:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az account list-locations -o table</code></pre>
-</div>
-</div>
-</td>
-</tr>
-</table>
-</div>
+<p>In the <strong>Filter by keyword</strong> box, enter Developer Hub and click the <strong>Red Hat Developer Hub Operator</strong> card.</p>
 </li>
 <li>
-<p>Create an AKS cluster by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks create \
---resource-group &lt;resource_group_name&gt; \
---name &lt;cluster_name&gt; \
---enable-managed-identity \
---generate-ssh-keys</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>You can refer to <code>--help</code> for additional options.</p>
-</div>
+<p>On the <strong>Red Hat Developer Hub Operator</strong> page, click <strong>Install</strong>.</p>
 </li>
 <li>
-<p>Connect to your cluster by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks get-credentials --resource-group &lt;resource_group_name&gt; --name &lt;cluster_name&gt;</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The previous command configures the Kubernetes client and sets the current context in the <code>kubeconfig</code> to point to your AKS cluster.</p>
-</div>
+<p>In the OpenShift Container Platform console, navigate to <strong>Installed Operators</strong> and select <strong>Red Hat Developer Hub Operator</strong>.</p>
 </li>
 <li>
-<p>Open terminal and run the following command to add the Helm chart repository:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm repo add openshift-helm-charts https://charts.openshift.io/</code></pre>
-</div>
-</div>
+<p>From the Developer Hub Operator page, click <strong>Create New Instance</strong> and specify the name and namespace where you want to deploy Developer Hub.</p>
 </li>
 <li>
-<p>Create and activate the <em>&lt;rhdh&gt;</em> namespace:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">DEPLOYMENT_NAME=&lt;redhat-developer-hub&gt;
-NAMESPACE=&lt;rhdh&gt;
-kubectl create namespace ${NAMESPACE}
-kubectl config set-context --current --namespace=${NAMESPACE}</code></pre>
-</div>
-</div>
+<p>Configure the required settings such as Git integration, secret management, and user permissions.</p>
 </li>
 <li>
-<p>Create a pull secret, which is used to pull the Developer Hub images from the Red Hat Ecosystem, by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n $NAMESPACE create secret docker-registry rhdh-pull-secret \
-    --docker-server=registry.redhat.io \
-    --docker-username=&lt;redhat_user_name&gt; \
-    --docker-password=&lt;redhat_password&gt; \
-    --docker-email=&lt;email&gt;</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Create a file named <code>values.yaml</code> using the following template:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">global:
-  host: &lt;app_address&gt;
-route:
-  enabled: false
-upstream:
-  ingress:
-    enabled: true
-    className: webapprouting.kubernetes.azure.com
-    host:
-  backstage:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    podSecurityContext:
-      fsGroup: 3000
-  postgresql:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        fsGroup: 3000
-  volumePermissions:
-    enabled: true</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>To install Developer Hub by using the Helm chart, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm -n $NAMESPACE install -f values.yaml $DEPLOYMENT_NAME openshift-helm-charts/redhat-developer-hub --version 1.3.0</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Verify the deployment status:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl get deploy $DEPLOYMENT_NAME -n $NAMESPACE</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Configure your Developer Hub Helm chart instance with the Developer Hub database password and router base URL values from your cluster:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
-CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
-helm upgrade $DEPLOYMENT_NAME -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz" \
-    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
-    --set global.postgresql.auth.password="$PASSWORD"</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Display the running Developer Hub instance URL, by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">echo "https://$DEPLOYMENT_NAME-$NAMESPACE.$CLUSTER_ROUTER_BASE"</code></pre>
-</div>
-</div>
+<p>Review the configuration, select deployment options, and click <strong>Create</strong>.</p>
 </li>
 </ol>
 </div>
@@ -2084,36 +1664,119 @@ helm upgrade $DEPLOYMENT_NAME -i "https://github.com/openshift-helm-charts/chart
 <div class="title">Verification</div>
 <ul>
 <li>
-<p>Open the running Developer Hub instance URL in your browser to use Developer Hub.</p>
+<p>To access the Developer Hub, navigate to the Developer Hub URL provided in the OpenShift Container Platform web console.</p>
 </li>
 </ul>
 </div>
 <div class="ulist">
-<div class="title">Upgrade</div>
+<div class="title">Additional resources</div>
 <ul>
 <li>
-<p>To upgrade the deployment, run the following command:</p>
+<p><a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">{Administration guide for Red Hat Developer Hub}</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="proc-install-rhdh-osd-gcp-helm_title-install-rhdh-osd-gcp">Chapter 2. Installing Red Hat Developer Hub on OpenShift Dedicated on GCP using the Helm Chart</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can install Developer Hub on OpenShift Dedicated on GCP using the Red Hat Developer Hub Helm Chart.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have a valid GCP account.</p>
+</li>
+<li>
+<p>Your OpenShift Dedicated cluster is running on GCP. For more information, see <a href="https://docs.redhat.com/en/documentation/openshift_dedicated/4/html/installing_accessing_and_deleting_openshift_dedicated_clusters/osd-creating-a-cluster-on-gcp">Creating a cluster on GCP</a> in Red Hat OpenShift Dedicated documentation.</p>
+</li>
+<li>
+<p>You have installed Helm 3 or the latest.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>From the <strong>Developer</strong> perspective on the Developer Hub web console, click <strong>+Add</strong>.</p>
+</li>
+<li>
+<p>From the <strong>Developer Catalog</strong> panel, click <strong>Helm Chart</strong>.</p>
+</li>
+<li>
+<p>In the <strong>Filter by keyword</strong> box, enter Developer Hub and click the <strong>Red Hat Developer Hub</strong> card.</p>
+</li>
+<li>
+<p>From the Red Hat Developer Hub page, click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>From your cluster, copy the OpenShift Container Platform router host (for example: <code>apps.&lt;clusterName&gt;.com</code>).</p>
+</li>
+<li>
+<p>Select the radio button to configure the Developer Hub instance with either the form view or YAML view. The <strong>Form view</strong> is selected by default.</p>
+<div class="openblock">
+<div class="content">
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Using <strong>Form view</strong></p>
+<div class="olist lowerroman">
+<ol class="lowerroman" type="i">
+<li>
+<p>To configure the instance with the Form view, go to <strong>Root Schema → global → Enable service authentication within Backstage instance</strong> and paste your OpenShift Container Platform router host into the field on the form.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Using <strong>YAML view</strong></p>
+<div class="olist lowerroman">
+<ol class="lowerroman" type="i">
+<li>
+<p>To configure the instance with the YAML view, paste your OpenShift Container Platform router hostname in the <code>global.clusterRouterBase</code> parameter value as shown in the following example:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm upgrade $DEPLOYMENT_NAME -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz</code></pre>
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  auth:
+    backend:
+      enabled: true
+  clusterRouterBase: apps.&lt;clusterName&gt;.com
+  # other {product} Helm Chart configurations</code></pre>
 </div>
 </div>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Edit the other values if needed, then click <strong>Create</strong> and wait for the database and Developer Hub to start.</p>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Verification</div>
+<ul>
+<li>
+<p>To access the the Developer Hub, click the <strong>Open URL</strong> icon.</p>
 </li>
 </ul>
 </div>
 <div class="ulist">
-<div class="title">Delete</div>
+<div class="title">Additional resources</div>
 <ul>
 <li>
-<p>To delete the deployment, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm -n $NAMESPACE delete $DEPLOYMENT_NAME</code></pre>
-</div>
-</div>
+<p><a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">{Administration guide for Red Hat Developer Hub}</a></p>
 </li>
 </ul>
-</div>
 </div>
 </div>
 </div>
