@@ -1,0 +1,128 @@
+[id='proc-customize-rhdh-sidebar-menuitems_{context}']
+= Customizing the sidebar menu items for your {product-short} instance
+
+The sidebar menu in {product} consists of two main parts:
+
+* *Main menu items*: These items are the static menu items that form the core navigation structure of sidebar. These menu items remain consistent and are predefined.
+
+* *Dynamic plugin menu items*: These items are displayed beneath the main menu and can be customized based on the plugins installed. The main menu items section is dynamic and can change based on your preferences and installed plugins.
+
+.Procedure
+
+. Customize the main menu items using the following steps:
++
+--
+.. Open the `app-config-rhdh.yaml` file.
+.. To customize the order and parent-child relationships for the main menu items, use the `dynamicPlugins.frontend.default.main-menu-items.menuItems` field.
+.. For dynamic plugin menu items, use the `dynamicPlugins.frontend.<package_name>.menuItems` field.
+
+.Example `app-config-rhdh.yaml` file
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    <package_name>: # same as `scalprum.name` key in plugin's `package.json`
+      menuItems: # optional, allows you to configure plugin menu items in the main sidebar navigation
+        <menu_item_name>: # unique name in the plugin menu items list <1>
+          icon: home | group | category | extension | school | _<your_icon>_  # <2>
+          title: My Plugin Page # optional, same as `menuItem.text` in `dynamicRoutes` <3>
+          priority: 10 # optional, defines the order of menu items in the sidebar <4>
+          parent: favorites # optional, defines parent-child relationships for nested menu items <5>
+----
+
+You can modify the fields in the previous example to configure the desired order and parent-child relationships of the sidebar menu items.
+
+<1> This attribute represents a unique name in the main sidebar navigation. It can denote either a standalone menu item or a parent menu item. If this attribute represents a plugin menu item, the name of the attribute must match with the corresponding path in `dynamicRoutes`. For example, if `dynamicRoutes` defines `path: /my-plugin`, then `menu_item_name` must be defined as `my-plugin`.
++
+For more complex, multi-segment paths such as `path: /metrics/users/info`, the `menu_item_name` must use dot notation to represent the full path, for example, `metrics.users.info`. Trailing and leading slashes in paths are ignored. For example, `path: /docs` results in `menu_item_name: docs`, and `path: /metrics/users` results in `menu_item_name: metrics.users`.
+
+<2> This optional attribute specifies the icon for the menu item. You can use default icons or extend the icon set with dynamic plugins. {product-short} also provides additional icons in its internal library, such as: 
++
+.Home Icon in the internal library
+[source, yaml]
+----
+dynamicPlugins:
+  frontend:
+    <package_name>:
+      menuItems:
+        <menu_item_name>: 
+          icon: home
+----
++
+Similarly, the internal library includes icons for `group`, `category`, `extension`, and `school`. If the icon is already defined in the `dynamicRoutes` configuration under `menuItem.icon`, it can be removed from the in the `menuItems` configuration. Also, both SVG and HTML image icons are supported. For example:
++
+.Example SVG icon
+[source,html]
+----
+icon: <svg width="20px" height="20px" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="#ffffff">...</svg>
+----
++
+.Example image icon
+[source,html]
+----
+icon: https://img.icons8.com/ios-glyphs/20/FFFFFF/shop.png
+----
+
+<3> This optional attribute specifies the title of the menu item. It can be removed if the title is already specified in the `dynamicRoutes` configuration under `menuItem.text`.
+
+<4> This optional attribute sets the order in which menu items appear in the sidebar. The default priority is 0, which places the item at the bottom of the list. A higher priority value places the item higher in the sidebar. You can define this attribute for each section.
+
+<5> This optional attribute specifies the parent menu item under which the current item is nested. If this attribute is used, the parent menu item must be defined elsewhere in the `menuItems` configuration of any enabled plugin. You can define this attribute for each section.
+
+.Example `menuItems` configuration
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    <package_name>:
+      dynamicRoutes:
+        - path: /my-plugin
+          module: CustomModule
+          importName: FooPluginPage
+          menuItem:
+            icon: fooIcon
+            text: Foo Plugin Page
+      menuItems:
+        my-plugin: # matches `path` in `dynamicRoutes`
+          priority: 10 # controls order of plugins under the parent menu item
+          parent: favorites # nests this plugin under the `favorites` parent menu item
+        favorites: # configuration for the parent menu item
+          icon: favorite # icon from RHDH system icons
+          title: Favorites # title for the parent menu item
+          priority: 100 # controls the order of this top-level menu item
+----
+--
+
+. To ensure that a menu item is identified as a main menu item, you must add `default.` prefix to its key. For example:
++
+--
+.Example configuration of main menu items in sidebar navigation
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    default.main-menu-items: # key for configuring static main menu items
+      default.<menu_item_name>: # key of the menu item configuration. `default.` prefix is required for a main menu item key <1>
+        parent: my_menu_group # optional, specifies the parent menu item for this item
+        priority: 10 # optional, specifies the order of this menu item within its menu level
+      default.<menu_group_parent_item_name>: # must be configured if it is specified as the parent of any menu items. `default.` prefix is required for a main menu item key
+        icon: my_menu_group_icon # required for parent menu items, defines the icon for the menu group
+        title: my_menu_group_title # required for parent menu items, defines the icon for the menu group
+        priority: 100 # optional, specifies the order of the parent menu item in the sidebar
+----
+
+
+<1> The `default.` prefix identifes an item as a main menu item. You can add the `default.` prefix to both individual menu items or parent menu group configuration, such as `default.<menu_group_parent_item_name>` in the previous example.
+
+[NOTE]
+====
+The default priority of main menu items determines their order in the sidebar. You can customize the order of the static main menu items by adjusting their priority values. Ensure that the priority and title of each item is clear to facilitate easy reordering. 
+====
+--
+
+
+
+
+
+
+
