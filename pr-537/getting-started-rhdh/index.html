@@ -1673,6 +1673,7 @@ section {
 <li><a href="#ref-audit-log-catalog-events.adoc_assembly-audit-log">9.2.3. Catalog events</a></li>
 </ul>
 </li>
+<li><a href="#ref-audit-log-file-rotation-overview_assembly-audit-log">9.3. Audit log file rotation in Red Hat Developer Hub</a></li>
 </ul>
 </li>
 </ul>
@@ -5296,12 +5297,197 @@ data:
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="ref-audit-log-file-rotation-overview_assembly-audit-log">9.3. Audit log file rotation in Red Hat Developer Hub</h3>
+<div class="paragraph">
+<p>Logging to a rotating file in Red Hat Developer Hub is helpful for persistent storage of audit logs.</p>
+</div>
+<div class="paragraph">
+<p>Persistent storage ensures that the file remains intact even after a pod is restarted. Audit log file rotation creates a new file at regular intervals, with only new data being written to the latest file.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Default settings</dt>
+<dd>
+<p>Audit logging to a rotating file is disabled by default. When it is enabled, the default behavior changes to:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Rotate logs at midnight (local system timezone).</p>
+</li>
+<li>
+<p>Log file format: <code>redhat-developer-hub-audit-%DATE%.log</code>.</p>
+</li>
+<li>
+<p>Log files are stored in <code>/var/log/redhat-developer-hub/audit</code>.</p>
+</li>
+<li>
+<p>No automatic log file deletion.</p>
+</li>
+<li>
+<p>No gzip compression of archived logs.</p>
+</li>
+<li>
+<p>No file size limit.</p>
+</li>
+</ul>
+</div>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>Audit logs are written in the <code>/var/log/redhat-developer-hub/audit</code> directory.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Log file names</dt>
+<dd>
+<p>Audit log file names are in the following format:</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p><code>redhat-developer-hub-audit-%DATE%.log</code></p>
+</div>
+<div class="paragraph">
+<p>where <code>%DATE%</code> is the format specified in <code>auditLog.rotateFile.dateFormat</code>. You can customize file names when you configure file rotation.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">File rotation date and frequency</dt>
+<dd>
+<p>Supported <code>auditLog.rotateFile.frequency</code> options include:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>daily</code>: Rotate daily at 00:00 local time</p>
+</li>
+<li>
+<p><code>Xm</code>: Rotate every <code>X</code> minutes (where X is a number between 0 and 59)</p>
+</li>
+<li>
+<p><code>Xh</code>: Rotate every <code>X</code> hours (where X is a number between 0 and 23)</p>
+</li>
+<li>
+<p><code>test</code>: Rotate every 1 minute</p>
+</li>
+<li>
+<p><code>custom</code>: Use <code>dateFormat</code> to set the rotation frequency (default if frequency is not specified)</p>
+</li>
+</ul>
+</div>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>If <code>frequency</code> is set to <code>Xh</code>, <code>Xm</code> or <code>test</code>, the <code>dateFormat</code> setting must be configured in a format that includes the specified time component. Otherwise, the rotation might not work as expected.</p>
+</div>
+<div class="paragraph">
+<p>For example, use <code>dateFormat: 'YYYY-MM-DD-HH</code> for hourly rotation, and <code>dateFormat: 'YYYY-MM-DD-HH-mm</code> for minute rotation.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example minute rotation:</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
+  rotateFile:
+    # If you want to rotate the file every 17 minutes
+    dateFormat: 'YYYY-MM-DD-HH-mm'
+    frequency: '17m'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>dateFormat</code> setting configures both the <code>%DATE%</code> in <code>logFileName</code> and the file rotation frequency if <code>frequency</code> is set to <code>custom</code>. The default format is <code>YYYY-MM-DD</code>, meaning daily rotation. Supported values are based on <a href="https://momentjs.com/docs/#/displaying/format/">Moment.js formats</a>.</p>
+</div>
+<div class="paragraph">
+<p>If the <code>frequency</code> is set to <code>custom</code>, then rotations take place when the date string, which is represented in the specified <code>dateFormat</code>, changes.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Archive and delete</dt>
+<dd>
+<p>By default, log files are not archived or deleted.</p>
+</dd>
+<dt class="hdlist1">Enable and configure audit file rotation</dt>
+<dd>
+<p>If you are an administrator of Developer Hub, you can enable file rotation for audit logs, and configure the file log location, name format, frequency,  log file size, retention policy, and archiving.</p>
+</dd>
+</dl>
+</div>
+<div class="listingblock">
+<div class="title">Example audit log file rotation configuration</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
+  rotateFile:
+    enabled: true <b class="conum">(1)</b>
+    logFileDirPath: /custom-path <b class="conum">(2)</b>
+    logFileName: custom-audit-log-%DATE%.log <b class="conum">(3)</b>
+    frequency: '12h' <b class="conum">(4)</b>
+    dateFormat: 'YYYY-MM-DD' <b class="conum">(5)</b>
+    utc: false <b class="conum">(6)</b>
+    maxSize: 100m <b class="conum">(7)</b>
+    maxFilesOrDays: 14 <b class="conum">(8)</b>
+    zippedArchive: true <b class="conum">(9)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Set <code>enabled</code> to <code>true</code> to use audit log file rotation. By default, it is set to <code>false</code>.</p>
+</li>
+<li>
+<p>Absolute path to the log file. The specified directory is created automatically if it does not exist.</p>
+</li>
+<li>
+<p>Default log file name format.</p>
+</li>
+<li>
+<p>If no frequency is specified, then the default file rotation occurs daily at 00:00 local time.</p>
+</li>
+<li>
+<p>Default date format.</p>
+</li>
+<li>
+<p>Set <code>utc</code> to <code>true</code> to use UTC time for <code>dateFormat</code> instead of local time.</p>
+</li>
+<li>
+<p>Sets a maximum file size limit for the audit log. In this example, the maximum size is 100m.</p>
+</li>
+<li>
+<p>If set to number of files, for example <code>14</code>, then it deletes the oldest log when there are more than 14 log files. If set to number of days, for example <code>5d</code>, then it deletes logs older than 5 days.</p>
+</li>
+<li>
+<p>Archive and compress rotated logs using <code>gzip</code>. The default value is <code>false</code>.</p>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="ulist">
+<ul>
+<li>
+<p>By default, log files are not archived or deleted. If log deletion is enabled, then a <code>.&lt;sha256 hash&gt;-audit.json</code> is generated in the directory where the logs are to track generated logs. Any log file not contained in the directory is not subject to automatic deletion.</p>
+</li>
+<li>
+<p>A new <code>.&lt;sha256 hash&gt;-audit.json</code> file is generated each time the backend starts, which causes previous audit logs to stop being tracked or deleted, except for those still in use by the current backend.</p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-26 15:54:01 UTC
+Last updated 2024-09-27 10:08:53 UTC
 </div>
 </div>
 </body>
