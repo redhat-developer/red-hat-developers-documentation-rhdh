@@ -1,15 +1,7 @@
 [id='proc-customize-rhdh-homepage_{context}']
 = Customizing the Home page in {product}
 
-To access the Home page in {product}, the base URL must include the `/developer-hub` proxy. You can configure the Home page by passing the data into the `app-config.yaml` file as a proxy. You can provide data to the Home page from the following sources:
-
-* JSON files hosted on GitHub or GitLab.
-* A dedicated service that provides the Home page data in JSON format using an API.
-
-== Using hosted JSON files to provide data to the Home page
-
 When using the `app-config`, you can do the following:
-
 
 * Customize and extend the default Home page layout with additional cards that appear based on the plugins you have installed and enabled. 
 * Change quick access links.  
@@ -23,20 +15,8 @@ When using the `app-config`, you can do the following:
 ** Catalog starred entities
 ** Featured docs
 
+The default Home page is as shown in the following `app-config` file configuration:
 
-.Prerequisites
-
-You have installed {product} by using either the Operator or Helm chart.
-//For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
-//replace with link to installation guide.
-
-
-.Procedure
-
-To access the data from the JSON files, complete the following step:
-
-* Add the following code to the `app-config.yaml` file:
-+
 [source,yaml]
 ----
 dynamicPlugins:
@@ -77,6 +57,11 @@ dynamicPlugins:
               xs: { w: 12, h: 4 }
               xxs: { w: 12, h: 4 }
 ----
+
+
+== Customizing the Home page cards
+
+Administrators can change the fixed height of cards that are in a 12-column grid.
 
 === Example card configurations for your Home page in {product}
 
@@ -394,7 +379,49 @@ dynamicPlugins:
               debugContent: right
 ----
 
-== Using a dedicated service to provide data to the Home page
+
+== Customizing the Quick access card in {product}
+
+To access the Home page in {product}, the base URL must include the `/developer-hub` proxy. You can configure the Home page by passing the data into the `app-config.yaml` file as a proxy. You can provide data to the Home page from the following sources:
+
+* JSON files hosted on GitHub or GitLab.
+* A dedicated service that provides the Home page data in JSON format using an API.
+
+
+=== Using hosted JSON files to provide data to the Quick access card
+
+.Prerequisites
+
+You have installed {product} by using either the Operator or Helm chart.
+//For more information, see xref:proc-install-rhdh_rhdh-getting-started[].
+//replace with link to installation guide.
+
+
+.Procedure
+
+To access the data from the JSON files, complete the following step:
+
+* Add the following code to the `app-config.yaml` file:
++
+[source,yaml]
+----
+proxy:
+  endpoints:
+    # Other Proxies
+    # customize developer hub instance
+    '/developer-hub':
+      target: <DOMAIN_URL> # i.e https://raw.githubusercontent.com/
+      pathRewrite:
+        '^/api/proxy/developer-hub': <path to json file> # i.e /janus-idp/backstage-showcase/main/packages/app/public/homepage/data.json
+      changeOrigin: true
+      secure: true
+      # Change to "false" in case of using self hosted cluster with a self-signed certificate
+      headers:
+	<HEADER_KEY>: <HEADER_VALUE> # optional and can be passed as needed i.e Authorization can be passed for private GitHub repo and PRIVATE-TOKEN can be passed for private GitLab repo
+----
+
+
+=== Using a dedicated service to provide data to the Home page
 
 When using a dedicated service, you can do the following:
 
