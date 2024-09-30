@@ -1674,6 +1674,7 @@ section {
 </li>
 </ul>
 </li>
+<li><a href="#proc-rhdh-deployment-config_assembly-admin-templates">Chapter 9. Configuring Red Hat Developer Hub deployment</a></li>
 </ul>
 </div>
 </div>
@@ -4695,10 +4696,176 @@ jobs:
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="proc-rhdh-deployment-config_assembly-admin-templates">Chapter 9. Configuring Red Hat Developer Hub deployment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Red Hat Developer Hub operator exposes a <code>rhdh.redhat.com/v1alpha2</code> API Version of its Custom Resource Definition (CRD). This CRD exposes a generic <code>spec.deployment.patch</code> field, which gives you full control over the Developer Hub Deployment resource. This field can be a fragment of the standard <code>apps.Deployment</code> Kubernetes object.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Create a Developer Hub Custom Resource Definition with the following fields:</p>
+</li>
+</ol>
+</div>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>labels</code></dt>
+<dd>
+<p>Add labels to the Developer Hub pod.</p>
+<div class="listingblock">
+<div class="title">Example adding the label <code>my=true</code></div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          metadata:
+            labels:
+              my: true</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>volumes</code></dt>
+<dd>
+<p>Add an additional volume named <code>my-volume</code> and mount it under <code>/my/path</code> in the Developer Hub application container.</p>
+<div class="listingblock">
+<div class="title">Example additional volume</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                volumeMounts:
+                  - mountPath: /my/path
+                    name: my-volume
+            volumes:
+              - ephemeral:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: "special"
+                name: my-volume</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Replace the default <code>dynamic-plugins-root</code> volume with a persistent volume claim (PVC) named <code>dynamic-plugins-root</code>. Note the <code>$patch: replace</code> directive, otherwise a new volume will be added.</p>
+</div>
+<div class="listingblock">
+<div class="title">Example <code>dynamic-plugins-root</code> volume replacement</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>cpu</code> request</dt>
+<dd>
+<p>Set the CPU request for the Developer Hub application container to 250m.</p>
+<div class="listingblock">
+<div class="title">Example CPU request</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                resources:
+                  requests:
+                    cpu: 250m</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>my-sidecar</code> container</dt>
+<dd>
+<p>Add a new <code>my-sidecar</code> sidecar container into the Developer Hub Pod.</p>
+<div class="listingblock">
+<div class="title">Example side car container</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: my-sidecar
+                image: quay.io/my-org/my-sidecar:latest</code></pre>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>To learn more about merging, see <a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format">Strategic Merge Patch</a>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-30 15:12:25 UTC
+Last updated 2024-09-30 20:42:37 UTC
 </div>
 </div>
 </body>
