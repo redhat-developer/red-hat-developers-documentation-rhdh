@@ -1,0 +1,150 @@
+// Module included in:
+// title-admin.adoc
+
+[id="proc-rhdh-deployment-config_{context}"]
+= Configuring {product} deployment
+
+The {product} operator exposes a `rhdh.redhat.com/v1alpha2` API Version of its Custom Resource Definition (CRD). This CRD exposes a generic `spec.deployment.patch` field, which gives you full control over the {product-short} Deployment resource. This field can be a fragment of the standard `apps.Deployment` Kubernetes object.
+
+.Procedure
+
+. Create a {product-short} Custom Resource Definition with the following fields:
+
+--
+.Example
+[source, yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+----
+
+`labels`::
+Add labels to the {product-short} pod.
++
+.Example adding the label `my=true`
+[source, yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          metadata:
+            labels:
+              my: true
+----
+
+`volumes`::
+Add an additional volume named `my-volume` and mount it under `/my/path` in the {product-short} application container.
++
+.Example additional volume
+[source, yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                volumeMounts:
+                  - mountPath: /my/path
+                    name: my-volume
+            volumes:
+              - ephemeral:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: "special"
+                name: my-volume
+----
++
+Replace the default `dynamic-plugins-root` volume with a persistent volume claim (PVC) named `dynamic-plugins-root`. Note the `$patch: replace` directive, otherwise a new volume will be added.
++
+.Example `dynamic-plugins-root` volume replacement
+[source, yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root
+----
+
+`cpu` request::
+
+Set the CPU request for the {product-short} application container to 250m.
++
+.Example CPU request
+[source, yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                resources:
+                  requests:
+                    cpu: 250m
+----
+
+`my-sidecar` container::
+
+Add a new `my-sidecar` sidecar container into the {product-short} Pod.
++
+.Example side car container
+[source, yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: my-sidecar
+                image: quay.io/my-org/my-sidecar:latest
+----
+
+--
+
+[role="_additional-resources"]
+.Additional resources
+
+* To learn more about merging, see link:https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format[Strategic Merge Patch].
