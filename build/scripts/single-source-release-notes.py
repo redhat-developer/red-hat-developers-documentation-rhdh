@@ -39,6 +39,9 @@ env = jinja2.Environment(
 snippet_template = env.get_template(
   'snippet.adoc.jinja2'
 )
+snippet_cve_template = env.get_template(
+  'snippet-cve.adoc.jinja2'
+)
 assembly_template = env.get_template(
   'assembly.adoc.jinja'
 )
@@ -93,23 +96,31 @@ for section in config['sections']:
     issue_key = format(issue.key)  # Issue id
     issue_rn_status = format(issue.fields.customfield_12310213)  # Release Note Status
     issue_rn_text = format(issue.fields.customfield_12317313)  # Release Note Text
-    issue_rn_type = format(issue.fields.customfield_12320850) # Release Note Type
-    issue_title = format(issue.fields.summary) # Issue title
+    issue_rn_type = format(issue.fields.customfield_12320850)  # Release Note Type
+    issue_title = format(issue.fields.summary)  # Issue title
     # Define AsciiDoc file id, file, and content
     file_id = format(issue_rn_type + "-" + issue_key).lower().replace(" ", "-")
     file_file = open(
       modules_dir + 'snip-' + file_id + '.adoc',
       'w'
     )
-    print(
-      snippet_template.render(
-        id=file_id,
-        key=issue_key,
-        text=issue_rn_text,
-        title=issue_title,
-      ),
-      file=file_file
-    )
+    if section["id"] == 'fixed-security-issues':
+      print(
+        snippet_cve_template.render(
+          text=issue_rn_text,
+        ),
+        file=file_file
+      )
+    else:
+      print(
+        snippet_template.render(
+          id=file_id,
+          key=issue_key,
+          text=issue_rn_text,
+          title=issue_title,
+        ),
+        file=file_file
+      )
 # Report final status
 print(
   'INFO: Single-sourced release notes from Jira for version {version} in {dir}'
