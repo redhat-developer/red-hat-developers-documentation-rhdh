@@ -1,0 +1,58 @@
+[id="deprecated-functionality-rhidp-1138"]
+= `spec.application.image`, `spec.application.replicas` and `spec.application.imagePullSecrets` fields are deprecated
+
+`spec.application.image`, `spec.application.replicas` and `spec.application.imagePullSecrets` fields are deprecated in `v1alpha2` in favour of `spec.deployment`. 
+
+Procedure:
+
+To update your {product-short} Operation configuration:
+
+. Remove the `spec.application.image`, `spec.application.replicas` and `spec.application.imagePullSecrets` fields from the Operator configuration:
++
+----
+spec:
+  application:
+    image: Backstage container image: [tag], e.g., "quay.io/my/my-rhdh:latest"
+    replicas: number of replicas, e.g., 2
+    imagePullSecrets: array of image pull secrets names, e.g.,
+      - my-secret-name
+----
+
+. Replace the removed fiels by new `spec.deployment` fields:
+//FIXME: replace by a technically accurate example
+----
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          metadata:
+            labels:
+              my: true
+          spec:
+            containers:
+              - name: backstage-backend
+                volumeMounts:
+                  - mountPath: /my/path
+                    name: my-volume
+                resources:
+                  requests:
+                    cpu: 250m
+              - name: my-sidecar
+                image: quay.io/my-org/my-sidecar:latest
+            volumes:
+              - ephemeral:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: "special"
+                name: my-volume
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root
+----
+
+// https://github.com/redhat-developer/rhdh-operator/blob/main/docs/configuration.md#deployment-parameters
+
+// .Additional resources
+// * link:https://issues.redhat.com/browse/RHIDP-1138[RHIDP-1138]
