@@ -100,7 +100,7 @@ for section in config['sections']:
     issue_title = format(issue.fields.summary)  # Issue title
     # Define AsciiDoc file id, file, and content
     file_id = format(issue_rn_type + "-" + issue_key).lower().replace(" ", "-")
-    file_file = open(
+    snippet_file = open(
       modules_dir + 'snip-' + file_id + '.adoc',
       'w'
     )
@@ -109,7 +109,7 @@ for section in config['sections']:
         snippet_cve_template.render(
           text=issue_rn_text,
         ),
-        file=file_file
+        file=snippet_file
       )
     else:
       print(
@@ -119,7 +119,7 @@ for section in config['sections']:
           text=issue_rn_text,
           title=issue_title,
         ),
-        file=file_file
+        file=snippet_file
       )
 # Report final status
 print(
