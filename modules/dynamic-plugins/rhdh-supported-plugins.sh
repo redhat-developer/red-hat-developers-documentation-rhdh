@@ -61,8 +61,9 @@ fi
 titlecase() { 
     for f in ${*} ; do \
         case $f in 
+            aap) echo -n "Ansible Automation Platform (AAP) ";;
             # UPPERCASE these exceptions
-            aap|acr|cd|ocm|rbac) echo -n "${f^^} ";;
+            acr|cd|ocm|rbac) echo -n "${f^^} ";;
             # MixedCase exceptions
             argocd) echo -n "Argo CD ";;
             github) echo -n "GitHub ";;
@@ -269,7 +270,12 @@ num_plugins=()
 # append to .csv and .adocN files
 rm -f "${0/.sh/.adoc1}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc1[@]}" | sort -z)
-for key in "${sorted[@]}"; do echo -e "${adoc1[$key]}" >> "${0/.sh/.ref-rh-supported-plugins}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+for key in "${sorted[@]}"; do 
+    echo -e "${adoc1[$key]}" >> "${0/.sh/.ref-rh-supported-plugins}"
+    if [[ $key != *"techdocs"* ]]; then
+        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+    fi
+done
 num_plugins+=(${#adoc1[@]})
 
 rm -f "${0/.sh/.adoc2}"
