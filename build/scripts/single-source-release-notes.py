@@ -36,15 +36,6 @@ env = jinja2.Environment(
     templates_dir
   )
 )
-snippet_template = env.get_template(
-  'snippet.adoc.jinja2'
-)
-snippet_cve_template = env.get_template(
-  'snippet-cve.adoc.jinja2'
-)
-assembly_template = env.get_template(
-  'assembly.adoc.jinja'
-)
 # Load configuration file
 with open(
   root_dir + '/jira2asciidoc.yml',
@@ -81,6 +72,9 @@ for section in config['sections']:
     assemblies_dir + 'assembly-release-notes-' + section["id"] + '.adoc',
     'w'
   )
+  assembly_template = env.get_template(
+    'assembly.adoc.jinja'
+  )
   print(
     assembly_template.render(
       assembly_id=section["id"],
@@ -97,6 +91,7 @@ for section in config['sections']:
     issue_rn_status = format(issue.fields.customfield_12310213)  # Release Note Status
     issue_rn_text = format(issue.fields.customfield_12317313)  # Release Note Text
     issue_rn_type = format(issue.fields.customfield_12320850)  # Release Note Type
+    issue_template = section["template"]
     issue_title = format(issue.fields.summary)  # Issue title
     # Define AsciiDoc file id, file, and content
     file_id = format(issue_rn_type + "-" + issue_key).lower().replace(" ", "-")
@@ -104,23 +99,18 @@ for section in config['sections']:
       modules_dir + 'snip-' + file_id + '.adoc',
       'w'
     )
-    if section["id"] == 'fixed-security-issues':
-      print(
-        snippet_cve_template.render(
-          text=issue_rn_text,
-        ),
-        file=snippet_file
-      )
-    else:
-      print(
-        snippet_template.render(
-          id=file_id,
-          key=issue_key,
-          text=issue_rn_text,
-          title=issue_title,
-        ),
-        file=snippet_file
-      )
+    snippet_template = env.get_template(
+      'snippet-' + issue_template + '.adoc.jinja2'
+    )
+    print(
+      snippet_template.render(
+        id=file_id,
+        key=issue_key,
+        text=issue_rn_text,
+        title=issue_title,
+      ),
+      file=snippet_file
+    )
 # Report final status
 print(
   'INFO: Single-sourced release notes from Jira for version {version} in {dir}'
