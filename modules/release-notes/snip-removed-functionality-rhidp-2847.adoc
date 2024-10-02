@@ -1,7 +1,62 @@
 [id="removed-functionality-rhidp-2847"]
 = Breaking changes in Backstage release 1.28
 
-Breaking changes in Backstage 1.28
+.Proxy backend plugin protected by default
+
+The proxy backend plugin is now protected by {product-short} authentication, by default. Unless specifically configured (see below), all proxy endpoints will reject requests immediately unless a valid {product-short} user or service token is passed along with the request. This aligns the proxy with how other {product-short} backends behave out of the box, and serves to protect your upstreams from unauthorized access.
+
+Here's an example of how to configure:
+[source,yaml]
+----
+proxy:
+  endpoints:
+    '/pagerduty':
+      target: https://api.pagerduty.com
+      credentials: require
+      headers:
+        Authorization: Token token=${PAGERDUTY_TOKEN}
+---- 
+
+There are three credentials settings:
+
+`require`:: Callers need {product-short} credentials. These are not forwarded to the target.
+
+`forward`:: Callers need {product-short} credentials, which are forwarded to the target.
+
+`dangerously-allow-unauthenticated`:: No {product-short} credentials needed. Target can apply its own checks. Incoming tokens of any sort will be allowed but ignored, and will also be forwarded if `allowedHeaders: ['Authorization']` is included.
+
+The new default is `require`, replacing the old `dangerously-allow-unauthenticated`. This means some previously permitted requests may now result in `401 Unauthorized responses`. This does not apply if `backend.auth.dangerouslyDisableDefaultAuthPolicy` is set to `true`.
+
+For proxy endpoints still requiring unauthenticated access, add credentials: `dangerously-allow-unauthenticated` in your app-config.
+
+
+.Github integration breaking changes
+
+Removed deprecated code from when casing was changed from `GitHub` to `Github` nearly two years ago. The following items have been removed:
+
+*  `getGitHubFileFetchUrl` (use `getGithubFileFetchUrl` instead)
+*  `GitHubIntegrationConfig` (use `GithubIntegrationConfig` instead)
+*  `GitHubIntegration` (use `GithubIntegration` instead)
+*   `readGitHubIntegrationConfig` (use `readGithubIntegrationConfig` instead)
+*  `readGitHubIntegrationConfigs` (use `readGithubIntegrationConfigs` instead)
+*   `replaceGitHubUrlType` (use `replaceGithubUrlType` instead)
+
+.OAuth Scope Updates
+
+The way that OAuth-based auth providers handle scopes has received several updates. There is now a new `.additionalScopes` configuration for all OAuth providers, which can be used to request additional scopes for all sessions. Many providers already had a similar configuration, but in most cases this did not work correctly as scopes requested by the client would override the configured set.
+
+Many providers now also have a set of required scopes that will always be present. This is in contrast to the previous solution where the client would be responsible for including a set of baseline scopes.
+
+A bug has also been fixed in the handling of persistent scopes, which could break session refresh for some providers, such as GitHub.
+
+.User Info service
+
+Limited-access user tokens (as used in cookies) no longer contain the ent ownership claim. This is notably used by TechDocs and the app-backend. If you use those services, you may want to log out and in again.
+
+Background: As part of the previous auth improvements, we added the coreServices.userInfo service. This service can extract user details from incoming credentials - notably the so-called ent claim with its ownership information.
+
+In this release, the auth backend part of this has been implemented, such that the information returned by your sign-in resolver gets persisted and can be acquired after the fact. With this in place, we could finally start slimming down on token sizes, starting with the cookie tokens. Unfortunately this has to be done in such a way that it’s breaking in the short term.
+
 
 // .Additional resources
 // * link:https://issues.redhat.com/browse/RHIDP-2847[RHIDP-2847]
