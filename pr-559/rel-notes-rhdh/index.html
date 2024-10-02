@@ -2091,7 +2091,93 @@ export const lightThemeProvider = ({ children }: { children: ReactNode }) =&gt; 
 <div class="sect2">
 <h3 id="removed-functionality-rhidp-2847">3.3. Breaking changes in Backstage release 1.28</h3>
 <div class="paragraph">
-<p>Breaking changes in Backstage 1.28</p>
+<div class="title">Proxy backend plugin protected by default</div>
+<p>The proxy backend plugin is now protected by Developer Hub authentication, by default. Unless specifically configured (see below), all proxy endpoints will reject requests immediately unless a valid Developer Hub user or service token is passed along with the request. This aligns the proxy with how other Developer Hub backends behave out of the box, and serves to protect your upstreams from unauthorized access.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s an example of how to configure:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">proxy:
+  endpoints:
+    '/pagerduty':
+      target: https://api.pagerduty.com
+      credentials: require
+      headers:
+        Authorization: Token token=${PAGERDUTY_TOKEN}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>There are three credentials settings:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>require</code></dt>
+<dd>
+<p>Callers need Developer Hub credentials. These are not forwarded to the target.</p>
+</dd>
+<dt class="hdlist1"><code>forward</code></dt>
+<dd>
+<p>Callers need Developer Hub credentials, which are forwarded to the target.</p>
+</dd>
+<dt class="hdlist1"><code>dangerously-allow-unauthenticated</code></dt>
+<dd>
+<p>No Developer Hub credentials needed. Target can apply its own checks. Incoming tokens of any sort will be allowed but ignored, and will also be forwarded if <code>allowedHeaders: ['Authorization']</code> is included.</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>The new default is <code>require</code>, replacing the old <code>dangerously-allow-unauthenticated</code>. This means some previously permitted requests may now result in <code>401 Unauthorized responses</code>. This does not apply if <code>backend.auth.dangerouslyDisableDefaultAuthPolicy</code> is set to <code>true</code>.</p>
+</div>
+<div class="paragraph">
+<p>For proxy endpoints still requiring unauthenticated access, add credentials: <code>dangerously-allow-unauthenticated</code> in your app-config.</p>
+</div>
+<div class="paragraph">
+<div class="title">Github integration breaking changes</div>
+<p>Removed deprecated code from when casing was changed from <code>GitHub</code> to <code>Github</code> nearly two years ago. The following items have been removed:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>getGitHubFileFetchUrl</code> (use <code>getGithubFileFetchUrl</code> instead)</p>
+</li>
+<li>
+<p><code>GitHubIntegrationConfig</code> (use <code>GithubIntegrationConfig</code> instead)</p>
+</li>
+<li>
+<p><code>GitHubIntegration</code> (use <code>GithubIntegration</code> instead)</p>
+</li>
+<li>
+<p><code>readGitHubIntegrationConfig</code> (use <code>readGithubIntegrationConfig</code> instead)</p>
+</li>
+<li>
+<p><code>readGitHubIntegrationConfigs</code> (use <code>readGithubIntegrationConfigs</code> instead)</p>
+</li>
+<li>
+<p><code>replaceGitHubUrlType</code> (use <code>replaceGithubUrlType</code> instead)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<div class="title">OAuth Scope Updates</div>
+<p>The way that OAuth-based auth providers handle scopes has received several updates. There is now a new <code>.additionalScopes</code> configuration for all OAuth providers, which can be used to request additional scopes for all sessions. Many providers already had a similar configuration, but in most cases this did not work correctly as scopes requested by the client would override the configured set.</p>
+</div>
+<div class="paragraph">
+<p>Many providers now also have a set of required scopes that will always be present. This is in contrast to the previous solution where the client would be responsible for including a set of baseline scopes.</p>
+</div>
+<div class="paragraph">
+<p>A bug has also been fixed in the handling of persistent scopes, which could break session refresh for some providers, such as GitHub.</p>
+</div>
+<div class="paragraph">
+<div class="title">User Info service</div>
+<p>Limited-access user tokens (as used in cookies) no longer contain the ent ownership claim. This is notably used by TechDocs and the app-backend. If you use those services, you may want to log out and in again.</p>
+</div>
+<div class="paragraph">
+<p>Background: As part of the previous auth improvements, we added the coreServices.userInfo service. This service can extract user details from incoming credentials - notably the so-called ent claim with its ownership information.</p>
+</div>
+<div class="paragraph">
+<p>In this release, the auth backend part of this has been implemented, such that the information returned by your sign-in resolver gets persisted and can be acquired after the fact. With this in place, we could finally start slimming down on token sizes, starting with the cookie tokens. Unfortunately this has to be done in such a way that it’s breaking in the short term.</p>
 </div>
 </div>
 <div class="sect2">
@@ -2791,7 +2877,7 @@ There is unfortunately no known workaround yet.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-02 13:15:51 UTC
+Last updated 2024-10-02 13:39:12 UTC
 </div>
 </div>
 </body>
