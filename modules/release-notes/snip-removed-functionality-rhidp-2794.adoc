@@ -25,35 +25,6 @@ The `@backstage/plugin-catalog-backend-module-ldap` module has been improved to 
 
 This change is breaking for `readLdapOrg` and `LdapProviderConfig`, which now both always accept arrays of users and groups configurations.
 
-.Proxy backend plugin protected by default
-
-The proxy backend plugin is now protected by {product-short} authentication, by default. Unless specifically configured (see below), all proxy endpoints will reject requests immediately unless a valid {product-short} user or service token is passed along with the request. This aligns the proxy with how other {product-short} backends behave out of the box, and serves to protect your upstreams from unauthorized access.
-
-Here's an example of how to configure:
-[source,yaml]
-----
-proxy:
-  endpoints:
-    '/pagerduty':
-      target: https://api.pagerduty.com
-      credentials: require
-      headers:
-        Authorization: Token token=${PAGERDUTY_TOKEN}
----- 
-
-There are three credentials settings:
-
-`require`:: Callers need {product-short} credentials. These are not forwarded to the target.
-
-`forward`:: Callers need {product-short} credentials, which are forwarded to the target.
-
-`dangerously-allow-unauthenticated`:: No {product-short} credentials needed. Target can apply its own checks. Incoming tokens of any sort will be allowed but ignored, and will also be forwarded if `allowedHeaders: ['Authorization']` is included.
-
-The new default is `require`, replacing the old `dangerously-allow-unauthenticated`. This means some previously permitted requests may now result in `401 Unauthorized responses`. This does not apply if `backend.auth.dangerouslyDisableDefaultAuthPolicy` is set to `true`.
-
-For proxy endpoints still requiring unauthenticated access, add credentials: `dangerously-allow-unauthenticated` in your app-config.
-
-
 .Github integration breaking changes
 
 Removed deprecated code from when casing was changed from `GitHub` to `Github` nearly two years ago. The following items have been removed:
