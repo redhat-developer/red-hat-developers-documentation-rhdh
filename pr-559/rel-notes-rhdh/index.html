@@ -1644,12 +1644,12 @@ section {
 <li><a href="#bug-fix-rhidp-4013">7.13. The Developer Hub image defined in the custom resource takes precedence on the image defined in the environment variable</a></li>
 <li><a href="#bug-fix-rhidp-3471">7.14. Theme issues with plugins using material 5</a></li>
 <li><a href="#bug-fix-rhidp-2374">7.15. Added missing plugin name in the RBAC administration interface</a></li>
-<li><a href="#bug-fix-rhidp-2139">7.16. Filtering for permissions policies that do not exist leads to an error being thrown</a></li>
-<li><a href="#bug-fix-rhidp-2412">7.17. HTTP error code 431 when an user is member of many groups</a></li>
+<li><a href="#bug-fix-rhidp-2412">7.16. HTTP error code 431 when an user is member of many groups</a></li>
+<li><a href="#bug-fix-rhidp-2529">7.17. When login using azure entra sso, it will use id to match the user entity, which will fail to match with user entity imported by msgraph.</a></li>
 <li><a href="#bug-fix-rhidp-2438">7.18. OCM calls are not scoped to the OCM page</a></li>
-<li><a href="#bug-fix-rhidp-2529">7.19. When login using azure entra sso, it will use id to match the user entity, which will fail to match with user entity imported by msgraph.</a></li>
-<li><a href="#bug-fix-rhidp-1334">7.20. Removed unnecessary pull secret from the Red Hat Developer Hub Helm Chart</a></li>
-<li><a href="#bug-fix-rhidp-2728">7.21. Handle PII logging in Application Logs</a></li>
+<li><a href="#bug-fix-rhidp-2728">7.19. Handle PII logging in Application Logs</a></li>
+<li><a href="#bug-fix-rhidp-2139">7.20. Filtering for permissions policies that do not exist leads to an error being thrown</a></li>
+<li><a href="#bug-fix-rhidp-1334">7.21. Removed unnecessary pull secret from the Red Hat Developer Hub Helm Chart</a></li>
 </ul>
 </li>
 <li><a href="#known-issues">Chapter 8. Known issues</a></li>
@@ -1916,9 +1916,6 @@ Additionally, Developer Hub supports conditional policy aliases, which are dynam
 <ol class="arabic">
 <li>
 <p>Export a theme provider function in the dynamic plugin, such as:</p>
-</li>
-</ol>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="javascript">import { lightTheme } from './lightTheme'; // some custom theme
@@ -1928,13 +1925,9 @@ export const lightThemeProvider = ({ children }: { children: ReactNode }) =&gt; 
 );</code></pre>
 </div>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
+</li>
 <li>
 <p>Configure Developer Hub to load the them in the UI by using the new <code>themes</code> configuration field:</p>
-</li>
-</ol>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">dynamicPlugins:
@@ -1955,6 +1948,9 @@ export const lightThemeProvider = ({ children }: { children: ReactNode }) =&gt; 
 </li>
 </ol>
 </div>
+</li>
+</ol>
+</div>
 <div class="ulist">
 <div class="title">Verification</div>
 <ul>
@@ -1964,7 +1960,7 @@ export const lightThemeProvider = ({ children }: { children: ReactNode }) =&gt; 
 </ul>
 </div>
 <div class="paragraph">
-<p>This update also introduced the ability to override core API service factories from a dynamic plugin, which can be helpful for more specialized use cases such as providing a custom ScmAuth configuration for the {prdouct-short} frontend.</p>
+<p>This update also introduced the ability to override core API service factories from a dynamic plugin, which can be helpful for more specialized use cases such as providing a custom ScmAuth configuration for the Developer Hub frontend.</p>
 </div>
 </div>
 </div>
@@ -2427,17 +2423,7 @@ ClassNameGenerator.configure(componentName =&gt; {
 </div>
 </div>
 <div class="sect2">
-<h3 id="bug-fix-rhidp-2139">7.16. Filtering for permissions policies that do not exist leads to an error being thrown</h3>
-<div class="paragraph">
-<p>Before this update, permission checks by the permission framework would throw an error if a matching permission policy was not previously defined.
-Therefore, Developer Hub denied the request with an error.</p>
-</div>
-<div class="paragraph">
-<p>With this update, Developer Hub denies the request without throwing an error.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="bug-fix-rhidp-2412">7.17. HTTP error code 431 when an user is member of many groups</h3>
+<h3 id="bug-fix-rhidp-2412">7.16. HTTP error code 431 when an user is member of many groups</h3>
 <div class="paragraph">
 <p>Before this update, {prod-short} API became unresponsive when a user was member of a high number of groups (more than 150) with aggregated relations.
 Therefore, the user might have failed to authenticate.
@@ -2445,6 +2431,17 @@ Also, {prod-short} might have shown an error when opening the user entity in the
 </div>
 <div class="paragraph">
 <p>With this update, {prod-short} can handle a user member of a high number of groups (more than 150) with aggregated relations.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="bug-fix-rhidp-2529">7.17. When login using azure entra sso, it will use id to match the user entity, which will fail to match with user entity imported by msgraph.</h3>
+<div class="paragraph">
+<p>Before this update, Developer Hub failed to resolve user entities with Azure authentication provider to entities ingested by the  MsGraph catalog provider.
+Therefore, a user authentication with Microsoft Azure could not open a session in Developer Hub.</p>
+</div>
+<div class="paragraph">
+<p>With this update, Developer Hub resolves user entities with Azure authentication provider to entities ingested by the MsGraph catalog provider.
+Therefore, a user authentication with Microsoft Azure can open a session in Developer Hub.</p>
 </div>
 </div>
 <div class="sect2">
@@ -2457,32 +2454,31 @@ Also, {prod-short} might have shown an error when opening the user entity in the
 </div>
 </div>
 <div class="sect2">
-<h3 id="bug-fix-rhidp-2529">7.19. When login using azure entra sso, it will use id to match the user entity, which will fail to match with user entity imported by msgraph.</h3>
-<div class="paragraph">
-<p>Before this update, Developer Hub failed to resolve user entities with Azure authentication provider to entities ingested by the  MsGraph catalog provider.
-Therefore, a user authentication with Microsoft Azure could not open a session in Developer Hub.</p>
-</div>
-<div class="paragraph">
-<p>With this update, Developer Hub resolves user entities with Azure authentication provider to entities ingested by the MsGraph catalog provider.
-Therefore, a user authentication with Microsoft Azure can open a session in Developer Hub.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="bug-fix-rhidp-1334">7.20. Removed unnecessary pull secret from the Red Hat Developer Hub Helm Chart</h3>
-<div class="paragraph">
-<p>Before this update, the Red Hat Developer Hub Helm Chart specified a pull secret that is no longer needed.</p>
-</div>
-<div class="paragraph">
-<p>With this update, the unnecessary pull secret has been removed.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="bug-fix-rhidp-2728">7.21. Handle PII logging in Application Logs</h3>
+<h3 id="bug-fix-rhidp-2728">7.19. Handle PII logging in Application Logs</h3>
 <div class="paragraph">
 <p>Before this update, Developer Hub included user IP addresses in the application logs.</p>
 </div>
 <div class="paragraph">
 <p>With this update, Developer Hub does not include user IP addresses in the application logs.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="bug-fix-rhidp-2139">7.20. Filtering for permissions policies that do not exist leads to an error being thrown</h3>
+<div class="paragraph">
+<p>Before this update, permission checks by the permission framework would throw an error if a matching permission policy was not previously defined.
+Therefore, Developer Hub denied the request with an error.</p>
+</div>
+<div class="paragraph">
+<p>With this update, Developer Hub denies the request without throwing an error.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="bug-fix-rhidp-1334">7.21. Removed unnecessary pull secret from the Red Hat Developer Hub Helm Chart</h3>
+<div class="paragraph">
+<p>Before this update, the Red Hat Developer Hub Helm Chart specified a pull secret that is no longer needed.</p>
+</div>
+<div class="paragraph">
+<p>With this update, the unnecessary pull secret has been removed.</p>
 </div>
 </div>
 </div>
@@ -2501,7 +2497,7 @@ Therefore, a user authentication with Microsoft Azure can open a session in Deve
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-02 07:44:51 UTC
+Last updated 2024-10-02 07:53:09 UTC
 </div>
 </div>
 </body>
