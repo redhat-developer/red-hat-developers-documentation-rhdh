@@ -15,7 +15,7 @@ rm "$destination"
 exec &>> "$destination"
 for cve in $(cat cve-list.txt)
 do
-  echo "link:https://access.redhat.com/security/cve/$cve[$cve]:: "
-  curl -s "https://access.redhat.com/hydra/rest/securitydata/cve/$cve.json" | jq -r '.details[-1]'
+  echo "link:https://access.redhat.com/security/cve/$cve[$cve]::"
+  curl -s "https://access.redhat.com/hydra/rest/securitydata/cve/$cve.json" | jq -r '.details[-1]' | head -n 2
   echo ""
 done
