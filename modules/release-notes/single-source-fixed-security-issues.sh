@@ -47,15 +47,15 @@ single_source_from_security_data () {
   done
   # Stop sending output to the destination file
   exec 1>&3 3>&-
+  echo "include::${destination}[leveloffset=+2]"
 }
 
 title="{product} dependency updates"
 section="product"
 single_source_from_security_data
-echo "INFO: Verify that the assemblies/assembly-release-notes-fixed-security-issues.adoc file contains required include statement:"
-echo "include::${destination}[leveloffset=+2]"
 
 title="RHEL 9 platform RPM updates"
 section="rpm"
 single_source_from_security_data
-echo "include::${destination}[leveloffset=+2]"
+
+echo "INFO: Verify that the assemblies/assembly-release-notes-fixed-security-issues.adoc file contains aforementionned required include statement."
