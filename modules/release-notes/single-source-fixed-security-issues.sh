@@ -19,13 +19,13 @@ single_source_from_security_data () {
   # Assert that the list file exists.
   if [ ! -f ${list} ]
   then
-    echo "ERROR: The ${list} file is missing"
+    echo "ERROR: The ${list} file is missing. You must create it to proceed. For a given version, can collect the list of CVEs from a JIRA query like https://issues.redhat.com/issues/?jql=labels%3DSecurityTracking+and+project%3DRHIDP+and+fixversion%3D1.3.1 or list of Erratas from https://errata.devel.redhat.com/advisory/filters/4213"
     exit 1
   fi
   # Cleanup the destination files.
   rm -f "$destination"
   # Send output to the destination file.
-  exec &>> "$destination"
+  exec 3>&1 1>> "$destination"
   echo "= ${title}"
   for cve in $(cat ${list} | sort | uniq)
   do
@@ -41,14 +41,19 @@ single_source_from_security_data () {
   # Add a separation
   echo ""
   done
+  # Stop sending output to the destination file
+  exec 1>&3 3>&-
 }
 
 title="{product} dependency updates"
-destination="modules/release-notes/snip-common-vulnerabilities-and-exposures-product-${product_version}.adoc"
-list="build/cve-lists/cve-list-product-${product_version}.txt"
+destination="modules/release-notes/snip-fixed-security-issues-in-product-${product_version}.adoc"
+list="modules/release-notes/cve-list-product-${product_version}.txt"
 single_source_from_security_data
+echo "INFO: Verify that the assemblies/assembly-release-notes-fixed-security-issues.adoc file contains required include statement:"
+echo "include::${destination}[leveloffset=+2]"
 
 title="RHEL 9 platform RPM updates"
-list="build/cve-lists/cve-list-rpm-${product_version}.txt"
-destination="modules/release-notes/snip-common-vulnerabilities-and-exposures-rpm-${product_version}.adoc"
+list="modules/release-notes/cve-list-rpm-${product_version}.txt"
+destination="modules/release-notes/snip-fixed-security-issues-in-rpm-${product_version}.adoc"
 single_source_from_security_data
+echo "include::${destination}[leveloffset=+2]"
