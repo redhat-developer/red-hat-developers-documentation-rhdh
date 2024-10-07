@@ -16,6 +16,10 @@ set -e
 product_version="$(grep ':product-bundle-version:' artifacts/attributes.adoc | cut -d' ' -f2 )"
 
 single_source_from_security_data () {
+  sectionname="fixed-security-issues-in-${section}-${product_version}"
+  dirname=$(dirname ${BASH_SOURCE})
+  destination="${dirname}/snip-${sectionname}.adoc"
+  list="${dirname}/list-${sectionname}.txt"
   # Assert that the list file exists.
   if [ ! -f ${list} ]
   then
@@ -46,14 +50,12 @@ single_source_from_security_data () {
 }
 
 title="{product} dependency updates"
-destination="modules/release-notes/snip-fixed-security-issues-in-product-${product_version}.adoc"
-list="modules/release-notes/cve-list-product-${product_version}.txt"
+section="product"
 single_source_from_security_data
 echo "INFO: Verify that the assemblies/assembly-release-notes-fixed-security-issues.adoc file contains required include statement:"
 echo "include::${destination}[leveloffset=+2]"
 
 title="RHEL 9 platform RPM updates"
-list="modules/release-notes/cve-list-rpm-${product_version}.txt"
-destination="modules/release-notes/snip-fixed-security-issues-in-rpm-${product_version}.adoc"
+section="rpm"
 single_source_from_security_data
 echo "include::${destination}[leveloffset=+2]"
