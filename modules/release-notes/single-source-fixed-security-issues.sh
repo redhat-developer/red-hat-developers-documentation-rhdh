@@ -13,6 +13,7 @@
 # Fail and stop on first error
 set -e
 
+# get the z-stream version from the bundle-version attribute. Note that while chart-version could be larger, this is the correct value for CVE tracking
 product_version="$(grep ':product-bundle-version:' artifacts/attributes.adoc | cut -d' ' -f2 )"
 
 single_source_from_security_data () {
