@@ -59,4 +59,4 @@ title="RHEL 9 platform RPM updates"
 section="rpm"
 single_source_from_security_data
 
-echo "INFO: Verify that the assemblies/assembly-release-notes-fixed-security-issues.adoc file contains aforementionned required include statement."
+echo "INFO: Verify that the assemblies/assembly-release-notes-fixed-security-issues.adoc file contains aforementioned required include statements."
