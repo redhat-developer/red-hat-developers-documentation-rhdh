@@ -42,8 +42,8 @@ single_source_from_security_data () {
       curl -s "https://access.redhat.com/hydra/rest/securitydata/cve/$cve.json" | jq -r '.details[-1]' | head -n 2 >> "$destination"
   fi
   done < "$list"
-  # in 1.3, don't remove the 'modules/release-notes/' path prefix, just use ${destination}
-  echo "include::${destination##*release-notes/}[leveloffset=+2]"
+  # in 1.3, don't remove the 'modules/release-notes/' path prefix, just use ${destination} and use levelofset=+2
+  echo "include::${destination##*release-notes/}[leveloffset=+3]"
 }
 
 title="{product} dependency updates"
