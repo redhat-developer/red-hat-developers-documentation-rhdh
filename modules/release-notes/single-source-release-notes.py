@@ -54,7 +54,7 @@ jira = JIRA(
 )
 # Delete old file files.
 fileList = glob.glob(
-  modules_dir + 'snip-*.adoc'
+  modules_dir + 'snip-*-rhidp-*.adoc'
 )
 for filePath in fileList:
   os.remove(filePath)
