@@ -1,0 +1,149 @@
+[id="enabling-authentication-with-github"]
+= Enabling authentication with GitHub
+
+To authenticate users with GitHub, enable the GitHub authentication provider in {product}.
+
+.Prerequisites
+* You link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html/administration_guide_for_red_hat_developer_hub/assembly-add-custom-app-file-openshift_admin-rhdh[added a custom {product-short} application configuration], and have sufficient permissions to modify it.
+* You have sufficient permissions in GitHub to create and manage a link:https://docs.github.com/en/apps/overview[GitHub App].
+
+.Procedure
+. To allow {product-short} to authenticate with GitHub, create a GitHub App.
+Prefer a GitHub App to an OAuth app to use fine-grained permissions, give more control over which repositories the application can access, and use short-lived tokens.
+
+.. link:https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app[Register a GitHub App] with the configuration:
++
+* *GitHub App name*: Enter a unique name identifying your GitHub App, such as __<{product}>__-__<GUID>__.
+* *Homepage URL*: Your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+* *Authorization callback URL*: Your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/github/handler/frame]`.
+* *Webhook URL*: Your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+* *Webhook secret*: Provide a strong secret.
+* *Repository permissions*:
+** Enable `Read-only` access to:
+*** *Administration*
+*** *Commit statuses*
+*** *Contents*
+*** *Dependabot alerts*
+*** *Deployments*
+*** *Pull Requests*
+*** *Webhooks*
++
+TIP: When you intend to make changes via the GitHub API, enable `Read and write` permissions rather than `Read-only`.
+
+** Toggle other permissions as per your needs.
+
+* *Organization permissions*:
+** Enable `Read-only` access to:
+*** *Members*
+
+* *Where can this GitHub App be installed?*: Select `Only on this account`.
+
+.. In the *General* tab, *Clients secrets* section, click *Generate a new client secret*.
+
+.. In the *General* tab, *Private keys* section, click *Generate a private key*.
+
+.. In the *Install App* tab, choose an account to install your GitHub App on.
+
+.. Save for the next step:
+
+* **App ID**
+* **Client ID**
+* **Client secret**
+* **Private key**
+* **Webhook secret**
+
+. To add your GitHub credentials to your {product-short} secrets, edit your {product-short} secrets, such as `secrets-rhdh`, and add the following key/value pairs:
++
+`AUTH_GITHUB_APP_ID`:: Enter the saved **App ID**.
+`AUTH_GITHUB_CLIENT_ID`:: Enter the saved **Client ID**.
++
+Optional: enter additional secrets, not required for authentication, but required for further integration with GitHub:
++
+`GITHUB_HOST_DOMAIN`:: Enter your GitHub host domain: `pass:c[https://github.com]` unless you are using GitHub Enterprise.
+`GITHUB_ORGANIZATION`:: Enter your GitHub organization name, such as `__<your_github_organization_name>__'.
+`GITHUB_ORG_URL`:: Enter `$GITHUB_HOST_DOMAIN/$GITHUB_ORGANIZATION`.
+`GITHUB_CLIENT_SECRET`:: Enter the saved **Client Secret**.
+`GITHUB_PRIVATE_KEY_FILE`:: Enter the saved **Private key**.
+`GITHUB_WEBHOOK_SECRET`:: Enter the saved *Webhook secret*.
+
+. To set up the GitHub authentication provider in your {product-short} custom configuration, edit your custom {product-short} ConfigMap such as `app-config-rhdh`, and add the following lines to the `app-config-rhdh.yaml` content:
++
+--
+.`app-config-rhdh.yaml` fragment with mandatory fields to enable authentication with GitHub
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+signInPage: github
+----
+
+`environment: production`::
+Mark the environment as `production` to hide the Guest login in the {product-short} home page.
+
+`clientId`, `clientSecret`::
+Use the {product-short} application information that you have created in GitHub and configured in OpenShift as secrets.
+
+`sigInPage: github`::
+To enable the GitHub provider as default sign-in provider.
+
+Optional: Consider adding the following optional fields:
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::
+To enable authentication without requiring to provision users in the {product-short} software catalog.
++
+WARNING: Use this option to explore {product-short} features, but do not use it in production.
++
+.`app-config-rhdh.yaml` fragment with optional field to allow authenticating users absent from the software catalog
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+signInPage: github
+dangerouslyAllowSignInWithoutUserInCatalog: true
+----
+
+`callbackUrl`::
+The callback URL that GitHub uses when initiating an OAuth flow, such as: __<your_intermediate_service_url/handler>__.
+Define it when {product-short} is not the immediate receiver, such as in cases when you use one OAuth app for many {product-short} instances.
++
+.`app-config-rhdh.yaml` fragment with optional `enterpriseInstanceUrl` field
+[source,yaml,subs="+quotes"]
+----
+auth:
+  providers:
+    oidc:
+      production:
+        callbackUrl: __<your_intermediate_service_url/handler>__
+----
+
+`enterpriseInstanceUrl`::
+Your GitHub Enterprise URL.
+Requires you defined the `GITHUB_HOST_DOMAIN` secret in the previous step.
++
+.`app-config-rhdh.yaml` fragment with optional `enterpriseInstanceUrl` field
+[source,yaml,subs="+quotes"]
+----
+auth:
+  providers:
+    oidc:
+      production:
+        enterpriseInstanceUrl: ${GITHUB_HOST_DOMAIN}
+----
+
+--
+
+.Verification
+. Go to the {product-short} login page.
+. Your {product-short} sign-in page displays *Sign in using GitHub* and the Guest user sign-in is disabled.
+. Log in with GitHub.
+
