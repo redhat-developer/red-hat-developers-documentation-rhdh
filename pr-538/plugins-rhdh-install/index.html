@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.16">
-<title>Installing dynamic plugins in Red Hat Developer Hub</title>
+<title>Installing and viewing dynamic plugins</title>
 <style>
 /* Red Hat Fonts */
 @font-face {
@@ -1585,16 +1585,398 @@ section {
 
 </style>
 </head>
-<body id="rhdh-installing-rhdh-plugins_title-plugins-rhdh-about" class="book">
+<body id="rhdh-installing-rhdh-plugins_title-plugins-rhdh-about" class="book toc2 toc-left">
 <div id="header">
 <h1>Installing dynamic plugins in Red Hat Developer Hub</h1>
+<div id="toc" class="toc2">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#proc-config-dynamic-plugins-rhdh-operator_title-plugins-rhdh-about">Chapter 1. Installing dynamic plugins with the Red Hat Developer Hub Operator</a></li>
+<li><a href="#con-install-dynamic-plugin-helm_title-plugins-rhdh-about">Chapter 2. Installing dynamic plugins using the Helm chart</a>
+<ul class="sectlevel2">
+<li><a href="#proc-obtaining-integrity-checksum">2.1. Obtaining the integrity checksum</a></li>
+<li><a href="#ref-example-dynamic-plugin-helm-installations">2.2. Example Helm chart configurations for dynamic plugin installations</a></li>
+<li><a href="#proc-install-external-dynamic-plugins-helm">2.3. Installing external dynamic plugins using a Helm chart</a></li>
+</ul>
+</li>
+<li><a href="#proc-using-custom-npm-registry">Chapter 3. Installing dynamic plugins in an air-gapped environment</a></li>
+<li><a href="#proc-viewing-installed-plugins_title-plugins-rhdh-about">Chapter 4. Viewing installed plugins</a></li>
+</ul>
+</div>
 </div>
 <div id="content">
-
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The dynamic plugin support is based on the backend plugin manager package, which is a service that scans a configured root directory (<code>dynamicPlugins.rootDirectory</code> in the <code>app-config.yaml</code> file) for dynamic plugin packages and loads them dynamically.</p>
+</div>
+<div class="paragraph">
+<p>You can use the dynamic plugins that come preinstalled with Red Hat Developer Hub or install external dynamic plugins from a public NPM registry.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="proc-config-dynamic-plugins-rhdh-operator_title-plugins-rhdh-about">Chapter 1. Installing dynamic plugins with the Red Hat Developer Hub Operator</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can store the configuration for dynamic plugins in a <code>ConfigMap</code> object that your <code>Backstage</code> custom resource (CR) can reference.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If the <code>pluginConfig</code> field references environment variables, you must define the variables in your <code>secrets-rhdh</code> secret.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>From the OpenShift Container Platform web console, select the <strong>ConfigMaps</strong> tab.</p>
+</li>
+<li>
+<p>Click <strong>Create ConfigMap</strong>.</p>
+</li>
+<li>
+<p>From the <strong>Create ConfigMap</strong> page, select the <strong>YAML view</strong> option in <strong>Configure via</strong> and edit the file, if needed.</p>
+<div class="listingblock">
+<div class="title">Example <code>ConfigMap</code> object using the GitHub dynamic plugin</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic'
+        disabled: false
+        pluginConfig:
+          catalog:
+            providers:
+              github:
+                organization: "${GITHUB_ORG}"
+                schedule:
+                  frequency: { minutes: 1 }
+                  timeout: { minutes: 1 }
+                  initialDelay: { seconds: 100 }</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Create</strong>.</p>
+</li>
+<li>
+<p>Go to the <strong>Topology</strong> view.</p>
+</li>
+<li>
+<p>Click on the overflow menu for the Red Hat Developer Hub instance that you want to use and select <strong>Edit Backstage</strong> to load the YAML view of the Red Hat Developer Hub instance.</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/operator-install-2.png" alt="operator install 2">
+</div>
+</div>
+</li>
+<li>
+<p>Add the <code>dynamicPluginsConfigMapName</code> field to your <code>Backstage</code> CR. For example:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: my-rhdh
+spec:
+  application:
+# ...
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+# ...</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Save</strong>.</p>
+</li>
+<li>
+<p>Navigate back to the <strong>Topology</strong> view and wait for the Red Hat Developer Hub pod to start.</p>
+</li>
+<li>
+<p>Click the <strong>Open URL</strong> icon to start using the Red Hat Developer Hub platform with the new configuration changes.</p>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Verification</div>
+<ul>
+<li>
+<p>Ensure that the dynamic plugins configuration has been loaded, by appending <code>/api/dynamic-plugins-info/loaded-plugins</code> to your Red Hat Developer Hub root URL and checking the list of plugins:</p>
+<div class="listingblock">
+<div class="title">Example list of plugins</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="json">[
+  {
+    "name": "backstage-plugin-catalog-backend-module-github-dynamic",
+    "version": "0.5.2",
+    "platform": "node",
+    "role": "backend-plugin-module"
+  },
+  {
+    "name": "backstage-plugin-techdocs",
+    "version": "1.10.0",
+    "role": "frontend-plugin",
+    "platform": "web"
+  },
+  {
+    "name": "backstage-plugin-techdocs-backend-dynamic",
+    "version": "1.9.5",
+    "platform": "node",
+    "role": "backend-plugin"
+  },
+]</code></pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="con-install-dynamic-plugin-helm_title-plugins-rhdh-about">Chapter 2. Installing dynamic plugins using the Helm chart</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can deploy a Developer Hub instance using a Helm chart, which is a flexible installation method. With the Helm chart, you can sideload dynamic plugins into your Developer Hub instance without having to recompile your code or rebuild the container.</p>
+</div>
+<div class="paragraph">
+<p>To install dynamic plugins in Developer Hub using Helm, add the following <code>global.dynamic</code> parameters in your Helm chart:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>plugins</code>: the dynamic plugins list intended for installation. By default, the list is empty. You can populate the plugins list with the following fields:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>package</code>: a package specification for the dynamic plugin package that you want to install. You can use a package for either a local or an external dynamic plugin installation. For a local installation, use a path to the local folder containing the dynamic plugin. For an external installation, use a package specification from a public NPM repository.</p>
+</li>
+<li>
+<p><code>integrity</code> (required for external packages): an integrity checksum in the form of <code>&lt;alg&gt;-&lt;digest&gt;</code> specific to the package. Supported algorithms include <code>sha256</code>, <code>sha384</code> and <code>sha512</code>.</p>
+</li>
+<li>
+<p><code>pluginConfig</code>: an optional plugin-specific <code>app-config</code> YAML fragment. See plugin configuration for more information.</p>
+</li>
+<li>
+<p><code>disabled</code>: disables the dynamic plugin if set to <code>true</code>. Default: <code>false</code>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code>includes</code>: a list of YAML files utilizing the same syntax.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The <code>plugins</code> list in the <code>includes</code> file is merged with the <code>plugins</code> list in the main Helm values. If a plugin package is mentioned in both <code>plugins</code> lists, the <code>plugins</code> fields in the main Helm values override the <code>plugins</code> fields in the <code>includes</code> file. The default configuration includes the <code>dynamic-plugins.default.yaml</code> file, which contains all of the dynamic plugins preinstalled in Developer Hub, whether enabled or disabled by default.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="proc-obtaining-integrity-checksum">2.1. Obtaining the integrity checksum</h3>
+<div class="paragraph">
+<p>To obtain the integrity checksum, enter the following command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>npm view &lt;package name&gt;@&lt;version&gt; dist.integrity</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="ref-example-dynamic-plugin-helm-installations">2.2. Example Helm chart configurations for dynamic plugin installations</h3>
+<div class="paragraph">
+<p>The following examples demonstrate how to configure the Helm chart for specific types of dynamic plugin installations.</p>
+</div>
+<div class="listingblock">
+<div class="title">Configuring a local plugin and an external plugin when the external plugin requires a specific app-config</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    plugins:
+      - package: &lt;alocal package-spec used by npm pack&gt;
+      - package: &lt;external package-spec used by npm pack&gt;
+        integrity: sha512-&lt;some hash&gt;
+        pluginConfig: ...</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Disabling a plugin from an included file</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: &lt;some imported plugins listed in dynamic-plugins.default.yaml&gt;
+        disabled: true</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Enabling a plugin from an included file</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: &lt;some imported plugins listed in dynamic-plugins.custom.yaml&gt;
+        disabled: false</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Enabling a plugin that is disabled in an included file</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: &lt;some imported plugins listed in dynamic-plugins.custom.yaml&gt;
+        disabled: false</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-install-external-dynamic-plugins-helm">2.3. Installing external dynamic plugins using a Helm chart</h3>
+<div class="paragraph">
+<p>The NPM registry contains external dynamic plugins that you can use for demonstration purposes. For example, the following community plugins are available in the <code>janus-idp</code> organization in the NPMJS repository:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Notifications (frontend and backend)</p>
+</li>
+<li>
+<p>Kubernetes actions (scaffolder actions)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>To install the Notifications and Kubernetes actions plugins, include them in the Helm chart values in the <code>global.dynamic.plugins</code> list as shown in the following example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">global:
+  dynamic:
+    plugins:
+      - package: '@janus-idp/plugin-notifications-backend-dynamic@1.3.6'
+        # Integrity can be found at https://registry.npmjs.org/@janus-idp/plugin-notifications-backend-dynamic
+        integrity: 'sha512-Qd8pniy1yRx+x7LnwjzQ6k9zP+C1yex24MaCcx7dGDPT/XbTokwoSZr4baSSn8jUA6P45NUUevu1d629mG4JGQ=='
+      - package: '@janus-idp/plugin-notifications@1.1.12'
+        # https://registry.npmjs.org/@janus-idp/plugin-notifications
+        integrity: 'sha512-GCdEuHRQek3ay428C8C4wWgxjNpNwCXgIdFbUUFGCLLkBFSaOEw+XaBvWaBGtQ5BLgE3jQEUxa+422uzSYC5oQ=='
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              janus-idp.backstage-plugin-notifications:
+                appIcons:
+                  - name: notificationsIcon
+                    module: NotificationsPlugin
+                    importName: NotificationsActiveIcon
+                dynamicRoutes:
+                  - path: /notifications
+                    importName: NotificationsPage
+                    module: NotificationsPlugin
+                    menuItem:
+                      icon: notificationsIcon
+                      text: Notifications
+                    config:
+                      pollingIntervalMs: 5000
+      - package: '@janus-idp/backstage-scaffolder-backend-module-kubernetes-dynamic@1.3.5'
+        # https://registry.npmjs.org/@janus-idp/backstage-scaffolder-backend-module-kubernetes-dynamic
+        integrity: 'sha512-19ie+FM3QHxWYPyYzE0uNdI5K8M4vGZ0SPeeTw85XPROY1DrIY7rMm2G0XT85L0ZmntHVwc9qW+SbHolPg/qRA=='
+          proxy:
+            endpoints:
+              /explore-backend-completed:
+                target: 'http://localhost:7017'
+      - package: '@dfatwork-pkgs/search-backend-module-explore-wrapped-dynamic@0.1.3-next.1'
+        # https://registry.npmjs.org/@dfatwork-pkgs/search-backend-module-explore-wrapped-dynamic
+        integrity: 'sha512-mv6LS8UOve+eumoMCVypGcd7b/L36lH2z11tGKVrt+m65VzQI4FgAJr9kNCrjUZPMyh36KVGIjYqsu9+kgzH5A=='
+      - package: '@dfatwork-pkgs/plugin-catalog-backend-module-test-dynamic@0.0.0'
+        # https://registry.npmjs.org/@dfatwork-pkgs/plugin-catalog-backend-module-test-dynamic
+        integrity: 'sha512-YsrZMThxJk7cYJU9FtAcsTCx9lCChpytK254TfGb3iMAYQyVcZnr5AA/AU+hezFnXLsr6gj8PP7z/mCZieuuDA=='</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="proc-using-custom-npm-registry">Chapter 3. Installing dynamic plugins in an air-gapped environment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can install external plugins in an air-gapped environment by setting up a custom NPM registry.</p>
+</div>
+<div class="paragraph">
+<p>You can configure the NPM registry URL and authentication information for dynamic plugin packages using a Helm chart. For dynamic plugin packages obtained through <code>npm pack</code>, you can use a <code>.npmrc</code> file.</p>
+</div>
+<div class="paragraph">
+<p>Using the Helm chart, add the <code>.npmrc</code> file to the NPM registry by creating a secret named <code>dynamic-plugins-npmrc</code> with the following content:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: v1
+kind: Secret
+metadata:
+  name: dynamic-plugins-npmrc
+type: Opaque
+stringData:
+  .npmrc: |
+    registry=&lt;registry-url&gt;
+    //&lt;registry-url&gt;:_authToken=&lt;auth-token&gt;
+          ...</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="proc-viewing-installed-plugins_title-plugins-rhdh-about">Chapter 4. Viewing installed plugins</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Using the Dynamic Plugins Info front-end plugin, you can view plugins that are currently installed in your Red Hat Developer Hub application. This plugin is enabled by default.</p>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Open your Developer Hub application and click <strong>Administration</strong>.</p>
+</li>
+<li>
+<p>Go to the <strong>Plugins</strong> tab to view a list of installed plugins and related information.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-01 09:47:16 UTC
+Last updated 2024-10-09 13:05:20 UTC
 </div>
 </div>
 </body>
