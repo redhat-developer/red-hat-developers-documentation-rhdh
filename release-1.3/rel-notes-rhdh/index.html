@@ -1619,9 +1619,10 @@ section {
 </li>
 <li><a href="#breaking-changes">Chapter 3. Breaking changes</a>
 <ul class="sectlevel2">
-<li><a href="#removed-functionality-rhidp-4293">3.1. Plugins with updated scope</a></li>
-<li><a href="#removed-functionality-rhidp-3048">3.2. The 'dynamic-plugins' config map is named dynamically</a></li>
+<li><a href="#removed-functionality-rhidp-3048">3.1. The 'dynamic-plugins' config map is named dynamically</a></li>
+<li><a href="#removed-functionality-rhidp-3074">3.2. Signing in without user in the software catalog is now disabled by default</a></li>
 <li><a href="#removed-functionality-rhidp-3187">3.3. Red Hat and Community Technology Preview (TP) plugins and actions are disabled by default</a></li>
+<li><a href="#removed-functionality-rhidp-4293">3.4. Plugins with updated scope</a></li>
 </ul>
 </li>
 <li><a href="#deprecated-functionalities">Chapter 4. Deprecated functionalities</a>
@@ -1672,9 +1673,10 @@ section {
 </li>
 <li><a href="#known-issues">Chapter 8. Known issues</a>
 <ul class="sectlevel2">
-<li><a href="#known-issue-rhidp-4069">8.1. Conditional alias <code>$ownerRefs</code> does not work</a></li>
-<li><a href="#known-issue-rhidp-4067">8.2. Bulk Import: Added repositories count is incorrect</a></li>
-<li><a href="#known-issue-rhidp-3931">8.3. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</a></li>
+<li><a href="#known-issue-rhidp-4378">8.1. Admin users should have high privilage</a></li>
+<li><a href="#known-issue-rhidp-4069">8.2. Conditional alias <code>$ownerRefs</code> does not work</a></li>
+<li><a href="#known-issue-rhidp-4067">8.3. Bulk Import: Added repositories count is incorrect</a></li>
+<li><a href="#known-issue-rhidp-3931">8.4. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</a></li>
 </ul>
 </li>
 </ul>
@@ -2032,7 +2034,105 @@ export const lightThemeProvider = ({ children }: { children: ReactNode }) =&gt; 
 <p>This section lists breaking changes in Red Hat Developer Hub 1.3.</p>
 </div>
 <div class="sect2">
-<h3 id="removed-functionality-rhidp-4293">3.1. Plugins with updated scope</h3>
+<h3 id="removed-functionality-rhidp-3048">3.1. The 'dynamic-plugins' config map is named dynamically</h3>
+<div class="paragraph">
+<p>Before this update, the dynamic-plugins config map name was hardcoded.
+Therefore, it was not possible to install two Red Hat Developer Hub helm charts in the same namespace.</p>
+</div>
+<div class="paragraph">
+<p>With this update, the dynamic-plugins config map is named dynamically based on the deployment name similar to how all other components names are generated.
+When upgrading from a previous chart you might need to manually update that section of your <code>values.yaml</code> file to pull in the correct config map.</p>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://issues.redhat.com/browse/RHIDP-3048">RHIDP-3048</a></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="removed-functionality-rhidp-3074">3.2. Signing in without user in the software catalog is now disabled by default</h3>
+<div class="paragraph">
+<p>By default, it is now required for the user entity to exist in the software catalog to allow sign in.
+This is required for production ready deployments since identities need to exist and originate from a trusted source (i.e. the Identity Provider) in order for security controls such as RBAC and Audit logging to be effective.
+To bypass this, enable the <code>dangerouslySignInWithoutUserInCatalog</code> configuration that allows sign in without the user being in the catalog.
+Enabling this option is dangerous as it might allow unauthorized users to gain access.</p>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://issues.redhat.com/browse/RHIDP-3074">RHIDP-3074</a></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="removed-functionality-rhidp-3187">3.3. Red Hat and Community Technology Preview (TP) plugins and actions are disabled by default</h3>
+<div class="paragraph">
+<p>Before this update, some Red Hat and Community Technology Preview (TP) plugins and actions were enabled by default:</p>
+</div>
+<div class="ulist">
+<div class="title">Technology Preview plugins</div>
+<ul>
+<li>
+<p>@backstage-community/plugin-catalog-backend-module-scaffolder-relation-processor (changing in RHIDP-3643)</p>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Community Support plugins</div>
+<ul>
+<li>
+<p>@backstage/plugin-scaffolder-backend-module-azure</p>
+</li>
+<li>
+<p>@backstage/plugin-scaffolder-backend-module-bitbucket-cloud</p>
+</li>
+<li>
+<p>@backstage/plugin-scaffolder-backend-module-bitbucket-server</p>
+</li>
+<li>
+<p>@backstage/plugin-scaffolder-backend-module-gerrit</p>
+</li>
+<li>
+<p>@backstage/plugin-scaffolder-backend-module-github</p>
+</li>
+<li>
+<p>@backstage/plugin-scaffolder-backend-module-gitlab</p>
+</li>
+<li>
+<p>@roadiehq/scaffolder-backend-module-http-request</p>
+</li>
+<li>
+<p>@roadiehq/scaffolder-backend-module-utils</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>With this update, all plugins included under the <a href="https://access.redhat.com/support/offerings/techpreview">Technology Preview scope of support</a>, whether from Red Hat or the community, are disabled by default.</p>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>If your workload requires these plugins, enable them in your custom resource or configmap using <code>disabled: false</code>.</p>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://issues.redhat.com/browse/RHIDP-3187">RHIDP-3187</a></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="removed-functionality-rhidp-4293">3.4. Plugins with updated scope</h3>
 <div class="paragraph">
 <p>With this update, three plugins previously under the <code>@janus-idp</code> scope have moved to <code>@backstage-community</code>:</p>
 </div>
@@ -2096,87 +2196,6 @@ export const lightThemeProvider = ({ children }: { children: ReactNode }) =&gt; 
 <ul>
 <li>
 <p><a href="https://issues.redhat.com/browse/RHIDP-4293">RHIDP-4293</a></p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="removed-functionality-rhidp-3048">3.2. The 'dynamic-plugins' config map is named dynamically</h3>
-<div class="paragraph">
-<p>Before this update, the dynamic-plugins config map name was hardcoded.
-Therefore, it was not possible to install two Red Hat Developer Hub helm charts in the same namespace.</p>
-</div>
-<div class="paragraph">
-<p>With this update, the dynamic-plugins config map is named dynamically based on the deployment name similar to how all other components names are generated.
-When upgrading from a previous chart you might need to manually update that section of your <code>values.yaml</code> file to pull in the correct config map.</p>
-</div>
-<div class="ulist">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p><a href="https://issues.redhat.com/browse/RHIDP-3048">RHIDP-3048</a></p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="removed-functionality-rhidp-3187">3.3. Red Hat and Community Technology Preview (TP) plugins and actions are disabled by default</h3>
-<div class="paragraph">
-<p>Before this update, some Red Hat and Community Technology Preview (TP) plugins and actions were enabled by default:</p>
-</div>
-<div class="ulist">
-<div class="title">Technology Preview plugins</div>
-<ul>
-<li>
-<p>@backstage-community/plugin-catalog-backend-module-scaffolder-relation-processor (changing in RHIDP-3643)</p>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Community Support plugins</div>
-<ul>
-<li>
-<p>@backstage/plugin-scaffolder-backend-module-azure</p>
-</li>
-<li>
-<p>@backstage/plugin-scaffolder-backend-module-bitbucket-cloud</p>
-</li>
-<li>
-<p>@backstage/plugin-scaffolder-backend-module-bitbucket-server</p>
-</li>
-<li>
-<p>@backstage/plugin-scaffolder-backend-module-gerrit</p>
-</li>
-<li>
-<p>@backstage/plugin-scaffolder-backend-module-github</p>
-</li>
-<li>
-<p>@backstage/plugin-scaffolder-backend-module-gitlab</p>
-</li>
-<li>
-<p>@roadiehq/scaffolder-backend-module-http-request</p>
-</li>
-<li>
-<p>@roadiehq/scaffolder-backend-module-utils</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>With this update, all plugins included under the <a href="https://access.redhat.com/support/offerings/techpreview">Technology Preview scope of support</a>, whether from Red Hat or the community, are disabled by default.</p>
-</div>
-<div class="ulist">
-<div class="title">Procedure</div>
-<ul>
-<li>
-<p>If your workload requires these plugins, enable them in your custom resource or configmap using <code>disabled: false</code>.</p>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p><a href="https://issues.redhat.com/browse/RHIDP-3187">RHIDP-3187</a></p>
 </li>
 </ul>
 </div>
@@ -2928,7 +2947,24 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 <p>This section lists known issues in Red Hat Developer Hub 1.3.</p>
 </div>
 <div class="sect2">
-<h3 id="known-issue-rhidp-4069">8.1. Conditional alias <code>$ownerRefs</code> does not work</h3>
+<h3 id="known-issue-rhidp-4378">8.1. Admin users should have high privilage</h3>
+<div class="paragraph">
+<p>A conditional alias that uses <code>$ownerRefs</code> doesn&#8217;t work.</p>
+</div>
+<div class="paragraph">
+<p>There is no workaround.</p>
+</div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://issues.redhat.com/browse/RHIDP-4378">RHIDP-4378</a></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="known-issue-rhidp-4069">8.2. Conditional alias <code>$ownerRefs</code> does not work</h3>
 <div class="paragraph">
 <p>A conditional alias that uses <code>$ownerRefs</code> doesn&#8217;t work.</p>
 </div>
@@ -2945,7 +2981,7 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 </div>
 </div>
 <div class="sect2">
-<h3 id="known-issue-rhidp-4067">8.2. Bulk Import: Added repositories count is incorrect</h3>
+<h3 id="known-issue-rhidp-4067">8.3. Bulk Import: Added repositories count is incorrect</h3>
 <div class="paragraph">
 <p>Only the first 20 repositories (in alphabetical order) can be displayed at most on the Bulk Import Added Repositories page. Also, the count of Added Repositories displayed might be wrong. In future releases, we plan to address this with proper pagination. Meanwhile, as a workaround, searching would still work against all Added Repositories. So you can still search any Added Repository and get it listed on the table.</p>
 </div>
@@ -2959,7 +2995,7 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 </div>
 </div>
 <div class="sect2">
-<h3 id="known-issue-rhidp-3931">8.3. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</h3>
+<h3 id="known-issue-rhidp-3931">8.4. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</h3>
 <div class="paragraph">
 <p>Repositories might be added to Developer Hub from various sources (like statically in an app-config file or dynamically when enabling GitHub discovery). By design, the bulk import plugin will only track repositories that are accessible from the configured GitHub integrations.
 When both the Bulk Import and the GitHub Discovery plugins are enabled, the repositories the latter discovers might be listed in the Bulk Import pages.
@@ -2980,7 +3016,7 @@ There is unfortunately no known workaround yet.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-09 14:18:59 UTC
+Last updated 2024-10-09 15:36:10 UTC
 </div>
 </div>
 </body>
