@@ -37,7 +37,7 @@ single_source_from_security_data () {
   list_cleaned=$(echo -e "$list_cleaned" | sort -uV)
   for cve in $list_cleaned; do
     # Start the list.
-    echo "[DEBUG] $cve ..."
+    # echo "[DEBUG] $cve ..."
     echo -e "\nlink:https://access.redhat.com/security/cve/$cve[$cve]::" >> "$destination"
     # Call the API to return a list of details.
     # Red Hat is last if there is one.
