@@ -1,0 +1,147 @@
+[id="enabling-authentication-with-microsoft-azure"]
+= Enabling authentication with Microsoft Azure
+
+{product} includes a Microsoft Azure authentication provider that can authenticate users by using OAuth.
+
+.Prerequisites
+. You have the permission to register an application in Microsoft Azure.
+. You link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html-single/administration_guide_for_red_hat_developer_hub/index#assembly-add-custom-app-file-openshift_admin-rhdh[added a custom {product-short} application configuration].
+
+.Procedure
+. To allow {product-short} to authenticate with Microsoft Azure, link:https://learn.microsoft.com/en-us/entra/identity-platform/scenario-web-app-sign-user-app-registration?tabs=aspnetcore#register-an-app-by-using-the-azure-portal[create an OAuth application in Microsoft Azure].
+
+.. In the Azure portal go to link:https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade[*App registrations*], create a **New registration** with the configuration:
++
+**Name**:: The application name in Azure, such as __<My {product-short}>__.
+
+.. On the *Home > App registrations > __<My {product-short}>__ > Manage > Authentication* page, *Add a platform*, with the following configuration:
+
+*Redirect URI*:: Enter the backend authentication URI set in {product-short}: `pass:c,a,q[{my-product-url}/api/auth/microsoft/handler/frame]`
+*Front-channel logout URL*:: Leave blank.
+*Implicit grant and hybrid flows*:: Leave all checkboxes cleared.
+
+.. On the *Home > App registrations > __<My {product-short}>__ > Manage > API permissions* page, *Add a Permission*, then add the following *Delegated permission* for the *Microsoft Graph API*:
++
+* `email`
+* `offline_access`
+* `openid`
+* `profile`
+* `User.Read`
+* Optional custom scopes for the Microsoft Graph API that you define both in this section and in the {product-short} configuration (`app-config-rhdh.yaml`).
++
+[NOTE]
+====
+Your company might require you to grant admin consent for these permissions.
+Even if your company does not require admin consent, you might do so as it means users do not need to individually consent the first time they access backstage.
+To grant administrator consent, a directory administrator must go to the link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/user-admin-consent-overview[admin consent] page and click *Grant admin consent for COMPANY NAME*.
+====
+
+
+.. On the *Home > App registrations > __<My {product-short}>__ > Manage > Certificates & Secrets* page, in the *Client secrets* tab, create a *New client secret*.
+
+.. Save for the next step:
+- **Directory (tenant) ID**
+- **Application (client) ID**
+- **Application (client) secret**
+
+. To add your Microsoft Azure credentials to {product-short}, add the following key/value pairs to your {product-short} secrets, such as `secrets-rhdh`:
++
+`AUTH_AZURE_TENANT_ID`:: Enter your saved *Directory (tenant) ID*.
+`AUTH_AZURE_CLIENT_ID`:: Enter your saved *Application (client) ID*.
+`AUTH_AZURE_CLIENT_SECRET`:: Enter your saved *Application (client) secret*.
+
+. Set up the Microsoft Azure authentication provider in your {product-short} custom configuration, such as `app-config-rhdh`:
++
+--
+.`app-config-rhdh.yaml` fragment
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+signInPage: microsoft
+----
+
+`environment: production`::
+Mark the environment as production to hide the **Guest** login in the {product-short} home page.
+
+`clientId`, `clientSecret` and `tenantId`::
+Use the {product-short} application information that you have created in Microsoft Azure and configured in OpenShift as secrets.
+
+`signInPage: microsoft`::
+Enable the Microsoft Azure provider as default sign-in provider.
+
+Optional: Consider adding following optional fields:
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::
++
+To enable authentication without requiring to provision users in the {product-short} software catalog.
++
+WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-short} features, but do not use it in production.
++
+.`app-config-rhdh.yaml` fragment with optional field to allow authenticating users absent from the software catalog
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+signInPage: microsoft
+dangerouslyAllowSignInWithoutUserInCatalog: true
+----
+
+`domainHint`::
+Optional for single-tenant applications.
+You can reduce login friction for users with accounts in multiple tenants by automatically filtering out accounts from other tenants.
+If you want to use this parameter for a single-tenant application, uncomment and enter the tenant ID.
+If your application registration is multi-tenant, leave this parameter blank.
+For more information, see link:https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy[Home Realm Discovery].
++
+.`app-config-rhdh.yaml` fragment with optional `domainHint` field
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        domainHint: ${AUTH_AZURE_TENANT_ID}
+----
+
+`additionalScopes`::
+Optional for additional scopes.
+To add scopes for the application registration, uncomment and enter the list of scopes that you want to add.
+The default and mandatory value lists: `'openid', 'offline_access', 'profile', 'email', 'User.Read'`.
++
+.`app-config-rhdh.yaml` fragment with optional `additionalScopes` field
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        additionalScopes:
+           - Mail.Send
+----
+--
+
+[NOTE]
+====
+This step is optional for environments with outgoing access restrictions, such as firewall rules.
+ If your environment has such restrictions, ensure that your {product-very-short} backend can access the following hosts:
+
+* `login.microsoftonline.com`: For obtaining and exchanging authorization codes and access tokens.
+
+* `graph.microsoft.com`: For retrieving user profile information (as referenced in the source code).
+If this host is unreachable, you might see an _Authentication failed, failed to fetch user profile_ error when attempting to log in.
+====
