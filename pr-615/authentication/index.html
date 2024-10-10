@@ -1601,6 +1601,7 @@ section {
 <ul class="sectlevel2">
 <li><a href="#enabling-authentication-with-rhsso">2.1. Enabling authentication with Red Hat Single-Sign On (RHSSO)</a></li>
 <li><a href="#provisioning-users-from-rhsso-to-the-software-catalog">2.2. Provisioning users from Red Hat Single-Sign On (RHSSO) to the software catalog</a></li>
+<li><a href="#provisioning-users-from-rhsso-to-the-software-catalog">2.3. Creating a custom transformer to provision users from Red Hat Single-Sign On (RHSSO) to the software catalog</a></li>
 </ul>
 </li>
 <li><a href="#assembly-auth-provider-github">Chapter 3. Enabling the GitHub authentication provider</a>
@@ -2345,6 +2346,129 @@ Supports ISO duration and "human duration" as used in code.</p>
 <p>Log in with an RHSSO account.</p>
 </li>
 </ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="provisioning-users-from-rhsso-to-the-software-catalog">2.3. Creating a custom transformer to provision users from Red Hat Single-Sign On (RHSSO) to the software catalog</h3>
+<div class="paragraph">
+<p>To customize further how users/groups are mapped into entities in Red Hat Developer Hub, you can create a custom backend module that utilizes the <code>keycloakTransformerExtensionPoint</code> to provide custom user and group transformers to the keycloak backend.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You <a href="#provisioning-users-from-rhsso-to-the-software-catalog">enabled provisioning users from Red Hat Single-Sign On (RHSSO) to the software catalog</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Create a new backend module with the <code>yarn new</code> command.</p>
+</li>
+<li>
+<p>Add your custom user and group transformers to the <code>keycloakTransformerExtensionPoint</code>.</p>
+<div class="paragraph">
+<p>Below is an example of how the backend module can be defined:</p>
+</div>
+<div class="listingblock">
+<div class="title"><code>plugins/<em>&lt;module-name&gt;</em>/src/module.ts</code></div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="javascript">/* highlight-add-start */
+import {
+  GroupTransformer,
+  keycloakTransformerExtensionPoint,
+  UserTransformer,
+} from '@janus-idp/backstage-plugin-keycloak-backend';
+
+const customGroupTransformer: GroupTransformer = async (
+  entity,
+  realm,
+  groups,
+) =&gt; {
+  /* apply transformations */
+  return entity;
+};
+const customUserTransformer: UserTransformer = async (
+  entity,
+  user,
+  realm,
+  groups,
+) =&gt; {
+  /* apply transformations */
+  return entity;
+};
+/* highlight-add-end */
+
+export const keycloakBackendModuleTransformer = createBackendModule({
+  pluginId: 'catalog',
+  moduleId: 'keycloak-transformer',
+  register(reg) {
+    reg.registerInit({
+      deps: {
+        /* highlight-add-start */
+        keycloak: keycloakTransformerExtensionPoint,
+        /* highlight-add-end */
+      },
+      /* highlight-add-start */
+      async init({ keycloak }) {
+        keycloak.setUserTransformer(customUserTransformer);
+        keycloak.setGroupTransformer(customGroupTransformer);
+        /* highlight-add-end */
+      },
+    });
+  },
+});</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The <code>pluginId</code> for the module <strong>MUST</strong> be set to <code>catalog</code> to match the <code>pluginId</code> of the <code>keycloak-backend</code> or else the module will fail to initialize.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>Install this new backend module into your Developer Hub backend.</p>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Verification</div>
+<ul>
+<li>
+<p>Developer Hub imports the users and groups each time when started.
+Check the console logs to verify that the synchronization is completed.</p>
+<div class="listingblock">
+<div class="title">Successful synchronization example:</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="json">{"class":"KeycloakOrgEntityProvider","level":"info","message":"Read 3 Keycloak users and 2 Keycloak groups in 1.5 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
+{"class":"KeycloakOrgEntityProvider","level":"info","message":"Committed 3 Keycloak users and 2 Keycloak groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>After the first import is complete, from the <strong>Catalog</strong> page, you can select <strong>User</strong> to list the users.</p>
+</li>
+<li>
+<p>When you select a user, you can see the information imported from RHSSO.</p>
+</li>
+<li>
+<p>You can select a group, view the list, and select or view the information imported from RHSSO.</p>
+</li>
+<li>
+<p>You can log in with an RHSSO account.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -3452,7 +3576,7 @@ backend:start: {"class":"MicrosoftGraphOrgEntityProvider$1","level":"info","mess
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-10 14:24:41 UTC
+Last updated 2024-10-10 14:58:15 UTC
 </div>
 </div>
 </body>
