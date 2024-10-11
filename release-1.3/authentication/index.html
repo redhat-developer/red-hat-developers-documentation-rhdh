@@ -1605,10 +1605,8 @@ section {
 </li>
 <li><a href="#assembly-auth-provider-github">Chapter 3. Enabling the GitHub authentication provider</a>
 <ul class="sectlevel2">
-<li><a href="#con-github-app-overview">3.1. GitHub App​ overview</a></li>
-<li><a href="#proc-registering-github-app">3.2. Registering a GitHub​ App</a></li>
-<li><a href="#proc-configuring-github-app">3.3. Configuring a GitHub App in Developer Hub</a></li>
-<li><a href="#proc-adding-github-to-frontend">3.4. Adding the GitHub provider to the Developer Hub front end​</a></li>
+<li><a href="#enabling-authentication-with-github">3.1. Enabling authentication with GitHub</a></li>
+<li><a href="#provisioning-users-from-github-to-the-software-catalog">3.2. Provisioning users from GitHub to the software catalog</a></li>
 </ul>
 </li>
 <li><a href="#assembly-authenticating-with-microsoft-azure">Chapter 4. Authentication with Microsoft Azure</a>
@@ -2355,112 +2353,431 @@ Supports ISO duration and "human duration" as used in code.</p>
 <h2 id="assembly-auth-provider-github">Chapter 3. Enabling the GitHub authentication provider</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Red Hat Developer Hub uses a built-in GitHub authentication provider to authenticate users in GitHub or GitHub Enterprise.</p>
+<p>To authenticate users with GitHub or GitHub Enterprise:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><a href="#enabling-authentication-with-github">Enable the GitHub authentication provider in Developer Hub</a>.</p>
+</li>
+<li>
+<p><a href="#provisioning-users-from-github-to-the-software-catalog">Provision users from GitHub to the software catalog</a>.</p>
+</li>
+</ol>
 </div>
 <div class="sect2">
-<h3 id="con-github-app-overview">3.1. GitHub App​ overview</h3>
+<h3 id="enabling-authentication-with-github">3.1. Enabling authentication with GitHub</h3>
 <div class="paragraph">
-<p>GitHub Apps are generally preferred to OAuth apps because they use fine-grained permissions, give more control over which repositories the application can access, and use short-lived tokens. For more information, see <a href="https://docs.github.com/en/apps/overview">GitHub Apps overview</a> in the GitHub documentation.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="proc-registering-github-app">3.2. Registering a GitHub​ App</h3>
-<div class="paragraph">
-<p>In a GitHub App, you configure the allowed scopes as part of that application, therefore, you must verify the scope that your plugins require. The scope information is available in the plugin README files.</p>
-</div>
-<div class="paragraph">
-<p>To add GitHub authentication, complete the steps in <a href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">Registering a GitHub App</a> on the GitHub website.</p>
-</div>
-<div class="paragraph">
-<p>Use the following examples to enter the information about your production environment into the required fields on the <strong>Register new GitHub App</strong> page:</p>
+<p>To authenticate users with GitHub, enable the GitHub authentication provider in Red Hat Developer Hub.</p>
 </div>
 <div class="ulist">
+<div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>Application name: Red Hat Developer Hub</p>
+<p>You have <a href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.3/html/administration_guide_for_red_hat_developer_hub/assembly-add-custom-app-file-openshift_admin-rhdh">added a custom Developer Hub application configuration</a>, and have sufficient permissions to modify it.</p>
 </li>
 <li>
-<p>Homepage URL:  <code>https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;</code></p>
-</li>
-<li>
-<p>Authorization callback URL: <code>https://developer-hub-&lt;NAMESPACE_NAME&gt;.&lt;KUBERNETES_ROUTE_HOST&gt;/api/auth/github/handler/frame</code></p>
+<p>You have sufficient permissions in GitHub to create and manage a <a href="https://docs.github.com/en/apps/overview">GitHub App</a>.</p>
 </li>
 </ul>
 </div>
-<div class="admonitionblock note">
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>To allow Developer Hub to authenticate with GitHub, create a GitHub App.
+Opt for a GitHub App instead of an OAuth app to use fine-grained permissions, gain more control over which repositories the application can access, and use short-lived tokens.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p><a href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">Register a GitHub App</a> with the following configuration:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>GitHub App name</strong>: Enter a unique name identifying your GitHub App, such as <em>&lt;Red Hat Developer Hub&gt;</em>-<em>&lt;GUID&gt;</em>.</p>
+</li>
+<li>
+<p><strong>Homepage URL</strong>: Your Developer Hub URL: <code>https://<em>&lt;my_developer_hub_url&gt;</em></code>.</p>
+</li>
+<li>
+<p><strong>Authorization callback URL</strong>: Your Developer Hub authentication backend URL: <code>https://<em>&lt;my_developer_hub_url&gt;</em>/api/auth/github/handler/frame</code>.</p>
+</li>
+<li>
+<p><strong>Webhook URL</strong>: Your Developer Hub URL: <code>https://<em>&lt;my_developer_hub_url&gt;</em></code>.</p>
+</li>
+<li>
+<p><strong>Webhook secret</strong>: Provide a strong secret.</p>
+</li>
+<li>
+<p><strong>Repository permissions</strong>:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Enable <code>Read-only</code> access to:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Administration</strong></p>
+</li>
+<li>
+<p><strong>Commit statuses</strong></p>
+</li>
+<li>
+<p><strong>Contents</strong></p>
+</li>
+<li>
+<p><strong>Dependabot alerts</strong></p>
+</li>
+<li>
+<p><strong>Deployments</strong></p>
+</li>
+<li>
+<p><strong>Pull Requests</strong></p>
+</li>
+<li>
+<p><strong>Webhooks</strong></p>
+<div class="admonitionblock tip">
 <table>
 <tr>
 <td class="icon">
-<div class="title">Note</div>
+<div class="title">Tip</div>
 </td>
 <td class="content">
-The Homepage URL points to the Developer Hub front end, while the authorization callback URL points to the authentication provider backend.
+If you plan to make changes using the GitHub API, ensure that <code>Read and write</code> permissions are enabled instead of <code>Read-only</code>.
 </td>
 </tr>
 </table>
 </div>
-</div>
-<div class="sect2">
-<h3 id="proc-configuring-github-app">3.3. Configuring a GitHub App in Developer Hub</h3>
-<div class="paragraph">
-<p>To add GitHub authentication for Developer Hub, you must configure the GitHub App in your <code>app-config.yaml</code> file.</p>
-</div>
-<div class="paragraph">
-<p>The GitHub authentication provider uses the following configuration keys:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>clientId</code>: the client ID that you generated on GitHub. For example: b59241722e3c3b4816e2</p>
-</li>
-<li>
-<p><code>clientSecret</code>: the client secret tied to the generated client ID.</p>
-</li>
-<li>
-<p><code>enterpriseInstanceUrl</code> (optional): the base URL for a GitHub Enterprise instance. For example: <code>https://ghe.&lt;company&gt;.com</code>. The <code>enterpriseInstanceUrl</code> is only needed for GitHub Enterprise.</p>
-</li>
-<li>
-<p><code>callbackUrl</code> (optional): the callback URL that GitHub uses when initiating an OAuth flow. For example: https://your-intermediate-service.com/handler. The <code>callbackUrl</code> is only needed if Developer Hub is not the immediate receiver, such as in cases when you use one OAuth app for many Developer Hub instances.</p>
 </li>
 </ul>
 </div>
-<div class="paragraph">
-<p>To configure the GitHub App, add the provider configuration to your <code>app-config.yaml</code> file under the root auth configuration. For example:</p>
+</li>
+<li>
+<p>Toggle other permissions as per your needs.</p>
+</li>
+</ul>
 </div>
+</li>
+<li>
+<p><strong>Organization permissions</strong>:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Enable <code>Read-only</code> access to <strong>Members</strong>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>For <strong>Where can this GitHub App be installed?</strong>, select <code>Only on this account</code>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>In the <strong>General</strong> &#8594; <strong>Clients secrets</strong> section, click <strong>Generate a new client secret</strong>.</p>
+</li>
+<li>
+<p>In the <strong>General</strong> &#8594; <strong>Private keys</strong> section, click <strong>Generate a private key</strong>.</p>
+</li>
+<li>
+<p>In the <strong>Install App</strong> tab, choose an account to install your GitHub App on.</p>
+</li>
+<li>
+<p>Save the following values for the next step:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>App ID</strong></p>
+</li>
+<li>
+<p><strong>Client ID</strong></p>
+</li>
+<li>
+<p><strong>Client secret</strong></p>
+</li>
+<li>
+<p><strong>Private key</strong></p>
+</li>
+<li>
+<p><strong>Webhook secret</strong></p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>To add your GitHub credentials to your Developer Hub secrets, edit your Developer Hub secrets, such as <code>secrets-rhdh</code>, and add the following key/value pairs:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>AUTH_GITHUB_APP_ID</code></dt>
+<dd>
+<p>Enter the saved <strong>App ID</strong>.</p>
+</dd>
+<dt class="hdlist1"><code>AUTH_GITHUB_CLIENT_ID</code></dt>
+<dd>
+<p>Enter the saved <strong>Client ID</strong>.</p>
+<div class="paragraph">
+<p>Optional: enter additional secrets. The additional secrets are not required for authentication, but for further integration with GitHub, including:</p>
+</div>
+</dd>
+<dt class="hdlist1"><code>GITHUB_HOST_DOMAIN</code></dt>
+<dd>
+<p>Enter your GitHub host domain: <code>https://github.com</code> unless you are using GitHub Enterprise.</p>
+</dd>
+<dt class="hdlist1"><code>GITHUB_ORGANIZATION</code></dt>
+<dd>
+<p>Enter your GitHub organization name, such as `<em>&lt;your_github_organization_name&gt;</em>'.</p>
+</dd>
+<dt class="hdlist1"><code>GITHUB_ORG_URL</code></dt>
+<dd>
+<p>Enter <code>$GITHUB_HOST_DOMAIN/$GITHUB_ORGANIZATION</code>.</p>
+</dd>
+<dt class="hdlist1"><code>GITHUB_CLIENT_SECRET</code></dt>
+<dd>
+<p>Enter the saved <strong>Client Secret</strong>.</p>
+</dd>
+<dt class="hdlist1"><code>GITHUB_PRIVATE_KEY_FILE</code></dt>
+<dd>
+<p>Enter the saved <strong>Private key</strong>.</p>
+</dd>
+<dt class="hdlist1"><code>GITHUB_WEBHOOK_SECRET</code></dt>
+<dd>
+<p>Enter the saved <strong>Webhook secret</strong>.</p>
+</dd>
+</dl>
+</div>
+</li>
+<li>
+<p>To set up the GitHub authentication provider in your Developer Hub custom configuration, edit your custom Developer Hub ConfigMap such as <code>app-config-rhdh</code>, and add the following lines to the <code>app-config-rhdh.yaml</code> content:</p>
+<div class="openblock">
+<div class="content">
 <div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment with mandatory fields to enable authentication with GitHub</div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="yaml">auth:
- environment: production
- providers:
-   github:
-     production:
-       clientId: ${GITHUB_APP_CLIENT_ID}
-       clientSecret: ${GITHUB_APP_CLIENT_SECRET}
-       ## uncomment if using GitHub Enterprise
-       # enterpriseInstanceUrl: ${GITHUB_URL}</code></pre>
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+signInPage: github</code></pre>
 </div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>environment: production</code></dt>
+<dd>
+<p>Mark the environment as <code>production</code> to hide the Guest login in the Developer Hub home page.</p>
+</dd>
+<dt class="hdlist1"><code>clientId</code>, <code>clientSecret</code></dt>
+<dd>
+<p>Use the Developer Hub application information that you have created in GitHub and configured in OpenShift as secrets.</p>
+</dd>
+<dt class="hdlist1"><code>sigInPage: github</code></dt>
+<dd>
+<p>To enable the GitHub provider as default sign-in provider.</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>Optional: Consider adding the following optional fields:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>dangerouslyAllowSignInWithoutUserInCatalog: true</code></dt>
+<dd>
+<p>To enable authentication without requiring to provision users in the Developer Hub software catalog.</p>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">
+Use <code>dangerouslyAllowSignInWithoutUserInCatalog</code> to explore Developer Hub features, but do not use it in production.
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment with optional field to allow authenticating users absent from the software catalog</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+signInPage: github
+dangerouslyAllowSignInWithoutUserInCatalog: true</code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>callbackUrl</code></dt>
+<dd>
+<p>The callback URL that GitHub uses when initiating an OAuth flow, such as: <em>&lt;your_intermediate_service_url/handler&gt;</em>.
+Define it when Developer Hub is not the immediate receiver, such as in cases when you use one OAuth app for many Developer Hub instances.</p>
+<div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment with optional <code>enterpriseInstanceUrl</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  providers:
+    github:
+      production:
+        callbackUrl: <em>&lt;your_intermediate_service_url/handler&gt;</em></code></pre>
+</div>
+</div>
+</dd>
+<dt class="hdlist1"><code>enterpriseInstanceUrl</code></dt>
+<dd>
+<p>Your GitHub Enterprise URL.
+Requires you defined the <code>GITHUB_HOST_DOMAIN</code> secret in the previous step.</p>
+<div class="listingblock">
+<div class="title"><code>app-config-rhdh.yaml</code> fragment with optional <code>enterpriseInstanceUrl</code> field</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auth:
+  providers:
+    github:
+      production:
+        enterpriseInstanceUrl: ${GITHUB_HOST_DOMAIN}</code></pre>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Go to the Developer Hub login page.</p>
+</li>
+<li>
+<p>Your Developer Hub sign-in page displays <strong>Sign in using GitHub</strong> and the Guest user sign-in is disabled.</p>
+</li>
+<li>
+<p>Log in with GitHub.</p>
+</li>
+</ol>
 </div>
 </div>
 <div class="sect2">
-<h3 id="proc-adding-github-to-frontend">3.4. Adding the GitHub provider to the Developer Hub front end​</h3>
+<h3 id="provisioning-users-from-github-to-the-software-catalog">3.2. Provisioning users from GitHub to the software catalog</h3>
 <div class="paragraph">
-<p>To add the provider to the front end, add the sign in configuration to your <code>app-config.yaml</code> file. For example:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">signInPage: github</code></pre>
-</div>
+<p>To authenticate users, Red Hat Developer Hub requires their presence in the software catalog.
+Consider configuring Developer Hub to provision users from GitHub to the software catalog on schedule, rather than provisioning the users manually.</p>
 </div>
 <div class="ulist">
-<div class="title">Additional resources</div>
+<div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>For information about authenticating Backstage access with GitHub, see <a href="https://backstage.io/docs/integrations/github/github-apps/">GitHub Authentication Provider</a> in the community documentation.</p>
+<p>You have <a href="#enabling-authentication-with-github">enabled authentication with GitHub</a>, including the following secrets:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>GITHUB_HOST_DOMAIN</code></p>
 </li>
 <li>
-<p>For information about adding the provider to the Backstage front end, see <a href="https://github.com/janus-idp/backstage-showcase/blob/main/docs/auth.md#enabling-authentication-in-showcase">Enabling authentication</a> in the community documentation.</p>
+<p><code>GITHUB_ORGANIZATION</code></p>
 </li>
 </ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="ulist">
+<div class="title">Procedure</div>
+<ul>
+<li>
+<p>To enable GitHub member discovery, edit your custom Developer Hub ConfigMap, such as <code>app-config-rhdh</code>, and add the following lines to the <code>app-config-rhdh.yaml</code> content:</p>
+<div class="openblock">
+<div class="content">
+<div id="githubProviderId" class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment with mandatory <code>github</code> fields</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">dangerouslyAllowSignInWithoutUserInCatalog: false
+catalog:
+  providers:
+    github:
+      providerId:
+        organization: "${GITHUB_ORGANIZATION}"
+        schedule:
+          frequency:
+            minutes: 30
+          initialDelay:
+            seconds: 15
+          timeout:
+            minutes: 15
+    githubOrg:
+      githubUrl: "${GITHUB_HOST_DOMAIN}"
+      orgs: [ "${GITHUB_ORGANIZATION}" ]
+      schedule:
+        frequency:
+          minutes: 30
+        initialDelay:
+          seconds: 15
+        timeout:
+          minutes: 15</code></pre>
+</div>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>dangerouslyAllowSignInWithoutUserInCatalog: false</code></dt>
+<dd>
+<p>Allow authentication only for users present in the Developer Hub software catalog.</p>
+</dd>
+<dt class="hdlist1"><code>organization</code>, <code>githubUrl</code>, and <code>orgs</code></dt>
+<dd>
+<p>Use the Developer Hub application information that you have created in GitHub and configured in OpenShift as secrets.</p>
+</dd>
+<dt class="hdlist1"><code>schedule.frequency</code></dt>
+<dd>
+<p>To specify custom schedule frequency.
+Supports cron, ISO duration, and "human duration" as used in code.</p>
+</dd>
+<dt class="hdlist1"><code>schedule.timeout</code></dt>
+<dd>
+<p>To specify custom timeout.
+Supports ISO duration and "human duration" as used in code.</p>
+</dd>
+<dt class="hdlist1"><code>schedule.initialDelay</code></dt>
+<dd>
+<p>To specify custom initial delay.
+Supports ISO duration and "human duration" as used in code.</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Check the console logs to verify that the synchronization is completed.</p>
+<div class="listingblock">
+<div class="title">Successful synchronization example:</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="json">{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Reading GitHub users and teams for org: rhdh-dast","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:production:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:58"}
+{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Read 7 GitHub users and 2 GitHub groups in 0.4 seconds. Committing...","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:production:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:59"}</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Log in with a GitHub account.</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -3135,7 +3452,7 @@ backend:start: {"class":"MicrosoftGraphOrgEntityProvider$1","level":"info","mess
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-10 09:41:33 UTC
+Last updated 2024-10-11 10:01:14 UTC
 </div>
 </div>
 </body>
