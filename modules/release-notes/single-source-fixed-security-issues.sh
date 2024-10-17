@@ -31,7 +31,7 @@ single_source_from_security_data () {
   echo -e "= ${title}" > "$destination"
   while IFS="" read -r cve || [ -n "$cve" ]; do
     if [[ ${cve} != "#"* ]] && [[ $cve != "" ]]; then # skip commented and blank lines
-      list_cleaned="${list_cleaned}\n${cve}"
+      list_cleaned="${list_cleaned}\n${cve%%,*}" # trim csv content after the CVE number
     fi
   done < "$list"
   list_cleaned=$(echo -e "$list_cleaned" | sort -uV)
