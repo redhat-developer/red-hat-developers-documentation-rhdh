@@ -55,17 +55,15 @@ TIP: If you plan to make changes using the GitHub API, ensure that `Read and wri
 +
 `AUTH_GITHUB_APP_ID`:: Enter the saved **App ID**.
 `AUTH_GITHUB_CLIENT_ID`:: Enter the saved **Client ID**.
-+
-Optional: enter additional secrets. The additional secrets are not required for authentication, but for further integration with GitHub, including:
-+
 `GITHUB_HOST_DOMAIN`:: Enter your GitHub host domain: `pass:c[https://github.com]` unless you are using GitHub Enterprise.
 `GITHUB_ORGANIZATION`:: Enter your GitHub organization name, such as `__<your_github_organization_name>__'.
 `GITHUB_ORG_URL`:: Enter `$GITHUB_HOST_DOMAIN/$GITHUB_ORGANIZATION`.
 `GITHUB_CLIENT_SECRET`:: Enter the saved **Client Secret**.
 `GITHUB_PRIVATE_KEY_FILE`:: Enter the saved **Private key**.
+`GITHUB_WEBHOOK_URL`:: Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
 `GITHUB_WEBHOOK_SECRET`:: Enter the saved *Webhook secret*.
 
-. To set up the GitHub authentication provider in your {product-short} custom configuration, edit your custom {product-short} ConfigMap such as `app-config-rhdh`, and add the following lines to the `app-config-rhdh.yaml` content:
+. To set up the GitHub authentication provider and enable integration with the GitHub API in your {product-short} custom configuration, edit your custom {product-short} ConfigMap such as `app-config-rhdh`, and add the following lines to the `app-config-rhdh.yaml` content:
 +
 --
 .`app-config-rhdh.yaml` fragment with mandatory fields to enable authentication with GitHub
@@ -78,13 +76,24 @@ auth:
       production:
         clientId: ${AUTH_GITHUB_CLIENT_ID}
         clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+integrations:
+  github:
+    - host: ${GITHUB_HOST_DOMAIN}
+      apps:
+        - appId: ${AUTH_GITHUB_APP_ID}
+          clientId: ${AUTH_GITHUB_CLIENT_ID}
+          clientSecret: ${GITHUB_CLIENT_SECRET}
+          webhookUrl: ${GITHUB_WEBHOOK_URL}
+          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
+          privateKey: |
+            ${GITHUB_PRIVATE_KEY_FILE}
 signInPage: github
 ----
 
 `environment: production`::
 Mark the environment as `production` to hide the Guest login in the {product-short} home page.
 
-`clientId`, `clientSecret`::
+`clientId`, `clientSecret`, `host`, `appId`, `webhookUrl`, `webhookSecret`, `privateKey`::
 Use the {product-short} application information that you have created in GitHub and configured in OpenShift as secrets.
 
 `sigInPage: github`::
@@ -107,6 +116,17 @@ auth:
       production:
         clientId: ${AUTH_GITHUB_CLIENT_ID}
         clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+integrations:
+  github:
+    - host: ${GITHUB_HOST_DOMAIN}
+      apps:
+        - appId: ${AUTH_GITHUB_APP_ID}
+          clientId: ${AUTH_GITHUB_CLIENT_ID}
+          clientSecret: ${GITHUB_CLIENT_SECRET}
+          webhookUrl: ${GITHUB_WEBHOOK_URL}
+          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
+          privateKey: |
+            ${GITHUB_PRIVATE_KEY_FILE}
 signInPage: github
 dangerouslyAllowSignInWithoutUserInCatalog: true
 ----
