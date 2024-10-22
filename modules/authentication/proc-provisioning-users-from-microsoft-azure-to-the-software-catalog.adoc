@@ -1,0 +1,291 @@
+[id="provisioning-users-from-microsoft-azure-to-the-software-catalog"]
+= Provisioning users from Microsoft Azure to the software catalog
+
+To authenticate users with Microsoft Azure, after xref:enabling-authentication-with-microsoft-azure[Enabling authentication with Microsoft Azure], provision users from Microsoft Azure to the {product-short} software catalog.
+
+.Prerequisites
+* You have xref:enabling-authentication-with-microsoft-azure[enabled authentication with Microsoft Azure].
+
+.Procedure
+* To enable Microsoft Azure member discovery, edit your custom {product-short} ConfigMap, such as `app-config-rhdh`, and add following lines to the `app-config-rhdh.yaml` content:
++
+--
+[id=microsoftGraphOrgProviderId]
+.`app-config.yaml` fragment with mandatory `microsoftGraphOrg` fields
+[source,yaml]
+----
+dangerouslyAllowSignInWithoutUserInCatalog: false
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        target: https://graph.microsoft.com/v1.0
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+----
+
+`dangerouslyAllowSignInWithoutUserInCatalog: false`::
+Allow authentication only for users in the {product-short} software catalog.
+
+`target: https://graph.microsoft.com/v1.0`::
+Defines the MSGraph API endpoint the provider is connecting to.
+You might change this parameter to use a different version, such as the link:https://learn.microsoft.com/en-us/graph/api/overview?view=graph-rest-beta#call-the-beta-endpoint[beta endpoint].
+
+`tenandId`, `clientId` and `clientSecret`::
+Use the {product-short} application information you created in Microsoft Azure and configured in OpenShift as secrets.
+
+Optional: Consider adding the following optional `microsoftGraphOrg.providerId` fields:
+
+[id=authority]
+`authority: https://login.microsoftonline.com`::
+Defines the authority used.
+Change the value to use a different link:https://learn.microsoft.com/en-us/graph/deployments#app-registration-and-token-service-root-endpoints[authority], such as Azure US government.
+Default value: `https://login.microsoftonline.com`.
++
+.`app-config.yaml` fragment with optional `queryMode` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        authority: https://login.microsoftonline.com/
+----
+[id=queryMode]
+`queryMode: basic | advanced`:: By default, the Microsoft Graph API only provides the `basic` feature set for querying.
+Certain features require `advanced` querying capabilities.
+See link:https://docs.microsoft.com/en-us/graph/aad-advanced-queries[Microsoft Azure Advanced queries].
++
+.`app-config.yaml` fragment with optional `queryMode` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        queryMode: advanced
+----
+
+[id=userExpand]
+`user.expand`::
+To include the expanded resource or collection referenced by a single relationship (navigation property) in your results.
+Only one relationship can be expanded in a single request.
+See https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter[Microsoft Graph query expand parameter].
+This parameter can be combined with xref:userGroupMemberFilter[] or xref:userFilter[].
++
+.`app-config.yaml` fragment with optional `user.expand` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          expand: manager
+----
+
+[id=userFilter]
+`user.filter`::
+To filter users.
+See link:https://docs.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0#properties[Microsoft Graph API] and link:https://docs.microsoft.com/en-us/graph/query-parameters#filter-parameter[Microsoft Graph API query filter parameters syntax].
+This parameter and xref:userGroupMemberFilter[] are mutually exclusive, only one can be specified.
++
+.`app-config.yaml` fragment with optional `user.filter` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          filter: accountEnabled eq true and userType eq 'member'
+----
+
+[id=userLoadPhotos]
+`user.loadPhotos: true | false`::
+Load photos by default.
+Set to `false` to not load user photos.
++
+.`app-config.yaml` fragment with optional `user.loadPhotos` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          loadPhotos: true
+----
+
+[id=userSelect]
+`user.select`::
+Define the link:https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0[Microsoft Graph resource types] to retrieve.
++
+.`app-config.yaml` fragment with optional `user.select` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          select: ['id', 'displayName', 'description']
+----
+
+[id="userGroupMemberFilter"]
+`userGroupMember.filter`:::
+To use group membership to get users.
+To filter groups and fetch their members.
+This parameter and xref:userFilter[] are mutually exclusive, only one can be specified.
++
+.`app-config.yaml` fragment with optional `userGroupMember.filter` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        userGroupMember:
+          filter: "displayName eq 'Backstage Users'"
+----
+
+[id="userGroupMemberSearch"]
+`userGroupMember.search`::
+To use group membership to get users.
+To search for groups and fetch their members.
+This parameter and xref:userFilter[] are mutually exclusive, only one can be specified.
++
+.`app-config.yaml` fragment with optional `userGroupMember.search` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        userGroupMember:
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
+----
+
+[id=groupExpand]
+`group.expand`::
+Optional parameter to include the expanded resource or collection referenced by a single relationship (navigation property) in your results.
+Only one relationship can be expanded in a single request.
+See https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter
+This parameter can be combined with xref:userGroupMemberFilter[] instead of xref:userFilter[].
++
+.`app-config.yaml` fragment with optional `group.expand` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          expand: member
+----
+
+[id=groupFilter]
+`group.filter`::
+To filter groups.
+See link:https://docs.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0#properties[Microsoft Graph API query group syntax].
++
+.`app-config.yaml` fragment with optional `group.filter` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          filter: securityEnabled eq false and mailEnabled eq true and groupTypes/any(c:c+eq+'Unified')
+----
+
+[id=groupSearch]
+`group.search`::
+To search for groups.
+See link:https://docs.microsoft.com/en-us/graph/search-query-parameter[Microsoft Graph API query search parameter].
++
+.`app-config.yaml` fragment with optional `group.search` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
+----
+
+[id=groupSelect]
+`group.select`::
+To define the link:https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0[Microsoft Graph resource types] to retrieve.
++
+.`app-config.yaml` fragment with optional `group.select` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          select: ['id', 'displayName', 'description']
+----
+
+`schedule.frequency`::
+To specify custom schedule frequency.
+Supports cron, ISO duration, and "human duration" as used in code.
++
+.`app-config.yaml` fragment with optional `schedule.frequency` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        schedule:
+          frequency: { hours: 1 }
+----
+
+`schedule.timeout`::
+To specify custom timeout.
+Supports ISO duration and "human duration" as used in code.
++
+.`app-config.yaml` fragment with optional `schedule.timeout` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        schedule:
+          timeout: { minutes: 50 }
+----
+
+`schedule.initialDelay`::
+To specify custom initial delay.
+Supports ISO duration and "human duration" as used in code.
++
+.`app-config.yaml` fragment with optional `schedule.initialDelay` field
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        schedule:
+          initialDelay: { seconds: 15}
+----
+--
+
+.Verification
+. Check the console logs to verify that the synchronization is completed.
++
+.Successful synchronization example:
+[source,json]
+----
+backend:start: {"class":"MicrosoftGraphOrgEntityProvider$1","level":"info","message":"Read 1 msgraph users and 1 msgraph groups in 2.2 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"MicrosoftGraphOrgEntityProvider:default:refresh","taskInstanceId":"88a67ce1-c466-41a4-9760-825e16b946be","timestamp":"2024-06-26 12:23:42"}
+backend:start: {"class":"MicrosoftGraphOrgEntityProvider$1","level":"info","message":"Committed 1 msgraph users and 1 msgraph groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"MicrosoftGraphOrgEntityProvider:default:refresh","taskInstanceId":"88a67ce1-c466-41a4-9760-825e16b946be","timestamp":"2024-06-26 12:23:42"}
+----
+
+. Log in with a Microsoft Azure account.
