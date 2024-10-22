@@ -17,7 +17,7 @@ name: GitHub Pages
 
 on:
   push:
-    branches: 
+    branches:
     - main
     - rhdh-1.**
     - 1.**.x
@@ -41,14 +41,15 @@ jobs:
       run: |
         # update
         sudo apt-get update -y || true
-        # install 
+        # install
         sudo apt-get -y -q install asciidoctor && asciidoctor --version
+        sudo apt-get -y -q install podman && podman --version
         echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
 
     - name: Build guides and indexes
       run: |
         echo "Building branch ${{ env.GIT_BRANCH }}"
-        build/scripts/build.sh -b ${{ env.GIT_BRANCH }}
+        build/scripts/build-ccutil.sh -b ${{ env.GIT_BRANCH }}
 
     # repo must be public for this to work
     - name: Deploy
@@ -60,7 +61,7 @@ jobs:
         keep_files: true
         publish_dir: ./titles-generated
 
-    - name: Cleanup merged PR branches 
+    - name: Cleanup merged PR branches
       run: |
         PULL_URL="https://api.github.com/repos/redhat-developer/red-hat-developers-documentation-rhdh/pulls"
         GITHUB_TOKEN="${{ secrets.RHDH_BOT_TOKEN }}"
@@ -70,7 +71,7 @@ jobs:
         git checkout gh-pages; git pull || true
         dirs=$(find . -maxdepth 1 -name "pr-*" -type d | sed -r -e "s|^\./pr-||")
         refs=$(cat pulls.html | grep pr- | sed -r -e "s|.+.html>pr-([0-9]+)</a>.+|\1|")
-        for d in $(echo -e "$dirs\n$refs" | sort -uV); do 
+        for d in $(echo -e "$dirs\n$refs" | sort -uV); do
           PR="${d}"
           echo -n "Check merge status of PR $PR ... "
           PR_JSON=$(curl -sSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "$PULL_URL/$PR")
