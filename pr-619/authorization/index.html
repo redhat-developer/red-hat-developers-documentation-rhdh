@@ -229,7 +229,7 @@ table {
   border:0;
   font-size:1rem;
   line-height:1.6667;
-  table-layout:fixed
+  /* commented out as it breaks on Safari on Mac // table-layout:fixed */
 }
 table caption {
   color:#585858;
@@ -1599,7 +1599,8 @@ section {
 <li><a href="#con-rbac-config-permission-policies-admin_title-authorization">2.1.1. Configuration of permission policies administrators</a></li>
 <li><a href="#con-rbac-config-permission-policies-external-file_title-authorization">2.1.2. Configuration of permission policies defined in an external file</a>
 <ul class="sectlevel4">
-<li><a href="#_mounting-policy-csv-file-to-the-developer-hub-helm-chart">Mounting <code>policy.csv</code> file to the Developer Hub Helm chart</a></li>
+<li><a href="#proc-mounting-the-policy-csv-file-using-the-operator_title-authorization">Mounting <code>policy.csv</code> file using the Developer Hub Operator</a></li>
+<li><a href="#proc-mounting-the-policy-csv-file-using-helm_title-authorization">Mounting <code>policy.csv</code> file to the Developer Hub Helm chart</a></li>
 </ul>
 </li>
 </ul>
@@ -1766,6 +1767,35 @@ g, user:default/myuser, role:default/myrole</code></pre>
 <td class="tableblock halign-left valign-top"></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">delete</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Allows user or role to delete locations from the catalog</p></td>
+</tr>
+</tbody>
+</table>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Bulk import permissions</dt>
+</dl>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 15%;">
+<col style="width: 25%;">
+<col style="width: 15%;">
+<col style="width: 45%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Resource type</th>
+<th class="tableblock halign-left valign-top">Policy</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>bulk.import</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>bulk-import</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Allows the user to access the bulk import endpoints, such as listing all repositories and organizations accessible by all GitHub integrations and managing the import requests.</p></td>
 </tr>
 </tbody>
 </table>
@@ -2126,7 +2156,120 @@ permission:
 </div>
 </div>
 <div class="sect4">
-<h5 id="_mounting-policy-csv-file-to-the-developer-hub-helm-chart">Mounting <code>policy.csv</code> file to the Developer Hub Helm chart</h5>
+<h5 id="proc-mounting-the-policy-csv-file-using-the-operator_title-authorization">Mounting <code>policy.csv</code> file using the Developer Hub Operator</h5>
+<div class="paragraph">
+<p>When the Red Hat Developer Hub is deployed with the Operator, you can add your <code>policy.csv</code> file using the Developer Hub Operator by creating a <code>ConfigMap</code> and mounting it through your Custom Resource (CR).</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You are logged in to your OpenShift Container Platform account using the OpenShift Container Platform web console.</p>
+</li>
+<li>
+<p>Red Hat Developer Hub is installed and deployed using the Operator.</p>
+</li>
+<li>
+<p>You have added a custom configuration file to OpenShift Container Platform. For more information, see <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index">Adding a custom configuration file to OpenShift Container Platform</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>In OpenShift Container Platform, create a ConfigMap to hold the policies as shown in the following example:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>ConfigMap</code></div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rbac-policy
+data:
+  rbac-policy.csv: |
+    p, role:default/guests, catalog-entity, read, allow
+    p, role:default/guests, catalog.entity.create, create, allow
+
+    g, user:default/&lt;YOUR_USER&gt;, role:default/guests</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>Update the policy path in your custom <code>app-config.yaml</code> ConfigMap as follows:</p>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">Example <code>app-config.yaml</code> file</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    policies-csv-file: ./rbac-policy.csv</code></pre>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li>
+<p>From the <strong>Developer</strong> perspective in the OpenShift Container Platform web console, select the <strong>Topology</strong> view.</p>
+</li>
+<li>
+<p>Click the overflow menu for the Red Hat Developer Hub instance that you want to use and select <strong>Edit Backstage</strong> to load the YAML view of the Red Hat Developer Hub instance.</p>
+</li>
+<li>
+<p>In the CR, enter the name of the custom <code>rbac-policy</code> ConfigMap as the value for the <code>spec.application.extraFiles.configMaps</code> field. For example:</p>
+<div class="listingblock">
+<div class="title">Example custom resource</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: example
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+        - name: app-config-rhdh
+    extraEnvs:
+      secrets:
+        - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt/app-root/src
+      configMaps:
+        - name: rbac-policy
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Save</strong>.</p>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Navigate back to the <strong>Topology</strong> view and wait for the Red Hat Developer Hub pod to start.</p>
+</li>
+<li>
+<p>Click the <strong>Open URL</strong> icon to access the Red Hat Developer Hub platform with the updated configuration settings.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect4">
+<h5 id="proc-mounting-the-policy-csv-file-using-helm_title-authorization">Mounting <code>policy.csv</code> file to the Developer Hub Helm chart</h5>
 <div class="paragraph">
 <p>When the Red Hat Developer Hub is deployed with the Helm chart, you must define the <code>policy.csv</code> file by mounting it to the Developer Hub Helm chart.</p>
 </div>
@@ -3489,6 +3632,13 @@ data:
 <li>
 <p>Red Hat Developer Hub is installed and running.</p>
 </li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For more information about installing Red Hat Developer Hub, see <a href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.3/html-single/installing_red_hat_developer_hub_on_openshift_container_platform/index#assembly-install-rhdh-ocp-helm">Installing Red Hat Developer Hub on OpenShift Container Platform with the Helm chart</a>.</p>
+</div>
+<div class="ulist">
+<ul>
 <li>
 <p>You have access to the Developer Hub.</p>
 </li>
@@ -3607,7 +3757,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[GET] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[GET] /api/permission/roles/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em></dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -3631,7 +3781,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[POST] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[POST] /api/permission/roles/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em></dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -3681,7 +3831,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[PUT] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[PUT] /api/permission/roles/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em></dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -3740,7 +3890,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}?memberReferences=&lt;VALUE&gt;</dt>
+<dt class="hdlist1">[DELETE] /api/permission/roles/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em>?memberReferences=&lt;VALUE&gt;</dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -3799,7 +3949,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[DELETE] /api/permission/roles/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[DELETE] /api/permission/roles/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em></dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -3897,7 +4047,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[GET] /api/permission/policies/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[GET] /api/permission/policies/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em></dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -4041,7 +4191,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[PUT] /api/permission/policies/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[PUT] /api/permission/policies/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em></dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -4128,7 +4278,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[DELETE] /api/permission/policies/{kind}/{namespace}/{name}?permission={value1}&amp;policy={value2}&amp;effect={value3}</dt>
+<dt class="hdlist1">[DELETE] /api/permission/policies/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em>?permission={value1}&amp;policy={value2}&amp;effect={value3}</dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -4199,7 +4349,7 @@ data:
 </div>
 </div>
 </dd>
-<dt class="hdlist1">[DELETE] /api/permission/policies/{kind}/{namespace}/{name}</dt>
+<dt class="hdlist1">[DELETE] /api/permission/policies/<em>&lt;kind&gt;</em>/<em>&lt;namespace&gt;</em>/<em>&lt;name&gt;</em></dt>
 <dd>
 <div class="openblock">
 <div class="content">
@@ -4897,7 +5047,7 @@ user:default/dev,John Leavy,dev@redhat.com,"Thu, 22 Aug 2024 16:27:41 GMT"</code
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-31 12:25:27 UTC
+Last updated 2024-10-31 13:04:07 UTC
 </div>
 </div>
 </body>
