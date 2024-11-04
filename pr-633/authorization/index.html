@@ -1591,7 +1591,7 @@ section {
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#con-rbac-overview_title-authorization">Chapter 1. Role-Based Access Control (RBAC) in Red Hat Developer Hub</a></li>
+<li><a href="#enabling-and-giving-access-to-rbac">Chapter 1. Enabling and giving access to the Role-Based Access Control (RBAC) feature</a></li>
 <li><a href="#proc-rbac-ui-manage-roles_title-authorization">Chapter 2. Managing role-based access controls (RBAC) using the Red Hat Developer Hub Web UI</a>
 <ul class="sectlevel2">
 <li><a href="#proc-rbac-ui-create-role_title-authorization">2.1. Creating a role in the Red Hat Developer Hub Web UI</a></li>
@@ -1603,8 +1603,7 @@ section {
 <ul class="sectlevel2">
 <li><a href="#con-rbac-config-permission-policies_title-authorization">3.1. Permission policies configuration</a>
 <ul class="sectlevel3">
-<li><a href="#con-rbac-config-permission-policies-admin_title-authorization">3.1.1. Configuration of permission policies administrators</a></li>
-<li><a href="#con-rbac-config-permission-policies-external-file_title-authorization">3.1.2. Configuration of permission policies defined in an external file</a>
+<li><a href="#con-rbac-config-permission-policies-external-file_title-authorization">3.1.1. Configuration of permission policies defined in an external file</a>
 <ul class="sectlevel4">
 <li><a href="#proc-mounting-the-policy-csv-file-using-the-operator_title-authorization">Mounting <code>policy.csv</code> file using the Developer Hub Operator</a></li>
 <li><a href="#proc-mounting-the-policy-csv-file-using-helm_title-authorization">Mounting <code>policy.csv</code> file to the Developer Hub Helm chart</a></li>
@@ -1646,14 +1645,152 @@ section {
 </div>
 </div>
 <div id="content">
-<div class="sect1">
-<h2 id="con-rbac-overview_title-authorization">Chapter 1. Role-Based Access Control (RBAC) in Red Hat Developer Hub</h2>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Role-Based Access Control is a security paradigm that restricts access to authorized users. This feature includes defining roles with specific permissions and then assigning those roles to the users.</p>
+<p>In <a href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/authorization/index">Authentication</a>, you learnt how to authenticate users to Red Hat Developer Hub.
+Developer Hub knowns who the users are.</p>
 </div>
 <div class="paragraph">
-<p>The Red Hat Developer Hub uses RBAC to improve the permission system within the platform. The RBAC feature in Developer Hub introduces an administrator role and leverages the organizational structure including teams, groups, and users by facilitating efficient access control.</p>
+<p>In this book, learn how to authorize users to perform actions in Developer Hub.
+Define what users can do in Developer Hub.</p>
+</div>
+<div class="paragraph">
+<p>Role-Based Access Control (RBAC) is a security concept that controls access to resources in a system, and specifies a mapping between users of the system, and the actions they can perform on resources in the system.
+You define roles with specific permissions, and then assign the roles to users and groups.</p>
+</div>
+<div class="paragraph">
+<p>RBAC on Developer Hub is built on top of the Permissions framework, which defines RBAC policies in code.
+Rather than defining policies in code,
+the Developer Hub RBAC feature allows you
+to define policies in a declarative fashion using a simple CSV based format.
+You can define the policies by using Developer Hub web interface or REST API, rather than editing the CSV directly.</p>
+</div>
+<div class="paragraph">
+<p>To apply RBAC in Developer Hub:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The Developer Hub administrator sets up the RBAC feature:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Enable the RBAC feature</p>
+</li>
+<li>
+<p>Configure Policy Administrators</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>The Developer Hub policy administrator configures your RBAC policies:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Define roles with specific permissions</p>
+</li>
+<li>
+<p>Assign the roles to users and groups</p>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="enabling-and-giving-access-to-rbac">Chapter 1. Enabling and giving access to the Role-Based Access Control (RBAC) feature</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Role-Based Access Control (RBAC) feature is disabled by default.
+Enable the RBAC plugin and declare policy administrators to start using RBAC features.</p>
+</div>
+<div class="paragraph">
+<p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have <a href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.3/html-single/administration_guide_for_red_hat_developer_hub/index#assembly-add-custom-app-file-openshift_admin-rhdh">added a custom Developer Hub application configuration</a>, and have sufficient permissions to modify it.</p>
+</li>
+<li>
+<p>You have <a href="Authentication">enabled an authentication provider</a>.</p>
+</li>
+</ul>
+</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>The RBAC plugin is installed but disabled by default.
+To enable the  <code>./dynamic-plugins/dist/janus-idp-backstage-plugin-rbac</code> plugin, edit your <code>dynamic-plugins.yaml</code> with the following content.</p>
+<div class="listingblock">
+<div class="title"><code>dynamic-plugins.yaml</code> fragment</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">plugins:
+  - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-rbac
+    disabled: false</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>See <a href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.3/html-single/installing_and_viewing_dynamic_plugins/index">Installing and viewing dynamic plugins</a>.</p>
+</div>
+</li>
+<li>
+<p>Declare policy administrators to enable a select number of authenticated users to configure RBAC policies through the REST API or Web UI, instead of modifying the CSV file directly.
+The permissions can be specified in a separate CSV file referenced in the <code>app-config-rhdh</code> ConfigMap, or permissions can be created using the REST API or Web UI.</p>
+<div class="paragraph">
+<p>To declare users such as <em>&lt;your_policy_administrator_name&gt;</em> as policy administrators, edit your custom Developer Hub ConfigMap, such as <code>app-config-rhdh</code>, and add following code to the <code>app-config-rhdh.yaml</code> content:</p>
+</div>
+<div class="listingblock">
+<div class="title"><code>app-config.yaml</code> fragment</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">permission:
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/<em>&lt;your_policy_administrator_name&gt;</em></code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>Sign out from the existing Red Hat Developer Hub session and log in again using the declared policy administrator account.</p>
+</li>
+<li>
+<p>With RBAC enabled, most features are disabled by default.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>Navigate to the <strong>Catalog</strong> page in RHDH.
+The <strong>Create</strong> button is not visible.
+You cannot create new components.</p>
+</li>
+<li>
+<p>Navigate to the API page.
+The <strong>Register</strong> button is not visible.</p>
+</li>
+</ol>
+</div>
+</li>
+</ol>
+</div>
+<div class="ulist">
+<div class="title">Next steps</div>
+<ul>
+<li>
+<p>Explicitly enable permissions to resources in Developer Hub.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -2207,50 +2344,7 @@ g, user:default/myuser, role:default/myrole</code></pre>
 </ul>
 </div>
 <div class="sect3">
-<h4 id="con-rbac-config-permission-policies-admin_title-authorization">3.1.1. Configuration of permission policies administrators</h4>
-<div class="paragraph">
-<p>The permission policies for users and groups in the Developer Hub are managed by permission policy administrators. Only permission policy administrators can access the Role-Based Access Control REST API.</p>
-</div>
-<div class="paragraph">
-<p>The purpose of configuring policy administrators is to enable a specific, restricted number of authenticated users to access the RBAC REST API. The permission policies are defined in a <code>policy.csv</code> file, which is referenced in the <code>app-config-rhdh</code> ConfigMap. OpenShift platform administrators or cluster administrators can perform this task with access to the namespace where Red Hat Developer Hub is deployed.</p>
-</div>
-<div class="paragraph">
-<p>You can enable a permission policy administrator by configuring the <code>app-config.yaml</code> file as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">permission:
-  enabled: true
-  rbac:
-    admin:
-      users:
-        - name: user:default/joeuser</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The permission policy role (<code>role:default/rbac_admin</code>) is a default role in Developer Hub and includes some permissions upon creation, such as creating, reading, updating, and deleting permission policies/roles, as well as reading from the catalog.</p>
-</div>
-<div class="paragraph">
-<p>If the default permissions are not adequate for your requirements, you can define a new administrator role tailored to your requirements using relevant permission policies. Alternatively, you can use the optional <code>superUsers</code> configuration value, which grants unrestricted permissions across Developer Hub.</p>
-</div>
-<div class="paragraph">
-<p>You can set the <code>superUsers</code> in the <code>app-config.yaml</code> file as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml"># ...
-permission:
-  enabled: true
-  rbac:
-    admin:
-      superUsers:
-        - name: user:default/joeuser
-        # ...</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="con-rbac-config-permission-policies-external-file_title-authorization">3.1.2. Configuration of permission policies defined in an external file</h4>
+<h4 id="con-rbac-config-permission-policies-external-file_title-authorization">3.1.1. Configuration of permission policies defined in an external file</h4>
 <div class="paragraph">
 <p>You can configure the permission policies before starting the Red Hat Developer Hub. If permission policies are defined in an external file, then you can import the same file in the Developer Hub. You must define the permission policies using the following Casbin rules format:</p>
 </div>
@@ -5023,7 +5117,7 @@ user:default/dev,John Leavy,dev@redhat.com,"Thu, 22 Aug 2024 16:27:41 GMT"</code
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-11-04 08:30:53 UTC
+Last updated 2024-11-04 17:05:39 UTC
 </div>
 </div>
 </body>
