@@ -1,0 +1,90 @@
+# Copyright (c) 2023 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: GitHub Pages
+
+on:
+  push:
+    branches: 
+    - main
+    - rhdh-1.**
+    - 1.**.x
+    - release-1.**
+
+jobs:
+  adoc_build:
+    name: Asciidoctor Build For GH Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup environment
+      run: |
+        # update
+        sudo apt-get update -y || true
+        # install 
+        sudo apt-get -y -q install asciidoctor && asciidoctor --version
+        echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
+
+    - name: Build guides and indexes
+      run: |
+        echo "Building branch ${{ env.GIT_BRANCH }}"
+        build/scripts/build.sh -b ${{ env.GIT_BRANCH }}
+
+    # repo must be public for this to work
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v4
+      # if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.RHDH_BOT_TOKEN }}
+        publish_branch: gh-pages
+        keep_files: true
+        publish_dir: ./titles-generated
+
+    - name: Cleanup merged PR branches 
+      run: |
+        PULL_URL="https://api.github.com/repos/redhat-developer/red-hat-developers-documentation-rhdh/pulls"
+        GITHUB_TOKEN="${{ secrets.RHDH_BOT_TOKEN }}"
+        git config user.name "rhdh-bot service account"
+        git config user.email "rhdh-bot@redhat.com"
+
+        git checkout gh-pages; git pull || true
+        dirs=$(find . -maxdepth 1 -name "pr-*" -type d | sed -r -e "s|^\./pr-||")
+        refs=$(cat pulls.html | grep pr- | sed -r -e "s|.+.html>pr-([0-9]+)</a>.+|\1|")
+        for d in $(echo -e "$dirs\n$refs" | sort -uV); do 
+          PR="${d}"
+          echo -n "Check merge status of PR $PR ... "
+          PR_JSON=$(curl -sSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "$PULL_URL/$PR")
+          if [[ $(echo "$PR_JSON" | grep merged\") == *"merged\": true"* ]]; then
+            echo "merged, can delete from pulls.html and remove folder $d"
+            git rm -fr --quiet "pr-${d}" || rm -fr "pr-${d}"
+            sed -r -e "/pr-$PR\/index.html>pr-$PR</d" -i pulls.html
+          elif [[ $(echo "$PR_JSON" | grep \"state\") == *"state\": \"closed\""* ]]; then
+            echo "closed, can delete from pulls.html and remove folder pr-${d}"
+            git rm -fr --quiet "pr-${d}" || rm -fr "pr-${d}"
+            sed -r -e "/pr-$PR\/index.html>pr-$PR</d" -i pulls.html
+          else
+            echo "PR is not closed or merged (or could not read API)"
+          fi
+        done
+        git commit -s -m "remove merged PR branches" . || true # don't fail if there's nothing to do
+        git push origin gh-pages || true # don't fail if there's nothing to do

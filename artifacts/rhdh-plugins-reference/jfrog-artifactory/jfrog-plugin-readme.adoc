@@ -1,0 +1,135 @@
+= Jfrog Artifactory
+
+The Jfrog Artifactory plugin displays information about your container images within the Jfrog Artifactory registry.
+
+[IMPORTANT]
+====
+The Jfrog Artifactory plugin is a Technology Preview feature only.
+
+Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information on Red Hat Technology Preview features, see https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Scope].
+
+Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the https://access.redhat.com/policy/developerhub-support-policy[Red Hat Developer Support Policy] page.
+====
+
+The Jfrog Artifactory plugin displays information about your container images within the Jfrog Artifactory registry.
+
+== For administrators
+
+=== Installing and configuring the Jfrog Artifactory plugin
+
+ifeval::[{doc-show-dynamic-content} == true]
+include::../../../artifacts/rhdh-plugins-reference/jfrog-artifactory/jfrog-install-dynamic-plugin.adoc[leveloffset=+2]
+endif::[]
+
+ifeval::[{doc-show-dynamic-content} == false]
+The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the `@redhat` scoped packages:
+
+[source]
+----
+# update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package 
+yarn add @redhat/backstage-plugin-quay
+----
+
+For more information, see link:https://docs.npmjs.com/cli/v9/configuring-npm/npmrc[npm docs]. 
+
+Creating a `.npmrc` file ensures that all the packages are scoped under `@redhat` and are fetched from link:https://npm.registry.redhat.com/[Red Hat's NPM registry], while the rest dependencies remain sourced from other link:registry.npmjs.org[registry].
+
+.Procedure
+
+. Run the following command to install the Jfrog Artifactory plugin:
++
+--
+[source,console]
+----
+yarn workspace app add @redhat/backstage-plugin-jfrog-artifactory
+----
+--
+endif::[]
+
+. Set the proxy to the desired Artifactory server in the `app-config.yaml` file as follows:
++
+--
+[source,yaml]
+----
+proxy:
+    '/jfrog-artifactory/api':
+    target: 'http://<hostname>:8082' # or https://<customer>.jfrog.io
+    headers:
+        # Authorization: 'Bearer <YOUR TOKEN>'
+        # Change to "false" in case of using self hosted artifactory instance with a self-signed certificate
+    secure: true
+----
+--
+
+ifeval::[{doc-show-dynamic-content} == false]
+. Enable the *JFROG ARTIFACTORY* tab on the entity view page in `packages/app/src/components/catalog/EntityPage.tsx` file as follows:
++
+--
+[source]
+----
+/* highlight-add-start */
+import {
+    isJfrogArtifactoryAvailable,
+    JfrogArtifactoryPage,
+} from "@redhat/backstage-plugin-jfrog-artifactory";
+
+/* highlight-add-end */
+
+const serviceEntityPage = (
+    <EntityPageLayout>
+        // ...
+        {/* highlight-add-start */}
+        <EntityLayout.Route
+            if={isJfrogArtifactoryAvailable}
+            path="/jfrog-artifactory"
+            title="Jfrog Artifactory"
+        >
+            <JfrogArtifactoryPage />
+        </EntityLayout.Route>
+        {/* highlight-add-end */}
+    </EntityPageLayout>
+);
+----
+--
+
+. Annotate your entity using the following annotations:
++
+--
+[source,yaml]
+----
+metadata:
+    annotations:
+        'jfrog-artifactory/image-name': '<IMAGE-NAME>'
+----
+--
+endif::[]
+
+== For users
+
+=== Using the Jfrog Artifactory plugin in {product-short}
+
+Jfrog Artifactory is a front-end plugin that enables you to view the information about the container images that are available in your Jfrog Artifactory registry.
+
+.Prerequisites
+
+* Your {product-short} application is installed and running.
+* You have installed the Jfrog Artifactory plugin. For installation and configuration steps, see <<Installing and configuring the Jfrog Artifactory plugin>>.
+
+.Procedure
+
+. Open your {product-short} application and select a component from the *Catalog* page.
+
+. Go to the *JFROG ARTIFACTORY* tab.
++
+--
+image::jfrog-plugin-user1.png[jfrog-tab]
+
+The *JFROG ARTIFACTORY* tab contains a list of container images and related information, such as *VERSION*, *REPOSITORIES*, *MANIFEST*, *MODIFIED*, and *SIZE*.
+--
+
+
+   

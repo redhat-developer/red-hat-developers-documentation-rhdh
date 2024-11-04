@@ -1,0 +1,127 @@
+= Quay
+
+The Quay plugin displays the information about your container images within the Quay registry in your {product-short} application.
+
+== For administrators
+
+[[installation]]
+=== Installing and configuring the Quay plugin
+
+ifeval::[{doc-show-dynamic-content} == true]
+include::../../../artifacts/rhdh-plugins-reference/acr/acr-install-dynamic-plugin.adoc[leveloffset=+2]
+endif::[]
+
+ifeval::[{doc-show-dynamic-content} == false]
+The Red Hat Plug-ins for Backstage (RHPIB) packages are hosted in a separate NPM registry, which is maintained by Red Hat. To use these packages, you must adjust your NPM configuration to pull the `@redhat` scoped packages:
+
+[source]
+----
+# update your .npmrc or .yarnrc file
+yarn config set "@redhat:registry" https://npm.registry.redhat.com
+# then pull a package 
+yarn add @redhat/backstage-plugin-quay
+----
+
+For more information, see link:https://docs.npmjs.com/cli/v9/configuring-npm/npmrc[npm docs]. 
+
+Creating a `.npmrc` file ensures that all the packages are scoped under `@redhat` and are fetched from link:https://npm.registry.redhat.com/[Red Hat's NPM registry], while the rest dependencies remain sourced from other link:registry.npmjs.org[registry].
+
+You can now install the Quay plugin using the following command:
+
+[source,console]
+----
+yarn workspace app add @redhat/backstage-plugin-quay
+----
+endif::[]
+
+
+. Set the proxy to the desired Quay server in the `app-config.yaml` file as follows:
++
+--
+[source,yaml]
+----
+   ```yaml title="app-config.yaml"
+   proxy:
+     '/quay/api':
+       target: 'https://quay.io'
+       headers:
+         X-Requested-With: 'XMLHttpRequest'
+         # Uncomment the following line to access a private Quay Repository using a token
+         # Authorization: 'Bearer <YOUR TOKEN>'
+       changeOrigin: true
+       # Change to "false" in case of using self hosted quay instance with a self-signed certificate
+       secure: true
+
+   quay:
+     # The UI url for Quay, used to generate the link to Quay
+     uiUrl: 'https://quay.io'
+   ```
+----
+--
+
+ifeval::[{doc-show-dynamic-content} == false]
+. Enable an additional tab on the entity view page in `packages/app/src/components/catalog/EntityPage.tsx`:
++
+--
+[source]
+----
+   ```tsx title="packages/app/src/components/catalog/EntityPage.tsx"
+   /* highlight-add-next-line */
+   import { isQuayAvailable, QuayPage } from '@redhat/backstage-plugin-quay';
+
+   const serviceEntityPage = (
+     <EntityPageLayout>
+       {/* ... */}
+       {/* highlight-add-next-line */}
+       <EntityLayout.Route if={isQuayAvailable} path="/quay" title="Quay">
+         <QuayPage />
+       </EntityLayout.Route>
+     </EntityPageLayout>
+   );
+   ```
+----
+--
+endif::[]
+
+. Annotate your entity with the following annotations:
++
+--
+[source,yaml]
+----
+   ```yaml title="catalog-info.yaml"
+   metadata:
+     annotations:
+       'quay.io/repository-slug': `<ORGANIZATION>/<REPOSITORY>',
+   ```
+----
+--
+
+== For users
+
+=== Using the Quay plugin in {product-short}
+
+Quay is a front-end plugin that enables you to view the information about the container images.
+
+.Prerequisites
+
+* Your {product-short} application is installed and running.
+* You have installed the Quay plugin. For installation process, see <<installation,Installation>>.
+
+.Procedure
+
+. Open your {product-short} application and select a component from the *Catalog* page.
+. Go to the *Image Registry* tab.
++
+The *Image Registry* tab in the {product-short} UI contains a list of container images and related information, such as *TAG*, *LAST MODIFIED*, *SECURITY SCAN*, *SIZE*, *EXPIRES*, and *MANIFEST*.
++
+image::quay-plugin-backstage1.png[quay-tab]
+
+. If a container image does not pass the security scan, select the security scan value of the image to check the vulnerabilities.
++
+image::quay-plugin-backstage2.png[quay-tab]
++
+The vulnerabilities page displays the associated advisory with a link, severity, package name, and current and fixed versions.
++
+image::quay-plugin-backstage3.png[quay-tab-vulnerabilities]
++
+The advisory link redirects to the Red Hat Security Advisory page that contains detailed information about the advisory, including the solution.

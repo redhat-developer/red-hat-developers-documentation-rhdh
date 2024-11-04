@@ -1,0 +1,116 @@
+= Installation and configuration of Ansible Automation Platform
+
+The Ansible Automation Platform (AAP) plugin synchronizes the accessible templates including job templates and workflow job templates from AAP into your {product-short} catalog.
+
+[IMPORTANT]
+====
+The Ansible Automation Platform plugin is a Technology Preview feature only.
+
+Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information on Red Hat Technology Preview features, see https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Scope].
+
+Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the https://access.redhat.com/policy/developerhub-support-policy[Red Hat Developer Support Policy] page.
+====
+
+== For administrators
+
+=== Installing and configuring the AAP Backend plugin
+
+The AAP backend plugin allows you to configure one or multiple providers using your `app-config.yaml` configuration file in {product-short}.
+
+.Prerequisites
+* Your {product-short} application is installed and running.
+* You have created an account in Ansible Automation Platform.
+
+.Installation
+The AAP backend plugin is pre-loaded in {product-short} with basic configuration properties. To enable it, set the `disabled` property to `false` as follows:
+
+[source,yaml]
+----
+global: 
+  dynamic: 
+    includes: 
+      - dynamic-plugins.default.yaml
+    plugins: 
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-aap-backend-dynamic
+        disabled: false
+----
+
+.Basic configuration
+To enable the AAP plugin, you must set the following environment variables:
+
+* `AAP_BASE_URL`: Base URL of the service
+
+* `AAP AUTH TOKEN`: Authentication token for the service
+
+.Advanced configuration
+
+. You can use the `aap` marker to configure the `app-config.yaml` file of {product-short} as follows:
++
+--
+[source,yaml]
+----
+   catalog:
+     providers:
+       aap:
+         dev:
+           baseUrl: $(AAP_BASE_URL)
+           authorization: 'Bearer ${AAP_AUTH_TOKEN}'
+           owner: <owner>
+           system: <system>
+           schedule: # optional; same options as in TaskScheduleDefinition
+             # supports cron, ISO duration, "human duration" as used in code
+             frequency: { minutes: 1 }
+             # supports ISO duration, "human duration" as used in code
+             timeout: { minutes: 1 }
+----
+--
+
+=== Log lines for AAP Backend plugin troubleshoot
+
+When you start your {product-short} application, you can see the following log lines:
+
+[source,log]
+----
+[1] 2023-02-13T15:26:09.356Z catalog info Discovered ResourceEntity API type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.423Z catalog info Discovered ResourceEntity Red Hat Event (DEV, v1.2.0) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.620Z catalog info Discovered ResourceEntity Red Hat Event (TEST, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.819Z catalog info Discovered ResourceEntity Red Hat Event (PROD, v1.1.1) type=plugin target=AapResourceEntityProvider:dev
+[1] 2023-02-13T15:26:09.819Z catalog info Applying the mutation with 3 entities type=plugin target=AapResourceEntityProvider:dev
+----
+
+== For users
+
+=== Accessing templates from AAP in {product-short}
+
+When you have configured the AAP backend plugin successfully, it synchronizes the templates including job templates and workflow job templates from AAP and displays them on the {product-short} Catalog page as Resources.
+
+.Prerequisites
+
+* Your {product-short} application is installed and running.
+* You have installed the AAP backend plugin. For installation and configuration instructions, see <<Installing and configuring the AAP Backend plugin>>.
+
+.Procedure
+
+. Open your {product-short} application and Go to the *Catalog* page.
+. Select *Resource* from the *Kind* drop-down and *job template* or *workflow job template* from the *Type* drop-down on the left side of the page.
++
+--
+image::rhdh-plugins-reference/aap-backend-plugin-user1.png[aap-backend-plugin-backstage]
+
+A list of all the available templates from AAP appears on the page.
+--
+
+. Select a template from the list.
++
+--
+The *OVERVIEW* tab appears containing different cards, such as:
+
+* *About*: Provides detailed information about the template.
+* *Relations*: Displays the visual representation of the template and associated aspects.
+* *Links*: Contains links to the AAP dashboard and the details page of the template.
+* *Has subcomponents*: Displays a list of associated subcomponents.
+
+image::rhdh-plugins-reference/aap-backend-plugin-user2.png[aap-backend-plugin-backstage-details]
+--
