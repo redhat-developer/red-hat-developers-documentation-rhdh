@@ -81,13 +81,15 @@ titlecase() {
 }
 
 # generate a list of plugin:version mapping from the following files
-    # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
-    # * packages/app/package.json#.dependencies
-    # * packages/backend/package.json#.dependencies
-    pluginVersFile=/tmp/plugin-versions.txt
-    jq -r '.peerDependencies' /tmp/backstage-showcase/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > $pluginVersFile
-    jq -r '.dependencies' /tmp/backstage-showcase/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> $pluginVersFile
-    cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out $pluginVersFile
+# * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
+# * packages/app/package.json#.dependencies
+# * packages/backend/package.json#.dependencies
+pluginVersFile=/tmp/plugin-versions.txt
+jq -r '.peerDependencies' /tmp/backstage-showcase/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > $pluginVersFile
+jq -r '.dependencies' /tmp/backstage-showcase/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> $pluginVersFile
+cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out $pluginVersFile
+
+rm -fr /tmp/warnings.txt
 
 # create arrays of adoc and csv content
 declare -A adoc1
@@ -118,7 +120,9 @@ for j in $jsons; do
     # backstage-plugin-catalog-backend-module-bitbucket-cloud => @backstage/plugin-catalog-backend-module-bitbucket-cloud
     Plugin="${Name}"
     if [[ $Plugin != "@"* ]]; then # don't update janus-idp/backstage-plugins plugin names
-        Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' -e 's|backstage/community-|backstage-community/|')"
+        Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
+            -e 's|backstage/community-|backstage-community/|' \
+            -e 's|parfuemerie/douglas-|parfuemerie-douglas/|')"
     fi
 
     # "dynamic-plugins/wrappers/backstage-plugin-catalog-backend-module-bitbucket-cloud" ==> ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-bitbucket-cloud-dynamic
@@ -153,22 +157,34 @@ for j in $jsons; do
     if [[ ! $Path ]]; then 
         continue
     elif [[ $Path ]] || [[ "$j" == *"/wrappers/"* ]]; then
-
         # RHIDP-3203 just use the .package value from /tmp/backstage-showcase/dynamic-plugins.default.yaml as the Path
-
-        
         Role=$(jq -r '.backstage.role' "$j")
-
-        Version=$(jq -r '.version' "$j")
+        VersionJQ=$(jq -r '.version' "$j")
         # check this version against other references to the plugin in 
         # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
         # * packages/app/package.json#.dependencies
         # * packages/backend/package.json#.dependencies
-        echo "[DEBUG] Check version of $Name is really $Version ..."
+        echo "[DEBUG] Check version of $Name is really $VersionJQ (from Path = $Path)..."
         match=$(grep "\"$Name\": \"" $pluginVersFile || true)
+        Version=$VersionJQ
         if [[ $match ]]; then
             Version=$(echo "${match}" | sed -r -e "s/.+\": \"([0-9.]+)\"/\1/")
-            echo "[DEBUG] Updated version = $Version"
+            echo "[WARN] !! Using $pluginVersFile version = $Version, not $VersionJQ from $Path" | tee -a /tmp/warnings.txt
+        fi
+
+        # check if there's a newer version at npmjs.com and warn if so 
+        # for tags and associated repo digests (git head)
+        # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.versions[]|(.version+", "+.gitHead)' | sort -uV
+        # for timestamp when tag is created
+        # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.time' | grep -v -E "created|modified|{|}" | sort -uV
+        allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
+        # echo $allVersionsPublished
+        # clean out any pre-release versions
+        latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
+        echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
+        if [[ "$latestXYRelease" != "$Version" ]]; then
+            echo "[WARN] !! Newer $latestXYRelease > $Version - should upgrade to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease !!" | tee -a /tmp/warnings.txt
+            echo | tee -a /tmp/warnings.txt
         fi
 
         # default to community unless it's a RH-authored plugin
@@ -320,3 +336,8 @@ if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then cat "${ENABLED_PLUGINS}.errors"; f
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
 # rm -fr /tmp/backstage-plugins /tmp/backstage-showcase 
+
+warnings=$(grep -c "WARN" "/tmp/warnings.txt")
+if [[ $warnings -gt 0 ]]; then
+    echo; echo "[WARN] $warnings warnings collected in /tmp/warnings.txt ! Consider upgrading upstream project to newer plugin versions !"
+fi
