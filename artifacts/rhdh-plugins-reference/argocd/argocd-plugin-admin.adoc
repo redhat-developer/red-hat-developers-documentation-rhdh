@@ -1,0 +1,78 @@
+= Enabling the Argo CD plugin
+
+You can use the Argo CD plugin to visualize the Continuous Delivery (CD) workflows in OpenShift GitOps. This plugin provides a visual overview of the application’s status, deployment details, commit message, author of the commit, container image promoted to environment and deployment history.
+
+.Prerequisites
+
+* Add Argo CD instance information to your `app-config.yaml` configmap as shown in the following example:
+
++
+[source,yaml]
+----
+argocd:
+  appLocatorMethods:
+    - type: 'config'
+      instances:
+        - name: argoInstance1
+          url: https://argoInstance1.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
+        - name: argoInstance2
+          url: https://argoInstance2.com
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
+----
+
+* Add the following annotation to the entity’s `catalog-info.yaml` file to identify the Argo CD applications.
+
++
+[source,yaml]
+----
+annotations:
+  ...
+  # The label that Argo CD uses to fetch all the applications. The format to be used is label.key=label.value. For example, rht-gitops.com/janus-argocd=quarkus-app.
+
+  argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}' 
+----
+
+* (Optional) Add the following annotation to the entity’s `catalog-info.yaml` file to switch between Argo CD instances as shown in the following example:
+
++
+[source,yaml]
+----
+ annotations:
+   ...
+    # The Argo CD instance name used in `app-config.yaml`.
+
+    argocd/instance-name: '${ARGOCD_INSTANCE}' 
+----
+
++
+[NOTE]
+====
+If you do not set this annotation, the Argo CD plugin defaults to the first Argo CD instance configured in `app-config.yaml`.
+====
+
+.Procedure
+
+. Add the following to your dynamic-plugins ConfigMap to enable the Argo CD plugin.
++
+[source,yaml]
+----
+global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic
+        disabled: false
+      - package: ./dynamic-plugins/dist/backstage-community-plugin-redhat-argocd
+        disabled: false
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* The package path, scope, and name of the {company-name} ArgoCD plugin has changed since 1.2. For more information, see link:{release-notes-url}#removed-functionality-rhidp-4293[Breaking Changes] in the _{rn-product-title}_. 
+
+* For more information on installing dynamic plugins, see link:{installing-and-viewing-dynamic-plugins-url}[{installing-and-viewing-dynamic-plugins-title}].

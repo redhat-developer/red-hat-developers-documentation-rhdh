@@ -1,0 +1,117 @@
+[id='con-rbac-conditional-policies-rhdh_{context}']
+= Conditional policies in {product}
+
+The permission framework in {product} provides conditions, supported by the RBAC backend plugin (`backstage-plugin-rbac-backend`). The conditions work as content filters for the {product-short} resources that are provided by the RBAC backend plugin. 
+
+The RBAC backend API stores conditions assigned to roles in the database. When you request to access the frontend resources, the RBAC backend API searches for the corresponding conditions and delegates them to the appropriate plugin using its plugin ID. If you are assigned to multiple roles with different conditions, then the RBAC backend merges the conditions using the `anyOf` criteria.
+
+Conditional criteria::
++
+--
+A condition in {product-short} is a simple condition with a rule and parameters. However, a condition can also contain a parameter or an array of parameters combined by conditional criteria. The supported conditional criteria includes:
+
+* `allOf`: Ensures that all conditions within the array must be true for the combined condition to be satisfied.
+
+* `anyOf`: Ensures that at least one of the conditions within the array must be true for the combined condition to be satisfied.
+
+* `not`: Ensures that the condition within it must not be true for the combined condition to be satisfied.
+--
+
+Conditional object::
++
+--
+The plugin specifies the parameters supported for conditions. You can access the conditional object schema from the RBAC API endpoint to understand how to construct a conditional JSON object, which is then used by the RBAC backend plugin API.
+
+A conditional object contains the following parameters:
+
+.Conditional object parameters
+[cols="30%,45%,25%", frame="all", options="header"]
+|===
+|Parameter
+|Type
+|Description
+
+|`result`
+|String
+|Always has the value `CONDITIONAL`
+
+|`roleEntityRef`
+|String
+|String entity reference to the RBAC role, such as `role:default/dev`
+
+|`pluginId`
+|String
+|Corresponding plugin ID, such as `catalog`
+
+|`permissionMapping`
+|String array
+|Array permission actions, such as `['read', 'update', 'delete']`
+
+|`resourceType`
+|String
+|Resource type provided by the plugin, such as `catalog-entity`
+
+|`conditions`
+|JSON
+|Condition JSON with parameters or array parameters joined by criteria
+
+|===
+--
+
+Conditional policy aliases::
++
+--
+The RBAC backend plugin (`backstage-plugin-rbac-backend`) supports the use of aliases in conditional policy rule parameters. The conditional policy aliases are dynamically replaced with the corresponding values during policy evaluation. Each alias in conditional policy is prefixed with a `$` sign indicating its special function.
+
+The supported conditional aliases include:
+
+* `$currentUser`: This alias is replaced with the user entity reference for the user who requests access to the resource. For example, if user Tom from the default namespace requests access, `$currentUser` becomes `user:default/tom`.
++
+--
+
+.Example conditional policy object with `$currentUser` alias
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["$currentUser"]
+    }
+  }
+}
+----
+--
+
+* `$ownerRefs`: This alias is replaced with ownership references, usually as an array that includes the user entity reference and the user's parent group entity reference. For example, for user Tom from team-a, `$ownerRefs` becomes `['user:default/tom', 'group:default/team-a']`.
++
+--
+.Example conditional policy object with `$ownerRefs` alias
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["delete"],
+  "conditions": {
+    "rule": "IS_ENTITY_OWNER",
+    "resourceType": "catalog-entity",
+    "params": {
+      "claims": ["$ownerRefs"]
+    }
+  }
+}
+----
+--
+--
+
+
+
