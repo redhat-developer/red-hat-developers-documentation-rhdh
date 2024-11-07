@@ -148,7 +148,9 @@ for j in $jsons; do
         Version=$VersionJQ
         if [[ $match ]]; then
             Version=$(echo "${match}" | sed -r -e "s/.+\": \"([0-9.]+)\"/\1/")
-            echo "[WARN] !! Using $pluginVersFile version = $Version, not $VersionJQ from $Path" | tee -a /tmp/warnings.txt
+            if [[ "$Version" != "$VersionJQ" ]]; then 
+                echo "[WARN] !! Using $pluginVersFile version = $Version, not $VersionJQ from $Path" | tee -a /tmp/warnings.txt
+            fi
         fi
 
         # check if there's a newer version at npmjs.com and warn if so 
@@ -163,7 +165,7 @@ for j in $jsons; do
         echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
         if [[ "$latestXYRelease" != "$Version" ]]; then
             echo "[WARN] !! Newer $latestXYRelease > $Version - should upgrade to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease !!" | tee -a /tmp/warnings.txt
-            echo | tee -a /tmp/warnings.txt
+            # echo | tee -a /tmp/warnings.txt
         fi
 
         # default to community unless it's a RH-authored plugin
