@@ -6,10 +6,14 @@
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
+pluginsRepo="https://github.com/janus-idp/backstage-plugins"    # TODO move to BCP and rhdh-plugins
+showcaseRepo="https://github.com/janus-idp/backstage-showcase"  # TODO move to rhd/rhdh
 usage() {
   cat <<EOF
-Generate updated table of dynamic plugins from content in janus-idp/backstage-plugins and backstage-showcase repos, 
-for the specified branch
+
+Generate an updated table of dynamic plugins from content in the following two repos, for the specified branch:
+* $pluginsRepo
+* $showcaseRepo
 
 Requires:
 * jq 1.6+
@@ -19,12 +23,13 @@ Usage:
 $0 -b stable-ref-branch
 
 Options:
-  -b, --ref-branch    : Reference branch against which plugin versions should be incremented, like 1.1.x or main
+  -b, --ref-branch    : Reference branch against which plugin versions should be incremented, like release-1.y or main
   --clean             : Force a clean GH checkout (do not reuse files on disk)
   -h, --help          : Show this help
 
 Examples:
-  $0 -b 1.1.x
+
+  $0 -b release-1.3 --clean
 
 EOF
 }
@@ -45,14 +50,14 @@ if [[ ! $BRANCH ]]; then usage; exit 1; fi
 # TODO switch this to backstage/community-plugins
 if [[ ! -d /tmp/backstage-plugins ]]; then
     pushd /tmp >/dev/null || exit
-        git clone https://github.com/janus-idp/backstage-plugins --depth 1 -b "$BRANCH"
+        git clone "$pluginsRepo" --depth 1 -b "$BRANCH" backstage-plugins
     popd >/dev/null || exit
 fi
 
 # TODO switch this to redhat-developer/rhdh
 if [[ ! -d /tmp/backstage-showcase ]]; then
     pushd /tmp >/dev/null || exit
-        git clone https://github.com/janus-idp/backstage-showcase --depth 1 -b "$BRANCH"
+        git clone "$showcaseRepo" --depth 1 -b "$BRANCH" backstage-showcase
     popd >/dev/null || exit
 fi
 
@@ -85,7 +90,9 @@ titlecase() {
 # * packages/app/package.json#.dependencies
 # * packages/backend/package.json#.dependencies
 pluginVersFile=/tmp/plugin-versions.txt
-jq -r '.peerDependencies' /tmp/backstage-showcase/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > $pluginVersFile
+if [[ -f /tmp/backstage-showcase/dynamic-plugins/imports/package.json ]]; then
+    jq -r '.peerDependencies' /tmp/backstage-showcase/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > $pluginVersFile
+fi
 jq -r '.dependencies' /tmp/backstage-showcase/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> $pluginVersFile
 cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out $pluginVersFile
 
@@ -121,6 +128,7 @@ for j in $jsons; do
     Plugin="${Name}"
     if [[ $Plugin != "@"* ]]; then # don't update janus-idp/backstage-plugins plugin names
         Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
+            -e 's|janus/idp-|janus-idp/|' \
             -e 's|backstage/community-|backstage-community/|' \
             -e 's|parfuemerie/douglas-|parfuemerie-douglas/|')"
     fi
@@ -164,7 +172,7 @@ for j in $jsons; do
         # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
         # * packages/app/package.json#.dependencies
         # * packages/backend/package.json#.dependencies
-        echo "[DEBUG] Check version of $Name is really $VersionJQ (from Path = $Path)..."
+        # echo "[DEBUG] Check version of $Name is really $VersionJQ (from Path = $Path)..."
         match=$(grep "\"$Name\": \"" $pluginVersFile || true)
         Version=$VersionJQ
         if [[ $match ]]; then
@@ -183,7 +191,7 @@ for j in $jsons; do
         # echo $allVersionsPublished
         # clean out any pre-release versions
         latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
-        echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
+        # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
         if [[ "$latestXYRelease" != "$Version" ]]; then
             echo "[WARN] !! Newer $latestXYRelease > $Version - should upgrade to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease !!" | tee -a /tmp/warnings.txt
             # echo | tee -a /tmp/warnings.txt
