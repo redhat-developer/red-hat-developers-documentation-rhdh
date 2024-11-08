@@ -17,6 +17,7 @@ Generate an updated table of dynamic plugins from content in the following two r
 
 Requires:
 * jq 1.6+
+* yq from https://pypi.org/project/yq/ - not the mikefarah version
 
 Usage:
 
