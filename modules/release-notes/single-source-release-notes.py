@@ -38,7 +38,7 @@ env = jinja2.Environment(
 )
 # Load configuration file
 with open(
-  root_dir + '/jira2asciidoc.yml',
+  modules_dir + '/single-source-release-notes.jira2asciidoc.yml',
   'r'
 ) as file:
   config = yaml.safe_load(file)
