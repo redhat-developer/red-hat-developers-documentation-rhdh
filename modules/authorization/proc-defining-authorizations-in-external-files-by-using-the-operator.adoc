@@ -1,0 +1,104 @@
+[id='defining-authorizations-in-external-files-by-using-the-operator']
+= Defining authorizations in external files by using the operator
+
+To automate {product} maintenance, you can define permissions and roles in external files, before starting {product-short}.
+You need to prepare your files, upload them to your {ocp-short} project,
+and configure {product-short} to use the external files.
+
+.Prerequisites
+* xref:enabling-and-giving-access-to-rbac[You enabled the RBAC feature].
+
+.Procedure
+. Define your policies in a `rbac-policies.csv` CSV file by using the following format:
+
+.. Define role permissions:
++
+[source,csv,subs="+quotes"]
+----
+p, _<role_entity_reference>_, _<permission>_, _<action>_, _<allow_or_deny>_
+----
+
+_<role_entity_reference>_::
+Role entity reference, such as: `role:default/guest`.
+
+_<permission>_::
+Permission, such as: `bulk.import`, `catalog.entity.read`, or `catalog.entity.refresg`, or permission resource type, such as: `bulk-import` or `catalog-entity`.
++
+See: xref:ref-rbac-permission-policies_{context}[Permission policies reference].
+_<action>_::
+Action type, such as: `use`, `read`, `create`, `update`, `delete`.
+
+_<allow_or_deny>_::
+Access granted: `allow` or `deny`.
+
+.. Assign the role to a group or a user:
++
+[source,csv,subs="+quotes"]
+----
+g, _<group_or_user>_, _<role_entity_reference>_
+----
+
+_<group_or_user>_::
+Group, such as: `user:default/mygroup`, or user, such as: `user:default/myuser`.
++
+.Sample `rbac-policies.csv`
+[source,csv,subs="+quotes"]
+----
+p, role:default/guests, catalog-entity, read, allow
+p, role:default/guests, catalog.entity.create, create, allow
+g, user:default/my-user, role:default/guests
+g, group:default/my-group, role:default/guests
+----
+
+. Define your conditional policies in a `rbac-conditional-policies.yaml` YAML file by using the following format:
++
+[source,yaml,subs="+quotes"]
+----
+result: CONDITIONAL
+roleEntityRef: _<role_entity_reference>_
+pluginId: _<plugin_id>_
+permissionMapping:
+  - read
+  - update
+  - delete
+conditions: _<conditions>_
+----
++
+See: xref:ref-rbac-conditional-policy-definition_{context}[Conditional policies reference].
+
+. Upload your `rbac-policies.csv` and `rbac-conditional-policies.yaml` files to a `rbac-policies` config maps in your {ocp-short} project containing {product-short}.
++
+[source,terminal]
+----
+$ oc create configmap rbac-policies \
+     --from-file=rbac-policies.csv \
+     --from-file=rbac-conditional-policies.yaml
+----
+
+. Update your {product-short} `Backstage` custom resource to mount in the {product-short} filesystem your files from the config maps:
++
+.`Backstage` Custom resource fragment
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+spec:
+  application:
+    extraFiles:
+      configMaps:
+        - name: rbac-policies
+        - name: rbac-conditional-policies
+----
+
+. Update your {product-short} `app-config.yaml` configuration file to use the external files in {product-short}:
++
+.`app-config.yml` fragment
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    conditionalPoliciesFile: ./rbac-conditional-policies.yaml
+    policies-csv-file: ./rbac-policies.csv
+    policyFileReload: true
+----
