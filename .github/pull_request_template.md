@@ -10,5 +10,3 @@
 **Issue:**
 <!--- Add a link to the Jira issue. --->
 
-**Link to docs preview:**
-<!--- Add direct link(s) to the exact page(s) that contain the updated content from the preview build. --->
