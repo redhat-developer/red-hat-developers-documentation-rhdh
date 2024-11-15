@@ -1,0 +1,77 @@
+= Enabling and configuring the JFrog Artifactory plugin
+
+JFrog Artifactory is a front-end plugin that displays the information about your container images stored in the JFrog Artifactory repository. JFrog Artifactory is preinstalled with {product-short} and disabled by default. To use it, you need to enable and configure it first.
+
+[IMPORTANT]
+====
+The JFrog Artifactory plugin is a Technology Preview feature only.
+
+Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete, and Red Hat does not recommend using them for production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
+
+For more information on Red Hat Technology Preview features, see https://access.redhat.com/support/offerings/techpreview/[Technology Preview Features Scope].
+
+Additional detail on how Red Hat provides support for bundled community dynamic plugins is available on the https://access.redhat.com/policy/developerhub-support-policy[Red Hat Developer Support Policy] page.
+====
+
+== Enablement
+The JFrog Artifactory plugin is pre-loaded in {product-short} with basic configuration properties. To enable it, set the disabled property to `false` as follows:
+
+[source,yaml]
+----
+global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-jfrog-artifactory
+        disabled: false
+----
+
+== Configuration
+. Set the proxy to the desired JFrog Artifactory server in the `app-config.yaml` file as follows:
++
+[source,yaml]
+----
+proxy:
+  endpoints:
+    ‘/jfrog-artifactory/api’:
+      target: http://<hostname>:8082 # or https://<customer>.jfrog.io
+      headers:
+      # Authorization: 'Bearer <YOUR TOKEN>'
+      # Change to "false" in case of using a self-hosted Artifactory instance with a self-signed certificate
+      secure: true
+----
+
+. Enable the *Image Registry* tab on the entity view page in `packages/app/src/components/catalog/EntityPage.tsx`:
++
+[source,yaml]
+----
+import {
+  isJfrogArtifactoryAvailable,
+  JfrogArtifactoryPage,
+} from '@janus-idp/backstage-plugin-jfrog-artifactory';
+
+const serviceEntityPage = (
+  <EntityLayout>
+    // ...
+    {/* highlight-add-start */}
+    <EntityLayout.Route
+      if={isJfrogArtifactoryAvailable}
+      path="/image-registry"
+      title="Image Registry"
+    >
+      <JfrogArtifactoryPage />
+    </EntityLayout.Route>
+    {/* highlight-add-end */}
+  </EntityLayout>
+);
+----
+
+. Annotate your entity using the following annotations:
++
+[source,yaml]
+----
+metadata:
+    annotations:
+      'jfrog-artifactory/image-name': '<IMAGE-NAME>'
+----
