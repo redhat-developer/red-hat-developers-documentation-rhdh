@@ -1,0 +1,238 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Configuring Red Hat Developer Hub by using the operator</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="To configure Red Hat Developer Hub, add custom configuration files to Red Hat OpenShift Container Platform and register them in Developer Hub."/><link rel="next" href="#idm45739783641968" title="Preface"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><div xml:lang="en-US" class="book" id="idm45739778127360"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.4</span></div><div><h1 class="title">Configuring Red Hat Developer Hub by using the operator</h1></div><div><h2 class="subtitle">Adding custom configuration files to Red Hat Developer Hub</h2></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45739783140560">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				To configure Red Hat Developer Hub, add custom configuration files to Red Hat OpenShift Container Platform and register them in Developer Hub.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="preface"><a href="#idm45739783641968">Preface</a></span></li><li><span class="chapter"><a href="#proc-add-custom-app-config-file-ocp-operator_adding-custom-configuration-files">1. Adding a custom application configuration file to OpenShift Container Platform using the Operator</a></span></li><li><span class="chapter"><a href="#proc-rhdh-deployment-config_adding-custom-configuration-files">2. Configuring Red Hat Developer Hub deployment</a></span></li></ul></div><section class="preface" id="idm45739783641968"><div class="titlepage"><div><div><h1 class="title">Preface</h1></div></div></div><p>
+			To configure Red Hat Developer Hub, add custom configuration files to Red Hat OpenShift Container Platform and register them in Developer Hub.
+		</p></section><section class="chapter" id="proc-add-custom-app-config-file-ocp-operator_adding-custom-configuration-files"><div class="titlepage"><div><div><h1 class="title">Chapter 1. Adding a custom application configuration file to OpenShift Container Platform using the Operator</h1></div></div></div><p>
+			A custom application configuration file is a <code class="literal">ConfigMap</code> object that you can use to change the configuration of your Red Hat Developer Hub instance. If you are deploying your Developer Hub instance on Red Hat OpenShift Container Platform, you can use the Red Hat Developer Hub Operator to add a custom application configuration file to your OpenShift Container Platform instance by creating the <code class="literal">ConfigMap</code> object and referencing it in the Developer Hub custom resource (CR).
+		</p><p>
+			The custom application configuration file contains a sensitive environment variable, named <code class="literal">BACKEND_SECRET</code>. This variable contains a mandatory backend authentication key that Developer Hub uses to reference an environment variable defined in an OpenShift Container Platform secret. You must create a secret, named 'secrets-rhdh', and reference it in the Developer Hub CR.
+		</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+				You are responsible for protecting your Red Hat Developer Hub installation from external and unauthorized access. Manage the backend authentication key like any other secret. Meet strong password requirements, do not expose it in any configuration files, and only inject it into configuration files as an environment variable.
+			</p></div></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+					You have an active Red Hat OpenShift Container Platform account.
+				</li><li class="listitem">
+					Your administrator has installed the Red Hat Developer Hub Operator in OpenShift Container Platform. For more information, see <a class="link" href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/administration_guide_for_red_hat_developer_hub/index">Installing the Red Hat Developer Hub Operator</a>.
+				</li><li class="listitem">
+					You have created the Red Hat Developer Hub CR in OpenShift Container Platform.
+				</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+					From the <span class="strong strong"><strong>Developer</strong></span> perspective in the OpenShift Container Platform web console, select the <span class="strong strong"><strong>Topology</strong></span> view, and click the <span class="strong strong"><strong>Open URL</strong></span> icon on the Developer Hub pod to identify your Developer Hub external URL: <span class="emphasis"><em>&lt;RHDH_URL&gt;</em></span>.
+				</li><li class="listitem">
+					From the <span class="strong strong"><strong>Developer</strong></span> perspective in the OpenShift Container Platform web console, select the <span class="strong strong"><strong>ConfigMaps</strong></span> view.
+				</li><li class="listitem">
+					Click <span class="strong strong"><strong>Create ConfigMap</strong></span>.
+				</li><li class="listitem"><p class="simpara">
+					Select the <span class="strong strong"><strong>YAML view</strong></span> option in <span class="strong strong"><strong>Configure via</strong></span> and use the following example as a base template to create a <code class="literal">ConfigMap</code> object, such as <code class="literal">app-config-rhdh.yaml</code>:
+				</p><pre class="programlisting language-yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: &lt;RHDH_URL&gt; <span id="CO1-1"/><span class="callout">1</span>
+    backend:
+      auth:
+        externalAccess:
+            - type: legacy
+              options:
+                subject: legacy-default-config
+                secret: "${BACKEND_SECRET}" <span id="CO1-2"/><span class="callout">2</span>
+      baseUrl: &lt;RHDH_URL&gt; <span id="CO1-3"/><span class="callout">3</span>
+      cors:
+        origin: &lt;RHDH_URL&gt; <span id="CO1-4"/><span class="callout">4</span></pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO1-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+							Set the external URL of your Red Hat Developer Hub instance.
+						</div></dd><dt><a href="#CO1-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+							Use an environment variable exposing an OpenShift Container Platform secret to define the mandatory Developer Hub backend authentication key.
+						</div></dd><dt><a href="#CO1-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+							Set the external URL of your Red Hat Developer Hub instance.
+						</div></dd><dt><a href="#CO1-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+							Set the external URL of your Red Hat Developer Hub instance.
+						</div></dd></dl></div></li><li class="listitem">
+					Click <span class="strong strong"><strong>Create</strong></span>.
+				</li><li class="listitem">
+					Select the <span class="strong strong"><strong>Secrets</strong></span> view.
+				</li><li class="listitem">
+					Click <span class="strong strong"><strong>Create Key/value Secret</strong></span>.
+				</li><li class="listitem">
+					Create a secret named <code class="literal">secrets-rhdh</code>.
+				</li><li class="listitem"><p class="simpara">
+					Add a key named <code class="literal">BACKEND_SECRET</code> and a base64 encoded string as a value. Use a unique value for each Red Hat Developer Hub instance. For example, you can use the following command to generate a key from your terminal:
+				</p><pre class="programlisting language-yaml">node -p 'require("crypto").randomBytes(24).toString("base64")'</pre></li><li class="listitem">
+					Click <span class="strong strong"><strong>Create</strong></span>.
+				</li><li class="listitem">
+					Select the <span class="strong strong"><strong>Topology</strong></span> view.
+				</li><li class="listitem"><p class="simpara">
+					Click the overflow menu for the Red Hat Developer Hub instance that you want to use and select <span class="strong strong"><strong>Edit Backstage</strong></span> to load the YAML view of the Red Hat Developer Hub instance.
+				</p><div class="informalfigure"><div class="mediaobject"><img src="images/rhdh/operator-install-2.png" alt="operator install 2"/></div></div></li><li class="listitem"><p class="simpara">
+					In the CR, enter the name of the custom application configuration config map as the value for the <code class="literal">spec.application.appConfig.configMaps</code> field, and enter the name of your secret as the value for the <code class="literal">spec.application.extraEnvs.secrets</code> field. For example:
+				</p><pre class="programlisting language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config-rhdh
+    extraEnvs:
+      secrets:
+         - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true</pre></li><li class="listitem">
+					Click <span class="strong strong"><strong>Save</strong></span>.
+				</li><li class="listitem">
+					Navigate back to the <span class="strong strong"><strong>Topology</strong></span> view and wait for the Red Hat Developer Hub pod to start.
+				</li><li class="listitem">
+					Click the <span class="strong strong"><strong>Open URL</strong></span> icon to use the Red Hat Developer Hub platform with the configuration changes.
+				</li></ol></div><div class="itemizedlist"><p class="title"><strong>Additional resources</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+					For more information about roles and responsibilities in Developer Hub, see <a class="link" href="https://access.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/administration_guide_for_red_hat_developer_hub/index">Role-Based Access Control (RBAC) in Red Hat Developer Hub</a>.
+				</li></ul></div></section><section class="chapter" id="proc-rhdh-deployment-config_adding-custom-configuration-files"><div class="titlepage"><div><div><h1 class="title">Chapter 2. Configuring Red Hat Developer Hub deployment</h1></div></div></div><p>
+			The Red Hat Developer Hub operator exposes a <code class="literal">rhdh.redhat.com/v1alpha2</code> API Version of its Custom Resource Definition (CRD). This CRD exposes a generic <code class="literal">spec.deployment.patch</code> field, which gives you full control over the Developer Hub Deployment resource. This field can be a fragment of the standard <code class="literal">apps.Deployment</code> Kubernetes object.
+		</p><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+					Create a Developer Hub Custom Resource Definition with the following fields:
+				</li></ol></div><div class="formalpara"><p class="title"><strong>Example</strong></p><p>
+				
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:</pre>
+			</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">labels</code></span></dt><dd><p class="simpara">
+						Add labels to the Developer Hub pod.
+					</p><div class="formalpara"><p class="title"><strong>Example adding the label <code class="literal">my=true</code></strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          metadata:
+            labels:
+              my: true</pre>
+						</p></div></dd><dt><span class="term"><code class="literal">volumes</code></span></dt><dd><p class="simpara">
+						Add an additional volume named <code class="literal">my-volume</code> and mount it under <code class="literal">/my/path</code> in the Developer Hub application container.
+					</p><div class="formalpara"><p class="title"><strong>Example additional volume</strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                volumeMounts:
+                  - mountPath: /my/path
+                    name: my-volume
+            volumes:
+              - ephemeral:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: "special"
+                name: my-volume</pre>
+						</p></div><p class="simpara">
+						Replace the default <code class="literal">dynamic-plugins-root</code> volume with a persistent volume claim (PVC) named <code class="literal">dynamic-plugins-root</code>. Note the <code class="literal">$patch: replace</code> directive, otherwise a new volume will be added.
+					</p><div class="formalpara"><p class="title"><strong>Example <code class="literal">dynamic-plugins-root</code> volume replacement</strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root</pre>
+						</p></div></dd><dt><span class="term"><code class="literal">cpu</code> request</span></dt><dd><p class="simpara">
+						Set the CPU request for the Developer Hub application container to 250m.
+					</p><div class="formalpara"><p class="title"><strong>Example CPU request</strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                resources:
+                  requests:
+                    cpu: 250m</pre>
+						</p></div></dd><dt><span class="term"><code class="literal">my-sidecar</code> container</span></dt><dd><p class="simpara">
+						Add a new <code class="literal">my-sidecar</code> sidecar container into the Developer Hub Pod.
+					</p><div class="formalpara"><p class="title"><strong>Example side car container</strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha2
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: my-sidecar
+                image: quay.io/my-org/my-sidecar:latest</pre>
+						</p></div></dd></dl></div><div class="itemizedlist _additional-resources"><p class="title"><strong>Additional resources</strong></p><ul class="itemizedlist _additional-resources" type="disc"><li class="listitem">
+					To learn more about merging, see <a class="link" href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format">Strategic Merge Patch</a>.
+				</li></ul></div></section><div><div xml:lang="en-US" class="legalnotice" id="idm45739783140560"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2024 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></div></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
