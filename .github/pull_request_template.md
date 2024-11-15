@@ -6,7 +6,7 @@
 
 **Version(s):**
 <!--- Specify the version(s) of RHDH that your PR applies to. -->
-
+Add the relevant labels to the Pull Request.
 **Issue:**
 <!--- Add a link to the Jira issue. --->
 
