@@ -8,7 +8,7 @@ You can define the following types of permissions in {product-short}:
 * resource type
 * basic
 
-The distinction between the two permission types depend on whether a permission includes a defined resource type.
+The distinction between the two permission types depends on whether a permission includes a defined resource type.
 
 You can define the resource type permission using either the associated resource type or the permission name as shown in the following example:
 
@@ -180,6 +180,28 @@ Kubernetes permissions::
 |===
 
 OCM permissions::
+
+Basic OCM permissions only restrict access to the cluster view, but they do not prevent access to the Kubernetes clusters in the resource view. For more effective permissions, consider applying a conditional policy to restrict access to catalog entities that are of type `kubernetes-cluster`. Access restriction is dependent on the set of permissions granted to a role. For example, if the role had full permissions (`read`, `update`, and `delete`), then you must specify all its permissions in the `permissionMapping` field.
+
+.Example permissionMapping definition
+[source,csv]
+----
+result: CONDITIONAL
+roleEntityRef: 'role:default/<YOUR_ROLE>'
+pluginId: catalog
+resourceType: catalog-entity
+permissionMapping: 
+  - read
+  - update
+  - delete
+conditions: 
+  not: 
+    rule: HAS_SPEC
+    resourceType: catalog-entity
+    params: 
+      key: type
+      value: kubernetes-cluster
+----
 
 [cols="15%,25%,15%,45%", frame="all", options="header"]
 |===
