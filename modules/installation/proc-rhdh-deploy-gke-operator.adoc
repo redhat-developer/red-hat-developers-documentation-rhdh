@@ -9,7 +9,7 @@
 // .Additonal resources
 // * For information about the OLM, see link:https://olm.operatorframework.io/docs/[Operator Lifecycle Manager(OLM)] documentation.
 
-== Installing the {product-short} Operator with the OLM framework
+= Installing the {product-short} Operator with the OLM framework
 
 You can install the {product-short} Operator on {gke-short} using the https://olm.operatorframework.io[Operator Lifecycle Manager (OLM) framework]. Following that, you can proceed to deploy your {product-short} instance in {gke-short}.
 
@@ -19,13 +19,38 @@ For information about the OLM, see link:https://olm.operatorframework.io/docs/[O
 
 // TODO: Compare with GKE OLM install prerequisites
 
-// * You have set the context to the {eks-short} cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon {eks-short} cluster].
-// * You have installed `kubectl`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Installing or updating kubectl].
-// * You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
-// * You have installed the Operator Lifecycle Manager (OLM). For more information about installation and troubleshooting, see https://operatorhub.io/how-to-install-an-operator#How-do-I-get-Operator-Lifecycle-Manager?[How do I get Operator Lifecycle Manager?]
+//* You have set the context to the {eks-short} cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon {eks-short} cluster].
+
+* You have installed the Google `gcloud` CLI and you have logged in to your Google account. For more information, see https://cloud.google.com/sdk/docs/install[Installing or updating kubectl].
+* You have installed `kubectl`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Install the gcloud CLI].
+* You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+* You have installed the Operator Lifecycle Manager (OLM). For more information about installation and troubleshooting, see https://operatorhub.io/how-to-install-an-operator#How-do-I-get-Operator-Lifecycle-Manager?[How do I get Operator Lifecycle Manager?]
+* You have configured a domain name for your {product-short} instance.
+
+* You have created a https://https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster[GKE Autopilot] or https://cloud.google.com/kubernetes-engine/docs/how-to/creating-a-zonal-cluster[GKE Standard] cluster.
+
+(TBC)
+Reserve a static external IP address. Chose a Premium IPv4  Global IP address for this example. Do not attach it to any VM.
+https://cloud.google.com/vpc/docs/reserve-static-external-ip-address#reserve_new_static 
+Later, the name is referred to as <ADDRESS_NAME>
+Configure DNS records for your domain name to point to the IP address you just reserved – create an A record with the value equal to the IP address (this can take up to an hour to propagate).
+(END TBC)
+
 
 .Procedure
 
+. Connect to your GKE cluster using the following command:
++
+--
+[source,terminal]
+----
+gcloud container clusters get-credentials <cluster-name> \ <1>
+    --location=<cluster-location> <2>
+----
+<1> Enter your GKE cluster name.
+<2> Enter your GKE cluster location.
+--
+This command will configure your Kubernetes client to point to your GKE cluster.
 . Run the following command in your terminal to create the `rhdh-operator` namespace where the Operator is installed:
 +
 --
@@ -53,7 +78,17 @@ kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
 
 The created pull secret is used to pull the {product-short} images from the {company-name} Ecosystem.
 --
-
+. TBC 
++
+--
+[source,terminal]
+----
+kubectl -n rhdh-operator patch deployment \
+    rhdh-operator --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
+    --type=merge
+----
+This is a test.
+--
 . Create a `CatalogSource` resource that contains the Operators from the {company-name} Ecosystem:
 +
 --
@@ -201,6 +236,7 @@ kubectl -n rhdh-operator edit configmap backstage-default-config
 +
 Wait for a few minutes until the changes are automatically applied to the operator pods.
 
+////
 == Installing the {product-short} Operator without the OLM framework
 
 .Prerequisites
@@ -367,3 +403,4 @@ kubectl apply -f rhdh-operator-VERSION.yaml
 kubectl -n rhdh-operator get pods -w
 ----
 --
+////
