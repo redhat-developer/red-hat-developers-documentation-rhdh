@@ -8,11 +8,11 @@
 .Prerequisites
 
 * A cluster administrator has installed the {product} Operator.
-* You have an {eks-short} cluster with {aws-short} Application Load Balancer (ALB) add-on installed. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html[Application load balancing on {eks-brand-name}] and https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html[Installing the AWS Load Balancer Controller add-on].
-* You have configured a domain name for your {product-short} instance. The domain name can be a hosted zone entry on Route 53 or managed outside of AWS. For more information, see https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html[Configuring Amazon Route 53 as your DNS service] documentation.
-* You have an entry in the {aws-short} Certificate Manager (ACM) for your preferred domain name. Make sure to keep a record of your Certificate ARN.
+//* You have an {eks-short} cluster with {aws-short} Application Load Balancer (ALB) add-on installed. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html[Application load balancing on {eks-brand-name}] and https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html[Installing the AWS Load Balancer Controller add-on].
+//* You have configured a domain name for your {product-short} instance. The domain name can be a hosted zone entry on Route 53 or managed outside of AWS. For more information, see https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html[Configuring Amazon Route 53 as your DNS service] documentation.
+//* You have an entry in the {aws-short} Certificate Manager (ACM) for your preferred domain name. Make sure to keep a record of your Certificate ARN.
 * You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
-* You have set the context to the {eks-short} cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon {eks-short} cluster].
+//* You have set the context to the {eks-short} cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon {eks-short} cluster].
 * You have installed `kubectl`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Installing or updating kubectl].
 
 .Procedure
@@ -29,8 +29,8 @@ metadata:
 data:
   "app-config-rhdh.yaml": |
     app:
-      title: {product}
-      baseUrl: https://<rhdh_dns_name>
+      title: Red Hat Developer Hub
+      baseUrl: https://<rhdh_domain_name>
     backend:
       auth:
         externalAccess:
@@ -38,9 +38,9 @@ data:
               options:
                 subject: legacy-default-config
                 secret: "${BACKEND_SECRET}"
-      baseUrl: https://<rhdh_dns_name>
+      baseUrl: https://<rhdh_domain_name>
       cors:
-        origin: https://<rhdh_dns_name>
+        origin: https://<rhdh_domain_name>
 ----
 --
 
@@ -107,6 +107,89 @@ spec:
 ----
 --
 
+. Set up a Google-managed certificate by creating a `ManagedCertificate` object that you will later attach to the Ingress.
++
+--
+[source,yaml,subs="attributes+"]
+----
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: <rhdh_certificate_name>
+spec:
+  domains:
+    - <rhdh_domain_name>
+----
+--
+For more information about setting up a Google-managed certificate, see https://cloud.google.com/kubernetes-engine/docs/how-to/managed-certs?hl=en#setting_up_a_google-managed_certificate 
+
+. Create a `FrontendConfig` object to set a policy for redirecting to HTTPS. You will later attach this policy to the Ingress. 
++
+--
+[source,yaml,subs="attributes+"]
+----
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: <ingress_security_config>
+spec:
+  sslPolicy: gke-ingress-ssl-policy-https
+  redirectToHttps:
+    enabled: true
+----
+--
+For more information about setting a policy to redirect to HTTPS, see https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration?hl=en#https_redirect
+
+. Create an Ingress resource using the following template, customizing the names as needed:
++
+--
+[source,yaml,subs="attributes+"]
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  # TODO: this the name of your Developer Hub Ingress
+  name: my-rhdh
+  annotations:
+    # If the class annotation is not specified it defaults to "gce".
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
+    networking.gke.io/managed-certificates: <rhdh_certificate_name>
+    networking.gke.io/v1beta1.FrontendConfig: <ingress_security_config>
+spec:
+  ingressClassName: gce
+  rules:
+    # TODO: Set your application domain name.
+    - host: <rhdh_domain_name>
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              # TODO: my-rhdh is the name of your Backstage Custom Resource.
+              # Adjust if you changed it!
+              name: backstage-my-rhdh
+              port:
+                name: http-backend
+----
+--
+
+. Wait for the `ManagedCertificate` to be provisioned. This can take a couple of hours.
+
+. Access RHDH with `https://<rhdh_domain_name>`
++
+[IMPORTANT]
+Use the HTTPS protocol, not HTTP.
+
+.Additional information
+For more information on setting up GKE using Ingress with TLS, see https://github.com/GoogleCloudPlatform/gke-networking-recipes/tree/main/ingress/single-cluster/ingress-https 
+
+For more information on setting up GKE with LoadBalancer instead of Ingress, see https://github.com/sumiranchugh/rhdh-gke-poc/tree/main 
+
+
+
+////
 . Create an Ingress resource using the following template, ensuring to customize the names as needed:
 +
 --
@@ -156,3 +239,4 @@ In the previous template, replace ` <rhdh_dns_name>` with your {product-short} d
 .Verification
 
 Wait until the DNS name is responsive, indicating that your {product-short} instance is ready for use.
+////
