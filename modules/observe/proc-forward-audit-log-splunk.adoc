@@ -1,13 +1,13 @@
 [id='proc-forward-audit-log-splunk_{context}']
 = Forwarding {product} audit logs to Splunk
 
-You can use the {logging-brand-name} ({logging-short}) Operator and `ClusterLogForwarder` to capture the streamed audit logs from a {product-short} instance and forward them to the HTTPS endpoint associated with your Splunk instance.
+You can use the {logging-brand-name} ({logging-short}) Operator and a `ClusterLogForwarder` instance to capture the streamed audit logs from a {product-short} instance and forward them to the HTTPS endpoint associated with your Splunk instance.
 
 .Prerequisites
 
 * You have a cluster running on a supported {ocp-short} version.
 * You have an account with `cluster-admin` privileges.
-* You have a Splunk Cloud account.
+* You have a Splunk Cloud account or Splunk Enterprise installation.
 
 .Procedure
 
@@ -146,7 +146,7 @@ pipelines:
 oc apply -f <ClusterLogForwarder-configuration.yaml>
 ----
 --
-. Optional: Customize your `ClusterLogForwarder` pods using the following options:
+. Optional: To reduce the risk of log loss, configure your `ClusterLogForwarder` pods using the following options:
 .. Define the resource requests and limits for the log collector as follows:
 +
 --
@@ -172,11 +172,13 @@ collector:
 [source,yaml]
 ----
 tuning:
-  delivery: AtLeastOnce
+  delivery: AtLeastOnce <1>
   compression: none
   minRetryDuration: 1s
   maxRetryDuration: 10s
 ----
+
+<1> `AtLeastOnce` delivery mode means that if the log forwarder crashes or is restarted, any logs that were read before the crash but not sent to their destination are re-sent. It is possible that some logs are duplicated after a crash. 
 --
 
 .Verification
