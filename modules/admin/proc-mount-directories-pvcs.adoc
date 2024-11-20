@@ -1,0 +1,64 @@
+[id="proc-mount-directories-pvcs_{context}"]
+= Mounting directories from pre-created PVCs
+
+Starting from `v1alpha3`, you can mount directories from pre-created PersistentVolumeClaims (PVCs) using the `spec.application.extraFiles.pvcs` field.
+
+.Prerequisites
+* You have understanding of the mounting logic:
+** If `spec.application.extraFiles.pvcs[].mountPath` is defined, the PVC is mounted to the specified path.
+** If `spec.application.extraFiles.pvcs[].mountPath` is not defined, the PVC is mounted under the path specified in `spec.application.extraFiles.mountPath/`.
+** If neither `mountPath` is defined, the PVC defaults to `/opt/app-root/src` or you can use {product-very-short} container working directory (if defined).
+
+.Procedure
+. Define the PVCs using the following YAML example:
++
+--
+.Example YAML file to define PVCs
+[source,yaml]
+----
+apiVersion: v1  
+kind: PersistentVolumeClaim  
+metadata:  
+  name: myclaim1  
+spec:  
+  accessModes:  
+    - ReadWriteOnce  
+  resources:  
+    requests:  
+      storage: 2Gi  
+---  
+apiVersion: v1  
+kind: PersistentVolumeClaim  
+metadata:  
+  name: myclaim2  
+spec:  
+  accessModes:  
+    - ReadWriteOnce  
+  resources:  
+    requests:  
+      storage: 2Gi 
+----
+--
+
+. Use the following configuration to specify how the PVCs are mounted in the container:
++
+--
+.Example configuration for mounting PVCs in a container
+[source,yaml]
+----
+spec:  
+  application:  
+    extraFiles:  
+      mountPath: /my/path  
+      pvcs:  
+        - name: myclaim1  
+        - name: myclaim2  
+          mountPath: /vol/my/claim
+----
+--
+
+.Verification
+Based on the configuration, the following directories are mounted in the container:
+
+* `/my/path/myclaim1`
+* `/vol/my/claim`
