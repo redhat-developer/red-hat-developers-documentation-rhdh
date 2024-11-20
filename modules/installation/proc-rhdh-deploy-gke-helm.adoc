@@ -4,16 +4,27 @@
 [id='proc-rhdh-deploy-gke-helm_{context}']
 = Installing {product-short} on {gke-short} with the Helm chart
 
-When you install the {product-short} Helm chart in {gke-name} ({gke-short}), it orchestrates the deployment of a {product-short} instance, which provides a robust developer platform within the {gke-short} ecosystem.
+When you install the {product-short} Helm chart in {gke-brand-name} ({gke-short}), it orchestrates the deployment of a {product-short} instance, which provides a robust developer platform within the {gke-short} ecosystem.
 
 .Prerequisites
+* You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+* You have installed `kubectl`. For more information, see https://kubernetes.io/docs/tasks/tools/#kubectl[Install kubetl].
+* You have installed the Google Cloud CLI. For more information, see https://cloud.google.com/sdk/docs/install[Install the gcloud CLI].
+* You have logged in to your Google account and created a https://https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster[GKE Autopilot] or https://cloud.google.com/kubernetes-engine/docs/how-to/creating-a-zonal-cluster[GKE Standard] cluster.
+* You have installed Helm 3 or the latest version. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/helm.html[Using Helm with Amazon {eks-short}].
+
+* You have configured a domain name for your {product-short} instance.
+* You have reserved a static external Premium IPv4 Global IP address that is not attached to any VM.
+* You have configured the DNS records for your domain name to point to the IP address that have reseved. For more information see https://cloud.google.com/vpc/docs/reserve-static-external-ip-address#reserve_new_static[Reserve a new static external IP address]
++
+[NOTE]
+You need to create an `A` record with the value equal to the IP address. This can take up to one hour to propagate.
+* You have installed Helm 3 or the latest. For more information, see https://helm.sh/docs/intro/install[Installing Helm].
 
 //* You have an {eks-short} cluster with AWS Application Load Balancer (ALB) add-on installed. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html[Application load balancing on Amazon {product-short}] and https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html[Installing the AWS Load Balancer Controller add-on].
 //* You have configured a domain name for your {product-short} instance. The domain name can be a hosted zone entry on Route 53 or managed outside of AWS. For more information, see https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html[Configuring Amazon Route 53 as your DNS service] documentation.
 //* You have an entry in the AWS Certificate Manager (ACM) for your preferred domain name. Make sure to keep a record of your Certificate ARN.
-* You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
 //* You have set the context to the {eks-short} cluster in your current `kubeconfig`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html[Creating or updating a kubeconfig file for an Amazon {eks-short} cluster].
-* You have installed `kubectl`. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Installing or updating kubectl].
 //* You have installed Helm 3 or the latest. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/helm.html[Using Helm with Amazon {eks-short}].
 
 .Procedure
@@ -38,7 +49,7 @@ kubectl -n <your-namespace> create secret docker-registry rhdh-pull-secret \ <1>
     --docker-password=<password> \ <3>
     --docker-email=<email> <4>
 ----
-<1> Enter your GKE namespace in the command.
+<1> Enter your {gke-short} namespace in the command.
 <2> Enter your username in the command.
 <3> Enter your password in the command.
 <4> Enter your email address in the command.
@@ -46,7 +57,7 @@ kubectl -n <your-namespace> create secret docker-registry rhdh-pull-secret \ <1>
 The created pull secret is used to pull the {product-short} images from the {company-name} Ecosystem.
 --
 
-. Set up a Google-managed certificate by creating a `ManagedCertificate` object that you will later attach to the Ingress.
+. Set up a Google-managed certificate by creating a `ManagedCertificate` object that you will attach to the Ingress.
 +
 --
 [source,yaml,subs="attributes+"]
@@ -60,9 +71,9 @@ spec:
     - <rhdh_domain_name>
 ----
 --
-For more information about setting up a Google-managed certificate, see https://cloud.google.com/kubernetes-engine/docs/how-to/managed-certs?hl=en#setting_up_a_google-managed_certificate 
+For more information about setting up a Google-managed certificate, see https://cloud.google.com/kubernetes-engine/docs/how-to/managed-certs?hl=en#setting_up_a_google-managed_certificate[Setting up a Google-managed certificate].
 
-. Create a `FrontendConfig` object to set a policy for redirecting to HTTPS. You will later attach this policy to the Ingress. 
+. Create a `FrontendConfig` object to set a policy for redirecting to HTTPS. You will attach this policy to the Ingress. 
 +
 --
 [source,yaml,subs="attributes+"]
@@ -77,7 +88,7 @@ spec:
     enabled: true
 ----
 --
-For more information about setting a policy to redirect to HTTPS, see https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration?hl=en#https_redirect
+For more information about setting a policy to redirect to HTTPS, see https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration?hl=en#https_redirect[HTTP to HTTPS redirects].
 
 . Create a file named `values.yaml` using the following template:
 +
@@ -126,34 +137,41 @@ helm -n <your_namespace> install -f values.yaml <your_deploy_name> \
 +
 For the latest Helm Chart version, see https://github.com/openshift-helm-charts/charts/tree/main/charts/redhat/redhat/redhat-developer-hub
 +
-It takes some time to deploy it, check if the deployment completed use this command
+. Confirm that the deployment is complete.
 +
 [source,terminal,subs="attributes+"]
 ----
 kubectl get deploy <you_deploy_name>-developer-hub -n <your_namespace>
 ----
 
-. Verify that the service and ingress were created
+. Verify that the service and ingress were created.
 +
 [source,terminal,subs="attributes+"]
 ----
 kubectl get service -n <your_namespace>
 kubectl get ingress -n <your_namespace>
 ----
-
-. Wait for the `ManagedCertificate` to be provisioned. This can take a couple of hours.
++
+[NOTE]
+Wait for the `ManagedCertificate` to be provisioned. This can take a couple of hours.
 
 . Access RHDH with `https://<rhdh_domain_name>`
 +
 [IMPORTANT]
 Use the HTTPS protocol, not HTTP.
 
-. To upgrade or delete your deployment use (mind the –version)
+. To upgrade your deployment, use the following command:
 +
 [source,terminal,subs="attributes+"]
 ----
-helm -n <your_namespace> upgrade -f values.yaml <your_deploy_name> openshift-helm-charts/redhat-developer-hub --version 1.3.0
+helm -n <your_namespace> upgrade -f values.yaml <your_deploy_name> openshift-helm-charts/redhat-developer-hub --version <UPGRADE_CHART_VERSION>
 
+----
+
+. To delete your deployment, use the following command:
++
+[source,terminal,subs="attributes+"]
+----
 helm -n <your_namespace> delete <your_deploy_name>
 ----
 
