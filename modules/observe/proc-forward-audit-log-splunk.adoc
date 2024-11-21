@@ -1,0 +1,204 @@
+[id='proc-forward-audit-log-splunk_{context}']
+= Forwarding {product} audit logs to Splunk
+
+You can use the {logging-brand-name} ({logging-short}) Operator and a `ClusterLogForwarder` instance to capture the streamed audit logs from a {product-short} instance and forward them to the HTTPS endpoint associated with your Splunk instance.
+
+.Prerequisites
+
+* You have a cluster running on a supported {ocp-short} version.
+* You have an account with `cluster-admin` privileges.
+* You have a Splunk Cloud account or Splunk Enterprise installation.
+
+.Procedure
+
+. Log in to your {ocp-short} cluster. 
+. Install the {logging-short} Operator in the `openshift-logging` namespace and switch to the namespace:
++
+--
+.Example command to switch to a namespace
+[source,bash]
+----
+oc project openshift-logging
+----
+--
+. Create a `serviceAccount` named `log-collector` and bind the `collect-application-logs` role to the `serviceAccount` :
++
+--
+.Example command to create a `serviceAccount`
+[source,bash]
+----
+oc create sa log-collector
+----
+
+.Example command to bind a role to a `serviceAccount`
+[source,bash]
+----
+oc create clusterrolebinding log-collector --clusterrole=collect-application-logs --serviceaccount=openshift-logging:log-collector
+----
+--
+. Generate a `hecToken` in your Splunk instance.
+. Create a key/value secret in the `openshift-logging` namespace and verify the secret:
++
+--
+.Example command to create a key/value secret with `hecToken`
+[source,bash]
+----
+oc -n openshift-logging create secret generic splunk-secret --from-literal=hecToken=<HEC_Token>
+----
+
+.Example command to verify a secret
+[source,bash]
+----
+oc -n openshift-logging get secret/splunk-secret -o yaml
+----
+--
+. Create a basic `ClusterLogForwarder`resource YAML file as follows:
++
+--
+.Example `ClusterLogForwarder`resource YAML file
+[source,yaml]
+----
+apiVersion: logging.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: instance
+  namespace: openshift-logging
+----
+
+For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.16/html-single/logging/index#logging-create-clf_configuring-log-forwarding[Creating a log forwarder].
+--
+. Define the following `ClusterLogForwarder` configuration using OpenShift web console or OpenShift CLI:
+.. Specify the `log-collector` as `serviceAccount` in the YAML file:
++
+--
+.Example `serviceAccount` configuration
+[source,yaml]
+----
+serviceAccount:
+  name: log-collector
+----
+--
+.. Configure `inputs` to specify the type and source of logs to forward. The following configuration enables the forwarder to capture logs from all applications in a provided namespace:
++
+--
+.Example `inputs` configuration
+[source,yaml]
+----
+inputs:
+  - name: my-app-logs-input
+    type: application
+    application:
+      includes:
+        - namespace: my-developer-hub-namespace
+      containerLimit:
+        maxRecordsPerSecond: 100
+----
+
+For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.16/html-single/logging/index#cluster-logging-collector-log-forward-logs-from-application-pods_configuring-log-forwarding[Forwarding application logs from specific pods].
+--
+.. Configure outputs to specify where the captured logs are sent. In this step, focus on the `splunk` type. You can either use `tls.insecureSkipVerify` option if the Splunk endpoint uses self-signed TLS certificates (not recommended) or provide the certificate chain using a Secret.
++
+--
+.Example `outputs` configuration
+[source,yaml]
+----
+outputs:
+  - name: splunk-receiver-application
+    type: splunk
+    splunk:
+      authentication:
+        token:
+          key: hecToken
+          secretName: splunk-secret
+      index: main
+      url: 'https://my-splunk-instance-url'
+      rateLimit:
+        maxRecordsPerSecond: 250
+----
+
+For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.16/html-single/logging/index#logging-forward-splunk_configuring-log-forwarding[Forwarding logs to Splunk] in {ocp-short} documentation. 
+--
+.. Optional: Filter logs to include only audit logs:
++
+--
+.Example `filters` configuration
+[source,yaml]
+----
+filters:
+  - name: audit-logs-only
+    type: drop
+    drop:
+      - test:
+        - field: .message
+          notMatches: isAuditLog
+----
+For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.16/html-single/logging/index#logging-content-filtering[Filtering logs by content] in {ocp-short} documentation.
+--
+.. Configure pipelines to route logs from specific inputs to designated outputs. Use the names of the defined inputs and outputs to specify multiple `inputRefs` and `outputRefs` in each pipeline:
++
+--
+.Example `pipelines` configuration
+[source,yaml]
+----
+pipelines:
+  - name: my-app-logs-pipeline
+    detectMultilineErrors: true
+    inputRefs:
+      - my-app-logs-input
+    outputRefs:
+      - splunk-receiver-application
+    filterRefs:
+      - audit-logs-only
+----
+--
+
+. Run the following command to apply the `ClusterLogForwarder` configuration:
++
+--
+.Example command to apply `ClusterLogForwarder` configuration
+[source,bash]
+----
+oc apply -f <ClusterLogForwarder-configuration.yaml>
+----
+--
+. Optional: To reduce the risk of log loss, configure your `ClusterLogForwarder` pods using the following options:
+.. Define the resource requests and limits for the log collector as follows:
++
+--
+.Example `collector` configuration
+[source,yaml]
+----
+collector:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 64Mi
+      ephemeral-storage: 250Mi
+    limits:
+      cpu: 500m
+      memory: 128Mi
+      ephemeral-storage: 500Mi
+----
+--
+.. Define `tuning` options for log delivery, including `delivery`, `compression`, and `RetryDuration`. Tuning can be applied per output as needed.
++
+--
+.Example `tuning` configuration
+[source,yaml]
+----
+tuning:
+  delivery: AtLeastOnce <1>
+  compression: none
+  minRetryDuration: 1s
+  maxRetryDuration: 10s
+----
+
+<1> `AtLeastOnce` delivery mode means that if the log forwarder crashes or is restarted, any logs that were read before the crash but not sent to their destination are re-sent. It is possible that some logs are duplicated after a crash. 
+--
+
+.Verification
+. Confirm that logs are being forwarded to your Splunk instance by viewing them in the Splunk dashboard.
+. Troubleshoot any issues using {ocp-short} and Splunk logs as needed.
+
+
+
