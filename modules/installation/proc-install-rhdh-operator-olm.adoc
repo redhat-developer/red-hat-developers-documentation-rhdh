@@ -1,0 +1,148 @@
+// Included in the following procedures
+// proc-rhdh-deploy-aks-operator.adoc
+// proc-rhdh-deploy-eks-operator.adoc
+
+. Create a pull secret in the `olm` namespace using the following command:
++
+--
+[source,terminal]
+----
+kubectl -n olm create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<user_name> \ <1>
+    --docker-password=<password> \ <2>
+    --docker-email=<email> <3>
+----
+
+<1> Enter your username in the command.
+<2> Enter your password in the command.
+<3> Enter your email address in the command.
+
+The created pull secret is used to pull the Operator images from the {company-name} Ecosystem.
+--
+
+. Create a `CatalogSource` resource in the `olm` namespace that contains the Operators from the {company-name} Ecosystem:
++
+--
+[source,terminal,subs="attributes+"]
+----
+cat <<EOF | kubectl -n olm apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: redhat-catalog
+spec:
+  sourceType: grpc
+  image: registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}
+  secrets:
+  - "rhdh-pull-secret"
+  displayName: {company-name} Operators
+EOF
+----
+--
+
+. Wait a few minutes until the Catalog Source is up and run the following command to list the available operators from the {company-name} ecosystem and confirm that the `rhdh` operator is listed:
++
+--
+[source,terminal,subs="attributes+"]
+----
+kubectl -n olm get packagemanifests
+----
+--
+
+. Run the following command in your terminal to create the `rhdh-operator` namespace where the Operator is installed:
++
+--
+[source,terminal]
+----
+kubectl create namespace rhdh-operator
+----
+--
+
+. Create a pull secret in the `rhdh-operator` namespace using the following command:
++
+--
+[source,terminal]
+----
+kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<user_name> \ <1>
+    --docker-password=<password> \ <2>
+    --docker-email=<email> <3>
+----
+
+<1> Enter your username in the command.
+<2> Enter your password in the command.
+<3> Enter your email address in the command.
+
+The created pull secret is used to pull the {product-short} images from the {company-name} Ecosystem.
+--
+
+. Create an `OperatorGroup` resource as follows:
++
+--
+[source,terminal]
+----
+cat <<EOF | kubectl apply -n rhdh-operator -f -
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhdh-operator-group
+EOF
+----
+--
+
+. Create a `Subscription` resource using the following code:
++
+--
+[source,terminal,subs="attributes+"]
+----
+cat <<EOF | kubectl apply -n rhdh-operator -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: rhdh
+  namespace: rhdh-operator
+spec:
+  channel: fast
+  installPlanApproval: Automatic
+  name: rhdh
+  source: redhat-catalog
+  sourceNamespace: olm
+  startingCSV: rhdh-operator.v{product-bundle-version}
+EOF
+----
+--
+
+. Run the following command to verify that the created Operator is running:
++
+--
+[source,terminal]
+----
+kubectl -n rhdh-operator get pods -w
+----
+
+If the operator pod shows `ImagePullBackOff` status, then you might need permissions to pull the image directly within the Operator deployment's manifest.
+
+[TIP]
+====
+You can include the required secret name in the `deployment.spec.template.spec.imagePullSecrets` list and verify the deployment name using `kubectl get deployment -n rhdh-operator` command:
+
+[source,terminal]
+----
+kubectl -n rhdh-operator patch deployment \
+    rhdh.fast --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
+    --type=merge
+----
+====
+--
+
+. Update the default configuration of the operator to ensure that {product-short} resources can start correctly using the following steps:
+.. Edit the `backstage-default-config` ConfigMap in the `rhdh-operator` namespace using the following command:
++
+--
+[source,terminal]
+----
+kubectl -n rhdh-operator edit configmap backstage-default-config
+----
+--

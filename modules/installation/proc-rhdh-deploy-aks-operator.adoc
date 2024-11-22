@@ -4,11 +4,29 @@
 [id='proc-rhdh-deploy-aks-operator_{context}']
 = Deploying {product-short} on {aks-short} with the Operator
 
-You can deploy your {product-short} on {aks-short} using the {product} Operator.
+The {product} Operator installation requires the Operator Lifecycle Manager (OLM) framework.
+
+.Additonal resources
+* For information about the OLM, see link:https://olm.operatorframework.io/docs/[Operator Lifecycle Manager(OLM)] documentation.
+
+== Installing the {product-short} Operator with the OLM framework
+
+You can install the {product-short} Operator on {aks-short} using the https://olm.operatorframework.io[Operator Lifecycle Manager (OLM) framework]. Following that, you can proceed to deploy your {product-short} instance in {aks-short}.
+
+.Prerequisites
+
+* You have cluster-scoped privileges.
+* You have set the context to the {aks-short} cluster in your current `kubeconfig`. For more information, see https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-cli#connect-to-the-cluster[Connect to the cluster].
+* You have installed `kubectl`. For more information, see https://learn.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest#az-aks-install-cli[`az aks install-cli].
+* You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+* You have installed the Operator Lifecycle Manager (OLM). For more information about installation and troubleshooting, see https://olm.operatorframework.io/docs/getting-started/[OLM QuickStart] or https://operatorhub.io/how-to-install-an-operator#How-do-I-get-Operator-Lifecycle-Manager?[How do I get Operator Lifecycle Manager?]
 
 .Procedure
 
-. Obtain the {product} Operator manifest file, named `rhdh-operator-<VERSION>.yaml`, and modify the default configuration of `db-statefulset.yaml` and `deployment.yaml` by adding the following fragment:
+// Procedure fragment on installing the operator using OLM on a non OCP cluster
+include::./proc-install-rhdh-operator-olm.adoc[]
+
+. Modify the default configuration of `db-statefulset.yaml` and `deployment.yaml` by adding the following fragment:
 +
 --
 [source,yaml]
@@ -26,145 +44,7 @@ deployment.yaml: | spec.template.spec
 ----
 --
 
-. Apply the modified Operator manifest to your Kubernetes cluster:
-+
---
-[source,bash]
-----
-kubectl apply -f rhdh-operator-<VERSION>.yaml
-----
 
-[NOTE]
-====
-Execution of the previous command is cluster-scoped and requires appropriate cluster privileges.
-====
---
-
-. Create an `ImagePull Secret` named `rhdh-pull-secret` using your Red Hat credentials to access images from the protected `registry.redhat.io` as shown in the following example:
+.. Save and exit.
 +
---
-[source,bash]
-----
-kubectl -n <your_namespace> create secret docker-registry rhdh-pull-secret \
-    --docker-server=registry.redhat.io \
-    --docker-username=<redhat_user_name> \
-    --docker-password=<redhat_password> \
-    --docker-email=<email>
-----
---
-
-. Create an Ingress manifest file, named `rhdh-ingress.yaml`, specifying your {product-short} service name as follows:
-+
---
-[source,yaml]
-----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rhdh-ingress
-  namespace: <your_namespace>
-spec:
-  ingressClassName: webapprouting.kubernetes.azure.com
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backstage-<your-CR-name>
-                port:
-                  name: http-backend
-----
---
-
-. To deploy the created Ingress, run the following command:
-+
---
-[source,terminal]
-----
-kubectl -n <your_namespace> apply -f rhdh-ingress.yaml
-----
---
-
-. Create a ConfigMap named `app-config-rhdh` containing the {product-short} configuration using the following example:
-+
---
-[source,yaml]
-----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config-rhdh
-data:
-  "app-config-rhdh.yaml": |
-    app:
-      title: Red Hat Developer Hub
-      baseUrl: https://<app_address>
-    backend:
-      auth:
-        externalAccess:
-            - type: legacy
-              options:
-                subject: legacy-default-config
-                secret: "${BACKEND_SECRET}"
-      baseUrl: https://<app_address>
-      cors:
-        origin: https://<app_address>
-----
---
-
-. Create a Secret named `secrets-rhdh` and add a key named `BACKEND_SECRET` with a `Base64-encoded` string value as shown in the following example:
-+
---
-[source,yaml]
-----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: secrets-rhdh
-stringData:
-  BACKEND_SECRET: "xxx"
-----
---
-
-. Create a Custom Resource (CR) manifest file named `rhdh.yaml` and include the previously created `rhdh-pull-secret` as follows:
-+
---
-[source,yaml]
-----
-apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
-metadata:
-  name: <your-rhdh-cr>
-spec:
-  application:
-    imagePullSecrets:
-      - rhdh-pull-secret
-    appConfig:
-      configMaps:
-        - name: "app-config-rhdh"
-    extraEnvs:
-      secrets:
-        - name: "secrets-rhdh"
-----
---
-
-. Apply the CR manifest to your namespace:
-+
---
-[source,terminal]
-----
-kubectl -n <your_namespace> apply -f rhdh.yaml
-----
---
-
-. Access the deployed {product-short} using the URL: `https://<app_address>`, where <app_address> is the Ingress address obtained earlier (for example, `https://108.141.70.228`).
-. Optional: To delete the CR, run the following command:
-+
---
-[source,terminal]
-----
-kubectl -n <your_namespace> delete -f rhdh.yaml
-----
---
+Wait for a few minutes until the changes are automatically applied to the operator pods.
