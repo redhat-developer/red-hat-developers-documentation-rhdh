@@ -1,0 +1,138 @@
+[id="proc-install-third-party-plugins-rhdh_{context}"]
+= Installing third-party plugins in {product}
+
+You can install a third-party plugins in {product} without rebuilding the {product-very-short} application.
+
+.Prerequisites
+* The third-party plugin is packaged as a dynamic plugin in one of the following formats:
+** OCI image
+** TGZ file
+** NPM or JavaScript package
+
+For more information about packaging a third-party plugin, see xref:proc-package-third-party-dynamic-plugin_{context}[].
+
+[NOTE]
+====
+You can also load dynamic plugins from a plain directory, though this is intended for development or testing purposes and is not recommended for production, except for plugins included in the {product-very-short} container image.
+====
+
+.Procedure
+Load a plugin packaged as an OCI image::
++
+--
+. Define the plugin with the `oci://` prefix in the following format in `dynamic-plugins.default.yaml` file:
++
+`oci://<image-name>:<tag>!<plugin-name>`
++
+.Example configuration in `dynamic-plugins.default.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: oci://quay.io/example/image:v0.0.1!backstage-plugin-myplugin
+----
+
+. Configure authentication for private registries by setting the `REGISTRY_AUTH_FILE` environment variable to the path of the registry configuration file. For example, `~/.config/containers/auth.json` or `~/.docker/config.json`.
+
+. To perform an integrity check, use the image digest in place of the tag in `dynamic-plugins.default.yaml` file as follows:
++
+.Example configuration in `dynamic-plugins.default.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: oci://quay.io/example/image@sha256:<digest>!<plugin-name>
+----
+
+. To apply the changes, restart the {product-very-short} application.
+--
+
+Load a plugin packaged as a TGZ file::
++
+--
+. Specify the archive URL and its integrity hash in the `dynamic-plugins.default.yaml` file using the following format:
++
+.Configuration format in `dynamic-plugins.default.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: https://example.com/backstage-plugin-myplugin-1.0.0.tgz
+    integrity: <hash>
+----
++
+.Example configuration in `dynamic-plugins.default.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: https://example.com/backstage-plugin-myplugin-1.0.0.tgz
+    integrity: sha512-9WlbgEdadJNeQxdn1973r5E4kNFvnT9GjLD627GWgrhCaxjCmxqdNW08cj+Bf47mwAtZMt1Ttyo+ZhDRDj9PoA==
+----
+
+. To apply the changes, restart the {product-very-short} application.
+--
+
+Load a plugin packaged as a JavaScript or NPM package::
++
+--
+. Run the following command to obtain the integrity hash from the NPM registry:
++
+[source,bash]
+----
+npm view --registry <registry-url> @backstage-community/plugin-todo-dynamic@<version> dist.integrity
+----
+
+. Specify the package name, version, and its integrity hash in the `dynamic-plugins.default.yaml` file as follows:
++
+.Configuration format in `dynamic-plugins.default.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: @example/backstage-plugin-myplugin@1.0.0
+    integrity: <hash>
+----
++
+.Example configuration in `dynamic-plugins.default.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: @example/backstage-plugin-myplugin@1.0.0
+    integrity: sha512-9WlbgEdadJNeQxdn1973r5E4kNFvnT9GjLD627GWgrhCaxjCmxqdNW08cj+Bf47mwAtZMt1Ttyo+ZhDRDj9PoA==
+----
+
+. If you are using a custom NPM registry, create a `.npmrc` file with the registry URL and authentication details:
++
+.Example code for `.npmrc` file
+[source,text]
+----
+registry=<registry-url>
+//<registry-url>:_authToken=<auth-token>
+----
+
+. When using {ocp-short} or Kubernetes:
++
+* Create a secret with the `.npmrc` content as follows:
++
+.Example secret configuration
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dynamic-plugins-npmrc
+type: Opaque
+stringData:
+  .npmrc: |
+    registry=<registry-url>
+    //<registry-url>:_authToken=<auth-token>
+----
+
+* For {product-very-short} Helm chart, name the secret using the following format for automatic mounting:
++
+`<release-name>-dynamic-plugins-npmrc`
+
+. To apply the changes, restart the {product-very-short} application.
+--
