@@ -1,0 +1,158 @@
+[id="proc-package-third-party-dynamic-plugin_{context}"]
+= Packaging and publishing third-party plugins as dynamic plugins
+
+To package a third-party plugin as a dynamic plugin, you need to access to its source code and must export a plugin using the `@janus-idp/cli`. For more information, see xref:proc-export-third-party-plugins-rhdh_{context}[]. 
+
+After exporting a third-party plugin, you can convert the package into one of the following supported formats:
+
+* Open Container Initiative (OCI) image (recommended)
+* TGZ file
+* JavaScript package
+
+[IMPORTANT]
+====
+Exported dynamic plugin packages must only be published to private NPM registries.
+====
+
+[#convert-to-oci-image]
+== Converting a dynamic plugin package to an OCI image
+
+.Prerequisites
+* You have installed `podman` or `docker`.
+* You have exported a third-party dynamic plugin package. For more information, see xref:proc-export-third-party-plugins-rhdh_{context}[].
+
+.Procedure
+. Navigate to the exported plugin's root directory (not the `dist-dynamic` directory).
+. Run the following command to package the plugin into an OCI image:
++
+--
+.Example command to package an exported third-party plugin
+[source,bash]
+----
+npx @janus-idp/cli@latest package package-dynamic-plugins --tag quay.io/example/image:v0.0.1
+----
+
+In the previous command, the `--tag` argument specifies the image name and tag.
+--
+. Run one of the following commands to push the image to a registry:
++
+--
+.Example command to push an image to a registry using podman
+[source,bash]
+----
+podman push quay.io/example/image:v0.0.1
+----
+
+.Example command to push an image to a registry using docker
+[source,bash]
+----
+docker push quay.io/example/image:v0.0.1
+----
+
+The output of the previous commands provides the plugin's path for use in the `dynamic-plugin-config.yaml` file.
+--
+
+[#convert-to-tgz]
+== Converting a dynamic plugin package to a TGZ file
+
+.Prerequisites
+* You have exported a third-party dynamic plugin package. For more information, see xref:proc-export-third-party-plugins-rhdh_{context}[].
+
+.Procedure
+. Navigate to the `dist-dynamic` directory.
+. Run the following command to create a `tgz` archive:
++
+--
+.Example command to create a `tgz` archive
+[source,bash]
+----
+npm pack
+----
+--
+. To retrieve the integrity hash of the archive, run the following command:
++
+--
+.Example command to retrieve the integrity hash of a `tgz` archive
+[source,bash]
+----
+npm pack --json | jq -r '.[0].integrity'
+----
+--
+. Host the archive on a web server accessible to your {product-very-short} instance, and reference its URL in the `dynamic-plugin-config.yaml` file as follows:
++
+--
+.Example `dynamic-plugin-config.yaml` file
+[source,yaml]
+----
+plugins:
+  - package: https://example.com/backstage-plugin-myplugin-1.0.0.tgz
+    integrity: sha512-<hash>
+----
+--
+. Run the following command to package the plugins:
++
+--
+.Example command to package a dynamic plugin
+[source,bash]
+----
+npm pack --pack-destination ~/test/dynamic-plugins-root/
+----
+--
+. Build and deploy an HTTP server in {ocp-short}:
++
+--
+.Example commands to build and deploy an HTTP server in {ocp-short}
+[source,bash]
+----
+oc project rhdh
+oc new-build httpd --name=plugin-registry --binary
+oc start-build plugin-registry --from-dir=dynamic-plugins-root --wait
+oc new-app --image-stream=plugin-registry
+----
+--
+. Configure your {product-very-short} to use plugins from the HTTP server by editing the `dynamic-plugin-config.yaml` file:
++
+--
+.Example configuration to use packaged plugins in {product-very-short} 
+[source,yaml]
+----
+plugins:
+  - package: http://plugin-registry:8080/backstage-plugin-myplugin-1.9.6.tgz
+----
+--
+
+[#convert-to-jsp]
+== Converting a dynamic plugin to a JavaScript package
+
+.Prerequisites
+* You have exported a third-party dynamic plugin package. For more information, see xref:proc-export-third-party-plugins-rhdh_{context}[].
+
+.Procedure
+. Navigate to the `dist-dynamic` directory.
+. Run the following command to publish the package to your private NPM registry:
++
+--
+.Example command to publish a plugin package to an NPM registry
+[source,bash]
+----
+npm publish --registry <npm_registry_url>
+----
+
+[TIP]
+====
+You can add the following to your `package.json` file before running the `export` command:
+
+.Example `package.json` file
+[source,json]
+----
+{
+  "publishConfig": {
+    "registry": "<npm_registry_url>"
+  }
+}
+----
+
+If you modify the `publishConfig` after exporting the dynamic plugin, re-run the `export-dynamic-plugin` command to ensure the correct configuration is included.
+====
+--
+
