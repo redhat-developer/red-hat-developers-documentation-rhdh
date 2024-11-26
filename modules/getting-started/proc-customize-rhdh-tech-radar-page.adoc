@@ -1,16 +1,8 @@
 [id='proc-customize-rhdh-tech-radar-page_{context}']
 = Customizing the Tech Radar page in {product}
 
-In {product}, the Tech Radar page is provided by the `tech-radar` dynamic plugin, which is disabled by default. For information about enabling dynamic plugins in {product} see link:{LinkPluginsGuide}[Configuring plugins in {product}].
-
-In {product}, you can configure Learning Paths by passing the data into the `app-config.yaml` file as a proxy. The base Tech Radar URL must include the `/developer-hub/tech-radar` proxy.
-
-[NOTE]
-====
-Due to the use of overlapping `pathRewrites` for both the `tech-radar` and `homepage` quick access proxies, you must create the `tech-radar` configuration (`^api/proxy/developer-hub/tech-radar`) before you create the `homepage` configuration (`^/api/proxy/developer-hub`).
-
-For more information about customizing the Home page in {product}, see xref:proc-customize-rhdh-homepage_rhdh-getting-started[Customizing the Home page in {product}].
-====
+In {product}, the Tech Radar page is provided by the `tech-radar` and `tech-radar-backend` dynamic plugins, which are disabled by default. 
+For information about enabling dynamic plugins in {product} see link:{LinkPluginsGuide}[Configuring plugins in {product}].
 
 You can provide data to the Tech Radar page from the following sources:
 
@@ -21,33 +13,22 @@ You can provide data to the Tech Radar page from the following sources:
 
 .Prerequisites
 
-You have installed {product} by using either the Operator or Helm chart.
-For more information, see xref:{installing-on-ocp-book-url}#assembly-install-rhdh-ocp[{installing-on-ocp-book-title}].
+* You have installed {product} by using either the Operator or Helm chart. For more information, see link:{installing-on-ocp-book-url}[{installing-on-ocp-book-title}].
+* You have specified the data sources for the Tech Radar plugin in the `integrations` section of the `app-config.yaml` file. For example, to configure GitHub as an authentication provider, see link:{authentication-book-url}#authenticating-with-github[Authenticating with GitHub].
 
 .Procedure
 
 To access the data from the JSON files, complete the following step:
 
-* Add the following code to the `app-config.yaml` file:
+. Enable the `./dynamic-plugins/dist/backstage-community-plugin-tech-radar` and `/dynamic-plugins/dist/backstage-community-plugin-tech-radar-backend-dynamic` plugins.
+. Add the following code to the `app-config.yaml` file:
 +
 [source,yaml]
 ----
-proxy:
-  endpoints:
-    # Other Proxies
-    # customize developer hub instance
-    '/developer-hub':
-      target: <DOMAIN_URL> # i.e https://raw.githubusercontent.com/
-      pathRewrite:
-        '^/api/proxy/developer-hub/tech-radar': <path to json file> # i.e /janus-idp/backstage-showcase/main/packages/app/public/tech-radar/data-default.json
-	 '^/api/proxy/developer-hub': <path to json file> # i.e /janus-idp/backstage-showcase/main/packages/app/public/homepage/data.json
-      changeOrigin: true
-      secure: true
-
-      # Change to "false" in case of using self hosted cluster with a self-signed certificate
-      headers:
-	<HEADER_KEY>: <HEADER_VALUE> # optional and can be passed as needed i.e Authorization can be passed for private GitHub repo and PRIVATE-TOKEN can be passed for private GitLab repo
+techRadar:        
+    url: ${TECH_RADAR_DATA_URL} <1>
 ----
+<1>  `TECH_RADAR_DATA_URL` is the URL from which the JSON data is loaded.
 
 == Using a dedicated service to provide data to the Tech Radar page
 
@@ -66,24 +47,20 @@ For more information, see xref:{installing-on-ocp-book-url}#assembly-install-rhd
 
 To use a separate service to provide the Tech Radar data, complete the following steps:
 
-. Add the following code to the `app-config-rhdh.yaml` file:
+. Add the dedicated service as an allowed host by adding the following code to the `app-config.yaml` file:
 +
 [source,yaml]
 ----
-proxy:
-  endpoints:
-    # Other Proxies
-    '/developer-hub/tech-radar':
-      target: ${TECHRADAR_DATA_URL}
-      changeOrigin: true
-      # Change to "false" in case of using self hosted cluster with a self-signed certificate
-      secure: true
+backend:    
+   reading:    
+        allow:     
+          - host: 'hostname'
 ----
-where the `TECHRADAR_DATA_URL` is defined as `pass:c[http://<SERVICE_NAME>/tech-radar]`, for example, `pass:c[http://rhdh-customization-provider/tech-radar]`.
+. Add the following to the `app-config.yaml` file:
 +
-[NOTE]
-====
-You can define the `TECHRADAR_DATA_URL` by adding it to `rhdh-secrets` or by directly replacing it with its value in your custom ConfigMap.
-====
-+
-. Delete the {product-short} pod to ensure that the new configurations are loaded correctly.
+[source,yaml]
+----
+techRadar:        
+    url: ${TECH_RADAR_DATA_URL} <1>
+----
+<1> `TECH_RADAR_DATA_URL` is the URL from which the JSON data is loaded.
