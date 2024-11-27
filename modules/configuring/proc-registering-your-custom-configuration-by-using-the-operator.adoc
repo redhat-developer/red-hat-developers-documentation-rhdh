@@ -1,0 +1,194 @@
+[id="registering-your-custom-configuration-by-using-the-operator"]
+= Registering your custom {product} configuration by using the operator
+
+Reference your custom config maps and secrets in your the {product-short} custom resource to deploy your {product} instance with your custom configuration by using the {product-short} operator.
+
+.Prerequisites
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
+* link:{installing-on-ocp-book-url}[Your {ocp-short} administrator has installed the {product} Operator in {ocp-short}].
+* xref:provisioning-your-custom-configuration[You have provisioned your custom config maps and secrets in your `_<{my-product-namespace}>_` project].
+
+.Procedure
+
+. Author your {product-short} custom resource in a `my_{my-product-namespace}_cr.yaml` file to register all your custom config maps and secrets.
++
+.Minimal `my_{my-product-namespace}_cr.yaml` custom resource example
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: _<{my-product-cr-name}>_
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+    extraFiles:
+      mountPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true
+----
+====
++
+.`my_{my-product-namespace}_cr.yaml` custom resource example with synamic plugins and RBAC policies config maps, and external PostgreSQL database secrets.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: _<{my-product-cr-name}>_
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config
+         - name: rbac-policies
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+         - name: cred-secret
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: crt-secret
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: false
+----
+====
+
+spec.application.appConfig.configMaps::
+Enter your config map name list.
++
+.Register the `app-config` config map.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config
+----
+====
++
+.Register the `app-config` and `rbac-policies` config maps.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config
+         - name: rbac-policies
+----
+====
+spec.application.extraEnvs.envs::
+Optionally, enter your additional environment variables that are not secrets, such as xref:proc-configuring-proxy-in-operator-deployment_running-behind-a-proxy[your proxy environment variables].
++
+.Register your `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` environment variables.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraEnvs:
+      envs:
+        - name: HTTP_PROXY
+          value: 'http://10.10.10.105:3128'
+        - name: HTTPS_PROXY
+          value: 'http://10.10.10.106:3128'
+        - name: NO_PROXY
+          value: 'localhost,example.org'
+----
+====
+
+spec.application.extraEnvs.secrets::
+Enter your environment variables secret name list.
++
+.Register the `my-rhdh-secrets` secret
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+----
+====
++
+.Register the `my-rhdh-secrets` and `cred-secret` secrets
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+         - name: cred-secret
+----
+====
+
+spec.application.extraFiles.secrets::
+Enter your certificates files secret name and files list.
++
+.Register the `crt-secret` secret containing the `postgres-crt.pem`, `postgres-ca.pem`, and `postgres-key.key` files
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: crt-secret
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
+----
+
+spec.database.enableLocalDb::
+Enable or disable the local PostgreSQL database.
++
+.Disable the local PostgreSQL database generation to use an external postgreSQL database
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  database:
+    enableLocalDb: false
+----
++
+.On a development environment, use the local PostgreSQL database
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  database:
+    enableLocalDb: true
+----
+
+spec.deployment::
+Optionally, xref:configuring-the-deployment[enter your deployment configuration].
+
+. Apply your {product-short} custom resource to start your {product-short} instance.
++
+[source,terminal]
+----
+$ oc apply -f my_rhdh_cr.yaml
+----

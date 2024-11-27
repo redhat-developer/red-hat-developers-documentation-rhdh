@@ -1,0 +1,48 @@
+[id="proc-add-custom-app-config-file-ocp-operator_{context}"]
+= Adding your custom {product} configuration to a running {product-short} by using the operator
+
+Reference your custom config maps and secrets in your the `Backstage` custom resource
+to redeploy your running {product} instance with your custom configuration by using the {product-short} operator.
+
+.Prerequisites
+* A {product-short} instance that was installed by using the {product} operator is running in your `_<{my-product-namespace}>_` project.
+* xref:provisioning-your-custom-configuration[You have provisioned your custom config maps and secrets in your `_<{my-product-namespace}>_` project].
+* By using the {ocp-short} web console, you have access with developer permissions to your `_<{my-product-namespace}>_` project.
+
+.Procedure
+
+. Select the *Topology* view.
+. Click the overflow menu for the {product} instance that you want to use and select *Edit Backstage* to load the YAML view of the {product} instance.
++
+image::{imagesdir}/rhdh/operator-install-2.png[]
+
+. In the custom resource, enter the name of the custom application configuration config map as the value for the `spec.application.appConfig.configMaps` field, and enter the name of your secret as the value for the `spec.application.extraEnvs.secrets` field. For example:
++
+[source, yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: app-config
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+    extraFiles:
+      mountPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true
+----
++
+Optionally, reference the additional config maps and secrets that you have created.
+. Click *Save*.
+. Navigate back to the *Topology* view and wait for the {product} pod to start.
+. Click the *Open URL* icon to use the {product} platform with the configuration changes.
