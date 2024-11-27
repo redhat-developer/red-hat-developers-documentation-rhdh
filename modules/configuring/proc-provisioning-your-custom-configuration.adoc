@@ -1,0 +1,182 @@
+[id="provisioning-your-custom-configuration"]
+= Provisioning your custom {product} configuration
+
+Without a custom configuration,
+both the {product} operator and Helm install {product-short} with a default configuration not intended for production use, and revert your manual changes.
+
+To configure {product},
+author and upload your custom {product} link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/building_applications/index#nodes-pods-configmap-overview_config-maps[config maps] and secrets
+to {ocp-brand-name} before deploying {product}.
+
+.Prerequisites
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
+* You know your desired {product-short} external URL: pass:c,a,q[{my-product-url}].
++
+[TIP]
+====
+For a development environment, consider using the {product-short} external URL that {ocp-short} provides by default.
+To identify your {product-short} external URL:
+
+. Deploy {product-short} with the default configuration.
+. From the *Developer* perspective in the OpenShift Container Platform web console, select the *Topology* view, and click the *Open URL* icon on the Developer Hub pod.
+====
+
+
+.Procedure
+. Author your custom `secrets.txt` file, to provision your secrets as environment variables values in an {ocp-short} secret, rather than in clear text in your configuration files.
+It contains one secret per line in `KEY=value` form.
+
+.. To define the {product-short} backend secret, add the `BACKEND_SECRET` environment variable with a base64 encoded string.
+Use a unique value for each {product-short} instance.
++
+[source,terminal,subs="+attributes"]
+----
+$ echo > secrets.txt "BACKEND_SECRET=$(node -p 'require("crypto").randomBytes(24).toString("base64")')"
+----
++
+.`secrets.txt` example
+====
+----
+BACKEND_SECRET=3E2/rIPuZNFCtYHoxVP8wjriffnN1q/z
+----
+====
+
+.. Optionally, link:{authentication-book-url}[add authentication secrets].
+
+. Author your custom `app-config.yaml` file.
+This is the main {product-short} configuration file.
++
+.Minimal `app-config.yaml` example
+[source,yaml,subs="+attributes,+quotes"]
+====
+----
+app:
+  title: {product}
+  baseUrl: {my-product-url}
+backend:
+  auth:
+    externalAccess:
+      - type: legacy
+        options:
+          subject: legacy-default-config
+          secret: "${BACKEND_SECRET}"
+  baseUrl: {my-product-url}
+  cors:
+    origin: {my-product-url}
+----
+====
+
+app::
+Enter your {product-short} general configuration in the `app` section.
+
+app.title::: Enter your {product-short} instance display name, such as _<{product}>_.
++
+.`app-config.yaml` excerpt
+[source,yaml,subs="attributes+"]
+----
+app:
+  title: {product}
+----
+
+app.baseURL::: Enter your {product-short} external URL, such as pass:c,a,q[{my-product-url}].
++
+.`app-config.yaml` excerpt
+[source,yaml,subs="+attributes,+quotes"]
+----
+app:
+  baseUrl: {my-product-url}
+----
+
+backend::
+Enter your {product-short} backend configuration in the `backend` section.
+
+backend.auth::: Enter your authentication configuration.
+See link:{authentication-book-url}[{authentication-book-title}].
++
+.`app-config.yaml` excerpt
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  auth: _<my_authentication_configuration>_
+----
+
+backend.auth.externalAccess:::
+Enter the mandatory backend authentication key configuration.
++
+.`app-config.yaml` excerpt
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  auth:
+    externalAccess:
+      - type: legacy
+        options:
+          subject: legacy-default-config
+          secret: "${BACKEND_SECRET}"
+----
+
+backend.baseURL and backend.cors.origin::: Enter your {product-short} external URL, such as pass:c,a,q[{my-product-url}].
++
+.`app-config.yaml` excerpt
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  baseUrl: {my-product-url}
+  cors:
+    origin: {my-product-url}
+----
+
+catalog::
+Optionally, to configure the {product-short} catalog, enter your `catalog` section.
+
+kubernetes::
+Optionally, to configure the {ocp-short} integration, enter your `kubernetes` section.
+
+permission::
+Optionally, to configure authorization, enter your `permission` section.
+See link:{authorization-book-url}[{authorization-book-title}].
+
+. Provision your custom configuration files to your {ocp-short} cluster.
+
+.. Create the _<{my-product-namespace}>_ project aimed at containing your {product-short} instance.
++
+[source,terminal,subs="+attributes"]
+----
+$ oc create namespace {my-product-namespace}
+----
++
+Alternatively, link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/building_applications/index#creating-a-project-using-the-web-console_projects[create the project by using the web console].
+
+.. Provision your `app-config.yaml` file to the `app-config` config map.
++
+[source,terminal]
+----
+$ oc create configmap app-config --from-file=app-config.yaml
+----
++
+Alternatively, link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps[create the config map by using the web console].
+
+.. Provision your `secrets.txt` to the `my-rhdh-secrets` secret.
++
+[source,terminal]
+----
+$ oc create secret generic my-rhdh-secrets --from-file=secrets.txt
+----
++
+Alternatively,
+link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets[create the secret by using the web console].
+
+.Next steps
+
+Consider provisioning additional config maps and secrets:
+
+* To use an external PostgreSQL database, xref:configuring-external-postgresql-databases[provision your PostgreSQL database secrets].
++
+[TIP]
+====
+On a development environment, consider skipping this step and using the internal PostgreSQL database.
+====
+
+* To enable dynamic plugins, link:{installing-and-viewing-dynamic-plugins-url}[provision the dynamic plugins config map].
+
+* To configure authorization by using external files, link:{authorization-book-url}#managing-authorizations-by-using-external-files[provision the RBAC policies config map].
