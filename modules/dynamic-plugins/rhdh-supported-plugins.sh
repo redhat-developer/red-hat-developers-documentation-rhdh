@@ -1,18 +1,15 @@
 #!/bin/bash
 
 # script to generate rhdh-supported-plugins.adoc from content in
-# https://github.com/janus-idp/backstage-plugins/tree/main/plugins/ */package.json
 # https://github.com/janus-idp/backstage-showcase/tree/main/dynamic-plugins/wrappers/ */json
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
-pluginsRepo="https://github.com/janus-idp/backstage-plugins"    # TODO move to BCP and rhdh-plugins
 showcaseRepo="https://github.com/janus-idp/backstage-showcase"  # TODO move to rhd/rhdh
 usage() {
   cat <<EOF
 
 Generate an updated table of dynamic plugins from content in the following two repos, for the specified branch:
-* $pluginsRepo
 * $showcaseRepo
 
 Requires:
@@ -37,7 +34,7 @@ EOF
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    '--clean') rm -fr /tmp/plugin-versions.txt /tmp/backstage-plugins /tmp/backstage-showcase;;
+    '--clean') rm -fr /tmp/plugin-versions.txt /tmp/backstage-showcase;;
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x 
     '-h'|'--help') usage;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
@@ -48,14 +45,8 @@ done
 if [[ ! $BRANCH ]]; then usage; exit 1; fi
 
 # fetch GH repos
-# TODO switch this to backstage/community-plugins
-if [[ ! -d /tmp/backstage-plugins ]]; then
-    pushd /tmp >/dev/null || exit
-        git clone "$pluginsRepo" --depth 1 -b "$BRANCH" backstage-plugins
-    popd >/dev/null || exit
-fi
-
-# TODO switch this to redhat-developer/rhdh
+# TODO include backstage/community-plugins and redhat-developer/rhdh-plugins ?
+# TODO switch to redhat-developer/red-hat-developer-hub
 if [[ ! -d /tmp/backstage-showcase ]]; then
     pushd /tmp >/dev/null || exit
         git clone "$showcaseRepo" --depth 1 -b "$BRANCH" backstage-showcase
@@ -105,8 +96,8 @@ declare -A adoc2
 declare -A adoc3
 declare -A csv
 
-# process 2 folders of json files
-jsons=$(find /tmp/backstage-showcase/dynamic-plugins/wrappers/ /tmp/backstage-plugins/plugins/ -maxdepth 2 -name package.json | sort -V)
+# process 1 folders of json files
+jsons=$(find /tmp/backstage-showcase/dynamic-plugins/wrappers/ -maxdepth 2 -name package.json | sort -V)
 c=0
 tot=0
 for j in $jsons; do 
@@ -346,7 +337,7 @@ if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then cat "${ENABLED_PLUGINS}.errors"; f
 
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
-# rm -fr /tmp/backstage-plugins /tmp/backstage-showcase 
+# rm -fr /tmp/backstage-showcase 
 
 warnings=$(grep -c "WARN" "/tmp/warnings.txt")
 if [[ $warnings -gt 0 ]]; then
