@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.16">
-<title>Installing Red Hat Developer Hub on Microsoft Azure Kubernetes Service</title>
+<title>Monitoring and logging</title>
 <style>
 /* Red Hat Fonts */
 @font-face {
@@ -1585,336 +1585,143 @@ section {
 
 </style>
 </head>
-<body id="title-install-rhdh-aks" class="book toc2 toc-left">
+<body class="book toc2 toc-left">
 <div id="header">
-<h1>Installing Red Hat Developer Hub on Microsoft Azure Kubernetes Service</h1>
+<h1>Monitoring and logging</h1>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#proc-rhdh-deploy-aks-operator_title-install-rhdh-aks">Chapter 1. Deploying Developer Hub on AKS with the Operator</a></li>
-<li><a href="#proc-rhdh-deploy-aks-helm_title-install-rhdh-aks">Chapter 2. Deploying Developer Hub on AKS with the Helm chart</a></li>
+<li><a href="#assembly-rhdh-observability">Chapter 1. Enabling observability for Red Hat Developer Hub on OpenShift Container Platform</a>
+<ul class="sectlevel2">
+<li><a href="#proc-admin-enabling-metrics-ocp-operator_assembly-rhdh-observability">1.1. Enabling metrics monitoring in a Red Hat Developer Hub Operator installation on an OpenShift Container Platform cluster</a></li>
+<li><a href="#proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability">1.2. Enabling metrics monitoring in a Helm chart installation on an OpenShift Container Platform cluster</a></li>
+</ul>
+</li>
+<li><a href="#proc-rhdh-monitoring-logging-aws_assembly-rhdh-observability">Chapter 2. Monitoring and logging with Amazon Web Services (AWS) in Red Hat Developer Hub</a>
+<ul class="sectlevel2">
+<li><a href="#_monitoring-with-amazon-prometheus">2.1. Monitoring with Amazon Prometheus</a>
+<ul class="sectlevel3">
+<li><a href="#_configuring-annotations-for-monitoring">2.1.1. Configuring annotations for monitoring</a></li>
+</ul>
+</li>
+<li><a href="#_logging-with-amazon-cloudwatch-logs">2.2. Logging with Amazon CloudWatch logs</a>
+<ul class="sectlevel3">
+<li><a href="#_configuring-the-application-log-level">2.2.1. Configuring the application log level</a></li>
+<li><a href="#_retrieving-logs-from-amazon-cloudwatch">2.2.2. Retrieving logs from Amazon CloudWatch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#proc-rhdh-monitoring-logging-aks_assembly-rhdh-observability">Chapter 3. Monitoring and logging with Azure Kubernetes Services (AKS) in Red Hat Developer Hub</a>
+<ul class="sectlevel2">
+<li><a href="#_viewing-logs-with-azure-kubernetes-services-aks">3.1. Viewing logs with Azure Kubernetes Services (AKS)</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
 <div id="content">
-<div id="preamble">
-<div class="sectionbody">
-<div class="paragraph">
-<p>You can install Red Hat Developer Hub on Microsoft Azure Kubernetes Service (AKS) using one of the following methods:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The Red Hat Developer Hub Operator</p>
-</li>
-<li>
-<p>The Red Hat Developer Hub Helm chart</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
 <div class="sect1">
-<h2 id="proc-rhdh-deploy-aks-operator_title-install-rhdh-aks">Chapter 1. Deploying Developer Hub on AKS with the Operator</h2>
+<h2 id="assembly-rhdh-observability">Chapter 1. Enabling observability for Red Hat Developer Hub on OpenShift Container Platform</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>You can deploy your Developer Hub on AKS using the Red Hat Developer Hub Operator.</p>
+<p>In OpenShift Container Platform, metrics are exposed through an HTTP service endpoint under the <code>/metrics</code> canonical name. You can create a <code>ServiceMonitor</code> custom resource (CR) to scrape metrics from a service endpoint in a user-defined project.</p>
 </div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Obtain the Red Hat Developer Hub Operator manifest file, named <code>rhdh-operator-&lt;VERSION&gt;.yaml</code>, and modify the default configuration of <code>db-statefulset.yaml</code> and <code>deployment.yaml</code> by adding the following fragment:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">securityContext:
-  fsGroup: 300</code></pre>
-</div>
-</div>
+<div class="sect2">
+<h3 id="proc-admin-enabling-metrics-ocp-operator_assembly-rhdh-observability">1.1. Enabling metrics monitoring in a Red Hat Developer Hub Operator installation on an OpenShift Container Platform cluster</h3>
 <div class="paragraph">
-<p>Following is the specified locations in the manifests:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">db-statefulset.yaml: | spec.template.spec
-deployment.yaml: | spec.template.spec</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Apply the modified Operator manifest to your Kubernetes cluster:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">kubectl apply -f rhdh-operator-&lt;VERSION&gt;.yaml</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Execution of the previous command is cluster-scoped and requires appropriate cluster privileges.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create an <code>ImagePull Secret</code> named <code>rhdh-pull-secret</code> using your Red Hat credentials to access images from the protected <code>registry.redhat.io</code> as shown in the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">kubectl -n &lt;your_namespace&gt; create secret docker-registry rhdh-pull-secret \
-    --docker-server=registry.redhat.io \
-    --docker-username=&lt;redhat_user_name&gt; \
-    --docker-password=&lt;redhat_password&gt; \
-    --docker-email=&lt;email&gt;</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create an Ingress manifest file, named <code>rhdh-ingress.yaml</code>, specifying your Developer Hub service name as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rhdh-ingress
-  namespace: &lt;your_namespace&gt;
-spec:
-  ingressClassName: webapprouting.kubernetes.azure.com
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backstage-&lt;your-CR-name&gt;
-                port:
-                  name: http-backend</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>To deploy the created Ingress, run the following command:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; apply -f rhdh-ingress.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a ConfigMap named <code>app-config-rhdh</code> containing the Developer Hub configuration using the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config-rhdh
-data:
-  "app-config-rhdh.yaml": |
-    app:
-      title: Red Hat Developer Hub
-      baseUrl: https://&lt;app_address&gt;
-    backend:
-      auth:
-        externalAccess:
-            - type: legacy
-              options:
-                subject: legacy-default-config
-                secret: "${BACKEND_SECRET}"
-      baseUrl: https://&lt;app_address&gt;
-      cors:
-        origin: https://&lt;app_address&gt;</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a Secret named <code>secrets-rhdh</code> and add a key named <code>BACKEND_SECRET</code> with a <code>Base64-encoded</code> string value as shown in the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: v1
-kind: Secret
-metadata:
-  name: secrets-rhdh
-stringData:
-  BACKEND_SECRET: "xxx"</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a Custom Resource (CR) manifest file named <code>rhdh.yaml</code> and include the previously created <code>rhdh-pull-secret</code> as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
-metadata:
-  name: &lt;your-rhdh-cr&gt;
-spec:
-  application:
-    imagePullSecrets:
-      - rhdh-pull-secret
-    appConfig:
-      configMaps:
-        - name: "app-config-rhdh"
-    extraEnvs:
-      secrets:
-        - name: "secrets-rhdh"</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Apply the CR manifest to your namespace:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; apply -f rhdh.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Access the deployed Developer Hub using the URL: <code><a href="https://&lt;app_address&gt" class="bare">https://&lt;app_address&gt</a>;</code>, where &lt;app_address&gt; is the Ingress address obtained earlier (for example, <code><a href="https://108.141.70.228" class="bare">https://108.141.70.228</a></code>).</p>
-</li>
-<li>
-<p>Optional: To delete the CR, run the following command:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; delete -f rhdh.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="proc-rhdh-deploy-aks-helm_title-install-rhdh-aks">Chapter 2. Deploying Developer Hub on AKS with the Helm chart</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>You can deploy your Developer Hub application on Azure Kubernetes Service (AKS) to access a comprehensive solution for building, testing, and deploying applications.</p>
+<p>You can enable and view metrics for an Operator-installed Red Hat Developer Hub instance from the <strong>Developer</strong> perspective of the OpenShift Container Platform web console.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have a Microsoft Azure account with active subscription.</p>
+<p>Your OpenShift Container Platform cluster has <a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html">monitoring for user-defined projects</a> enabled.</p>
 </li>
 <li>
-<p>You have installed the <a href="https://learn.microsoft.com/en-us/cli/azure/install-azure-cli">Azure CLI</a>.</p>
+<p>You have installed Red Hat Developer Hub on OpenShift Container Platform using the Red Hat Developer Hub Operator.</p>
 </li>
 <li>
-<p>You have installed the <a href="https://kubernetes.io/docs/reference/kubectl/"><code>kubectl</code> CLI</a>.</p>
-</li>
-<li>
-<p>You are logged into your cluster using <code>kubectl</code>, and have <code>developer</code> or <code>admin</code> permissions.</p>
-</li>
-<li>
-<p>You have installed Helm 3 or the latest.</p>
+<p>You have installed the OpenShift CLI (<code>oc</code>).</p>
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<div class="title">Procedure</div>
+<p>Currently, the Red Hat Developer Hub Operator does not support creating a <code>ServiceMonitor</code> custom resource (CR) by default. You must complete the following steps to create a <code>ServiceMonitor</code> CR to scrape metrics from the endpoint.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Create the <code>ServiceMonitor</code> CR as a YAML file:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: &lt;custom_resource_name&gt; # <b class="conum">(1)</b>
+  namespace: &lt;project_name&gt; # <b class="conum">(2)</b>
+  labels:
+    app.kubernetes.io/instance: &lt;custom_resource_name&gt;
+    app.kubernetes.io/name: backstage
+spec:
+  namespaceSelector:
+    matchNames:
+      - &lt;project_name&gt;
+  selector:
+    matchLabels:
+      rhdh.redhat.com/app: backstage-&lt;custom_resource_name&gt;
+  endpoints:
+  - port: backend
+    path: '/metrics'</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Replace <code>&lt;custom_resource_name&gt;</code> with the name of your Red Hat Developer Hub CR.</p>
+</li>
+<li>
+<p>Replace <code>&lt;project_name&gt;</code> with the name of the OpenShift Container Platform project where your Red Hat Developer Hub instance is running.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Apply the <code>ServiceMonitor</code> CR by running the following command:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="terminal">oc apply -f &lt;filename&gt;</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>From the <strong>Developer</strong> perspective in the OpenShift Container Platform web console, select the <strong>Observe</strong> view.</p>
+</li>
+<li>
+<p>Click the <strong>Metrics</strong> tab to view metrics for Red Hat Developer Hub pods.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability">1.2. Enabling metrics monitoring in a Helm chart installation on an OpenShift Container Platform cluster</h3>
+<div class="paragraph">
+<p>You can enable and view metrics for a Red Hat Developer Hub Helm deployment from the <strong>Developer</strong> perspective of the OpenShift Container Platform web console.</p>
+</div>
 <div class="ulist">
-<div class="title">Comparison of AKS specifics with the base Developer Hub deployment</div>
+<div class="title">Prerequisites</div>
 <ul>
 <li>
-<p><strong>Permissions issue</strong>: Developer Hub containers might encounter permission-related errors, such as <code>Permission denied</code> when attempting certain operations. This error can be addresssed by adjusting the <code>fsGroup</code> in the <code>PodSpec.securityContext</code>.</p>
+<p>Your OpenShift Container Platform cluster has <a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html">monitoring for user-defined projects</a> enabled.</p>
 </li>
 <li>
-<p><strong>Ingress configuration</strong>: In AKS, configuring ingress is essential for accessing the installed Developer Hub instance. Accessing the Developer Hub instance requires enabling the Routing add-on, an NGINX-based Ingress Controller, using the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks approuting enable --resource-group &lt;your_ResourceGroup&gt; --name &lt;your_ClusterName&gt;</code></pre>
-</div>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>You might need to install the Azure CLI extension <code>aks-preview</code>. If the extension is not installed automatically, you might need to install it manually using the following command:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az extension add --upgrade -n aks-preview --allow-preview true</code></pre>
-</div>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>After you install the Ingress Controller, the <code>app-routing-system</code> namespace with the Ingress Controller will be deployed in your cluster. Note the address of your Developer Hub application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the Developer Hub application, later referenced as <code>&lt;app_address&gt;</code>.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl get svc nginx --namespace app-routing-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}'</code></pre>
-</div>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p><strong>Namespace management</strong>: You can create a dedicated namespace for Developer Hub deployment in AKS using the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl create namespace &lt;your_namespace&gt;</code></pre>
-</div>
-</div>
+<p>You have installed Red Hat Developer Hub on OpenShift Container Platform using the Helm chart.</p>
 </li>
 </ul>
 </div>
@@ -1922,200 +1729,383 @@ spec:
 <div class="title">Procedure</div>
 <ol class="arabic">
 <li>
-<p>Log in to AKS by running the following command:</p>
-<div class="listingblock">
+<p>From the <strong>Developer</strong> perspective in the OpenShift Container Platform web console, select the <strong>Topology</strong> view.</p>
+</li>
+<li>
+<p>Click the overflow menu of the Red Hat Developer Hub Helm chart, and select <strong>Upgrade</strong>.</p>
+<div class="imageblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az login [--tenant=&lt;optional_directory_name&gt;]</code></pre>
+<img src="images/rhdh/helm-upgrade.png" alt="helm upgrade">
 </div>
 </div>
 </li>
 <li>
-<p>Create a resource group by running the following command:</p>
+<p>On the <strong>Upgrade Helm Release</strong> page, select the <strong>YAML view</strong> option in <strong>Configure via</strong>, then configure the <code>metrics</code> section in the YAML, as shown in the following example:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az group create --name &lt;resource_group_name&gt; --location &lt;location&gt;</code></pre>
+<pre class="CodeRay highlight"><code data-lang="yaml">upstream:
+# ...
+  metrics:
+    serviceMonitor:
+      enabled: true
+      path: /metrics
+# ...</code></pre>
 </div>
 </div>
-<div class="admonitionblock tip">
+<div class="imageblock">
+<div class="content">
+<img src="images/rhdh/upgrade-helm-metrics.png" alt="upgrade helm metrics">
+</div>
+</div>
+</li>
+<li>
+<p>Click <strong>Upgrade</strong>.</p>
+</li>
+</ol>
+</div>
+<div class="olist arabic">
+<div class="title">Verification</div>
+<ol class="arabic">
+<li>
+<p>From the <strong>Developer</strong> perspective in the OpenShift Container Platform web console, select the <strong>Observe</strong> view.</p>
+</li>
+<li>
+<p>Click the <strong>Metrics</strong> tab to view metrics for Red Hat Developer Hub pods.</p>
+</li>
+</ol>
+</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p><a href="https://docs.openshift.com/container-platform/latest/observability/monitoring/managing-metrics.html">OpenShift Container Platform - Managing metrics</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="proc-rhdh-monitoring-logging-aws_assembly-rhdh-observability">Chapter 2. Monitoring and logging with Amazon Web Services (AWS) in Red Hat Developer Hub</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In the Red Hat Developer Hub, monitoring and logging are facilitated through Amazon Web Services (AWS) integration. With features like Amazon CloudWatch for real-time monitoring and Amazon Prometheus for comprehensive logging, you can ensure the reliability, scalability, and compliance of your Developer Hub application hosted on AWS infrastructure.</p>
+</div>
+<div class="paragraph">
+<p>This integration enables you to oversee, diagnose, and refine your applications in the Red Hat ecosystem, leading to an improved development and operational journey.</p>
+</div>
+<div class="sect2">
+<h3 id="_monitoring-with-amazon-prometheus">2.1. Monitoring with Amazon Prometheus</h3>
+<div class="paragraph">
+<p>Red Hat Developer Hub provides Prometheus metrics related to the running application. For more information about enabling or deploying Prometheus for EKS clusters, see <a href="https://docs.aws.amazon.com/eks/latest/userguide/prometheus.html">Prometheus metrics</a> in the Amazon documentation.</p>
+</div>
+<div class="paragraph">
+<p>To monitor Developer Hub using <a href="https://aws.amazon.com/prometheus/">Amazon Prometheus</a>, you need to create an Amazon managed service for the Prometheus workspace and configure the ingestion of the Developer Hub Prometheus metrics. For more information, see <a href="https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-onboard-create-workspace.html">Create a workspace</a> and <a href="https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-onboard-ingest-metrics.html">Ingest Prometheus metrics to the workspace</a> sections in the Amazon documentation.</p>
+</div>
+<div class="paragraph">
+<p>After ingesting Prometheus metrics into the created workspace, you can configure the metrics scraping to extract data from pods based on specific pod annotations.</p>
+</div>
+<div class="sect3">
+<h4 id="_configuring-annotations-for-monitoring">2.1.1. Configuring annotations for monitoring</h4>
+<div class="paragraph">
+<p>You can configure the annotations for monitoring in both Helm deployment and Operator-backed deployment.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Helm deployment</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>To annotate the backstage pod for monitoring, update your <code>values.yaml</code> file as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">upstream:
+  backstage:
+    # --- TRUNCATED ---
+    podAnnotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: '/metrics'
+      prometheus.io/port: '7007'
+      prometheus.io/scheme: 'http'</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">Operator-backed deployment</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>As an administrator of the operator, edit the default configuration to add Prometheus annotations as follows:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash"># Update OPERATOR_NS accordingly
+OPERATOR_NS=rhdh-operator
+kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Find the <code>deployment.yaml</code> key in the ConfigMap and add the annotations to the <code>spec.template.metadata.annotations</code> field as follows:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">deployment.yaml: |-
+  apiVersion: apps/v1
+  kind: Deployment
+  # --- truncated ---
+  spec:
+    template:
+      # --- truncated ---
+      metadata:
+        labels:
+         rhdh.redhat.com/app:  # placeholder for 'backstage-&lt;cr-name&gt;'
+        # --- truncated ---
+        annotations:
+          prometheus.io/scrape: 'true'
+          prometheus.io/path: '/metrics'
+          prometheus.io/port: '7007'
+          prometheus.io/scheme: 'http'
+  # --- truncated ---</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Save your changes.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<div class="title">Verification</div>
+<p>To verify if the scraping works:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Use <code>kubectl</code> to port-forward the Prometheus console to your local machine as follows:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">kubectl --namespace=prometheus port-forward deploy/prometheus-server 9090</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Open your web browser and navigate to <code>http://localhost:9090</code> to access the Prometheus console.</p>
+</li>
+<li>
+<p>Monitor relevant metrics, such as <code>process_cpu_user_seconds_total</code>.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_logging-with-amazon-cloudwatch-logs">2.2. Logging with Amazon CloudWatch logs</h3>
+<div class="paragraph">
+<p>Logging within the Red Hat Developer Hub relies on the <a href="https://github.com/winstonjs/winston">winston library</a>. By default, logs at the debug level are not recorded. To activate debug logs, you must set the environment variable <code>LOG_LEVEL</code> to debug in your Red Hat Developer Hub instance.</p>
+</div>
+<div class="sect3">
+<h4 id="_configuring-the-application-log-level">2.2.1. Configuring the application log level</h4>
+<div class="paragraph">
+<p>You can configure the application log level in both Helm deployment and Operator-backed deployment.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Helm deployment</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>To update the logging level, add the environment variable <code>LOG_LEVEL</code> to your Helm chart&#8217;s <code>values.yaml</code> file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">upstream:
+  backstage:
+    # --- Truncated ---
+    extraEnvVars:
+      - name: LOG_LEVEL
+        value: debug</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">Operator-backed deployment</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>You can modify the logging level by including the environment variable <code>LOG_LEVEL</code> in your custom resource as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">spec:
+  # Other fields omitted
+  application:
+    extraEnvs:
+      envs:
+        - name: LOG_LEVEL
+          value: debug</code></pre>
+</div>
+</div>
+</div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_retrieving-logs-from-amazon-cloudwatch">2.2.2. Retrieving logs from Amazon CloudWatch</h4>
+<div class="paragraph">
+<p>The CloudWatch Container Insights are used to capture logs and metrics for Amazon EKS. For more information, see <a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/implementing-logging-monitoring-cloudwatch/kubernetes-eks-logging.html">Logging for Amazon EKS</a> documentation.</p>
+</div>
+<div class="paragraph">
+<p>To capture the logs and metrics, <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Container-Insights-setup-EKS-addon.html">install the Amazon CloudWatch Observability EKS add-on</a> in your cluster. Following the setup of Container Insights, you can access container logs using Logs Insights or Live Tail views.</p>
+</div>
+<div class="paragraph">
+<p>CloudWatch names the log group where all container logs are consolidated in the following manner:</p>
+</div>
+<div class="paragraph">
+<p><code>/aws/containerinsights/&lt;ClusterName&gt;/application</code></p>
+</div>
+<div class="paragraph">
+<p>Following is an example query to retrieve logs from the Developer Hub instance:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql">fields @timestamp, @message, kubernetes.container_name
+| filter kubernetes.container_name in ["install-dynamic-plugins", "backstage-backend"]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="proc-rhdh-monitoring-logging-aks_assembly-rhdh-observability">Chapter 3. Monitoring and logging with Azure Kubernetes Services (AKS) in Red Hat Developer Hub</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Monitoring and logging are integral aspects of managing and maintaining Azure Kubernetes Services (AKS) in Red Hat Developer Hub. With features like Managed Prometheus Monitoring and Azure Monitor integration, administrators can efficiently monitor resource utilization, diagnose issues, and ensure the reliability of their containerized workloads.</p>
+</div>
+<div class="paragraph">
+<p>To enable Managed Prometheus Monitoring, use the <code>-enable-azure-monitor-metrics</code> option within either the <code>az aks create</code> or <code>az aks update</code> command, depending on whether you&#8217;re creating a new cluster or updating an existing one, such as:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">az aks create/update --resource-group &lt;your-ResourceGroup&gt; --name &lt;your-Cluster&gt; --enable-azure-monitor-metrics</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous command installs the metrics add-on, which gathers <a href="https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-overview">Prometheus metrics</a>. Using the previous command, you can enable monitoring of Azure resources through both native Azure Monitor metrics and Prometheus metrics. You can also view the results in the portal under <strong>Monitoring &#8594; Insights</strong>. For more information, see <a href="https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/monitor-azure-resource">Monitor Azure resources with Azure Monitor</a>.</p>
+</div>
+<div class="paragraph">
+<p>Furthermore, metrics from both the Managed Prometheus service and Azure Monitor can be accessed through Azure Managed Grafana service. For more information, see <a href="https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/azure-monitor-workspace-manage?tabs=azure-portal#link-a-grafana-workspace">Link a Grafana workspace</a> section.</p>
+</div>
+<div class="paragraph">
+<p>By default, Prometheus uses the minimum ingesting profile, which optimizes ingestion volume and sets default configurations for scrape frequency, targets, and metrics collected. The default settings can be customized through custom configuration. Azure offers various methods, including using different ConfigMaps, to provide scrape configuration and other metric add-on settings. For more information about default configuration, see <a href="https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-default">Default Prometheus metrics configuration in Azure Monitor</a> and <a href="https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration?tabs=CRDConfig%2CCRDScrapeConfig">Customize scraping of Prometheus metrics in Azure Monitor managed service for Prometheus</a> documentation.</p>
+</div>
+<div class="sect2">
+<h3 id="_viewing-logs-with-azure-kubernetes-services-aks">3.1. Viewing logs with Azure Kubernetes Services (AKS)</h3>
+<div class="paragraph">
+<p>You can access live data logs generated by Kubernetes objects and collect log data in Container Insights within AKS.</p>
+</div>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>You have deployed Developer Hub on AKS.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For more information, see <a href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.3/html/installing_red_hat_developer_hub_on_microsoft_azure_kubernetes_service/index.html#assembly-install-rhdh-aks">Installing Red Hat Developer Hub on Microsoft Azure Kubernetes Service</a>.</p>
+</div>
+<div class="dlist">
+<div class="title">Procedure</div>
+<dl>
+<dt class="hdlist1">View live logs from your Developer Hub instance</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Navigate to the Azure Portal.</p>
+</li>
+<li>
+<p>Search for the resource group <code>&lt;your-ResourceGroup&gt;</code> and locate your AKS cluster <code>&lt;your-Cluster&gt;</code>.</p>
+</li>
+<li>
+<p>Select <strong>Kubernetes resources &#8594; Workloads</strong> from the menu.</p>
+</li>
+<li>
+<p>Select the <code>&lt;your-rhdh-cr&gt;-developer-hub</code> (in case of Helm Chart installation) or <code>&lt;your-rhdh-cr&gt;-backstage</code> (in case of Operator-backed installation) deployment.</p>
+</li>
+<li>
+<p>Click <strong>Live Logs</strong> in the left menu.</p>
+</li>
+<li>
+<p>Select the pod.</p>
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<div class="title">Tip</div>
+<div class="title">Note</div>
 </td>
 <td class="content">
-<div class="paragraph">
-<p>You can list available regions by running the following command:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az account list-locations -o table</code></pre>
-</div>
-</div>
+There must be only single pod.
 </td>
 </tr>
 </table>
 </div>
 </li>
-<li>
-<p>Create an AKS cluster by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks create \
---resource-group &lt;resource_group_name&gt; \
---name &lt;cluster_name&gt; \
---enable-managed-identity \
---generate-ssh-keys</code></pre>
-</div>
+</ol>
 </div>
 <div class="paragraph">
-<p>You can refer to <code>--help</code> for additional options.</p>
+<p>Live log data is collected and displayed.</p>
 </div>
+</div>
+</div>
+</dd>
+<dt class="hdlist1">View real-time log data from the Container Engine</dt>
+<dd>
+<div class="openblock">
+<div class="content">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Navigate to the Azure Portal.</p>
 </li>
 <li>
-<p>Connect to your cluster by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks get-credentials --resource-group &lt;resource_group_name&gt; --name &lt;cluster_name&gt;</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The previous command configures the Kubernetes client and sets the current context in the <code>kubeconfig</code> to point to your AKS cluster.</p>
-</div>
+<p>Search for the resource group <code>&lt;your-ResourceGroup&gt;</code> and locate your AKS cluster <code>&lt;your-Cluster&gt;</code>.</p>
 </li>
 <li>
-<p>Open terminal and run the following command to add the Helm chart repository:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm repo add openshift-helm-charts https://charts.openshift.io/</code></pre>
-</div>
-</div>
+<p>Select <strong>Monitoring</strong> &#8594; <strong>Insights</strong> from the menu.</p>
 </li>
 <li>
-<p>Create and activate the <em>&lt;rhdh&gt;</em> namespace:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">DEPLOYMENT_NAME=&lt;redhat-developer-hub&gt;
-NAMESPACE=&lt;rhdh&gt;
-kubectl create namespace ${NAMESPACE}
-kubectl config set-context --current --namespace=${NAMESPACE}</code></pre>
-</div>
-</div>
+<p>Go to the <strong>Containers</strong> tab.</p>
 </li>
 <li>
-<p>Create a pull secret, which is used to pull the Developer Hub images from the Red Hat Ecosystem, by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n $NAMESPACE create secret docker-registry rhdh-pull-secret \
-    --docker-server=registry.redhat.io \
-    --docker-username=&lt;redhat_user_name&gt; \
-    --docker-password=&lt;redhat_password&gt; \
-    --docker-email=&lt;email&gt;</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Create a file named <code>values.yaml</code> using the following template:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">global:
-  host: &lt;app_address&gt;
-route:
-  enabled: false
-upstream:
-  ingress:
-    enabled: true
-    className: webapprouting.kubernetes.azure.com
-    host:
-  backstage:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    podSecurityContext:
-      fsGroup: 3000
-  postgresql:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        fsGroup: 3000
-  volumePermissions:
-    enabled: true</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>To install Developer Hub by using the Helm chart, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm -n $NAMESPACE install -f values.yaml $DEPLOYMENT_NAME openshift-helm-charts/redhat-developer-hub --version 1.3.0</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Verify the deployment status:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl get deploy $DEPLOYMENT_NAME -n $NAMESPACE</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Configure your Developer Hub Helm chart instance with the Developer Hub database password and router base URL values from your cluster:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
-CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
-helm upgrade $DEPLOYMENT_NAME -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz" \
-    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
-    --set global.postgresql.auth.password="$PASSWORD"</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Display the running Developer Hub instance URL, by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">echo "https://$DEPLOYMENT_NAME-$NAMESPACE.$CLUSTER_ROUTER_BASE"</code></pre>
-</div>
-</div>
+<p>Find the backend-backstage container and click it to view real-time log data as it&#8217;s generated by the Container Engine.</p>
 </li>
 </ol>
 </div>
-<div class="ulist">
-<div class="title">Verification</div>
-<ul>
-<li>
-<p>Open the running Developer Hub instance URL in your browser to use Developer Hub.</p>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Upgrade</div>
-<ul>
-<li>
-<p>To upgrade the deployment, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm upgrade $DEPLOYMENT_NAME -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz</code></pre>
 </div>
 </div>
-</li>
-</ul>
+</dd>
+</dl>
 </div>
-<div class="ulist">
-<div class="title">Delete</div>
-<ul>
-<li>
-<p>To delete the deployment, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm -n $NAMESPACE delete $DEPLOYMENT_NAME</code></pre>
-</div>
-</div>
-</li>
-</ul>
 </div>
 </div>
 </div>
