@@ -27,7 +27,7 @@ Options:
 
 Examples:
 
-  $0 -b release-1.3 --clean
+  $0 -b release-1.4 --clean
 
 EOF
 }
