@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.16">
-<title>Installing Red Hat Developer Hub on Microsoft Azure Kubernetes Service</title>
+<title>Audit log</title>
 <style>
 /* Red Hat Fonts */
 @font-face {
@@ -1585,74 +1585,72 @@ section {
 
 </style>
 </head>
-<body id="title-install-rhdh-aks" class="book toc2 toc-left">
+<body class="book toc2 toc-left">
 <div id="header">
-<h1>Installing Red Hat Developer Hub on Microsoft Azure Kubernetes Service</h1>
+<h1>Audit log</h1>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#proc-rhdh-deploy-aks-operator_title-install-rhdh-aks">Chapter 1. Deploying Developer Hub on AKS with the Operator</a></li>
-<li><a href="#proc-rhdh-deploy-aks-helm_title-install-rhdh-aks">Chapter 2. Deploying Developer Hub on AKS with the Helm chart</a></li>
+<li><a href="#assembly-audit-log">Chapter 1. Audit logs in Red Hat Developer Hub</a>
+<ul class="sectlevel2">
+<li><a href="#con-audit-log-config_assembly-audit-log">1.1. Configuring audit logs for Developer Hub on OpenShift Container Platform</a></li>
+<li><a href="#proc-audit-log-view_assembly-audit-log">1.2. Viewing audit logs in Developer Hub</a>
+<ul class="sectlevel3">
+<li><a href="#ref-audit-log-fields.adoc_assembly-audit-log">1.2.1. Audit log fields</a></li>
+<li><a href="#ref-audit-log-scaffolder-events.adoc_assembly-audit-log">1.2.2. Scaffolder events</a></li>
+<li><a href="#ref-audit-log-catalog-events.adoc_assembly-audit-log">1.2.3. Catalog events</a></li>
+</ul>
+</li>
+<li><a href="#ref-audit-log-file-rotation-overview_assembly-audit-log">1.3. Audit log file rotation in Red Hat Developer Hub</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
 <div id="content">
-<div id="preamble">
+<div class="sect1">
+<h2 id="assembly-audit-log">Chapter 1. Audit logs in Red Hat Developer Hub</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>You can install Red Hat Developer Hub on Microsoft Azure Kubernetes Service (AKS) using one of the following methods:</p>
+<p>Audit logs are a chronological set of records documenting the user activities, system events, and data changes that affect your Red Hat Developer Hub users, administrators, or components. Administrators can view Developer Hub audit logs in the OpenShift Container Platform web console to monitor scaffolder events, changes to the RBAC system, and changes to the Catalog database. Audit logs include the following information:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>The Red Hat Developer Hub Operator</p>
+<p>Name of the audited event</p>
 </li>
 <li>
-<p>The Red Hat Developer Hub Helm chart</p>
+<p>Actor that triggered the audited event, for example, terminal, port, IP address, or hostname</p>
+</li>
+<li>
+<p>Event metadata, for example, date, time</p>
+</li>
+<li>
+<p>Event status, for example, <code>success</code>, <code>failure</code></p>
+</li>
+<li>
+<p>Severity levels, for example, <code>info</code>, <code>debug</code>,  <code>warn</code>, <code>error</code></p>
 </li>
 </ul>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="proc-rhdh-deploy-aks-operator_title-install-rhdh-aks">Chapter 1. Deploying Developer Hub on AKS with the Operator</h2>
-<div class="sectionbody">
 <div class="paragraph">
-<p>You can deploy your Developer Hub on AKS using the Red Hat Developer Hub Operator.</p>
+<p>You can use the information in the audit log to achieve the following goals:</p>
 </div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Obtain the Red Hat Developer Hub Operator manifest file, named <code>rhdh-operator-&lt;VERSION&gt;.yaml</code>, and modify the default configuration of <code>db-statefulset.yaml</code> and <code>deployment.yaml</code> by adding the following fragment:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">securityContext:
-  fsGroup: 300</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Following is the specified locations in the manifests:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">db-statefulset.yaml: | spec.template.spec
-deployment.yaml: | spec.template.spec</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Apply the modified Operator manifest to your Kubernetes cluster:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">kubectl apply -f rhdh-operator-&lt;VERSION&gt;.yaml</code></pre>
-</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Enhance security</dt>
+<dd>
+<p>Trace activities, including those initiated by automated systems and software templates, back to their source. Know when software templates are executed, as well as the details of application and component installations, updates, configuration changes, and removals.</p>
+</dd>
+<dt class="hdlist1">Automate compliance</dt>
+<dd>
+<p>Use streamlined processes to view log data for specified points in time for auditing purposes or continuous compliance maintenance.</p>
+</dd>
+<dt class="hdlist1">Debug issues</dt>
+<dd>
+<p>Use access records and activity details to fix issues with software templates or plugins.</p>
+</dd>
+</dl>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1662,231 +1660,269 @@ deployment.yaml: | spec.template.spec</code></pre>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Execution of the previous command is cluster-scoped and requires appropriate cluster privileges.</p>
+<p>Audit logs are not forwarded to the internal log store by default because this does not provide secure storage. You are responsible for ensuring that the system to which you forward audit logs is compliant with your organizational and governmental regulations, and is properly secured.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-</div>
-</div>
+<div class="ulist _additional-resources">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>For more information about logging in OpenShift Container Platform, see <a href="https://docs.openshift.com/container-platform/latest/observability/logging/cluster-logging.html">About Logging</a></p>
 </li>
 <li>
-<p>Create an <code>ImagePull Secret</code> named <code>rhdh-pull-secret</code> using your Red Hat credentials to access images from the protected <code>registry.redhat.io</code> as shown in the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">kubectl -n &lt;your_namespace&gt; create secret docker-registry rhdh-pull-secret \
-    --docker-server=registry.redhat.io \
-    --docker-username=&lt;redhat_user_name&gt; \
-    --docker-password=&lt;redhat_password&gt; \
-    --docker-email=&lt;email&gt;</code></pre>
-</div>
-</div>
-</div>
-</div>
+<p>For a complete list of fields that a Developer Hub audit log can include, see <a href="ref-audit-log-fields.adoc_assembly-audit-log">ref-audit-log-fields.adoc_assembly-audit-log</a></p>
 </li>
 <li>
-<p>Create an Ingress manifest file, named <code>rhdh-ingress.yaml</code>, specifying your Developer Hub service name as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rhdh-ingress
-  namespace: &lt;your_namespace&gt;
-spec:
-  ingressClassName: webapprouting.kubernetes.azure.com
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backstage-&lt;your-CR-name&gt;
-                port:
-                  name: http-backend</code></pre>
-</div>
-</div>
-</div>
-</div>
+<p>For a list of scaffolder events that a Developer Hub audit log can include, see <a href="ref-audit-log-scaffolder-events.adoc_assembly-audit-log">ref-audit-log-scaffolder-events.adoc_assembly-audit-log</a></p>
 </li>
-<li>
-<p>To deploy the created Ingress, run the following command:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; apply -f rhdh-ingress.yaml</code></pre>
+</ul>
 </div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a ConfigMap named <code>app-config-rhdh</code> containing the Developer Hub configuration using the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config-rhdh
-data:
-  "app-config-rhdh.yaml": |
-    app:
-      title: Red Hat Developer Hub
-      baseUrl: https://&lt;app_address&gt;
-    backend:
-      auth:
-        externalAccess:
-            - type: legacy
-              options:
-                subject: legacy-default-config
-                secret: "${BACKEND_SECRET}"
-      baseUrl: https://&lt;app_address&gt;
-      cors:
-        origin: https://&lt;app_address&gt;</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a Secret named <code>secrets-rhdh</code> and add a key named <code>BACKEND_SECRET</code> with a <code>Base64-encoded</code> string value as shown in the following example:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: v1
-kind: Secret
-metadata:
-  name: secrets-rhdh
-stringData:
-  BACKEND_SECRET: "xxx"</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Create a Custom Resource (CR) manifest file named <code>rhdh.yaml</code> and include the previously created <code>rhdh-pull-secret</code> as follows:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">apiVersion: rhdh.redhat.com/v1alpha1
-kind: Backstage
-metadata:
-  name: &lt;your-rhdh-cr&gt;
-spec:
-  application:
-    imagePullSecrets:
-      - rhdh-pull-secret
-    appConfig:
-      configMaps:
-        - name: "app-config-rhdh"
-    extraEnvs:
-      secrets:
-        - name: "secrets-rhdh"</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Apply the CR manifest to your namespace:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; apply -f rhdh.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-<li>
-<p>Access the deployed Developer Hub using the URL: <code><a href="https://&lt;app_address&gt" class="bare">https://&lt;app_address&gt</a>;</code>, where &lt;app_address&gt; is the Ingress address obtained earlier (for example, <code><a href="https://108.141.70.228" class="bare">https://108.141.70.228</a></code>).</p>
-</li>
-<li>
-<p>Optional: To delete the CR, run the following command:</p>
-<div class="openblock">
-<div class="content">
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n &lt;your_namespace&gt; delete -f rhdh.yaml</code></pre>
-</div>
-</div>
-</div>
-</div>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="proc-rhdh-deploy-aks-helm_title-install-rhdh-aks">Chapter 2. Deploying Developer Hub on AKS with the Helm chart</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="con-audit-log-config_assembly-audit-log">1.1. Configuring audit logs for Developer Hub on OpenShift Container Platform</h3>
 <div class="paragraph">
-<p>You can deploy your Developer Hub application on Azure Kubernetes Service (AKS) to access a comprehensive solution for building, testing, and deploying applications.</p>
+<p>Use the OpenShift Container Platform web console to configure the following OpenShift Container Platform logging components to use audit logging for Developer Hub:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Logging deployment</dt>
+<dd>
+<p>Configure the logging environment, including both the CPU and memory limits for each logging component. For more information, see <a href="https://docs.openshift.com/container-platform/4.15/observability/logging/config/cluster-logging-memory.html">Red Hat OpenShift Container Platform - Configuring your Logging deployment</a>.</p>
+</dd>
+<dt class="hdlist1">Logging collector</dt>
+<dd>
+<p>Configure the <code>spec.collection</code> stanza in the <code>ClusterLogging</code> custom resource (CR) to use a supported modification to the log collector and collect logs from <code>STDOUT</code>. For more information, see <a href="https://docs.openshift.com/container-platform/4.15/observability/logging/log_collection_forwarding/cluster-logging-collector.html">Red Hat OpenShift Container Platform - Configuring the logging collector</a>.</p>
+</dd>
+<dt class="hdlist1">Log forwarding</dt>
+<dd>
+<p>Send logs to specific endpoints inside and outside your OpenShift Container Platform cluster by specifying a combination of outputs and pipelines in a <code>ClusterLogForwarder</code> CR. For more information, see <a href="https://docs.openshift.com/container-platform/4.15/observability/logging/log_collection_forwarding/cluster-logging-enabling-json-logging.html">Red Hat OpenShift Container Platform - Enabling JSON log forwarding</a> and <a href="https://docs.openshift.com/container-platform/4.15/observability/logging/log_collection_forwarding/configuring-log-forwarding.html">Red Hat OpenShift Container Platform - Configuring log forwarding</a>.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="proc-audit-log-view_assembly-audit-log">1.2. Viewing audit logs in Developer Hub</h3>
+<div class="paragraph">
+<p>Administrators can view, search, filter, and manage the log data from the Red Hat OpenShift Container Platform web console. You can filter audit logs from other log types by using the <code>isAuditLog</code> field.</p>
 </div>
 <div class="ulist">
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>You have a Microsoft Azure account with active subscription.</p>
-</li>
-<li>
-<p>You have installed the <a href="https://learn.microsoft.com/en-us/cli/azure/install-azure-cli">Azure CLI</a>.</p>
-</li>
-<li>
-<p>You have installed the <a href="https://kubernetes.io/docs/reference/kubectl/"><code>kubectl</code> CLI</a>.</p>
-</li>
-<li>
-<p>You are logged into your cluster using <code>kubectl</code>, and have <code>developer</code> or <code>admin</code> permissions.</p>
-</li>
-<li>
-<p>You have installed Helm 3 or the latest.</p>
+<p>You are logged in as an administrator in the OpenShift Container Platform web console.</p>
 </li>
 </ul>
 </div>
-<div class="ulist">
-<div class="title">Comparison of AKS specifics with the base Developer Hub deployment</div>
-<ul>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
 <li>
-<p><strong>Permissions issue</strong>: Developer Hub containers might encounter permission-related errors, such as <code>Permission denied</code> when attempting certain operations. This error can be addresssed by adjusting the <code>fsGroup</code> in the <code>PodSpec.securityContext</code>.</p>
+<p>From the <strong>Developer</strong> perspective of the OpenShift Container Platform web console, click the <strong>Topology</strong> tab.</p>
 </li>
 <li>
-<p><strong>Ingress configuration</strong>: In AKS, configuring ingress is essential for accessing the installed Developer Hub instance. Accessing the Developer Hub instance requires enabling the Routing add-on, an NGINX-based Ingress Controller, using the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks approuting enable --resource-group &lt;your_ResourceGroup&gt; --name &lt;your_ClusterName&gt;</code></pre>
+<p>From the <strong>Topology</strong> view, click the pod that you want to view audit log data for.</p>
+</li>
+<li>
+<p>From the pod panel, click the <strong>Resources</strong> tab.</p>
+</li>
+<li>
+<p>From the <strong>Pods</strong> section of the <strong>Resources</strong> tab, click <strong>View logs</strong>.</p>
+</li>
+<li>
+<p>From the <strong>Logs</strong> view, enter <code>isAuditLog</code> into the <strong>Search</strong> field to filter audit logs from other log types. You can use the arrows to browse the logs containing the <code>isAuditLog</code> field.</p>
+</li>
+</ol>
 </div>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">
+<div class="sect3">
+<h4 id="ref-audit-log-fields.adoc_assembly-audit-log">1.2.1. Audit log fields</h4>
 <div class="paragraph">
-<p>You might need to install the Azure CLI extension <code>aks-preview</code>. If the extension is not installed automatically, you might need to install it manually using the following command:</p>
+<p>Developer Hub audit logs can include the following fields:</p>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az extension add --upgrade -n aks-preview --allow-preview true</code></pre>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>eventName</code></dt>
+<dd>
+<p>The name of the audited event.</p>
+</dd>
+<dt class="hdlist1"><code>actor</code></dt>
+<dd>
+<p>An object containing information about the actor that triggered the audited event. Contains the following fields:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>actorId</code></dt>
+<dd>
+<p>The name/id/<code>entityRef</code> of the associated user or service. Can be <code>null</code> if an unauthenticated user accesses the endpoints and the default authentication policy is disabled.</p>
+</dd>
+<dt class="hdlist1"><code>ip</code></dt>
+<dd>
+<p>The IP address of the actor (optional).</p>
+</dd>
+<dt class="hdlist1"><code>hostname</code></dt>
+<dd>
+<p>The hostname of the actor (optional).</p>
+</dd>
+<dt class="hdlist1"><code>client</code></dt>
+<dd>
+<p>The user agent of the actor (optional).</p>
+</dd>
+</dl>
+</div>
+</dd>
+<dt class="hdlist1"><code>stage</code></dt>
+<dd>
+<p>The stage of the event at the time that the audit log was generated, for example, <code>initiation</code> or <code>completion</code>.</p>
+</dd>
+<dt class="hdlist1"><code>status</code></dt>
+<dd>
+<p>The status of the event, for example, <code>succeeded</code> or <code>failed</code>.</p>
+</dd>
+<dt class="hdlist1"><code>meta</code></dt>
+<dd>
+<p>An optional object containing event specific data, for example, <code>taskId</code>.</p>
+</dd>
+<dt class="hdlist1"><code>request</code></dt>
+<dd>
+<p>An optional field that contains information about the HTTP request sent to an endpoint. Contains the following fields:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>method</code></dt>
+<dd>
+<p>The HTTP method of the request.</p>
+</dd>
+<dt class="hdlist1"><code>query</code></dt>
+<dd>
+<p>The <code>query</code> fields of the request.</p>
+</dd>
+<dt class="hdlist1"><code>params</code></dt>
+<dd>
+<p>The <code>params</code> fields of the request.</p>
+</dd>
+<dt class="hdlist1"><code>body</code></dt>
+<dd>
+<p>The request <code>body</code>. The <code>secrets</code> provided when creating a task are redacted and appear as <code><strong>*</strong></code>.</p>
+</dd>
+<dt class="hdlist1"><code>url</code></dt>
+<dd>
+<p>The endpoint URL of the request.</p>
+</dd>
+</dl>
+</div>
+</dd>
+<dt class="hdlist1"><code>response</code></dt>
+<dd>
+<p>An optional field that contains information about the HTTP response sent from an endpoint. Contains the following fields:</p>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>status</code></dt>
+<dd>
+<p>The status code of the HTTP response.</p>
+</dd>
+<dt class="hdlist1"><code>body</code></dt>
+<dd>
+<p>The contents of the request body.</p>
+</dd>
+</dl>
+</div>
+</dd>
+<dt class="hdlist1"><code>isAuditLog</code></dt>
+<dd>
+<p>A flag set to <code>true</code> to differentiate audit logs from other log types.</p>
+</dd>
+<dt class="hdlist1"><code>errors</code></dt>
+<dd>
+<p>A list of errors containing the <code>name</code>, <code>message</code> and potentially the <code>stack</code> field of the error. Only appears when <code>status</code> is <code>failed</code>.</p>
+</dd>
+</dl>
 </div>
 </div>
-</td>
-</tr>
-</table>
+<div class="sect3">
+<h4 id="ref-audit-log-scaffolder-events.adoc_assembly-audit-log">1.2.2. Scaffolder events</h4>
+<div class="paragraph">
+<p>Developer Hub audit logs can include the following scaffolder events:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>ScaffolderParameterSchemaFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/v2/templates/:namespace/:kind/:name/parameter-schema</code> endpoint which return template parameter schemas</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderInstalledActionsFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/v2/actions</code> endpoint which grabs the list of installed actions</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskCreation</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/v2/tasks</code> endpoint which creates tasks that the scaffolder executes</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskListFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/v2/tasks</code> endpoint which fetches details of all tasks in the scaffolder.</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/v2/tasks/:taskId</code> endpoint which fetches details of a specified task <code>:taskId</code></p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskCancellation</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/v2/tasks/:taskId/cancel</code> endpoint which cancels a running task</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskStream</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/v2/tasks/:taskId/eventstream</code> endpoint which returns an event stream of the task logs of task <code>:taskId</code></p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskEventFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/v2/tasks/:taskId/events</code> endpoint which returns a snapshot of the task logs of task <code>:taskId</code></p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskDryRun</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/v2/dry-run</code> endpoint which creates a dry-run task. All audit logs for events associated with dry runs have the <code>meta.isDryLog</code> flag set to <code>true</code>.</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderStaleTaskCancellation</code></dt>
+<dd>
+<p>Tracks automated cancellation of stale tasks</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskExecution</code></dt>
+<dd>
+<p>Tracks the <code>initiation</code> and <code>completion</code> of a real scaffolder task execution (will not occur during dry runs)</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskStepExecution</code></dt>
+<dd>
+<p>Tracks <code>initiation</code> and <code>completion</code> of a scaffolder task step execution</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskStepSkip</code></dt>
+<dd>
+<p>Tracks steps skipped due to <code>if</code> conditionals not being met</p>
+</dd>
+<dt class="hdlist1"><code>ScaffolderTaskStepIteration</code></dt>
+<dd>
+<p>Tracks the step execution of each iteration of a task step that contains the <code>each</code> field.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect3">
+<h4 id="ref-audit-log-catalog-events.adoc_assembly-audit-log">1.2.3. Catalog events</h4>
+<div class="paragraph">
+<p>Developer Hub audit logs can include the following catalog events:</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>CatalogEntityAncestryFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/entities/by-name/:kind/:namespace/:name/ancestry</code> endpoint, which returns the ancestry of an entity</p>
+</dd>
+<dt class="hdlist1"><code>CatalogEntityBatchFetch</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/entities/by-refs</code> endpoint, which returns a batch of entities</p>
+</dd>
+<dt class="hdlist1"><code>CatalogEntityDeletion</code></dt>
+<dd>
+<p>Tracks <code>DELETE</code> requests to the <code>/entities/by-uid/:uid</code> endpoint, which deletes an entity</p>
+</dd>
+</dl>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1896,226 +1932,272 @@ spec:
 </td>
 <td class="content">
 <div class="paragraph">
-<p>After you install the Ingress Controller, the <code>app-routing-system</code> namespace with the Ingress Controller will be deployed in your cluster. Note the address of your Developer Hub application from the installed Ingress Controller (for example, 108.141.70.228) for later access to the Developer Hub application, later referenced as <code>&lt;app_address&gt;</code>.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl get svc nginx --namespace app-routing-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}'</code></pre>
-</div>
+<p>If the parent location of the deleted entity is still present in the catalog, then the entity is restored in the catalog during the next processing cycle.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-</li>
-<li>
-<p><strong>Namespace management</strong>: You can create a dedicated namespace for Developer Hub deployment in AKS using the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl create namespace &lt;your_namespace&gt;</code></pre>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>CatalogEntityFacetFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/entity-facets</code> endpoint, which returns the facets of an entity</p>
+</dd>
+<dt class="hdlist1"><code>CatalogEntityFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/entities</code> endpoint, which returns a list of entities</p>
+</dd>
+<dt class="hdlist1"><code>CatalogEntityFetchByName</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/entities/by-name/:kind/:namespace/:name</code> endpoint, which returns an entity matching the specified entity reference, for example, <code>&lt;kind&gt;:&lt;namespace&gt;/&lt;name&gt;</code></p>
+</dd>
+<dt class="hdlist1"><code>CatalogEntityFetchByUid</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/entities/by-uid/:uid</code> endpoint, which returns an entity matching the unique ID of the specified entity</p>
+</dd>
+<dt class="hdlist1"><code>CatalogEntityRefresh</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/entities/refresh</code> endpoint, which schedules the specified entity to be refreshed</p>
+</dd>
+<dt class="hdlist1"><code>CatalogEntityValidate</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/entities/validate</code> endpoint, which validates the specified entity</p>
+</dd>
+<dt class="hdlist1"><code>CatalogLocationCreation</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/locations</code> endpoint, which creates a location</p>
+</dd>
+</dl>
 </div>
-</div>
-</li>
-</ul>
-</div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>Log in to AKS by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az login [--tenant=&lt;optional_directory_name&gt;]</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Create a resource group by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az group create --name &lt;resource_group_name&gt; --location &lt;location&gt;</code></pre>
-</div>
-</div>
-<div class="admonitionblock tip">
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<div class="title">Tip</div>
+<div class="title">Note</div>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>You can list available regions by running the following command:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az account list-locations -o table</code></pre>
-</div>
+<p>A location is a marker that references other places to look for catalog data.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1"><code>CatalogLocationAnalyze</code></dt>
+<dd>
+<p>Tracks <code>POST</code> requests to the <code>/locations/analyze</code> endpoint, which analyzes the specified location</p>
+</dd>
+<dt class="hdlist1"><code>CatalogLocationDeletion</code></dt>
+<dd>
+<p>Tracks <code>DELETE</code> requests to the <code>/locations/:id</code> endpoint, which deletes a location and all child entities associated with it</p>
+</dd>
+<dt class="hdlist1"><code>CatalogLocationFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/locations</code> endpoint, which returns a list of locations</p>
+</dd>
+<dt class="hdlist1"><code>CatalogLocationFetchByEntityRef</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/locations/by-entity</code> endpoint, which returns a list of locations associated with the specified entity reference</p>
+</dd>
+<dt class="hdlist1"><code>CatalogLocationFetchById</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/locations/:id</code> endpoint, which returns a location matching the specified location ID</p>
+</dd>
+<dt class="hdlist1"><code>QueriedCatalogEntityFetch</code></dt>
+<dd>
+<p>Tracks <code>GET</code> requests to the <code>/entities/by-query</code> endpoint, which returns a list of entities matching the specified query</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="ref-audit-log-file-rotation-overview_assembly-audit-log">1.3. Audit log file rotation in Red Hat Developer Hub</h3>
+<div class="paragraph">
+<p>Logging to a rotating file in Red Hat Developer Hub is helpful for persistent storage of audit logs.</p>
+</div>
+<div class="paragraph">
+<p>Persistent storage ensures that the file remains intact even after a pod is restarted. Audit log file rotation creates a new file at regular intervals, with only new data being written to the latest file.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Default settings</dt>
+<dd>
+<p>Audit logging to a rotating file is disabled by default. When it is enabled, the default behavior changes to:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Rotate logs at midnight (local system timezone).</p>
 </li>
 <li>
-<p>Create an AKS cluster by running the following command:</p>
+<p>Log file format: <code>redhat-developer-hub-audit-%DATE%.log</code>.</p>
+</li>
+<li>
+<p>Log files are stored in <code>/var/log/redhat-developer-hub/audit</code>.</p>
+</li>
+<li>
+<p>No automatic log file deletion.</p>
+</li>
+<li>
+<p>No gzip compression of archived logs.</p>
+</li>
+<li>
+<p>No file size limit.</p>
+</li>
+</ul>
+</div>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>Audit logs are written in the <code>/var/log/redhat-developer-hub/audit</code> directory.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Log file names</dt>
+<dd>
+<p>Audit log file names are in the following format:</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p><code>redhat-developer-hub-audit-%DATE%.log</code></p>
+</div>
+<div class="paragraph">
+<p>where <code>%DATE%</code> is the format specified in <code>auditLog.rotateFile.dateFormat</code>. You can customize file names when you configure file rotation.</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">File rotation date and frequency</dt>
+<dd>
+<p>Supported <code>auditLog.rotateFile.frequency</code> options include:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>daily</code>: Rotate daily at 00:00 local time</p>
+</li>
+<li>
+<p><code>Xm</code>: Rotate every <code>X</code> minutes (where X is a number between 0 and 59)</p>
+</li>
+<li>
+<p><code>Xh</code>: Rotate every <code>X</code> hours (where X is a number between 0 and 23)</p>
+</li>
+<li>
+<p><code>test</code>: Rotate every 1 minute</p>
+</li>
+<li>
+<p><code>custom</code>: Use <code>dateFormat</code> to set the rotation frequency (default if frequency is not specified)</p>
+</li>
+</ul>
+</div>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>If <code>frequency</code> is set to <code>Xh</code>, <code>Xm</code> or <code>test</code>, the <code>dateFormat</code> setting must be configured in a format that includes the specified time component. Otherwise, the rotation might not work as expected.</p>
+</div>
+<div class="paragraph">
+<p>For example, use <code>dateFormat: 'YYYY-MM-DD-HH</code> for hourly rotation, and <code>dateFormat: 'YYYY-MM-DD-HH-mm</code> for minute rotation.</p>
+</div>
 <div class="listingblock">
+<div class="title">Example minute rotation:</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks create \
---resource-group &lt;resource_group_name&gt; \
---name &lt;cluster_name&gt; \
---enable-managed-identity \
---generate-ssh-keys</code></pre>
+<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
+  rotateFile:
+    # If you want to rotate the file every 17 minutes
+    dateFormat: 'YYYY-MM-DD-HH-mm'
+    frequency: '17m'</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>You can refer to <code>--help</code> for additional options.</p>
-</div>
-</li>
-<li>
-<p>Connect to your cluster by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">az aks get-credentials --resource-group &lt;resource_group_name&gt; --name &lt;cluster_name&gt;</code></pre>
-</div>
+<p>The <code>dateFormat</code> setting configures both the <code>%DATE%</code> in <code>logFileName</code> and the file rotation frequency if <code>frequency</code> is set to <code>custom</code>. The default format is <code>YYYY-MM-DD</code>, meaning daily rotation. Supported values are based on <a href="https://momentjs.com/docs/#/displaying/format/">Moment.js formats</a>.</p>
 </div>
 <div class="paragraph">
-<p>The previous command configures the Kubernetes client and sets the current context in the <code>kubeconfig</code> to point to your AKS cluster.</p>
+<p>If the <code>frequency</code> is set to <code>custom</code>, then rotations take place when the date string, which is represented in the specified <code>dateFormat</code>, changes.</p>
 </div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Archive and delete</dt>
+<dd>
+<p>By default, log files are not archived or deleted.</p>
+</dd>
+<dt class="hdlist1">Enable and configure audit file rotation</dt>
+<dd>
+<p>If you are an administrator of Developer Hub, you can enable file rotation for audit logs, and configure the file log location, name format, frequency,  log file size, retention policy, and archiving.</p>
+</dd>
+</dl>
+</div>
+<div class="listingblock">
+<div class="title">Example audit log file rotation configuration</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="yaml">auditLog:
+  rotateFile:
+    enabled: true <b class="conum">(1)</b>
+    logFileDirPath: /custom-path <b class="conum">(2)</b>
+    logFileName: custom-audit-log-%DATE%.log <b class="conum">(3)</b>
+    frequency: '12h' <b class="conum">(4)</b>
+    dateFormat: 'YYYY-MM-DD' <b class="conum">(5)</b>
+    utc: false <b class="conum">(6)</b>
+    maxSize: 100m <b class="conum">(7)</b>
+    maxFilesOrDays: 14 <b class="conum">(8)</b>
+    zippedArchive: true <b class="conum">(9)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<ol>
+<li>
+<p>Set <code>enabled</code> to <code>true</code> to use audit log file rotation. By default, it is set to <code>false</code>.</p>
 </li>
 <li>
-<p>Open terminal and run the following command to add the Helm chart repository:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm repo add openshift-helm-charts https://charts.openshift.io/</code></pre>
-</div>
-</div>
+<p>Absolute path to the log file. The specified directory is created automatically if it does not exist.</p>
 </li>
 <li>
-<p>Create and activate the <em>&lt;rhdh&gt;</em> namespace:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">DEPLOYMENT_NAME=&lt;redhat-developer-hub&gt;
-NAMESPACE=&lt;rhdh&gt;
-kubectl create namespace ${NAMESPACE}
-kubectl config set-context --current --namespace=${NAMESPACE}</code></pre>
-</div>
-</div>
+<p>Default log file name format.</p>
 </li>
 <li>
-<p>Create a pull secret, which is used to pull the Developer Hub images from the Red Hat Ecosystem, by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl -n $NAMESPACE create secret docker-registry rhdh-pull-secret \
-    --docker-server=registry.redhat.io \
-    --docker-username=&lt;redhat_user_name&gt; \
-    --docker-password=&lt;redhat_password&gt; \
-    --docker-email=&lt;email&gt;</code></pre>
-</div>
-</div>
+<p>If no frequency is specified, then the default file rotation occurs daily at 00:00 local time.</p>
 </li>
 <li>
-<p>Create a file named <code>values.yaml</code> using the following template:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="yaml">global:
-  host: &lt;app_address&gt;
-route:
-  enabled: false
-upstream:
-  ingress:
-    enabled: true
-    className: webapprouting.kubernetes.azure.com
-    host:
-  backstage:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    podSecurityContext:
-      fsGroup: 3000
-  postgresql:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        fsGroup: 3000
-  volumePermissions:
-    enabled: true</code></pre>
-</div>
-</div>
+<p>Default date format.</p>
 </li>
 <li>
-<p>To install Developer Hub by using the Helm chart, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm -n $NAMESPACE install -f values.yaml $DEPLOYMENT_NAME openshift-helm-charts/redhat-developer-hub --version 1.3.0</code></pre>
-</div>
-</div>
+<p>Set <code>utc</code> to <code>true</code> to use UTC time for <code>dateFormat</code> instead of local time.</p>
 </li>
 <li>
-<p>Verify the deployment status:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">kubectl get deploy $DEPLOYMENT_NAME -n $NAMESPACE</code></pre>
-</div>
-</div>
+<p>Sets a maximum file size limit for the audit log. In this example, the maximum size is 100m.</p>
 </li>
 <li>
-<p>Configure your Developer Hub Helm chart instance with the Developer Hub database password and router base URL values from your cluster:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
-CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
-helm upgrade $DEPLOYMENT_NAME -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz" \
-    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
-    --set global.postgresql.auth.password="$PASSWORD"</code></pre>
-</div>
-</div>
+<p>If set to number of files, for example <code>14</code>, then it deletes the oldest log when there are more than 14 log files. If set to number of days, for example <code>5d</code>, then it deletes logs older than 5 days.</p>
 </li>
 <li>
-<p>Display the running Developer Hub instance URL, by running the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">echo "https://$DEPLOYMENT_NAME-$NAMESPACE.$CLUSTER_ROUTER_BASE"</code></pre>
-</div>
-</div>
+<p>Archive and compress rotated logs using <code>gzip</code>. The default value is <code>false</code>.</p>
 </li>
 </ol>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
 <div class="ulist">
-<div class="title">Verification</div>
 <ul>
 <li>
-<p>Open the running Developer Hub instance URL in your browser to use Developer Hub.</p>
+<p>By default, log files are not archived or deleted. If log deletion is enabled, then a <code>.&lt;sha256 hash&gt;-audit.json</code> is generated in the directory where the logs are to track generated logs. Any log file not contained in the directory is not subject to automatic deletion.</p>
+</li>
+<li>
+<p>A new <code>.&lt;sha256 hash&gt;-audit.json</code> file is generated each time the backend starts, which causes previous audit logs to stop being tracked or deleted, except for those still in use by the current backend.</p>
 </li>
 </ul>
 </div>
-<div class="ulist">
-<div class="title">Upgrade</div>
-<ul>
-<li>
-<p>To upgrade the deployment, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm upgrade $DEPLOYMENT_NAME -i https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-1.3.0/redhat-developer-hub-1.3.0.tgz</code></pre>
+</td>
+</tr>
+</table>
 </div>
-</div>
-</li>
-</ul>
-</div>
-<div class="ulist">
-<div class="title">Delete</div>
-<ul>
-<li>
-<p>To delete the deployment, run the following command:</p>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="terminal">helm -n $NAMESPACE delete $DEPLOYMENT_NAME</code></pre>
-</div>
-</div>
-</li>
-</ul>
 </div>
 </div>
 </div>
