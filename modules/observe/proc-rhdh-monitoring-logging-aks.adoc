@@ -3,6 +3,8 @@
 
 Monitoring and logging are integral aspects of managing and maintaining Azure Kubernetes Services (AKS) in {product}. With features like Managed Prometheus Monitoring and Azure Monitor integration, administrators can efficiently monitor resource utilization, diagnose issues, and ensure the reliability of their containerized workloads.
 
+== Enabling Azure Monitor Metrics
+
 To enable Managed Prometheus Monitoring, use the `-enable-azure-monitor-metrics` option within either the `az aks create` or `az aks update` command, depending on whether you're creating a new cluster or updating an existing one, such as:
 
 [source,bash]
@@ -10,11 +12,78 @@ To enable Managed Prometheus Monitoring, use the `-enable-azure-monitor-metrics`
 az aks create/update --resource-group <your-ResourceGroup> --name <your-Cluster> --enable-azure-monitor-metrics
 ----
 
-The previous command installs the metrics add-on, which gathers https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-overview[Prometheus metrics]. Using the previous command, you can enable monitoring of Azure resources through both native Azure Monitor metrics and Prometheus metrics. You can also view the results in the portal under *Monitoring -> Insights*. For more information, see https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/monitor-azure-resource[Monitor Azure resources with Azure Monitor].
+The previous command installs the metrics add-on, which gathers https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-overview[Prometheus metrics]. Using the previous command, you can enable monitoring of Azure resources through both native Azure Monitor metrics. You can also view the results in the portal under *Monitoring -> Insights*. For more information, see https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/monitor-azure-resource[Monitor Azure resources with Azure Monitor].
 
 Furthermore, metrics from both the Managed Prometheus service and Azure Monitor can be accessed through Azure Managed Grafana service. For more information, see https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/azure-monitor-workspace-manage?tabs=azure-portal#link-a-grafana-workspace[Link a Grafana workspace] section.
 
 By default, Prometheus uses the minimum ingesting profile, which optimizes ingestion volume and sets default configurations for scrape frequency, targets, and metrics collected. The default settings can be customized through custom configuration. Azure offers various methods, including using different ConfigMaps, to provide scrape configuration and other metric add-on settings. For more information about default configuration, see https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-default[Default Prometheus metrics configuration in Azure Monitor] and https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-configuration?tabs=CRDConfig%2CCRDScrapeConfig[Customize scraping of Prometheus metrics in Azure Monitor managed service for Prometheus] documentation.
+
+== Configuring annotations for monitoring
+
+You can configure the annotations for monitoring {product} specific metrics in both Helm deployment and Operator-backed deployment.
+
+Helm deployment::
++
+--
+To annotate the backstage pod for monitoring, update your `values.yaml` file as follows:
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    # --- TRUNCATED ---
+    podAnnotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: '/metrics'
+      prometheus.io/port: '9464'
+      prometheus.io/scheme: 'http'
+----
+--
+
+Operator-backed deployment::
++
+--
+.Procedure
+
+. As an administrator of the operator, edit the default configuration to add Prometheus annotations as follows:
++
+[source,bash]
+----
+# Update OPERATOR_NS accordingly
+OPERATOR_NS=rhdh-operator
+kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"
+----
+
+. Find the `deployment.yaml` key in the ConfigMap and add the annotations to the `spec.template.metadata.annotations` field as follows:
++
+[source,yaml]
+----
+deployment.yaml: |-
+  apiVersion: apps/v1
+  kind: Deployment
+  # --- truncated ---
+  spec:
+    template:
+      # --- truncated ---
+      metadata:
+        labels:
+         rhdh.redhat.com/app:  # placeholder for 'backstage-<cr-name>'
+        # --- truncated ---
+        annotations:
+          prometheus.io/scrape: 'true'
+          prometheus.io/path: '/metrics'
+          prometheus.io/port: '9464'
+          prometheus.io/scheme: 'http'
+  # --- truncated ---
+----
+
+. Save your changes.
+--
+
+.Verification
+
+To verify if the scraping works, navigate to the corresponding Azure Monitor Workspace and view the metrics under *Monitoring -> Metrics*.
+
 
 == Viewing logs with Azure Kubernetes Services (AKS)
 
