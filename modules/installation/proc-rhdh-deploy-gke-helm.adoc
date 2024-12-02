@@ -1,0 +1,168 @@
+[id='proc-rhdh-deploy-gke-helm_{context}']
+= Installing {product-short} on {gke-short} with the Helm chart
+
+When you install the {product-short} Helm chart in {gke-brand-name} ({gke-short}), it orchestrates the deployment of a {product-short} instance, which provides a robust developer platform within the {gke-short} ecosystem.
+
+.Prerequisites
+* You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+* You have installed `kubectl`. For more information, see https://kubernetes.io/docs/tasks/tools/#kubectl[Install kubetl].
+* You have installed the Google Cloud CLI. For more information, see https://cloud.google.com/sdk/docs/install[Install the gcloud CLI].
+* You have logged in to your Google account and created a https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster[GKE Autopilot] or https://cloud.google.com/kubernetes-engine/docs/how-to/creating-a-zonal-cluster[GKE Standard] cluster.
+
+
+* You have configured a domain name for your {product-short} instance.
+* You have reserved a static external Premium IPv4 Global IP address that is not attached to any VM. For more information see https://cloud.google.com/vpc/docs/reserve-static-external-ip-address#reserve_new_static[Reserve a new static external IP address]
+* You have configured the DNS records for your domain name to point to the IP address that has been reserved. 
++
+[NOTE]
+====
+You need to create an `A` record with the value equal to the IP address. This process can take up to one hour to propagate.
+====
+* You have installed Helm 3 or the latest. For more information, see https://helm.sh/docs/intro/install[Installing Helm].
+
+.Procedure
+. Go to your terminal and run the following command to add the Helm chart repository containing the {product-short} chart to your local Helm registry:
++
+--
+[source,terminal]
+----
+helm repo add openshift-helm-charts https://charts.openshift.io/
+----
+--
+
+. Create a pull secret using the following command:
++
+--
+[source,terminal]
+----
+kubectl -n <your-namespace> create secret docker-registry rhdh-pull-secret \ <1>
+    --docker-server=registry.redhat.io \
+    --docker-username=<user_name> \ <2>
+    --docker-password=<password> \ <3>
+    --docker-email=<email> <4>
+----
+<1> Enter your {gke-short} namespace in the command.
+<2> Enter your username in the command.
+<3> Enter your password in the command.
+<4> Enter your email address in the command.
+
+The created pull secret is used to pull the {product-short} images from the {company-name} Ecosystem.
+--
+
+. Set up a Google-managed certificate by creating a `ManagedCertificate` object that you must attach to the ingress.
++
+--
+.Example of attaching a `ManagedCertificate` object to the ingress
+[source,yaml,subs="attributes+"]
+----
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: <rhdh_certificate_name>
+spec:
+  domains:
+    - <rhdh_domain_name>
+----
+--
+For more information about setting up a Google-managed certificate, see https://cloud.google.com/kubernetes-engine/docs/how-to/managed-certs?hl=en#setting_up_a_google-managed_certificate[Setting up a Google-managed certificate].
+
+. Create a `FrontendConfig` object to set a policy for redirecting to HTTPS. You must attach this policy to the ingress. 
++
+--
+.Example of attaching a `FrontendConfig` object to the ingress
+[source,yaml,subs="attributes+"]
+----
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: <ingress_security_config>
+spec:
+  sslPolicy: gke-ingress-ssl-policy-https
+  redirectToHttps:
+    enabled: true
+----
+--
+For more information about setting a policy to redirect to HTTPS, see https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration?hl=en#https_redirect[HTTP to HTTPS redirects].
+
+. Create a file named `values.yaml` using the following template:
++
+.Example `values.yaml` file
+[source,yaml,subs="attributes+"]
+----
+global:
+  host: <rhdh_domain_name>
+route:
+  enabled: false
+upstream:
+  service:
+    type: NodePort
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: gce
+      kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
+      networking.gke.io/managed-certificates: <rhdh_certificate_name>
+      networking.gke.io/v1beta1.FrontendConfig: <ingress_security_config>
+    className: gce
+  backstage:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    podSecurityContext:
+      fsGroup: 2000
+  postgresql:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
+----
+. Run the following command in your terminal to deploy {product-short} using the latest version of Helm Chart and using the `values.yaml` file:
++
+[source,terminal,subs="attributes+"]
+----
+helm -n <your_namespace> install -f values.yaml <your_deploy_name> \
+  openshift-helm-charts/redhat-developer-hub \
+  --version {product-chart-version}
+----
++
+For the latest Helm Chart version, see this https://github.com/openshift-helm-charts/charts/tree/main/charts/redhat/redhat/redhat-developer-hub[Helm Charts] repository.
+
+.Verification
+* Confirm that the deployment is complete.
++
+[source,terminal,subs="attributes+"]
+----
+kubectl get deploy <you_deploy_name>-developer-hub -n <your_namespace>
+----
+
+* Verify that the service and ingress were created.
++
+[source,terminal,subs="attributes+"]
+----
+kubectl get service -n <your_namespace>
+kubectl get ingress -n <your_namespace>
+----
++
+[NOTE]
+Wait for the `ManagedCertificate` to be provisioned. This process can take a couple of hours.
+
+* Access {product-very-short} with `https://<rhdh_domain_name>`
+
+* To upgrade your deployment, use the following command:
++
+[source,terminal,subs="attributes+"]
+----
+helm -n <your_namespace> upgrade -f values.yaml <your_deploy_name> openshift-helm-charts/redhat-developer-hub --version <UPGRADE_CHART_VERSION>
+----
+
+* To delete your deployment, use the following command:
++
+[source,terminal,subs="attributes+"]
+----
+helm -n <your_namespace> delete <your_deploy_name>
+----
