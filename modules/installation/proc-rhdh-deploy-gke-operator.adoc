@@ -1,0 +1,210 @@
+[id="proc-rhdh-deploy-gke-operator.adoc_{context}"]
+= Installing the {product-short} Operator with the OLM framework
+
+You can install the {product-short} Operator on {gke-short} using the https://olm.operatorframework.io[Operator Lifecycle Manager (OLM) framework]. Following that, you can proceed to deploy your {product-short} instance in {gke-short}.
+
+For information about the OLM, see link:https://olm.operatorframework.io/docs/[Operator Lifecycle Manager(OLM)] documentation.
+
+.Prerequisites
+* You have subscribed to `registry.redhat.io`. For more information, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+
+* You have installed the Operator Lifecycle Manager (OLM). For more information about installation and troubleshooting, see https://operatorhub.io/how-to-install-an-operator#How-do-I-get-Operator-Lifecycle-Manager?[How do I get Operator Lifecycle Manager?]
+
+* You have installed `kubectl`. For more information, see https://kubernetes.io/docs/tasks/tools/#kubectl[Install kubetl].
+
+* You have installed the Google Cloud CLI. For more information, see https://cloud.google.com/sdk/docs/install[Install the gcloud CLI].
+
+* You have logged in to your Google account and created a https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster[GKE Autopilot] or https://cloud.google.com/kubernetes-engine/docs/how-to/creating-a-zonal-cluster[GKE Standard] cluster.
+
+.Procedure
+. Connect to your GKE cluster using the following command:
++
+--
+[source,terminal]
+----
+gcloud container clusters get-credentials <cluster-name> \ <1>
+    --location=<cluster-location> <2>
+----
+<1> Enter your GKE cluster name.
+<2> Enter your GKE cluster location.
+--
+This command configures your Kubernetes client to point to your GKE cluster.
+. Run the following command in your terminal to create the `rhdh-operator` namespace where the Operator is installed:
++
+--
+[source,terminal]
+----
+kubectl create namespace rhdh-operator
+----
+--
+
+. Create a pull secret using the following command:
++
+--
+[source,terminal]
+----
+kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<user_name> \ <1>
+    --docker-password=<password> \ <2>
+    --docker-email=<email> <3>
+----
+
+<1> Enter your username in the command.
+<2> Enter your password in the command.
+<3> Enter your email address in the command.
+
+The created pull secret is used to pull the {product-short} images from the {company-name} Ecosystem.
+--
+. Create a `CatalogSource` resource that contains the Operator from the {company-name} Ecosystem:
++
+--
+.Example `CatalogSource` resource
+[source,terminal,subs="attributes+"]
+----
+cat <<EOF | kubectl -n rhdh-operator apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: redhat-catalog
+spec:
+  sourceType: grpc
+  image: registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}
+  secrets:
+  - "rhdh-pull-secret"
+  displayName: {company-name} Operators
+EOF
+----
+--
+
+. Create an `OperatorGroup` resource as follows:
++
+--
+.Example `OperatorGroup` resource
+[source,terminal]
+----
+cat <<EOF | kubectl apply -n rhdh-operator -f -
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhdh-operator-group
+EOF
+----
+--
+
+. Create a `Subscription` resource using the following code:
++
+--
+.Example `Subscription` resource
+[source,terminal,subs="attributes+"]
+----
+cat <<EOF | kubectl apply -n rhdh-operator -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: rhdh
+  namespace: rhdh-operator
+spec:
+  channel: fast
+  installPlanApproval: Automatic
+  name: rhdh
+  source: redhat-catalog
+  sourceNamespace: rhdh-operator
+  startingCSV: rhdh-operator.v{product-bundle-version}
+EOF
+----
+--
+
+. Run the following command to verify that the created Operator is running:
++
+--
+[source,terminal]
+----
+kubectl -n rhdh-operator get pods -w
+----
+
+If the Operator pod shows `ImagePullBackOff` status, you might need permission to pull the image directly within the Operator deployment's manifest.
+
+[TIP]
+====
+You can include the required secret name in the `deployment.spec.template.spec.imagePullSecrets` list and verify the deployment name using `kubectl get deployment -n rhdh-operator` command. For example:
+
+[source,terminal]
+----
+kubectl -n rhdh-operator patch deployment \
+    rhdh.fast --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
+    --type=merge
+----
+====
+--
+
+. Update the default configuration of the Operator to ensure that {product-short} resources can start correctly in {gke-short} using the following steps:
+.. Edit the `backstage-default-config` ConfigMap in the `rhdh-operator` namespace using the following command:
++
+--
+[source,terminal]
+----
+kubectl -n rhdh-operator edit configmap backstage-default-config
+----
+--
+
+.. Locate the `db-statefulset.yaml` string and add the `fsGroup` to its `spec.template.spec.securityContext`, as shown in the following example:
++
+--
+.`db-statefulset.yaml` fragment
+[source,yaml]
+----
+  db-statefulset.yaml: |
+    apiVersion: apps/v1
+    kind: StatefulSet
+--- TRUNCATED ---
+    spec:
+    --- TRUNCATED ---
+      restartPolicy: Always
+      securityContext:
+      # You can assign any random value as fsGroup
+        fsGroup: 2000
+      serviceAccount: default
+      serviceAccountName: default
+--- TRUNCATED ---
+----
+--
+
+.. Locate the `deployment.yaml` string and add the `fsGroup` to its specification, as shown in the following example:
++
+--
+.`deployment.yaml` fragment
+[source,yaml]
+----
+  deployment.yaml: |
+    apiVersion: apps/v1
+    kind: Deployment
+--- TRUNCATED ---
+    spec:
+      securityContext:
+        # You can assign any random value as fsGroup
+        fsGroup: 3000
+      automountServiceAccountToken: false
+--- TRUNCATED ---
+----
+--
+
+.. Locate the `service.yaml` string and change the `type` to `NodePort` as follows:
++
+--
+.`service.yaml` fragment
+[source,yaml]
+----
+  service.yaml: |
+    apiVersion: v1
+    kind: Service
+    spec:
+     # NodePort is required for the ALB to route to the Service
+      type: NodePort
+--- TRUNCATED ---
+----
+--
+
+.. Save and exit.
++
+Wait until the changes are automatically applied to the Operator pods.

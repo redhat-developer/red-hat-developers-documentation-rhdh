@@ -36,7 +36,7 @@ for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TIT
     CMD="podman run --interactive --rm --tty \
           --volume "$(pwd)":/docs:Z \
           --workdir "/docs/$d" \
-          quay.io/ivanhorvath/ccutil:amazing ccutil compile --format html-single --lang en-US";
+          quay.io/ivanhorvath/ccutil:amazing ccutil compile --format html-single --lang en-US --doctype article";
     echo -e -n "\nBuilding $t into $dest ...\n  ";
     echo "${CMD}" | sed -r -e "s/\  +/ \\\\\n    /g"
     $CMD
