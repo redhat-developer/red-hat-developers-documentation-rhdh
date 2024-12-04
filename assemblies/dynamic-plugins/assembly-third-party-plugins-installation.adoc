@@ -2,9 +2,9 @@
 = Third-party plugins in {product}
 :context: assembly-third-party-plugins-installation
 
-In {product}, third-party dynamic plugins can be integrated seamlessly, enabling the use of external plugins alongside native ones. This flexibility allows you to enhance the platform functionality without modifying its core structure. To add third-party dynamic plugins, you can either export them as standalone packages or wrap them in custom wrappers, especially if you want to adjust the dependencies or configurations of a plugin for compatibility.
+In {product}, third-party dynamic plugins can be integrated seamlessly, enabling the use of external plugins. This flexibility allows you to enhance the platform functionality without modifying its source code and rebuilding. To add third-party dynamic plugins, you need to export them as derived package.
 
-The third-party plugins are typically packaged as dynamic plugins, which means they can be loaded at runtime, enabling you to easily manage external modules without rebuilding the entire application. The process involves creating a wrapper that exports the plugin code, ensuring that dependencies are correctly bundled or marked as shared, depending on their relationship to the {product-short} environment.
+The third-party plugins are typically packaged as dynamic plugin derived package, enabling you to manage external modules without rebuilding the entire application. The process involves exporting the plugin package, ensuring that dependencies are correctly bundled or marked as shared, depending on their relationship to the {product-short} environment.
 
 To integrate a third-party plugin into {product-short}:
 
@@ -13,97 +13,6 @@ To integrate a third-party plugin into {product-short}:
 . Package and publish the dynamic plugin. See xref:proc-package-third-party-dynamic-plugin_{context}[].
 . Install the plugin in the {product-short} environment. See xref:proc-install-third-party-plugins-rhdh_{context}[].
 
-The third-party plugins include:
-
-Backend plugins::
-+
---
-To ensure compatibility with the dynamic plugin support and enable their use as dynamic plugins, existing backend plugins must be compatible with, the new backend system. Additionally, these plugins must be rebuilt using a dedicated CLI command.
-
-The new backend system is created using `createBackendPlugin()` or `createBackendModule()`. You must export the new backend system as the default export from either the main package or an alpha package (if support exists in alpha). The dynamic export mechanism automatically identifies private dependencies, and adds them to the `bundleDependencies` field in the `package.json` file. This mechanism ensures that the dynamic plugin package is self-contained, with private dependencies bundled within a private `node_modules` folder.
-
-The backend plugins contains two types of dependencies, including:
-
-* *Shared dependencies* are provided by an application and listed as `peerDependencies` in `package.json` file, not bundled in the dynamic plugin package. For example, by default, all `@backstage` packages are shared.
-+
-You can use the `--shared-package` flag to specify shared dependencies. To treat a `@backstage` package as private, use the negation prefix (`!`).
-
-* *Embedded dependencies* are bundled into the dynamic plugin package with their dependencies hoisted to the top level. By default, packages with `-node` or `-common` suffixes are embedded.
-+
-You can use the `--embed-package` flag to specify additional embedded packages, including those in the same repository that do not follow the default naming convention.
-
-The following is an example of exporting a dynamic plugin with shared and embedded packages:
-
-.Example dynamic plugin export with shared and embedded packages
-[source,bash]
-----
-npx @janus-idp/cli@latest export-dynamic-plugin --shared-package '!/@backstage/plugin-notifications/'<1> --embed-package @backstage/plugin-notifications-backend <2>
-----
-
-<1> `@backstage/plugin-notifications` package is treated as a private dependency and is bundled in the dynamic plugin package, despite being in the `@backstage` scope.
-<2> `@backstage/plugin-notifications-backend` package is marked as an embedded dependency and is bundled in the dynamic plugin package.
---
-
-Front-end plugins::
-+
---
-Front-end plugins can use `scalprum` for configuration, which the CLI can generate automatically during the export process. The generated default configuration is logged when running the following command:
-
-.Example command to log the default configuration
-[source,bash]
-----
-npx @janus-idp/cli@latest export-dynamic
-----
-
-The following is an example of default `scalprum` configuration:
-
-.Default `scalprum` configuration
-[source,json]
-----
-"scalprum": {
-  "name": "<package_name>",  // The Webpack container name matches the NPM package name, with "@" replaced by "." and "/" removed.
-  "exposedModules": {
-    "PluginRoot": "./src/index.ts"  // The default module name is "PluginRoot" and doesn't need explicit specification in the app-config.yaml file.
-  }
-}
-----
-
-You can add a `scalprum` section to the `package.json` file. For example:
-
-.Example `scalprum` customization
-[source,json]
-----
-"scalprum": {
-  "name": "custom-package-name",
-  "exposedModules": {
-    "FooModuleName": "./src/foo.ts",
-    "BarModuleName": "./src/bar.ts"
-    // Define multiple modules here, with each exposed as a separate entry point in the Webpack container.
-  }
-}
-----
-
-Dynamic plugins might need adjustments for {product-short} needs, such as static JSX for mountpoints or dynamic routes. These changes are optional but might be incompatible with static plugins.
-
-To include static JSX, define an additional export and use it as the dynamic plugin's `importName`. For example:
-
-.Example static and dynamic plugin export
-[source,tsx]
-----
-// For a static plugin
-export const EntityTechdocsContent = () => {...}
-
-// For a dynamic plugin
-export const DynamicEntityTechdocsContent = {
-  element: EntityTechdocsContent,
-  staticJSXContent: (
-    <TechDocsAddons>
-      <ReportIssue />
-    </TechDocsAddons>
-  ),
-};
-----
---
 //Export third-party plugins
 include::../modules/dynamic-plugins/proc-export-third-party-plugins-rhdh.adoc[leveloffset=+2]
 
@@ -112,3 +21,7 @@ include::../modules/dynamic-plugins/proc-package-third-party-dynamic-plugin.adoc
 
 //install third-party plugins
 include::../modules/dynamic-plugins/proc-install-third-party-plugins-rhdh.adoc[leveloffset=+2]
+
+//example third-party plugin installation
+include::../modules/dynamic-plugins/ref-example-third-party-plugin-installation.adoc[leveloffset=+2]
+
