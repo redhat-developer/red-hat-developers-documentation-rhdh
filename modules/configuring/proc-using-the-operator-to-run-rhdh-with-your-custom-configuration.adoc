@@ -1,7 +1,10 @@
-[id="registering-your-custom-configuration-by-using-the-operator"]
-= Registering your custom {product} configuration by using the operator
+[id="using-the-operator-to-run-rhdh-with-your-custom-configuration"]
+= Using the {product} operator to run {product-short} with your custom configuration
 
-Reference your custom config maps and secrets in your {product-short} custom resource to deploy your {product} instance with your custom configuration by using the {product-short} operator.
+To use the {product-short} operator to run {product} with your custom configuration, create a {product-short} custom resource that:
+
+* Mounts files provisioned in your custom config maps.
+* Injects environment variables provisioned in your custom secrets.
 
 .Prerequisites
 * By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
@@ -10,25 +13,25 @@ Reference your custom config maps and secrets in your {product-short} custom res
 
 .Procedure
 
-. Author your {product-short} custom resource in a `my_{my-product-namespace}_cr.yaml` file to register all your custom config maps and secrets.
+. Author your {product-short} custom resource in a `{my-product-cr-name}.yaml` file to use your custom config maps and secrets.
 +
-.Minimal `my_{my-product-namespace}_cr.yaml` custom resource example
+.Minimal `{my-product-cr-name}.yaml` custom resource example
 ====
 [source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: rhdh.redhat.com/v1alpha1
 kind: Backstage
 metadata:
-  name: _<{my-product-cr-name}>_
+  name: {my-product-cr-name}
 spec:
   application:
     appConfig:
       mountPath: /opt/app-root/src
       configMaps:
-         - name: app-config
+         - name: {my-app-config-config-map}
     extraEnvs:
       secrets:
-         - name: my-rhdh-secrets
+         - name: {my-product-secrets}
     extraFiles:
       mountPath: /opt/app-root/src
     replicas: 1
@@ -39,7 +42,7 @@ spec:
 ----
 ====
 +
-.`my_{my-product-namespace}_cr.yaml` custom resource example with dynamic plugins and RBAC policies config maps, and external PostgreSQL database secrets.
+.`{my-product-cr-name}.yaml` custom resource example with dynamic plugins and RBAC policies config maps, and external PostgreSQL database secrets.
 ====
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -52,12 +55,12 @@ spec:
     appConfig:
       mountPath: /opt/app-root/src
       configMaps:
-         - name: app-config
+         - name: {my-app-config-config-map}
          - name: rbac-policies
     dynamicPluginsConfigMapName: dynamic-plugins-rhdh
     extraEnvs:
       secrets:
-         - name: my-rhdh-secrets
+         - name: {my-product-secrets}
          - name: cred-secret
     extraFiles:
       mountPath: /opt/app-root/src
@@ -75,7 +78,7 @@ spec:
 spec.application.appConfig.configMaps::
 Enter your config map name list.
 +
-.Register the `app-config` config map.
+.Register the `{my-app-config-config-map}` config map.
 ====
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -84,11 +87,11 @@ spec:
     appConfig:
       mountPath: /opt/app-root/src
       configMaps:
-         - name: app-config
+         - name: {my-app-config-config-map}
 ----
 ====
 +
-.Register the `app-config` and `rbac-policies` config maps.
+.Register the `{my-app-config-config-map}` and `rbac-policies` config maps.
 ====
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -97,7 +100,7 @@ spec:
     appConfig:
       mountPath: /opt/app-root/src
       configMaps:
-         - name: app-config
+         - name: {my-app-config-config-map}
          - name: rbac-policies
 ----
 ====
@@ -124,7 +127,7 @@ spec:
 spec.application.extraEnvs.secrets::
 Enter your environment variables secret name list.
 +
-.Register the `my-rhdh-secrets` secret
+.Register the `{my-product-secrets}` secret
 ====
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -132,11 +135,11 @@ spec:
   application:
     extraEnvs:
       secrets:
-         - name: my-rhdh-secrets
+         - name: {my-product-secrets}
 ----
 ====
 +
-.Register the `my-rhdh-secrets` and `cred-secret` secrets
+.Register the `{my-product-secrets}` and `cred-secret` secrets
 ====
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -144,7 +147,7 @@ spec:
   application:
     extraEnvs:
       secrets:
-         - name: my-rhdh-secrets
+         - name: {my-product-secrets}
          - name: cred-secret
 ----
 ====
@@ -188,7 +191,7 @@ Optionally, xref:configuring-the-deployment[enter your deployment configuration]
 
 . Apply your {product-short} custom resource to start your {product-short} instance.
 +
-[source,terminal]
+[source,terminal,subs="+attributes,+quotes"]
 ----
-$ oc apply -f my_rhdh_cr.yaml
+$ oc apply --filename={my-product-cr-name}.yaml --namespace={my-product-namespace}
 ----
