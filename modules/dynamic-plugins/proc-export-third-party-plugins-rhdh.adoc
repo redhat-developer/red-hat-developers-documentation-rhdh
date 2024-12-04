@@ -1,7 +1,99 @@
 [id="proc-export-third-party-plugins-rhdh_{context}"]
 = Exporting third-party plugins in {product}
 
-To use dynamic plugins in {product}, the plugins must be exported as separate packages. These packages contain the plugin code and dependencies, ready for dynamic plugin integration into {product-short}.
+To use plugins in {product}, the plugins must be exported as derived dynamic plugin package. These packages contain the plugin code and dependencies, ready for dynamic plugin integration into {product-short}.
+
+The third-party plugins include:
+
+Backend plugins::
++
+--
+To ensure compatibility with the dynamic plugin support and enable their use as dynamic plugins, existing backend plugins must be compatible with the plugin instance. Additionally, these plugins must be rebuilt using a dedicated CLI command.
+
+The plugin instance is created using `createBackendPlugin()` or `createBackendModule()`. You must export the plugin instance as the default export from either the main package or an `alpha` package (if the plugin instance support is still provided using `alpha` APIs). This doesn't add any additional requirement on top of the standard plugin development guidelines of the plugin instance.
+
+Certain plugin dependencies require specific handling in the derived packages, such as:
+
+* *Shared dependencies* are provided by the {product-very-short} application and listed as `peerDependencies` in `package.json` file, not bundled in the dynamic plugin package. For example, by default, all `@backstage` scoped packages are shared.
++
+You can use the `--shared-package` flag to specify shared dependencies. To treat a `@backstage` package as private, use the negation prefix (`!`).
+
+* *Embedded dependencies* are bundled into the dynamic plugin package with their dependencies hoisted to the top level. By default, packages with `-node` or `-common` suffixes are embedded.
++
+You can use the `--embed-package` flag to specify additional embedded packages, including those in the same repository that do not follow the default naming convention.
+
+The following is an example of exporting a dynamic plugin with shared and embedded packages:
+
+.Example dynamic plugin export with shared and embedded packages
+[source,bash]
+----
+npx @janus-idp/cli@latest export-dynamic-plugin --shared-package '!/@backstage/plugin-notifications/'<1> --embed-package @backstage/plugin-notifications-backend <2>
+----
+
+<1> `@backstage/plugin-notifications` package is treated as a private dependency and is bundled in the dynamic plugin package, despite being in the `@backstage` scope.
+<2> `@backstage/plugin-notifications-backend` package is marked as an embedded dependency and is bundled in the dynamic plugin package.
+--
+
+Front-end plugins::
++
+--
+Front-end plugins can use `scalprum` for configuration, which the CLI can generate automatically during the export process. The generated default configuration is logged when running the following command:
+
+.Example command to log the default configuration
+[source,bash]
+----
+npx @janus-idp/cli@latest export-dynamic
+----
+
+The following is an example of default `scalprum` configuration:
+
+.Default `scalprum` configuration
+[source,json]
+----
+"scalprum": {
+  "name": "<package_name>",  // The Webpack container name matches the NPM package name, with "@" replaced by "." and "/" removed.
+  "exposedModules": {
+    "PluginRoot": "./src/index.ts"  // The default module name is "PluginRoot" and doesn't need explicit specification in the app-config.yaml file.
+  }
+}
+----
+
+You can add a `scalprum` section to the `package.json` file. For example:
+
+.Example `scalprum` customization
+[source,json]
+----
+"scalprum": {
+  "name": "custom-package-name",
+  "exposedModules": {
+    "FooModuleName": "./src/foo.ts",
+    "BarModuleName": "./src/bar.ts"
+    // Define multiple modules here, with each exposed as a separate entry point in the Webpack container.
+  }
+}
+----
+
+Dynamic plugins might need adjustments for {product-short} needs, such as static JSX for mountpoints or dynamic routes. These changes are optional but might be incompatible with static plugins.
+
+To include static JSX, define an additional export and use it as the dynamic plugin's `importName`. For example:
+
+.Example static and dynamic plugin export
+[source,tsx]
+----
+// For a static plugin
+export const EntityTechdocsContent = () => {...}
+
+// For a dynamic plugin
+export const DynamicEntityTechdocsContent = {
+  element: EntityTechdocsContent,
+  staticJSXContent: (
+    <TechDocsAddons>
+      <ReportIssue />
+    </TechDocsAddons>
+  ),
+};
+----
+--
 
 .Prerequisites
 * The `@janus-idp/cli` package is installed. Use the latest version (`@latest` tag) for compatibility with the most recent features and fixes.
@@ -11,9 +103,8 @@ To use dynamic plugins in {product}, the plugins must be exported as separate pa
 * The third-party plugin is compatible with your {product} version. For more information, see link:https://github.com/janus-idp/backstage-showcase/blob/main/docs/dynamic-plugins/versions.md[Version compatibility matrix].
 
 .Procedure
-. Use the `package export-dynamic-plugin` command from the `@janus-idp/cli` package to export the plugin:
-+
---
+Use the `package export-dynamic-plugin` command from the `@janus-idp/cli` package to export the plugin:
+
 .Example command to export a third-party plugin
 [source,bash]
 ----
@@ -21,15 +112,5 @@ npx @janus-idp/cli@latest package export-dynamic-plugin
 ----
 
 Ensure that you execute the previous command in the root directory of the plugin's JavaScript package (containing `package.json` file).
---
 
-. Located the exported package in the `dist-dynamic` sub-folder.
-. Use `npm pack` or a private NPM registry to package or distribute the plugin. For more information, see xref:proc-package-third-party-dynamic-plugin_{context}[].
-+
---
-[IMPORTANT]
-====
-Ensure that you do not push derived dynamic plugin packages to a public NPM registry. Use a private NPM registry only.
-====
---
 
