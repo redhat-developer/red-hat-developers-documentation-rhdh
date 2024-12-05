@@ -3,24 +3,26 @@
 
 To use plugins in {product}, the plugins must be exported as derived dynamic plugin package. These packages contain the plugin code and dependencies, ready for dynamic plugin integration into {product-short}.
 
-The third-party plugins include:
-
 Backend plugins::
 +
 --
-To ensure compatibility with the dynamic plugin support and enable their use as dynamic plugins, existing backend plugins must be compatible with the plugin instance. Additionally, these plugins must be rebuilt using a dedicated CLI command.
+To ensure compatibility with the dynamic plugin support and enable their use as dynamic plugins, existing backend plugins must be compatible with the new backend system. Additionally, these plugins must be rebuilt using a dedicated CLI command.
 
-The plugin instance is created using `createBackendPlugin()` or `createBackendModule()`. You must export the plugin instance as the default export from either the main package or an `alpha` package (if the plugin instance support is still provided using `alpha` APIs). This doesn't add any additional requirement on top of the standard plugin development guidelines of the plugin instance.
+The new backend system entry point (created using `createBackendPlugin()` or `createBackendModule()`)  must be exported as the default export from either the main package or an `alpha` package (if the plugin instance support is still provided using `alpha` APIs). This doesn't add any additional requirement on top of the standard plugin development guidelines of the plugin instance.
+
+The dynamic export mechanism identifies private dependencies and sets the `bundleDependencies` field in the `package.json` file. This export mechanism ensures that the dynamic plugin package is published as a self-contained package, with its private dependencies bundled in a private `node_modules` folder.
 
 Certain plugin dependencies require specific handling in the derived packages, such as:
 
 * *Shared dependencies* are provided by the {product-very-short} application and listed as `peerDependencies` in `package.json` file, not bundled in the dynamic plugin package. For example, by default, all `@backstage` scoped packages are shared.
 +
-You can use the `--shared-package` flag to specify shared dependencies. To treat a `@backstage` package as private, use the negation prefix (`!`).
+You can use the `--shared-package` flag to specify shared dependencies, that are expected to be provided by {product} application and not bundled in the dynamic plugin package.
++
+To treat a `@backstage` package as private, use the negation prefix (`!`). For example, when a plugin depends on the package in `@backstage` that is not provided by the {product} application. 
 
 * *Embedded dependencies* are bundled into the dynamic plugin package with their dependencies hoisted to the top level. By default, packages with `-node` or `-common` suffixes are embedded.
 +
-You can use the `--embed-package` flag to specify additional embedded packages, including those in the same repository that do not follow the default naming convention.
+You can use the `--embed-package` flag to specify additional embedded packages. For example, packages from the same workspace that do not follow the default naming convention.
 
 The following is an example of exporting a dynamic plugin with shared and embedded packages:
 
@@ -99,7 +101,6 @@ export const DynamicEntityTechdocsContent = {
 * The `@janus-idp/cli` package is installed. Use the latest version (`@latest` tag) for compatibility with the most recent features and fixes.
 * The third-party plugin must have a valid package.json file in its root directory, containing all required metadata and dependencies.
 * Node.js and NPM is installed and configured.
-* You have access to a private NPM registry for publishing and distributing the exported plugin package.
 * The third-party plugin is compatible with your {product} version. For more information, see link:https://github.com/janus-idp/backstage-showcase/blob/main/docs/dynamic-plugins/versions.md[Version compatibility matrix].
 
 .Procedure
@@ -112,5 +113,12 @@ npx @janus-idp/cli@latest package export-dynamic-plugin
 ----
 
 Ensure that you execute the previous command in the root directory of the plugin's JavaScript package (containing `package.json` file).
+
+The resulting derived package will be located in the `dist-dynamic` subfolder. The exported package name consists of the original plugin name with `-dynamic` appended.
+
+[WARNING]
+====
+The derived dynamic plugin JavaScript packages must not be published to the public NPM registry. For more appropriate packaging options, see xref:proc-package-third-party-dynamic-plugin_{context}[]. If you must publish to the NPM registry, use a private registry.
+====
 
 
