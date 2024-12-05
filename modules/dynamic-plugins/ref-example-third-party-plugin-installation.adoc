@@ -6,7 +6,7 @@ This section provides step-by-step instructions for integrating the link:https:/
 . *Obtain the third-party plugin source code*: Clone the plugins repository and navigate to the link:https://github.com/backstage/community-plugins/tree/main/workspaces/todo/plugins[Todo plugin] directory:
 +
 --
-.Example commands to obtain the third-party plugin source code
+.Obtain the third-party plugin source code
 [source,bash]
 ----
 $ git clone https://github.com/backstage/community-plugins
@@ -18,44 +18,127 @@ $ yarn install
 . *Export backend and front-end plugins*: Run the following commands to build the backend plugin, adjust package dependencies for dynamic loading, and generate self-contained configuration schema:
 +
 --
-.Example commands to export a backend plugin
+.Export a backend plugin
 [source,bash]
 ----
 $ cd todo-backend
 $ npx @janus-idp/cli@latest package export-dynamic-plugin
 ----
 
+.Output of exporting a backend plugin commands
+[source,bash]
+----
+Building main package
+  executing     yarn build ✔
+Packing main package to dist-dynamic/package.json
+Customizing main package in dist-dynamic/package.json for dynamic loading
+  moving @backstage/backend-common to peerDependencies
+  moving @backstage/backend-openapi-utils to peerDependencies
+  moving @backstage/backend-plugin-api to peerDependencies
+  moving @backstage/catalog-client to peerDependencies
+  moving @backstage/catalog-model to peerDependencies
+  moving @backstage/config to peerDependencies
+  moving @backstage/errors to peerDependencies
+  moving @backstage/integration to peerDependencies
+  moving @backstage/plugin-catalog-node to peerDependencies
+Installing private dependencies of the main package
+   executing     yarn install --no-immutable ✔
+Validating private dependencies
+Validating plugin entry points
+Saving self-contained config schema in /Users/user/Code/community-plugins/workspaces/todo/plugins/todo-backend/dist-dynamic/dist/configSchema.json
+----
+
 You can run the following commands to set default dynamic UI configurations, create front-end plugin assets, and to generate a configuration schema for a front-end plugin:
 
-.Example command to export a front-end plugin
+.Export a front-end plugin
 [source,bash]
 ----
 $ cd ../todo
 $ npx @janus-idp/cli@latest package export-dynamic-plugin
+----
+
+.Output of exporting a front-end plugin commands
+[source,bash]
+----
+No scalprum config. Using default dynamic UI configuration:
+{
+  "name": "backstage-community.plugin-todo",
+  "exposedModules": {
+    "PluginRoot": "./src/index.ts"
+  }
+}
+If you wish to change the defaults, add "scalprum" configuration to plugin "package.json" file, or use the '--scalprum-config' option to specify an external config.
+Packing main package to dist-dynamic/package.json
+Customizing main package in dist-dynamic/package.json for dynamic loading
+Generating dynamic frontend plugin assets in /Users/user/Code/community-plugins/workspaces/todo/plugins/todo/dist-dynamic/dist-scalprum
+  263.46 kB  dist-scalprum/static/1417.d5271413.chunk.js
+...
+...
+...
+  250 B      dist-scalprum/static/react-syntax-highlighter_languages_highlight_plaintext.0b7d6592.chunk.js
+Saving self-contained config schema in /Users/user/Code/community-plugins/workspaces/todo/plugins/todo/dist-dynamic/dist-scalprum/configSchema.json
 ----
 --
 
 . *Package and publish a third-party plugin*: Run the following commands to navigate to the workspace directory and package the dynamic plugin to build the OCI image:
 +
 --
-.Example commands to build an OCI image
+.Build an OCI image
 [source,bash]
 ----
 $ cd ../..
 $ npx @janus-idp/cli@latest package package-dynamic-plugins --tag quay.io/user/backstage-community-plugin-todo:v0.1.1
 ----
 
-.Example command to push the OCI image to a container registry:
+.Output of building an OCI image commands
+[source,bash]
+----
+  executing     podman --version ✔
+Using existing 'dist-dynamic' directory at plugins/todo
+Using existing 'dist-dynamic' directory at plugins/todo-backend
+Copying 'plugins/todo/dist-dynamic' to '/var/folders/5c/67drc33d0018j6qgtzqpcsbw0000gn/T/package-dynamic-pluginsmcP4mU/backstage-community-plugin-todo
+No plugin configuration found at undefined create this file as needed if this plugin requires configuration
+Copying 'plugins/todo-backend/dist-dynamic' to '/var/folders/5c/67drc33d0018j6qgtzqpcsbw0000gn/T/package-dynamic-pluginsmcP4mU/backstage-community-plugin-todo-backend-dynamic
+No plugin configuration found at undefined create this file as needed if this plugin requires configuration
+Writing plugin registry metadata to '/var/folders/5c/67drc33d0018j6qgtzqpcsbw0000gn/T/package-dynamic-pluginsmcP4mU/index.json'
+Creating image using podman
+  executing     echo "from scratch
+COPY . .
+" | podman build --annotation com.redhat.rhdh.plugins='[{"backstage-community-plugin-todo":{"name":"@backstage-community/plugin-todo","version":"0.2.40","description":"A Backstage plugin that lets you browse TODO comments in your source code","backstage":{"role":"frontend-plugin","pluginId":"todo","pluginPackages":["@backstage-community/plugin-todo","@backstage-community/plugin-todo-backend"]},"homepage":"https://backstage.io","repository":{"type":"git","url":"https://github.com/backstage/community-plugins","directory":"workspaces/todo/plugins/todo"},"license":"Apache-2.0"}},{"backstage-community-plugin-todo-backend-dynamic":{"name":"@backstage-community/plugin-todo-backend","version":"0.3.19","description":"A Backstage backend plugin that lets you browse TODO comments in your source code","backstage":{"role":"backend-plugin","pluginId":"todo","pluginPackages":["@backstage-community/plugin-todo","@backstage-community/plugin-todo-backend"]},"homepage":"https://backstage.io","repository":{"type":"git","url":"https://github.com/backstage/community-plugins","directory":"workspaces/todo/plugins/todo-backend"},"license":"Apache-2.0"}}]' -t 'quay.io/user/backstage-community-plugin-todo:v0.1.1' -f - .
+    ✔
+Successfully built image quay.io/user/backstage-community-plugin-todo:v0.1.1 with following plugins:
+  backstage-community-plugin-todo
+  backstage-community-plugin-todo-backend-dynamic
+
+Here is an example dynamic-plugins.yaml for these plugins:
+
+plugins:
+  - package: oci://quay.io/user/backstage-community-plugin-todo:v0.1.1!backstage-community-plugin-todo
+    disabled: false
+  - package: oci://quay.io/user/backstage-community-plugin-todo:v0.1.1!backstage-community-plugin-todo-backend-dynamic
+    disabled: false
+----
+
+.Push the OCI image to a container registry:
 [source,bash]
 ----
 $ podman push quay.io/user/backstage-community-plugin-todo:v0.1.1
+----
+
+.Output of pushing the OCI image command
+[source,bash]
+----
+Getting image source signatures
+Copying blob sha256:86a372c456ae6a7a305cd464d194aaf03660932efd53691998ab3403f87cacb5
+Copying config sha256:3b7f074856ecfbba95a77fa87cfad341e8a30c7069447de8144aea0edfcb603e
+Writing manifest to image destination
 ----
 --
 
 . *Install and configure the third-party plugin*: Add the following plugin definitions to your `dynamic-plugins.yaml` file:
 +
 --
-.Example plugin definitions in `dynamic-plugins.yaml` file
+.Plugin definitions in `dynamic-plugins.yaml` file
 [source,yaml]
 ----
 packages:

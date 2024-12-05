@@ -3,6 +3,15 @@
 
 You can install a third-party plugins in {product} without rebuilding the {product-very-short} application.
 
+The location of the `dynamic-plugin-config.yaml` file depends on the deployment method. For more details, refer to xref:proc-config-dynamic-plugins-rhdh-operator_{context}[] and xref:con-install-dynamic-plugin-helm_{context}[].
+
+Plugins are defined in the `plugins` array within the `dynamic-plugin-config.yaml` file. Each plugin is represented as an object with the following properties:
+
+* `package`: The plugin's package definition, which can be an OCI image, a TGZ file, a JavaScript package, or a directory path
+* `disabled`: A boolean value indicating whether the plugin is enabled or disabled.
+* `integrity`: The integrity hash of the package, required for TGZ file and JavaScript packages.
+* `pluginConfig`: The plugin's configuration. For backend plugins, this is optional; for frontend plugins, it is required. The `pluginConfig` is a fragment of the `app-config.yaml` file, and any added properties are merged with the {product-very-short} `app-config.yaml` file.
+
 .Prerequisites
 * The third-party plugin is packaged as a dynamic plugin in one of the following formats:
 ** OCI image
@@ -20,11 +29,11 @@ You can also load dynamic plugins from a plain directory, though this is intende
 Load a plugin packaged as an OCI image::
 +
 --
-. Define the plugin with the `oci://` prefix in the following format in `dynamic-plugins.default.yaml` file:
+. Define the plugin with the `oci://` prefix in the following format in `dynamic-plugins.yaml` file:
 +
 `oci://<image-name>:<tag>!<plugin-name>`
 +
-.Example configuration in `dynamic-plugins.default.yaml` file
+.Example configuration in `dynamic-plugins.yaml` file
 [source,yaml]
 ----
 plugins:
@@ -34,9 +43,9 @@ plugins:
 
 . Configure authentication for private registries by setting the `REGISTRY_AUTH_FILE` environment variable to the path of the registry configuration file. For example, `~/.config/containers/auth.json` or `~/.docker/config.json`.
 
-. To perform an integrity check, use the image digest in place of the tag in `dynamic-plugins.default.yaml` file as follows:
+. To perform an integrity check, use the image digest in place of the tag in `dynamic-plugins.yaml` file as follows:
 +
-.Example configuration in `dynamic-plugins.default.yaml` file
+.Example configuration in `dynamic-plugins.yaml` file
 [source,yaml]
 ----
 plugins:
@@ -50,9 +59,9 @@ plugins:
 Load a plugin packaged as a TGZ file::
 +
 --
-. Specify the archive URL and its integrity hash in the `dynamic-plugins.default.yaml` file using the following example:
+. Specify the archive URL and its integrity hash in the `dynamic-plugins.yaml` file using the following example:
 +
-.Example configuration in `dynamic-plugins.default.yaml` file
+.Example configuration in `dynamic-plugins.yaml` file
 [source,yaml]
 ----
 plugins:
@@ -74,9 +83,9 @@ Load a plugin packaged as a JavaScript package::
 npm view --registry <registry-url> <npm package>@<version> dist.integrity
 ----
 
-. Specify the package name, version, and its integrity hash in the `dynamic-plugins.default.yaml` file as follows:
+. Specify the package name, version, and its integrity hash in the `dynamic-plugins.yaml` file as follows:
 +
-.Example configuration in `dynamic-plugins.default.yaml` file
+.Example configuration in `dynamic-plugins.yaml` file
 [source,yaml]
 ----
 plugins:
