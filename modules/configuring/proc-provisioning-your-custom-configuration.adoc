@@ -1,28 +1,16 @@
 [id="provisioning-your-custom-configuration"]
 = Provisioning your custom {product} configuration
 
-To configure {product}, provision your custom {product} config maps and secrets to {ocp-brand-name} before deploying {product}.
+To configure {product}, provision your custom {product} config maps and secrets to {ocp-brand-name} before running {product}.
 
 [TIP]
 ====
-For a development environment, you can install {product-short} with a default config map and secret.
+You can skip this step to run {product-short} with the default config map and secret.
 Your changes on this configuration might get reverted on {product-short} restart.
 ====
 
 .Prerequisites
 * By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
-
-* You know your desired {product-short} external URL: pass:c,a,q[{my-product-url}].
-+
-[TIP]
-====
-For a development environment, consider using the {product-short} external URL that {ocp-short} provides by default.
-To identify your {product-short} external URL:
-
-. Deploy {product-short} with the default configuration.
-. From the *Developer* perspective in the OpenShift Container Platform web console, select the *Topology* view, and click the *Open URL* icon on the Developer Hub pod.
-====
-
 
 .Procedure
 . Author your custom `{my-product-secrets}.txt` file to provision your secrets as environment variables values in an {ocp-short} secret, rather than in clear text in your configuration files.
@@ -52,9 +40,6 @@ This is the main {product-short} configuration file.
 ====
 [source,yaml,subs="+attributes,+quotes"]
 ----
-app:
-  title: {product}
-  baseUrl: {my-product-url}
 backend:
   auth:
     externalAccess:
@@ -62,86 +47,40 @@ backend:
         options:
           subject: legacy-default-config
           secret: "${BACKEND_SECRET}"
-  baseUrl: {my-product-url}
-  cors:
-    origin: {my-product-url}
 ----
 ====
 
-app::
-Enter your {product-short} general configuration in the `app` section.
+Mandatory fields::
 
-app.title::: Enter your {product-short} instance display name, such as _<{product}>_.
-+
-.`{my-app-config-file}` excerpt
-[source,yaml,subs="+attributes,+quotes"]
-----
-app:
-  title: {product}
-----
+`backend.auth.externalAccess`:::
+Enter the mandatory backend authentication key configuration.
 
-app.baseURL::: Enter your {product-short} external URL, such as pass:c,a,q[{my-product-url}].
-+
-.`{my-app-config-file}` excerpt
-[source,yaml,subs="+attributes,+quotes"]
-----
-app:
-  baseUrl: {my-product-url}
-----
+Optional fields::
 
-app.branding::
-Enter your {product-short} appearance configuration in the `branding` section.
+`app.title`:::
+Optionally, enter your {product-short} instance display name, such as _<{product}>_.
+
+`app.baseURL`, `backend.baseURL` and `backend.cors.origin`:::
+Optionally, enter your {product-short} external URL, such as pass:c,a,q[{my-product-url}].
+
+`app.branding`:::
+Optionally, enter your appearance customization configuration.
 See link:{customizing-book-url}#customizing-appearance[Customizing the appearance].
 
-backend::
-Enter your {product-short} backend configuration in the `backend` section.
-
-backend.auth::: Enter your authentication configuration.
+`backend.auth`:::
+Optionally, enter your authentication configuration.
 See link:{authentication-book-url}[{authentication-book-title}].
-+
-.`{my-app-config-file}` excerpt
-[source,yaml,subs="+attributes,+quotes"]
-----
-backend:
-  auth: _<my_authentication_configuration>_
-----
 
-backend.auth.externalAccess:::
-Enter the mandatory backend authentication key configuration.
-+
-.`{my-app-config-file}` excerpt
-[source,yaml,subs="+attributes,+quotes"]
-----
-backend:
-  auth:
-    externalAccess:
-      - type: legacy
-        options:
-          subject: legacy-default-config
-          secret: "${BACKEND_SECRET}"
-----
-
-backend.baseURL and backend.cors.origin::: Enter your {product-short} external URL, such as pass:c,a,q[{my-product-url}].
-+
-.`{my-app-config-file}` excerpt
-[source,yaml,subs="+attributes,+quotes"]
-----
-backend:
-  baseUrl: {my-product-url}
-  cors:
-    origin: {my-product-url}
-----
-
-catalog::
-Optionally, to configure the {product-short} catalog, enter your `catalog` section.
+`catalog`:::
+Optionally, configure the {product-short} catalog.
 See link:{authentication-book-url}[{authorization-book-title}] and xref:proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_running-behind-a-proxy[].
 
-kubernetes::
-Optionally, to configure the {ocp-short} integration, enter your `kubernetes` section.
+`kubernetes`:::
+Optionally, configure the {ocp-short} integration.
 See xref:proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_running-behind-a-proxy[].
 
-permission::
-Optionally, to configure authorization, enter your `permission` section.
+`permission`:::
+Optionally, configure authorization.
 See link:{authorization-book-url}[{authorization-book-title}].
 
 . Provision your custom configuration files to your {ocp-short} cluster.
