@@ -24,13 +24,13 @@ By default, {product-short} uses a database for each plugin and automatically cr
 
 . Optional: Create a certificate secret to configure your PostgreSQL instance with a TLS connection:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
-cat <<EOF | oc -n <your-namespace> create -f -
+cat <<EOF | oc -n {my-product-namespace} create -f -
 apiVersion: v1
 kind: Secret
 metadata:
- name: <crt-secret> <1>
+ name: {my-product-database-certificates-secrets} <1>
 type: Opaque
 stringData:
  postgres-ca.pem: |-
@@ -52,13 +52,13 @@ EOF
 
 . Create a credential secret to connect with the PostgreSQL instance:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
-cat <<EOF | oc -n <your-namespace> create -f -
+cat <<EOF | oc -n {my-product-namespace} create -f -
 apiVersion: v1
 kind: Secret
 metadata:
- name: <cred-secret> <1>
+ name: {my-product-database-secrets} <1>
 type: Opaque
 stringData: <2>
  POSTGRES_PASSWORD: <password>
@@ -74,11 +74,11 @@ EOF
 <3> Optional: Provide the value based on the required link:https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNECT-SSLMODE[Secure Sockets Layer (SSL) mode].
 <4> Optional: Provide the value only if you need a TLS connection for your PostgreSQL instance.
 
-. Create a `Backstage` custom resource (CR):
+. Create a `{product-custom-resource-type}` custom resource (CR):
 +
-[source,terminal]
+[source,terminal,subs="+attributes,+quotes"]
 ----
-cat <<EOF | oc -n <your-namespace> create -f -
+cat <<EOF | oc -n {my-product-namespace} create -f -
 apiVersion: rhdh.redhat.com/v1alpha3
 kind: Backstage
 metadata:
@@ -90,11 +90,11 @@ spec:
     extraFiles:
       mountPath: <path> # e g /opt/app-root/src
       secrets:
-        - name: <crt-secret> <2>
-          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key # key name as in <crt-secret> Secret
+        - name: {my-product-database-certificates-secrets} <2>
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key # key name as in {my-product-database-certificates-secrets} Secret
     extraEnvs:
       secrets:
-        - name: <cred-secret> <3>
+        - name: {my-product-database-secrets} <3>
         # ...
 ----
 <1> Set the value of the `enableLocalDb` parameter to `false` to disable creating local PostgreSQL instances.
@@ -106,4 +106,4 @@ spec:
 The environment variables listed in the `Backstage` CR work with the Operator default configuration. If you have changed the Operator default configuration, you must reconfigure the `Backstage` CR accordingly.
 ====
 
-. Apply the `Backstage` CR to the namespace where you have deployed the {product-very-short} instance.
+. Apply the `{product-custom-resource-type}` CR to the namespace where you have deployed the {product-short} instance.
