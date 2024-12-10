@@ -1,0 +1,67 @@
+[id="proc-load-plugin-js-package_{context}"]
+= Loading a plugin packaged as a JavaScript package
+
+.Prerequisites
+* The third-party plugin is packaged as a dynamic plugin in a JavaScript package. 
++
+For more information about packaging a third-party plugin, see xref:assembly-package-publish-third-party-dynamic-plugin[].
+
+.Procedure
+. Run the following command to obtain the integrity hash from the NPM registry:
++
+--
+[source,bash]
+----
+npm view --registry <registry-url> <npm package>@<version> dist.integrity
+----
+--
+
+. Specify the package name, version, and its integrity hash in the `dynamic-plugins.yaml` file as follows:
++
+--
+.Example configuration in `dynamic-plugins.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: @example/backstage-plugin-myplugin@1.0.0
+    integrity: sha512-9WlbgEdadJNeQxdn1973r5E4kNFvnT9GjLD627GWgrhCaxjCmxqdNW08cj+Bf47mwAtZMt1Ttyo+ZhDRDj9PoA==
+----
+--
+
+. If you are using a custom NPM registry, create a `.npmrc` file with the registry URL and authentication details:
++
+--
+.Example code for `.npmrc` file
+[source,text]
+----
+registry=<registry-url>
+//<registry-url>:_authToken=<auth-token>
+----
+--
+
+. When using {ocp-short} or Kubernetes:
++
+--
+* Create a secret with the `.npmrc` content as follows:
++
+.Example secret configuration
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dynamic-plugins-npmrc
+type: Opaque
+stringData:
+  .npmrc: |
+    registry=<registry-url>
+    //<registry-url>:_authToken=<auth-token>
+----
+
+* For {product-very-short} Helm chart, name the secret using the following format for automatic mounting:
++
+`<release-name>-dynamic-plugins-npmrc`
+--
+
+. To apply the changes, restart the {product-very-short} application.
