@@ -1,10 +1,6 @@
 ---
 jira:
   server: 'https://issues.redhat.com'
-product:
-  version:
-    minor_glob: 1.3.*
-    patch: 1.3
 sections:
   - id: new-features
     title: New features
@@ -16,7 +12,8 @@ sections:
       AND level is EMPTY
       AND status in (Closed, "Release Pending")
       AND "Release Note Type" in ("Feature", "Enhancement")
-      AND (fixVersion ~ "{version_minor_glob}" OR fixVersion = "{version_patch}")
+      AND fixVersion >= "{version_minor}"
+      AND fixVersion <= "{version_patch}"
       ORDER BY key
     template: without-jira-link
   - id: breaking-changes
@@ -29,7 +26,8 @@ sections:
       AND level is EMPTY
       AND status in (Closed, "Release Pending")
       AND "Release Note Type" in ("Removed Functionality")
-      AND (fixVersion ~ "{version_minor_glob}" OR fixVersion = "{version_patch}")
+      AND fixVersion >= "{version_minor}"
+      AND fixVersion <= "{version_patch}"
       ORDER BY key
     template: with-jira-link
   - id: deprecated-functionalities
@@ -42,7 +40,8 @@ sections:
       AND level is EMPTY
       AND status in (Closed, "Release Pending")
       AND "Release Note Type" in ("Deprecated Functionality")
-      AND (fixVersion ~ "{version_minor_glob}" OR fixVersion = "{version_patch}")
+      AND fixVersion >= "{version_minor}"
+      AND fixVersion <= "{version_patch}"
       ORDER BY key
     template: with-jira-link
   - id: technology-preview
@@ -63,7 +62,8 @@ sections:
       AND level is EMPTY
       AND status in (Closed, "Release Pending")
       AND "Release Note Type" in ("Developer Preview", "Technology Preview")
-      AND (fixVersion ~ "{version_minor_glob}" OR fixVersion = "{version_patch}")
+      AND fixVersion >= "{version_minor}"
+      AND fixVersion <= "{version_patch}"
       ORDER BY key
     template: with-jira-link
   - id: fixed-issues
@@ -76,9 +76,10 @@ sections:
       AND level is EMPTY
       AND status in (Closed, "Release Pending")
       AND "Release Note Type" = "Bug Fix"
-      AND (fixVersion ~ "{version_minor_glob}" OR fixVersion = "{version_patch}")
-      ORDER BY key
-    template: with-jira-link
+      AND fixVersion >= "{version_minor}"
+      AND fixVersion <= "{version_patch}"
+      ORDER BY fixVersion DESC,key
+    template: with-z-stream-section
   - id: known-issues
     title: Known issues
     description: |
@@ -88,6 +89,7 @@ sections:
       AND "Release Note Status" = "Done"
       AND level is EMPTY
       AND "Release Note Type" in ("Known Issue")
+      AND affectedVersion >= "{version_minor}"
       AND affectedVersion <= "{version_patch}"
       AND (fixVersion > "{version_patch}" OR fixVersion is EMPTY)
       ORDER BY key DESC
