@@ -1,0 +1,66 @@
+[id='proc-configure-annotations-for-aks-monitoring_{context}']
+= Configuring annotations for monitoring
+
+You can configure the annotations for monitoring {product} specific metrics in both Helm deployment and Operator-backed deployment.
+
+Helm deployment::
++
+--
+To annotate the backstage pod for monitoring, update your `values.yaml` file as follows:
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    # --- TRUNCATED ---
+    podAnnotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: '/metrics'
+      prometheus.io/port: '9464'
+      prometheus.io/scheme: 'http'
+----
+--
+
+Operator-backed deployment::
++
+--
+.Procedure
+
+. As an administrator of the operator, edit the default configuration to add Prometheus annotations as follows:
++
+[source,bash]
+----
+# Update OPERATOR_NS accordingly
+OPERATOR_NS=rhdh-operator
+kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"
+----
+
+. Find the `deployment.yaml` key in the ConfigMap and add the annotations to the `spec.template.metadata.annotations` field as follows:
++
+[source,yaml]
+----
+deployment.yaml: |-
+  apiVersion: apps/v1
+  kind: Deployment
+  # --- truncated ---
+  spec:
+    template:
+      # --- truncated ---
+      metadata:
+        labels:
+         rhdh.redhat.com/app:  # placeholder for 'backstage-<cr-name>'
+        # --- truncated ---
+        annotations:
+          prometheus.io/scrape: 'true'
+          prometheus.io/path: '/metrics'
+          prometheus.io/port: '9464'
+          prometheus.io/scheme: 'http'
+  # --- truncated ---
+----
+
+. Save your changes.
+--
+
+.Verification
+
+To verify if the scraping works, navigate to the corresponding Azure Monitor Workspace and view the metrics under *Monitoring -> Metrics*.
