@@ -1,0 +1,92 @@
+:_content-type: REFERENCE
+[id="breaking-changes"]
+= Breaking changes
+
+This section lists breaking changes in {product} {product-version}.
+
+[id="removed-functionality-rhidp-3048"]
+== The &#39;dynamic-plugins&#39; config map is named dynamically
+
+Before this update, the dynamic-plugins config map name was hardcoded.
+Therefore, it was not possible to install two {product} helm charts in the same namespace.
+
+With this update, the dynamic-plugins config map is named dynamically based on the deployment name similar to how all other components names are generated. 
+When upgrading from a previous chart you might need to manually update that section of your `values.yaml` file to pull in the correct config map.
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-3048[RHIDP-3048]
+
+[id="removed-functionality-rhidp-3074"]
+== Signing in without user in the software catalog is now disabled by default
+
+By default, it is now required for the user entity to exist in the software catalog to allow sign in. 
+This is required for production ready deployments since identities need to exist and originate from a trusted source (i.e. the Identity Provider) in order for security controls such as RBAC and Audit logging to be effective. 
+To bypass this, enable the `dangerouslySignInWithoutUserInCatalog` configuration that allows sign in without the user being in the catalog.
+Enabling this option is dangerous as it might allow unauthorized users to gain access.
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-3074[RHIDP-3074]
+
+[id="removed-functionality-rhidp-3187"]
+== {company-name} and Community Technology Preview (TP) plugins and actions are disabled by default
+
+Before this update, some {company-name} and Community Technology Preview (TP) plugins and actions were enabled by default:
+
+.Technology Preview plugins
+* @backstage-community/plugin-catalog-backend-module-scaffolder-relation-processor (changing in RHIDP-3643)
+
+.Community Support plugins
+* @backstage/plugin-scaffolder-backend-module-azure
+* @backstage/plugin-scaffolder-backend-module-bitbucket-cloud
+* @backstage/plugin-scaffolder-backend-module-bitbucket-server
+* @backstage/plugin-scaffolder-backend-module-gerrit
+* @backstage/plugin-scaffolder-backend-module-github
+* @backstage/plugin-scaffolder-backend-module-gitlab
+* @roadiehq/scaffolder-backend-module-http-request
+* @roadiehq/scaffolder-backend-module-utils
+
+With this update, all plugins included under the link:https://access.redhat.com/support/offerings/techpreview[Technology Preview scope of support], whether from {company-name} or the community, are disabled by default.
+
+.Procedure
+* If your workload requires these plugins, enable them in your custom resource or configmap using `disabled: false`. 
+
+//See https://github.com/redhat-developer/red-hat-developer-hub/blob/main/dynamic-plugins.default.yaml for examples.
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-3187[RHIDP-3187]
+
+[id="removed-functionality-rhidp-4293"]
+== Plugins with updated scope
+
+With this update, three plugins previously under the `@janus-idp` scope have moved to `@backstage-community`:
+
+[%header,cols=2*]
+|===
+|*RHDH 1.2 Plugin Name* |*RHDH 1.3 Plugin Name*
+
+| `@janus-idp/backstage-plugin-argocd`
+| `@backstage-community/plugin-redhat-argocd`
+
+| `@janus-idp/backstage-plugin-3scale-backend`
+| `@backstage-community/plugin-3scale-backend`
+
+| `@janus-idp/backstage-plugin-catalog-backend-module-scaffolder-relation-processor`
+| `@backstage-community/plugin-catalog-backend-module-scaffolder-relation-processor`
+|===
+
+As the scope of the previous plugins has been updated, the dynamic plugin configuration has also changed.
+
+[%header,cols=2*]
+|===
+|*RHDH 1.2 Configuration* |*RHDH 1.3 Configuration*
+
+| link:https://github.com/janus-idp/backstage-showcase/blob/1.2.x/dynamic-plugins.default.yaml[dynamic-plugins.default.yaml]
+| link:https://github.com/janus-idp/backstage-showcase/blob/release-1.3/dynamic-plugins.default.yaml[dynamic-plugins.default.yaml]
+|===
+
+.Procedure
+* If your workload requires plugins with an updated scope, revise your configuration to use the latest plugins from the new scope.
+
+//See https://github.com/redhat-developer/red-hat-developer-hub/blob/main/dynamic-plugins.default.yaml for examples.
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-4293[RHIDP-4293]
+
+
+
