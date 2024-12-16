@@ -121,6 +121,7 @@ for j in $jsons; do
     if [[ $Plugin != "@"* ]]; then # don't update janus-idp/backstage-plugins plugin names
         Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
             -e 's|janus/idp-|janus-idp/|' \
+            -e 's|red/hat-developer-hub-|red-hat-developer-hub/|' \
             -e 's|backstage/community-|backstage-community/|' \
             -e 's|parfuemerie/douglas-|parfuemerie-douglas/|')"
     fi
@@ -179,8 +180,9 @@ for j in $jsons; do
         # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.versions[]|(.version+", "+.gitHead)' | sort -uV
         # for timestamp when tag is created
         # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.time' | grep -v -E "created|modified|{|}" | sort -uV
+        # echo "Searching for ${Plugin/\//%2f} at npmjs.org..."
         allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
-        # echo $allVersionsPublished
+        # echo "Found $allVersionsPublished"
         # clean out any pre-release versions
         latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
         # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
@@ -197,10 +199,7 @@ for j in $jsons; do
             if [[ $keywords == *"support:production"* ]]; then
                 Support_Level="Production"
             elif [[ $keywords == *"support:tech-preview"* ]]; then
-                # mark Tech Preview wrappers as Community Supported
-                if [[ "$j" != *"/wrappers/"* ]]; then 
-                    Support_Level="Red Hat Tech Preview"
-                fi
+                Support_Level="Red Hat Tech Preview"
             fi
         fi
 
@@ -296,23 +295,32 @@ for key in "${sorted[@]}"; do
 done
 num_plugins+=(${#adoc1[@]})
 
-# RHIDP-5103 - currently no tech-preview plugins, only community. So disable this for now
 rm -f "${0/.sh/.adoc2}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc2[@]}" | sort -z)
-for key in "${sorted[@]}"; do 
-    # echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}"; 
-    echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+# shellcheck disable=SC2128
+if [[ $sorted ]] ;then 
+    for key in "${sorted[@]}"; do 
+        echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}"; 
+        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+    done
+fi
 num_plugins+=(${#adoc2[@]})
 
 rm -f "${0/.sh/.adoc3}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc3[@]}" | sort -z)
-for key in "${sorted[@]}"; do echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}"; echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+# shellcheck disable=SC2128
+if [[ $sorted ]] ;then 
+    for key in "${sorted[@]}"; do 
+        echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}"; 
+        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+    done
+fi
 num_plugins+=(${#adoc3[@]})
 
 # merge the content from the three .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
 count=1
 index=0
-for d in ref-rh-supported-plugins ref-community-plugins; do # RHIDP-5103 - remove ref-rh-tech-preview-plugins for now as everything has moved to community
+for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins; do 
     (( index = count - 1 ))
     this_num_plugins=${num_plugins[$index]}
     echo "[$count] Processing $d ..."
@@ -321,7 +329,7 @@ for d in ref-rh-supported-plugins ref-community-plugins; do # RHIDP-5103 - remov
         -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
         "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
     rm -f "$adocfile"
-    (( count = count + 2 ))
+    (( count = count + 1 ))
 done
 
 # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
