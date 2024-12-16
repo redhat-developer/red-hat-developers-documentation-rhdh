@@ -27,7 +27,7 @@ Options:
 
 Examples:
 
-  $0 -b release-1.3 --clean
+  $0 -b release-1.4 --clean
 
 EOF
 }
@@ -297,16 +297,24 @@ num_plugins+=(${#adoc1[@]})
 
 rm -f "${0/.sh/.adoc2}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc2[@]}" | sort -z)
-for key in "${sorted[@]}"; do 
-    echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}"; 
-    echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+# shellcheck disable=SC2128
+if [[ $sorted ]] ;then 
+    for key in "${sorted[@]}"; do 
+        echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}"; 
+        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+    done
+fi
 num_plugins+=(${#adoc2[@]})
 
 rm -f "${0/.sh/.adoc3}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc3[@]}" | sort -z)
-for key in "${sorted[@]}"; do 
-    echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}"; 
-    echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"; done
+# shellcheck disable=SC2128
+if [[ $sorted ]] ;then 
+    for key in "${sorted[@]}"; do 
+        echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}"; 
+        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+    done
+fi
 num_plugins+=(${#adoc3[@]})
 
 # merge the content from the three .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
