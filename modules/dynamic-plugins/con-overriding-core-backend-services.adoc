@@ -1,0 +1,101 @@
+[id="overriding-core-backend-services_{context}"]
+= Overriding Core Backend Service Configuration
+
+The {product} ({product-very-short}) backend platform consists of a number of core services that are well encapsulated. The {product-very-short} backend installs these default core services statically during initialization. 
+
+You can configure these core services by customizing the backend source code and rebuilding your {product-short} application. Alternatively, you can customize a core service by installing it as a `BackendFeature` by using dynamic plugin functionality.
+
+To use the dynamic plugin functionality to customize a core service in your RHDH application, you must configure the backend to avoid statically installing a given default core service.
+
+For example, adding a middleware function to handle all incoming requests can be done by installing a custom `configure` function for the root `HTTP` router backend service which allows access to the underlying Express application.
+
+.Example of a `BackendFeature` middleware function to handle incoming `HTTP` requests
+
+[source,javascript]
+----
+// Create the BackendFeature
+export const customRootHttpServerFactory: BackendFeature =
+  rootHttpRouterServiceFactory({
+    configure: ({ app, routes, middleware, logger }) => {
+      logger.info(
+        'Using custom root HttpRouterServiceFactory configure function',
+      );
+      app.use(middleware.helmet());
+      app.use(middleware.cors());
+      app.use(middleware.compression());
+      app.use(middleware.logging());
+      // Add a the custom middleware function before all
+      // of the route handlers
+      app.use(addTestHeaderMiddleware({ logger }));
+      app.use(routes);
+      app.use(middleware.notFound());
+      app.use(middleware.error());
+    },
+  });
+
+// Export the BackendFeature as the default entrypoint
+export default customRootHttpServerFactory;
+----
+
+In the above example, as the `BackendFeature` overrides the default implementation of the HTTP router service, you must set the `ENABLE_CORE_ROOTHTTPROUTER_OVERRIDE` environment variable to `true` so that the {product-short} does not install the default implementation automatically.
+
+== Overriding environment variables
+To allow a dynamic plugin to load a core service override, you must start the {product-short} backend with the corresponding core service ID environment variable set to `true`.
+
+.Environment variables and core service IDs
+[cols="50%,50%", frame="all", options="header"]
+|===
+|Variable
+|Description
+
+|`ENABLE_CORE_AUTH_OVERRIDE`
+|Override the `core.auth` service
+
+| `ENABLE_CORE_CACHE_OVERRIDE` 
+| Override the `core.cache` service
+
+| `ENABLE_CORE_ROOTCONFIG_OVERRIDE` 
+| Override the `core.rootConfig` service
+
+| `ENABLE_CORE_DATABASE_OVERRIDE` 
+| Override the `core.database` service
+
+| `ENABLE_CORE_DISCOVERY_OVERRIDE` 
+| Override the `core.discovery` service
+
+| `ENABLE_CORE_HTTPAUTH_OVERRIDE` 
+| Override the `core.httpAuth` service
+
+| `ENABLE_CORE_HTTPROUTER_OVERRIDE` 
+| Override the `core.httpRouter` service
+
+| `ENABLE_CORE_LIFECYCLE_OVERRIDE` 
+| Override the `core.lifecycle` service
+
+| `ENABLE_CORE_LOGGER_OVERRIDE` 
+| Override the `core.logger` service
+
+| `ENABLE_CORE_PERMISSIONS_OVERRIDE` 
+| Override the `core.permissions` service
+
+| `ENABLE_CORE_ROOTHEALTH_OVERRIDE` 
+| Override the `core.rootHealth` service
+
+| `ENABLE_CORE_ROOTHTTPROUTER_OVERRIDE` 
+| Override the `core.rootHttpRouter` service
+
+| `ENABLE_CORE_ROOTLIFECYCLE_OVERRIDE` 
+| Override the `core.rootLifecycle` service
+
+| `ENABLE_CORE_SCHEDULER_OVERRIDE` 
+| Override the `core.scheduler` service
+
+| `ENABLE_CORE_USERINFO_OVERRIDE` 
+| Override the `core.userInfo` service
+
+| `ENABLE_CORE_URLREADER_OVERRIDE` 
+| Override the `core.urlReader` service
+
+| `ENABLE_EVENTS_SERVICE_OVERRIDE` 
+| Override the `events.service` service
+|===
