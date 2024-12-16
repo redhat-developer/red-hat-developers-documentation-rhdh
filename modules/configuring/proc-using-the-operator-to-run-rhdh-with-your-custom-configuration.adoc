@@ -1,0 +1,206 @@
+[id="using-the-operator-to-run-rhdh-with-your-custom-configuration"]
+= Using the {product} operator to run {product-short} with your custom configuration
+
+To use the {product-short} operator to run {product} with your custom configuration, create a {product-custom-resource-type} custom resource that:
+
+* Mounts files provisioned in your custom config maps.
+* Injects environment variables provisioned in your custom secrets.
+
+.Prerequisites
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
+* link:{installing-on-ocp-book-url}[Your {ocp-short} administrator has installed the {product} Operator in {ocp-short}].
+* xref:provisioning-your-custom-configuration[You have provisioned your custom config maps and secrets in your `_<{my-product-namespace}>_` project].
+
+.Procedure
+
+. Author your {product-custom-resource-type} custom resource in a `{my-product-cr-name}.yaml` file to use your custom config maps and secrets.
++
+.Minimal `{my-product-cr-name}.yaml` custom resource example
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: {my-product-cr-name}
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: {my-app-config-config-map}
+    extraEnvs:
+      secrets:
+         - name: {my-product-secrets}
+    extraFiles:
+      mountPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true
+----
+====
++
+.`{my-product-cr-name}.yaml` custom resource example with dynamic plugins and RBAC policies config maps, and external PostgreSQL database secrets.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: _<{my-product-cr-name}>_
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: {my-app-config-config-map}
+         - name: rbac-policies
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+      secrets:
+         - name: {my-product-secrets}
+         - name: {my-product-database-secrets}
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: {my-product-database-certificates-secrets}
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: false
+----
+====
+
+Mandatory fields::
+
+No fields are mandatory.
+You can create an empty {product-custom-resource-type} custom resource
+and run {product-short} with the default configuration.
+
+Optional fields::
+
+`spec.application.appConfig.configMaps`:::
+Enter your config map name list.
++
+.Mount files in the `{my-app-config-config-map}` config map.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: {my-app-config-config-map}
+----
+====
++
+.Mount files in the `{my-app-config-config-map}` and `rbac-policies` config maps.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: {my-app-config-config-map}
+         - name: rbac-policies
+----
+====
+
+`spec.application.extraEnvs.envs`:::
+Optionally, enter your additional environment variables that are not secrets, such as xref:proc-configuring-proxy-in-operator-deployment_running-behind-a-proxy[your proxy environment variables].
++
+.Inject your `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` environment variables.
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraEnvs:
+      envs:
+        - name: HTTP_PROXY
+          value: 'http://10.10.10.105:3128'
+        - name: HTTPS_PROXY
+          value: 'http://10.10.10.106:3128'
+        - name: NO_PROXY
+          value: 'localhost,example.org'
+----
+====
+
+`spec.application.extraEnvs.secrets`:::
+Enter your environment variables secret name list.
++
+.Inject the environment variables in your `{my-product-secrets}` secret
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraEnvs:
+      secrets:
+         - name: {my-product-secrets}
+----
+====
++
+.Inject the envvironment variables in the `{my-product-secrets}` and `{my-product-database-secrets}` secrets
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraEnvs:
+      secrets:
+         - name: {my-product-secrets}
+         - name: {my-product-database-secrets}
+----
+====
+
+`spec.application.extraFiles.secrets`:::
+Enter your certificates files secret name and files list.
++
+.Mount the `postgres-crt.pem`, `postgres-ca.pem`, and `postgres-key.key` files contained in the `{my-product-database-certificates-secrets}` secret
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: {my-product-database-certificates-secrets}
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
+----
+
+`spec.database.enableLocalDb`:::
+Enable or disable the local PostgreSQL database.
++
+.Disable the local PostgreSQL database generation to use an external postgreSQL database
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  database:
+    enableLocalDb: false
+----
++
+.On a development environment, use the local PostgreSQL database
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  database:
+    enableLocalDb: true
+----
+
+`spec.deployment`:::
+Optionally, xref:configuring-the-deployment[enter your deployment configuration].
+
+. Apply your {product-custom-resource-type} custom resource to start or update your {product-short} instance.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc apply --filename={my-product-cr-name}.yaml --namespace={my-product-namespace}
+----

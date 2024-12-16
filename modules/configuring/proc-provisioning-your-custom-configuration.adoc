@@ -1,0 +1,71 @@
+[id="provisioning-your-custom-configuration"]
+= Provisioning your custom {product} configuration
+
+To configure {product}, provision your custom {product} config maps and secrets to {ocp-brand-name} before running {product}.
+
+[TIP]
+====
+You can skip this step to run {product-short} with the default config map and secret.
+Your changes on this configuration might get reverted on {product-short} restart.
+====
+
+.Prerequisites
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
+
+.Procedure
+. Author your custom `{my-product-secrets}.txt` file to provision your secrets as environment variables values in an {ocp-short} secret, rather than in clear text in your configuration files.
+It contains one secret per line in `KEY=value` form.
++
+* link:{authentication-book-url}[Enter your authentication secrets].
+
+. Author your custom `{my-app-config-file}` file.
+This is the main {product-short} configuration file.
++
+You can start with an empty file to use the default configuration.
++
+Optionally, enter your configuration such as:
+
+* link:{authentication-book-url}[{authentication-book-title}].
+* link:{authorization-book-url}[{authorization-book-title}].
+* link:{customizing-book-url}[Customization].
+* xref:proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_running-behind-a-proxy[Configure your {ocp-short} integration].
+
+. Provision your custom configuration files to your {ocp-short} cluster.
+
+.. Create the _<{my-product-namespace}>_ project aimed at containing your {product-short} instance.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc create namespace {my-product-namespace}
+----
++
+Alternatively, link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/building_applications/index#creating-a-project-using-the-web-console_projects[create the project by using the web console].
+
+.. Provision your `{my-app-config-file}` file to the `{my-app-config-config-map}` config map in the _<{my-product-namespace}>_ project.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc create configmap {my-app-config-config-map} --from-file={my-app-config-file} --namespace={my-product-namespace}
+----
++
+Alternatively, link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps[create the config map by using the web console].
+
+.. Provision your `{my-product-secrets}.txt` file to the `{my-product-secrets}` secret in the _<{my-product-namespace}>_ project.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc create secret generic {my-product-secrets} --from-file={my-product-secrets}.txt --namespace={my-product-namespace}
+----
++
+Alternatively,
+link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets[create the secret by using the web console].
+
+.Next steps
+Consider provisioning additional config maps and secrets:
+
+* To use an external PostgreSQL database, xref:configuring-external-postgresql-databases[provision your PostgreSQL database secrets].
+
+
+* To enable dynamic plugins, link:{installing-and-viewing-dynamic-plugins-url}[provision your dynamic plugins config map].
+
+* To configure authorization by using external files, link:{authorization-book-url}#managing-authorizations-by-using-external-files[provision your RBAC policies config map].
