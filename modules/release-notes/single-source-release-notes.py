@@ -13,109 +13,93 @@ $ pip3 install --requirement requirements.txt
 Generate the AsciiDoc files for the release notes and known issues from JIRA content.
 """
 import glob
-import jinja2
 import os
+import re
+
+import jinja2
 import yaml
 from jira import JIRA
+from setuptools.dist import sequence
 
 # Define location for product attributes, templates, and generated files.
-root_dir = os.path.normpath(
+script_dir = os.path.normpath(
   os.path.normpath(
     os.path.dirname(
       __file__
     )
-  ) + '/../..'
+  )
 )
-product_attributes = root_dir + '/artifacts/product-attributes.adoc'
-templates_dir = root_dir + '/build/templates/'
-assemblies_dir = root_dir + '/assemblies/'
-modules_dir = root_dir + '/modules/release-notes/'
+root_dir = os.path.normpath(script_dir + '/../..')
+attributes_file = root_dir + '/artifacts/attributes.adoc'
+config_file = script_dir + '/single-source-release-notes.jira2asciidoc.yml'
+asciidoc_modules_dir = script_dir
 # Load Jinja2 templates.
 env = jinja2.Environment(
   loader=jinja2.FileSystemLoader(
-    templates_dir
-  )
-)
-# Load configuration file
-with open(
-  modules_dir + '/single-source-release-notes.jira2asciidoc.yml',
-  'r'
-) as file:
+    asciidoc_modules_dir
+  ), autoescape=True)
+
+# Load attributes.adoc to get the product version (y-stream and z-stream).
+with open(attributes_file) as file:
+  attributes = {}
+  for lines in file:
+    if re.search(':', lines):
+      items = lines.rsplit(':', 2)
+      attributes[items[1]] = items[2].strip()
+
+product_version_minor = attributes["product-version"]
+product_version_patch = attributes["product-bundle-version"]
+
+# Load the configuration file to get the sections and their Jira queries.
+with open(config_file) as file:
   config = yaml.safe_load(file)
-# Load AsciiDoc attributes.
-product_version_minor_glob = config['product']['version']['minor_glob']
-product_version_patch = config['product']['version']['patch']
-# Configure access to Jira using kerberos
+# Configure access to Jira using kerberos if defined.
 jira = JIRA(
   server=config['jira']['server'],
   token_auth=os.environ.get(
     'JIRA_TOKEN'
   )
 )
-# Delete old file files.
+
+# Delete old snip files.
 fileList = glob.glob(
-  modules_dir + 'snip-*-rhidp-*.adoc'
+  asciidoc_modules_dir + '/snip-*-rhidp-*.adoc'
 )
 for filePath in fileList:
   os.remove(filePath)
-# Generate the release notes and known issues assemblies and files
+
+# Generate the release notes and known issues asciidoc and files
 for section in config['sections']:
   # Search in Jira for issues to publish defined in jira_query
   query = section["query"].format(
-    version_minor_glob=product_version_minor_glob,
+    version_minor=product_version_minor,
     version_patch=product_version_patch
   )
   print(query)
   issues = jira.search_issues(query)
-  # Create the assembly file
-  assembly_file = open(
-    assemblies_dir + 'assembly-release-notes-' + section["id"] + '.adoc',
+  # Create the asciidoc file
+  asciidoc_file = open(
+    asciidoc_modules_dir + '/ref-release-notes-' + section["id"] + '.adoc',
     'w'
   )
-  assembly_template = env.get_template(
-    'assembly.adoc.jinja'
+  asciidoc_template = env.get_template(
+    'single-source-release-notes-template.adoc.jinja'
   )
   print(
-    assembly_template.render(
-      assembly_id=section["id"],
-      assembly_title=section["title"],
-      assembly_introduction=section["description"],
+    asciidoc_template.render(
+      id=section["id"],
+      title=section["title"],
+      introduction=section["description"],
       vars=issues,
+      template=section["template"]
     ),
-    file=assembly_file
+    file=asciidoc_file
   )
-  # Create the file files
-  for issue in issues:
-    # Collect values from these fields:
-    issue_key = format(issue.key)  # Issue id
-    issue_rn_status = format(issue.fields.customfield_12310213)  # Release Note Status
-    issue_rn_text = format(issue.fields.customfield_12317313)  # Release Note Text
-    issue_rn_type = format(issue.fields.customfield_12320850)  # Release Note Type
-    issue_template = section["template"]
-    issue_title = format(issue.fields.summary)  # Issue title
-    # Define AsciiDoc file id, file, and content
-    file_id = format(issue_rn_type + "-" + issue_key).lower().replace(" ", "-")
-    snippet_file = open(
-      modules_dir + 'snip-' + file_id + '.adoc',
-      'w'
-    )
-    snippet_template = env.get_template(
-      'snippet-' + issue_template + '.adoc.jinja2'
-    )
-    print(
-      snippet_template.render(
-        id=file_id,
-        key=issue_key,
-        text=issue_rn_text,
-        title=issue_title,
-      ),
-      file=snippet_file
-    )
 # Report final status
 print(
   'INFO: Single-sourced release notes from Jira for version {version} in {dir}'
   .format(
     version=product_version_patch,
-    dir=modules_dir
+    dir=asciidoc_modules_dir
   )
 )

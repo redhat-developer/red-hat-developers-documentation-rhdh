@@ -1,0 +1,63 @@
+:_content-type: REFERENCE
+[id="deprecated-functionalities"]
+= Deprecated functionalities
+
+This section lists deprecated functionalities in {product} {product-version}.
+
+[id="deprecated-functionality-rhidp-1138"]
+== `spec.application.image`, `spec.application.replicas` and `spec.application.imagePullSecrets` fields are deprecated
+
+`spec.application.image`, `spec.application.replicas` and `spec.application.imagePullSecrets` fields are deprecated in `v1alpha2` in favour of `spec.deployment`. 
+
+Procedure:
+
+To update your {product-short} Operation configuration:
+
+. Remove the `spec.application.image`, `spec.application.replicas` and `spec.application.imagePullSecrets` fields from the Operator configuration:
++
+[source,yaml]
+----
+spec:
+  application:
+    replicas: 2 # &lt;1&gt;
+    imagePullSecrets: # &lt;2&gt;
+      - my-secret-name
+    image: quay.io/my/my-rhdh:latest # &lt;3&gt;
+----
+&lt;1&gt; Replica count.
+&lt;2&gt; Array of image pull secrets names.
+&lt;3&gt; Image name.
+
+
+. Replace the removed fields by new `spec.deployment` fields, such as:
++
+[source,yaml]
+----
+spec:
+  deployment:
+    patch:
+      spec:
+        replicas: 2 # &lt;1&gt;
+        imagePullSecrets: # &lt;2&gt;
+          - name: my-secret-name
+        template:
+          metadata:
+            labels:
+              my: true
+          spec:
+            containers:
+              - name: backstage-backend
+                image: quay.io/my/my-rhdh:latest # &lt;3&gt;
+----
+&lt;1&gt; Replica count.
+&lt;2&gt; Array of image pull secrets names.
+&lt;3&gt; Image name.
+
+// https://github.com/redhat-developer/rhdh-operator/blob/main/docs/configuration.md#deployment-parameters
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-1138[RHIDP-1138]
+
+
+
