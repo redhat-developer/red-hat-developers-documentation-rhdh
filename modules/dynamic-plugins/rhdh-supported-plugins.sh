@@ -121,6 +121,7 @@ for j in $jsons; do
     if [[ $Plugin != "@"* ]]; then # don't update janus-idp/backstage-plugins plugin names
         Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
             -e 's|janus/idp-|janus-idp/|' \
+            -e 's|red/hat-developer-hub-|red-hat-developer-hub/|' \
             -e 's|backstage/community-|backstage-community/|' \
             -e 's|parfuemerie/douglas-|parfuemerie-douglas/|')"
     fi
@@ -179,8 +180,9 @@ for j in $jsons; do
         # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.versions[]|(.version+", "+.gitHead)' | sort -uV
         # for timestamp when tag is created
         # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.time' | grep -v -E "created|modified|{|}" | sort -uV
+        # echo "Searching for ${Plugin/\//%2f} at npmjs.org..."
         allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
-        # echo $allVersionsPublished
+        # echo "Found $allVersionsPublished"
         # clean out any pre-release versions
         latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
         # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
