@@ -17,6 +17,19 @@
 
 .Procedure
 
+. Create an Image Pull Secret named `rhdh-pull-secret` using your Red Hat credentials to access images from the protected `registry.redhat.io` as shown in the following example:
++
+--
+[source,bash]
+----
+kubectl -n <your_namespace> create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<redhat_user_name> \
+    --docker-password=<redhat_password> \
+    --docker-email=<email>
+----
+--
+
 . Create a ConfigMap named `app-config-rhdh` containing the {product-short} configuration using the following template:
 +
 --
@@ -44,15 +57,15 @@ data:
 ----
 --
 
-. Create a Secret named `secrets-rhdh` and add a key named `BACKEND_SECRET` with a `Base64-encoded` string as value:
+. Create a Secret named `{my-product-secrets}` and add a key named `BACKEND_SECRET` with a `Base64-encoded` string as value:
 +
 --
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: v1
 kind: Secret
 metadata:
-  name: secrets-rhdh
+  name: {my-product-secrets}
 stringData:
   # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup
   BACKEND_SECRET: "xxx"
@@ -67,7 +80,7 @@ You can use the following command to generate a key:
 
 [source,terminal]
 ----
-node-p'require("crypto").randomBytes(24).toString("base64")'
+node -p 'require("crypto").randomBytes(24).toString("base64")'
 ----
 --
 
@@ -85,9 +98,9 @@ kubectl patch serviceaccount default \
 . Create a Custom Resource file using the following template:
 +
 --
-[source,yaml,subs="attributes+"]
+[source,yaml,subs="+attributes,+quotes"]
 ----
-apiVersion: rhdh.redhat.com/v1alpha1
+apiVersion: rhdh.redhat.com/v1alpha3
 kind: Backstage
 metadata:
  # TODO: this the name of your {product-short} instance
@@ -103,7 +116,7 @@ spec:
         - name: "app-config-rhdh"
     extraEnvs:
       secrets:
-        - name: "secrets-rhdh"
+        - name: {my-product-secrets}
 ----
 --
 
