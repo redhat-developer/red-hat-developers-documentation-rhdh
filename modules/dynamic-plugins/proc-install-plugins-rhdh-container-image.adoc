@@ -1,0 +1,42 @@
+[id="proc-install-plugins-rhdh-container-image_{context}"]
+= Installing plugins included in {product-very-short} container image
+
+In the {product-very-short} container image, a set of dynamic plugins is pre-loaded to enhance functionality. However, due to mandatory configuration requirements, most of the plugins are disabled.
+
+You can activate and configure the plugins in the {product-very-short} container image, including how to manage the default configuration, set necessary environment variables, and ensure the proper functionality of the plugins within your application.
+
+.Prerequisites
+* You have access to the link:https://github.com/janus-idp/backstage-showcase/blob/main/dynamic-plugins.default.yaml[`dynamic-plugins.default.yaml`] file, which lists all preloaded plugins.
+* You have deployed the {product-very-short} application, and have access to the logs of the `install-dynamic-plugins` init container.
+* You have the necessary permissions to modify plugin configurations and access the application environment.
+* You have identified and set the required environment variables referenced by the plugin's default configuration. These environment variables must be defined in the Helm Chart or Operator configuration.
+
+.Procedure
+. Locate the link:https://github.com/janus-idp/backstage-showcase/blob/main/dynamic-plugins.default.yaml[`dynamic-plugins.default.yaml`] file in your setup.
+. Start your {product-very-short} application and access the logs of the `install-dynamic-plugins` init container within the {product-very-short} pod.
+. Look for log entries indicating plugins that are disabled by default. For example:
++
+--
+.Example log entry for a disabled plugin
+[source,sql]
+----
+======= Skipping disabled dynamic plugin ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
+----
+--
+. Open the plugin configuration file and locate the plugin entry you want to activate.
+. Modify the `disabled` field to `false` and specify the package name as follows:
++
+--
+.Example plugin configuration
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
+----
+--
+. Optional: Replace the default plugin configuration from the `dynamic-plugins.default.yaml` file by adding a `pluginConfig` entry to the plugin configuration file.
+
+.Verification
+. Restart the {product-very-short} application and verify that the plugin is successfully activated and configured.
+. Verify the application logs for confirmation and ensure the plugin is functioning as expected.
