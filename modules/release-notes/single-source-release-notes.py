@@ -48,6 +48,7 @@ with open(attributes_file) as file:
       attributes[items[1]] = items[2].strip()
 
 product_version_minor = attributes["product-version"]
+product_version_next = attributes["product-version-next"]
 product_version_patch = attributes["product-bundle-version"]
 # Until 1.4 at least, Jira has no z-stream 0. Use the y-stream instead.
 if re.search('.0$',product_version_patch):
@@ -76,9 +77,10 @@ for section in config['sections']:
   # Search in Jira for issues to publish defined in jira_query
   query = section["query"].format(
     version_minor=product_version_minor,
-    version_patch=product_version_patch
+    version_patch=product_version_patch,
+    version_next=product_version_next
   )
-  print(query)
+  print(section["title"] + " :: " + query)
   issues = jira.search_issues(query)
   # Create the asciidoc file
   asciidoc_file = open(
