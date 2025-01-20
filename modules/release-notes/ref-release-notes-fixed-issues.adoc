@@ -4,6 +4,46 @@
 
 This section lists issues fixed in {product} {product-version}.
 
+== Fixed issues in 1.4.1
+
+[id="bug-fix-rhidp-4687"]
+=== Updating Channel does not trigger an Operator Update
+
+Administrators may encounter problems updating {product-short} across channels. As a workaround, to upgrade across channels:
+
+* Delete the {product-very-short} Operator subscription. Do not delete the operands.
+* Create a new subscription pointing to the new channel (`fast` or `fast-1.4`), using the latest CSV.
+* When you install the new operator, the existing Backstage objects will be upgraded.
+
+[NOTE]
+If plugin names or configuration requirements have been changed, you may need to update your application configuration. See link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html-single/release_notes/index#feature-rhidp-4853[Plugins with updated scope].
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-4687[RHIDP-4687]
+
+
+[id="bug-fix-rhidp-5308"]
+=== notification backend and catalog backend gitlab org failing to load with MODULE_NOT_FOUND
+
+In the previous version of {product-short}, the GitLab Org catalog backend plugin (`plugin-catalog-backend-module-gitlab-org`)and the Notification backend plugin (`plugin-notifications-backend`) fail to load when configured with a `MODULE_NOT_FOUND` error.  This has been fixed by embedding the  missing dependencies in the dynamic plugins.
+
+See similar issue https://issues.redhat.com/browse/RHIDP-5319
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5308[RHIDP-5308]
+
+
+[id="bug-fix-rhidp-5411"]
+=== RHDH fails on table lock when deploying using RHDH Operator 1.4
+
+In the previous version,  operator deployment could fail due to a database table lock. This is fixed in 1.4.1.
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5411[RHIDP-5411]
+
 == Fixed issues in 1.4
 
 [id="bug-fix-rhidp-2727"]
@@ -12,6 +52,7 @@ This section lists issues fixed in {product} {product-version}.
 Previously, the GitHub issues plugin defaulted to using the first GitHub integration it detected for all components. This behavior made it incompatible with setups involving multiple GitHub integration hosts.
 
 Now, GitHub issues plugin supports multiple GitHub integration hosts. It uses the well-known entity slug annotation `backstage.io/source-location` or `backstage.io/managed-by-location` to determine the appropriate GitHub integration for a component. If no integration matches the slug, the first GitHub integration is selected, maintaining the previous behavior.
+
 
 
 .Additional resources
@@ -60,6 +101,7 @@ With this update, disabling the RBAC backend plugin no longer creates roles and 
 Before this update, repositories were added to the {product-short} from various sources, such as `app-config` files or GitHub discovery. The Bulk Import plugin only tracked repositories accessible using the configured GitHub integrations. When both plugins were enabled, repositories discovered by GitHub Discovery appeared on Bulk Import pages. However, deleting these repositories from Bulk Import Jobs had no effect, as entities from discovery or `app-config.yaml` file remained in the {product-short} catalog.
 
 With this update, an alert on the deletion icon notifies the user to modify the source (either the `catalog-info` within the repository or the `app-config.yaml` file if the file originates from there) to remove the catalog entity.
+
 
 
 .Additional resources
@@ -117,9 +159,9 @@ With this update, RBAC roles are now properly synced across all pods, with Redis
 [id="bug-fix-rhidp-5014"]
 === `export-dynamic-plugin` fails to find dependencies nested deeper than one level in `node_modules`
 
-Previously, the CLI examined the dependencies of embedded packages during the export process to know if other packages should be embedded. One of the methods was calling {{require}} when the CLI encountered a built embedded package, which was the case when wrapping an existing plugin.
+Previously, the CLI examined the dependencies of embedded packages during the export process to know if other packages should be embedded. One of the methods was calling `require` when the CLI encountered a built embedded package, which was the case when wrapping an existing plugin. 
 
-This update changes the parent directory that the {{require}} uses from the monorepo root to the embedded package. Therefore, the dependent package found is the dependency that is most relevant to the embedded package.
+This update changes the parent directory that the `require` uses from the monorepo root to the embedded package. Therefore, the dependent package found is the dependency that is most relevant to the embedded package.
 
 
 .Additional resources
@@ -129,7 +171,7 @@ This update changes the parent directory that the {{require}} uses from the mono
 [id="bug-fix-rhidp-5062"]
 === `suppress-native-package` and `allow-native-package` flags to handle native modules
 
-Previously, the CLI failed with a message that native modules are not supported.
+Previously, the CLI failed with a message that native modules are not supported.  
 
 This update introduces two new CLI flags that help dynamic plugin developers handle native modules. Both flags accept a list of packages. The `--suppress-native-package` flag does not require the native module at runtime. It replaces the native module with an empty package that displays an error. The `--allow-native-package` flag instructs the CLI to allow the native package during checks, and tests a plugin that uses a native module.
 
@@ -158,7 +200,7 @@ With this update, users can select texts when reporting a documentation (TechDoc
 
 Previously, the `export-dynamic-plugin` failed with an error that the `stdout maxBuffer` length was exceeded.
 
-With this update, the CLI redirects the output of the {{yarn install}} command it performs during the export process to a file. Therefore, a successful completion of the {{yarn install}} command and verification of the `export-dynamic-plugin`, cleans up the file. The file is available for troubleshooting when the dynamic plugin validation checks fail.
+With this update, the CLI redirects the output of the `yarn install` command it performs during the export process to a file. Therefore, a successful completion of the `yarn install` command and verification of the `export-dynamic-plugin`, cleans up the file. The file is available for troubleshooting when the dynamic plugin validation checks fail.
 
 
 .Additional resources
@@ -170,7 +212,7 @@ With this update, the CLI redirects the output of the {{yarn install}} command i
 
 Previously, exporting a plugin that has not been updated to a newer backstage version failed due to a semver check performed on dependencies of the dynamic plugin package.
 
-With this update, an `--ignore-version-check` flag accepts a list of package names causing the CLI to selectively ignore the semver check the CLI performs when evaluating the plugin package dependencies. Therefore, a plugin that has not been updated works because it relies on unchanged interfaces and functions.
+With this update, an `--ignore-version-check` flag accepts a list of package names causing the CLI to selectively ignore the semver check the CLI performs when evaluating the plugin package dependencies. Therefore, a plugin that has not been updated works because it relies on unchanged interfaces and functions. 
 
 
 .Additional resources
