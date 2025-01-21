@@ -139,7 +139,7 @@ for j in $jsons; do
 
     # echo "Path = $Path" 
     # shellcheck disable=SC2016
-    found_in_default_config1=$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml)
+    found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml)
     # shellcheck disable=SC2016
     found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' /tmp/backstage-showcase/dynamic-plugins.default.yaml)
     # echo "[DEBUG] default configs:"
