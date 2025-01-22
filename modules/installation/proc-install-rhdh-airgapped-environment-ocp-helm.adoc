@@ -2,13 +2,13 @@
 // no assembly
 
 [id="proc-install-rhdh-airgapped-environment-ocp-helm_{context}"]
-= Installing {product} in an air-gapped environment with the Helm Chart
+= Installing {product} in an air-gapped environment with the Helm chart
 
-An air-gapped environment, also known as an air-gapped network or isolated network, ensures security by physically segregating the system or network. This isolation is established to prevent unauthorized access, data transfer, or communication between the air-gapped system and external sources.
+You can install {product} in a fully disconnected or partially disconnected environment using the {product} Helm chart.
 
-You can install {product} in an air-gapped environment to ensure security and meet specific regulatory requirements.
+== Installing {product} in a partially disconnected environment with the Helm chart
 
-To install {product-short} in an air-gapped environment, you must have access to the `registry.redhat.io` and the registry for the air-gapped environment.
+If your network has access to the internal {company-name} registries, you can deploy your {product} instance in your partially disconnected environment by mirroring the specified resources directly to the target registry.
 
 .Prerequisites
 
@@ -21,15 +21,14 @@ To install {product-short} in an air-gapped environment, you must have access to
 * You have an account in https://developers.redhat.com/[{rhdeveloper-name}] portal.
 
 .Procedure
-
-. Log in to your {ocp-short} account using the {openshift-cli}, by running the following command:
+. Log in to your {ocp-short} account using the {openshift-cli} by running the following command:
 +
 [source,terminal]
 ----
 oc login -u <user> -p <password> https://api.<hostname>:6443
 ----
 
-. Log in to the {ocp-short} image registry using the `podman` command line tool, by running the following command:
+. Log in to the {ocp-short} image registry using the `podman` command line tool by running the following command:
 +
 [source,terminal]
 ----
@@ -58,11 +57,95 @@ podman login -u kubeadmin -p $(oc whoami -t) $REGISTRY_HOST
 podman login registry.redhat.io
 ----
 +
-For more information about registry authentication, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
-
 . Create an `ImageSetConfiguration` file to specify the resources that you want to mirror. For example:
 +
+[source,terminal]
+----
+apiVersion: mirror.openshift.io/v1alpha2
+kind: ImageSetConfiguration
+storageConfig:
+  local:
+    path: ./mirror-output
+mirror:
+  helm:
+    repositories:
+      - name: openshift-charts
+        url: https://charts.openshift.io
+        charts:
+          - name: redhat-developer-hub
+            version: "{product-version}"
+----
+. Mirror the resources specified in the`ImageSetConfiguration` file directly to the target registry by running the following command:
++
+[source,terminal]
+----
+oc-mirror --config=mirror-config.yaml file://mirror-archive
+----
+. In your air-gapped environment, deploy the Helm chart to the `rhdh` namespace by running the `helm install` command. For example:
++
+[source,terminal,subs="attributes+"]
+----
+helm install rhdh ./mirror-archive/oc-mirror-workspace/src/charts/redhat-developer-hub-{product-version}.tgz --namespace rhdh --create-namespace
+----
 
+.Verification
+. To verify that all resources are successfully deployed and running, check the status of your deployments and pods in the cluster.
+. To validate the route, ensure that the route matches the expected URL based on the router base of the cluster.
+.. If necessary, update the route to align with your expected configuration.
+
+== Installing {product} in a fully disconnected environment with the Helm chart
+
+You can use the Helm chart to install {product} by mirroring specified resources and transferring them to your air-gapped environment without any connection to the internet.
+
+.Prerequisites
+
+* You have installed {ocp-brand-name} {ocp-version-min} or later.
+* You have access to the `registry.redhat.io`.
+* You have access to the {ocp-brand-name} image registry for your cluster. For more information about exposing the image registry, see the {ocp-brand-name} documentation about https://docs.openshift.com/container-platform/{ocp-version}/registry/securing-exposing-registry.html[Exposing the registry].
+* You have installed the {openshift-cli} on your workstation.
+* You have installed the `podman` command line tools on your workstation.
+* You have installed the oc-mirror {openshift-cli} plugin, for more information see https://docs.openshift.com/container-platform/4.17/disconnected/mirroring/installing-mirroring-disconnected.html#installation-oc-mirror-installing-plugin_installing-mirroring-disconnected[Installing the oc-mirror OpenShift CLI plugin].
+* You have an account in https://developers.redhat.com/[{rhdeveloper-name}] portal.
+
+.Procedure
+
+. Log in to your {ocp-short} account using the {openshift-cli} by running the following command:
++
+[source,terminal]
+----
+oc login -u <user> -p <password> https://api.<hostname>:6443
+----
+
+. Log in to the {ocp-short} image registry using the `podman` command line tool by running the following command:
++
+[source,terminal]
+----
+podman login -u kubeadmin -p $(oc whoami -t) default-route-openshift-image-registry.<hostname>
+----
++
+[NOTE]
+====
+You can run the following commands to get the full host name of the {ocp-short} image registry, and then use the host name in a command to log in:
+
+[source,terminal]
+----
+REGISTRY_HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+----
+
+[source,terminal]
+----
+podman login -u kubeadmin -p $(oc whoami -t) $REGISTRY_HOST
+----
+====
+
+. Log in to the `registry.redhat.io` in `podman` by running the following command:
++
+[source,terminal]
+----
+podman login registry.redhat.io
+----
++
+. Create an `ImageSetConfiguration` file to specify the resources that you want to mirror. For example:
 +
 [source,terminal]
 ----
@@ -92,20 +175,24 @@ oc-mirror --config=mirror-config.yaml file://mirror-archive
 ----
 scp ./mirror-archive/mirror_seq1_000000.tar /tmp
 ----
-. Extract the contents of the archive into a directory by running the following command:
+. Extract the contents of the archive into a directory (for example, `/tmp`) by running the `tar` command. For example:
 +
 [source,terminal]
 ----
 tar -xvf /mirror-archive/mirror_seq1_000000.tar -C /tmp
 ----
-. Deploy the Helm chart in the air-gapped environment by running the following command:
+. In your air-gapped environment, deploy the Helm chart to the `rhdh` namespace by running the `helm install` command. For example:
 +
-[source,terminal]
+[source,terminal,subs="attributes+"]
 ----
-helm install rhdh ./mirror-archive/oc-mirror-workspace/src/charts/redhat-developer-hub-1.4.1.tgz --namespace rhdh --create-namespace
+helm install rhdh ./mirror-archive/oc-mirror-workspace/src/charts/redhat-developer-hub-{product-version}.tgz --namespace rhdh --create-namespace
 ----
 
 .Verification
 . To verify that all resources are successfully deployed and running, check the status of your deployments and pods in the cluster.
 . To validate the route, ensure that the route matches the expected URL based on the router base of the cluster.
 .. If necessary, update the route to align with your expected configuration.
+
+[role="_additional-resources"]
+.Additional resources
+* For more information about registry authentication, see https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
