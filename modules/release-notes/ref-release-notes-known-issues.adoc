@@ -4,22 +4,47 @@
 
 This section lists known issues in {product} {product-version}.
 
+[id="known-issue-rhidp-5342"]
+== [Helm] Cannot run two RHDH replicas on different nodes due to Multi-Attach errors on the dynamic plugins root PVC
+
+Currently, when deploying {product-short} using the Helm Chart, two replicas cannot run on different cluster nodes. This might also affect the upgrade from 1.3 to 1.4.0 if the new pod is scheduled on a different node.
+
+Possible workarounds for the upgrade include the following actions:
+* Manually scale down the number of replicas to 0 before upgrading your Helm release. 
+* Manually remove the old {product-short} pod after upgrading the Helm release. However, this would imply some application downtime.
+* Leverage a Pod Affinity rule to force the cluster scheduler to run your {product-short} pods on the same node.
+
+.Additional resources
+
+* link:https://issues.redhat.com/browse/RHIDP-5342[RHIDP-5342]
+
 [id="known-issue-rhidp-5284"]
 == Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports
 
 Repositories might be added to Developer Hub from various sources (like statically in an app-config file or dynamically when enabling GitHub discovery). By design, the bulk import plugin will only track repositories that are accessible from the configured GitHub integrations. When both the Bulk Import and the GitHub Discovery plugins are enabled, the repositories the latter discovers might be listed in the Bulk Import pages. However, attempting to delete a repository added by the discovery plugin from the Bulk Import Jobs may have no effect, as any entities registered from this repository might still be present in the Developer Hub catalog. There is unfortunately no known workaround yet. 
 
+.Additional resources
+
+* link:https://issues.redhat.com/browse/RHIDP-5284[RHIDP-5284]
+
+[id="known-issue-rhidp-4695"]
+== [Doc] OIDC refresh token behavior 
+
+When using {rhsso-brand-name} or {rhbk-brand-name} as an OIDC provider, the default access token lifespan is set to 5 minutes, which corresponds to the token refresh grace period set in {product-short}. This 5-minute grace period is the threshold used to trigger a new refresh token call. Since the token is always near expiration, frequent refresh token requests will cause performance issues.
+
+This issue will be resolved in the 1.5 release. To prevent the performance issues, increase the lifespan in the {rhsso-brand-name} or {rhbk-brand-name} server by setting *Configure &gt; Realm Settings &gt; Access Token Lifespan* to a value greater than five minutes (preferably 10 or 15 minutes).
 
 .Additional resources
-* link:https://issues.redhat.com/browse/RHIDP-5284[RHIDP-5284]
+
+* link:https://issues.redhat.com/browse/RHIDP-4695[RHIDP-4695]
 
 [id="known-issue-rhidp-4067"]
 == Bulk Import: Added repositories count is incorrect
 
 Only the first 20 repositories (in alphabetical order) can be displayed at most on the Bulk Import Added Repositories page. Also, the count of Added Repositories displayed might be wrong. In future releases, we plan to address this with proper pagination. Meanwhile, as a workaround, searching would still work against all Added Repositories. So you can still search any Added Repository and get it listed on the table.
 
-
 .Additional resources
+
 * link:https://issues.redhat.com/browse/RHIDP-4067[RHIDP-4067]
 
 [id="known-issue-rhidp-3396"]
@@ -27,8 +52,8 @@ Only the first 20 repositories (in alphabetical order) can be displayed at most 
 
 Permissions associated only with front-end plugins do not appear in the UI because they require a backend plugin to expose the permission framework&#39;s well-known endpoint. As a workaround, you can apply these permissions by using a CSV file or directly calling the REST API of the RBAC backend plugin. Affected plugins include Topology (`topology.view.read`), Tekton (`tekton.view.read`), ArgoCD (`argocd.view.read`), and Quay (`quay.view.read`).
 
-
 .Additional resources
+
 * link:https://issues.redhat.com/browse/RHIDP-3396[RHIDP-3396]
 
 
