@@ -1,0 +1,77 @@
+[id="mounting-additional-files-in-your-custom-configuration-using-rhdh-operator"]
+= Mounting additional files in your custom configuration using the {product} Operator
+
+You can use the {product-short} Operator to mount extra files, such as a ConfigMap or Secret, to the container in a preferred location.
+
+The `mountPath` field specifies the location where a ConfigMap or Secret is mounted. The behavior of the mount, whether it includes or excludes a `subPath`, depends on the specification of the `key` or `mountPath` fields.
+
+* If `key` and `mountPath` are not specified: Each key or value is mounted as a `filename` or content with a `subPath`.
+* If `key` is specified with or without `mountPath`: The specified key or value is mounted with a `subPath`.
+* If only `mountPath` is specified: A directory containing all the keys or values is mounted without a `subPath`.
+
+[NOTE]
+====
+* {ocp-short} does not automatically update a volume mounted with `subPath`. By default, the {product-very-short} operator monitors these ConfigMaps or Secrets and refreshes the {product-very-short} Pod when changes occur.
+* For security purposes, {product} does not give the Operator Service Account read access to Secrets. As a result, mounting files from Secrets without specifying both mountPath and key is not supported.
+====
+
+
+.Prerequisites
+* You have developer permissions to access the {ocp-short} cluster containing your {product-short} instance using the {openshift-cli}.
+* link:{installing-on-ocp-book-url}[Your {ocp-short} administrator has installed the {product} Operator in {ocp-short}].
+
+.Procedure
+
+. In {ocp-short}, create your ConfigMap or Secret with the following YAML codes:
++
+.Minimal `{my-extra-file-configmap}` ConfigMap example
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {my-extra-file-configmap}
+data:
+  file11.txt: |
+    My file11 content
+  file 12.txt: |
+    My file12 content
+----
+====
++
+.Minimal `{my-product-secrets}` Secret example
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {my-product-secrets}
+StringData:
+  secret11.txt: |
+    secret-content
+----
+====
+For more information, see xref:provisioning-your-custom-configuration[Provisioning and using your custom {product} configuration].
+
+. Set the value of the `configMaps name` to the name of the ConfigMap or `secrets name` to the name of the Secret in your `{product-custom-resource-type}` CR. For example:
++
+====
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  application:
+    extraFiles:
+      mountPath: /my/path
+      configMaps:
+        - name: {my-extra-file-configmap}
+          key: file12.txt
+          mountPath: /my/my-rhdh-config-map/path
+      secrets:
+        - name: {my-product-secrets}
+          key: secret11.txt
+          mountPath: /my/my-rhdh-secret/path
+
+----
+====
