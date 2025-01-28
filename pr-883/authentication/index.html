@@ -1,0 +1,998 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Authentication</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub platform engineer, you can manage authentication of other users to meet the specific needs of your organization."/><link rel="next" href="#authenticating-with-the-guest-user_title-authentication" title="1. Authenticating with the Guest user"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45339210079600"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.4</span></div><div><h1 class="title">Authentication</h1></div><div><h3 class="subtitle"><em>Configuring authentication to external services in Red Hat Developer Hub</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45339207263600">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				As a Red Hat Developer Hub platform engineer, you can manage authentication of other users to meet the specific needs of your organization.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#authenticating-with-the-guest-user_title-authentication">1. Authenticating with the Guest user</a></span><ul><li><span class="section"><a href="#authenticating-with-the-guest-user-on-an-operator-based-installation_title-authentication">1.1. Authenticating with the Guest user on an Operator-based installation</a></span></li><li><span class="section"><a href="#authenticating-with-the-guest-user-on-a-helm-based-installation_title-authentication">1.2. Authenticating with the Guest user on a Helm-based installation</a></span></li></ul></li><li><span class="section"><a href="#assembly-authenticating-with-rhbk">2. Authenticating with Red Hat Build of Keycloak (RHBK)</a></span><ul><li><span class="section"><a href="#enabling-authentication-with-rhbk">2.1. Enabling authentication with Red Hat Build of Keycloak (RHBK)</a></span></li><li><span class="section"><a href="#provisioning-users-from-rhbk-to-the-software-catalog">2.2. Provisioning users from Red Hat Build of Keycloak (RHBK) to the software catalog</a></span></li><li><span class="section"><a href="#creating-a-custom-transformer-to-provision-users-from-rhbk-to-the-software-catalog">2.3. Creating a custom transformer to provision users from Red Hat Build of Keycloak (RHBK) to the software catalog</a></span></li></ul></li><li><span class="section"><a href="#authenticating-with-github">3. Authenticating with GitHub</a></span><ul><li><span class="section"><a href="#enabling-authentication-with-github">3.1. Enabling authentication with GitHub</a></span></li><li><span class="section"><a href="#provisioning-users-from-github-to-the-software-catalog">3.2. Provisioning users from GitHub to the software catalog</a></span></li></ul></li><li><span class="section"><a href="#assembly-authenticating-with-microsoft-azure">4. Authentication with Microsoft Azure</a></span><ul><li><span class="section"><a href="#enabling-authentication-with-microsoft-azure">4.1. Enabling authentication with Microsoft Azure</a></span></li><li><span class="section"><a href="#provisioning-users-from-microsoft-azure-to-the-software-catalog">4.2. Provisioning users from Microsoft Azure to the software catalog</a></span></li></ul></li></ul></div><p>
+		Depending on your organization’s security policies, you might require to identify and authorize users before giving them access to resources, such as Red Hat Developer Hub.
+	</p><p>
+		In Developer Hub, authentication and authorization are two separate processes:
+	</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+				Authentication defines the user identity, and passes on this information to Developer Hub. Read the following chapters to configure authentication in Developer Hub.
+			</li><li class="listitem">
+				Authorization defines what the authenticated identity can access or do in Developer Hub. See <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/authorization/index">Authorization</a>.
+			</li></ol></div><div class="admonition tip"><div class="admonition_header">Not recommended for production</div><div><p>
+		To explore Developer Hub features, you can enable the guest user to skip configuring authentication and authorization, log in as the guest user, and access all the features.
+	</p></div></div><p>
+		The authentication system in Developer Hub is handled by external authentication providers.
+	</p><p>
+		Developer Hub supports following authentication providers:
+	</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+				Red Hat Single-Sign On (RHSSO)
+			</li><li class="listitem">
+				GitHub
+			</li><li class="listitem">
+				Microsoft Azure
+			</li></ul></div><p>
+		To identify users in Developer Hub, configure:
+	</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+				One (and only one) authentication provider for sign-in and identification.
+			</li><li class="listitem">
+				Optionally, additional authentication providers for identification, to add more information to the user identity, or enable access to additional external resources.
+			</li></ul></div><p>
+		For each authentication provider, set up the shared secret that the authentication provider and Developer Hub require to communicate, first in the authentication provider, then in Developer Hub.
+	</p><p>
+		Developer Hub stores user identity information in the Developer Hub software catalog.
+	</p><div class="admonition tip"><div class="admonition_header">Not recommended for production</div><div><p>
+		To explore the authentication system and use Developer Hub without authorization policies, you can bypass the Developer Hub software catalog and start using Developer Hub without provisioning the Developer Hub software catalog.
+	</p></div></div><p>
+		To get, store, and update additional user information, such as group or team ownership, with the intention to use this data to define authorization policies, provision users and groups in the Developer Hub software catalog.
+	</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+			Developer Hub uses a one-way synchronization system to provision users and groups from your authentication system to the Developer Hub software catalog. Therefore, deleting users and groups by using Developer Hub Web UI or REST API might have unintended consequences.
+		</p></div></div><section class="section" id="authenticating-with-the-guest-user_title-authentication"><div class="titlepage"><div><div><h2 class="title">1. Authenticating with the Guest user</h2></div></div></div><p>
+			To explore Developer Hub features, you can skip configuring authentication and authorization. You can configure Developer Hub to log in as a Guest user and access Developer Hub features.
+		</p><section class="section" id="authenticating-with-the-guest-user-on-an-operator-based-installation_title-authentication"><div class="titlepage"><div><div><h3 class="title">1.1. Authenticating with the Guest user on an Operator-based installation</h3></div></div></div><p>
+				After an Operator-based installation, you can configure Developer Hub to log in as a Guest user and access Developer Hub features.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You <a class="link" href="">installed Developer Hub by using the Operator</a>.
+					</li><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index">added a custom Developer Hub application configuration</a>, and have sufficient permissions to modify it.
+					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						To enable the guest user in your Developer Hub custom configuration, <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index#provisioning-your-custom-configuration">edit your Developer Hub application configuration</a> with following content:
+					</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment</strong></p><p>
+							
+<pre class="programlisting language-yaml">auth:
+  environment: development
+  providers:
+    guest:
+      dangerouslyAllowOutsideDevelopment: true</pre>
+						</p></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+						Go to the Developer Hub login page.
+					</li><li class="listitem">
+						To log in with the Guest user account, click <span class="strong strong"><strong>Enter</strong></span> in the <span class="strong strong"><strong>Guest</strong></span> tile.
+					</li><li class="listitem">
+						In the Developer Hub <span class="strong strong"><strong>Settings</strong></span> page, your profile name is <span class="strong strong"><strong>Guest</strong></span>.
+					</li><li class="listitem">
+						You can use Developer Hub features.
+					</li></ol></div></section><section class="section" id="authenticating-with-the-guest-user-on-a-helm-based-installation_title-authentication"><div class="titlepage"><div><div><h3 class="title">1.2. Authenticating with the Guest user on a Helm-based installation</h3></div></div></div><p>
+				On a Helm-based installation, you can configure Developer Hub to log in as a Guest user and access Developer Hub features.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index">added a custom Developer Hub application configuration</a>, and have sufficient permissions to modify it.
+					</li><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index#using-the-helm-chart-to-run-rhdh-with-your-custom-configuration">use the Red Hat Developer Hub Helm chart to run Developer Hub</a>.
+					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						To enable the guest user in your Developer Hub custom configuration, <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index#using-the-helm-chart-to-run-rhdh-with-your-custom-configuration">configure your Red Hat Developer Hub Helm Chart</a> with following content:
+					</p><div class="formalpara"><p class="title"><strong>Red Hat Developer Hub Helm Chart configuration fragment</strong></p><p>
+							
+<pre class="programlisting language-yaml">upstream:
+  backstage:
+    appConfig:
+      app:
+        baseUrl: 'https://{{- include "janus-idp.hostname" . }}'
+      auth:
+        environment: development
+        providers:
+          guest:
+            dangerouslyAllowOutsideDevelopment: true</pre>
+						</p></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+						Go to the Developer Hub login page.
+					</li><li class="listitem">
+						To log in with the Guest user account, click <span class="strong strong"><strong>Enter</strong></span> in the <span class="strong strong"><strong>Guest</strong></span> tile.
+					</li><li class="listitem">
+						In the Developer Hub <span class="strong strong"><strong>Settings</strong></span> page, your profile name is <span class="strong strong"><strong>Guest</strong></span>.
+					</li><li class="listitem">
+						You can use Developer Hub features.
+					</li></ol></div></section></section><section class="section" id="assembly-authenticating-with-rhbk"><div class="titlepage"><div><div><h2 class="title">2. Authenticating with Red Hat Build of Keycloak (RHBK)</h2></div></div></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+				RHSSO 7.6 is deprecated as an authentication provider. You can continue using RHSSO until the end of its maintenance support. For more information, see <a class="link" href="https://access.redhat.com/support/policy/updates/jboss_notes#p_sso">RHSSO lifecycle dates</a>. As an alternative, consider migrating to Red Hat Build of Keycloak (RHBK).
+			</p></div></div><p>
+			To authenticate users with Red Hat Build of Keycloak (RHBK):
+		</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+					<a class="link" href="#enabling-authentication-with-rhbk" title="2.1. Enabling authentication with Red Hat Build of Keycloak (RHBK)">Enable the OpenID Connect (OIDC) authentication provider in RHDH</a>.
+				</li><li class="listitem">
+					<a class="link" href="#provisioning-users-from-rhbk-to-the-software-catalog" title="2.2. Provisioning users from Red Hat Build of Keycloak (RHBK) to the software catalog">Provision users from Red Hat Build of Keycloak (RHBK) to the software catalog</a>.
+				</li></ol></div><section class="section" id="enabling-authentication-with-rhbk"><div class="titlepage"><div><div><h3 class="title">2.1. Enabling authentication with Red Hat Build of Keycloak (RHBK)</h3></div></div></div><p>
+				To authenticate users with Red Hat Build of Keycloak (RHBK), enable the OpenID Connect (OIDC) authentication provider in Red Hat Developer Hub.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index">added a custom Developer Hub application configuration</a>, and have sufficient permissions to modify it.
+					</li><li class="listitem">
+						You have sufficient permissions in RHSSO to create and manage a realm.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						To allow Developer Hub to authenticate with RHBK, complete the steps in RHBK, to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/24.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-create-a-realm">create a realm and a user</a> and <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/24.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-secure-the-first-application">secure the first application</a>:
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+								Use an existing realm, or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/24.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-create-a-realm">create a realm</a>, with a distinctive <span class="strong strong"><strong>Name</strong></span> such as <span class="emphasis"><em>&lt;my_realm&gt;</em></span>. Save the value for the next step:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<span class="strong strong"><strong>RHBK realm base URL</strong></span>, such as: <span class="emphasis"><em>&lt;your_rhbk_URL&gt;</em></span>/realms/<span class="emphasis"><em>&lt;your_realm&gt;</em></span>.
+									</li></ul></div></li><li class="listitem"><p class="simpara">
+								To register your Developer Hub in RHBK, in the created realm, <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/24.0/html-single/getting_started_guide/index#getting-started-zip-secure-the-first-application">secure the first application</a>, with:
+							</p><div class="orderedlist"><ol class="orderedlist" type="i"><li class="listitem">
+										<span class="strong strong"><strong>Client ID</strong></span>: A distinctive client ID, such as <span class="emphasis"><em>&lt;RHDH&gt;</em></span>.
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Valid redirect URIs</strong></span>: Set to the OIDC handler URL: <code class="literal">https://<span class="emphasis"><em>&lt;RHDH_URL&gt;</em></span>/api/auth/oidc/handler/frame</code>.
+									</li><li class="listitem">
+										Navigate to the <span class="strong strong"><strong>Credentials</strong></span> tab and copy the <span class="strong strong"><strong>Client secret</strong></span>.
+									</li><li class="listitem"><p class="simpara">
+										Save the values for the next step:
+									</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+												<span class="strong strong"><strong>Client ID</strong></span>
+											</li><li class="listitem">
+												<span class="strong strong"><strong>Client Secret</strong></span>
+											</li></ul></div></li></ol></div></li><li class="listitem">
+								To prepare for the verification steps, in the same realm, get the credential information for an existing user or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/24.0/html-single/getting_started_guide/index#getting-started-zip-create-a-user">create a user</a>. Save the user credential information for the verification steps.
+							</li></ol></div></li><li class="listitem"><p class="simpara">
+						To add your RHSSO credentials to your Developer Hub, add the following key/value pairs to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html-single/configuring_dynamic_plugins/index#provisioning-your-custom-configuration">your Developer Hub secrets</a>:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">AUTH_OIDC_CLIENT_ID</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">AUTH_OIDC_CLIENT_SECRET</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client Secret</strong></span>.
+								</dd><dt><span class="term"><code class="literal">AUTH_OIDC_METADATA_URL</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>RHBK realm base URL</strong></span>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						To set up the RHBK authentication provider in your Developer Hub custom configuration, edit your custom Developer Hub ConfigMap such as <code class="literal">app-config-rhdh</code>, and add the following lines to the <code class="literal">app-config.yaml</code> content:
+					</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with mandatory fields to enable authentication with RHBK</strong></p><p>
+							
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
+signInPage: oidc</pre>
+						</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">environment: production</code></span></dt><dd>
+									Mark the environment as <code class="literal">production</code> to hide the Guest login in the Developer Hub home page.
+								</dd><dt><span class="term"><code class="literal">metadataUrl</code>, <code class="literal">clientId</code>, <code class="literal">clientSecret</code></span></dt><dd>
+									To configure the OIDC provider with your secrets.
+								</dd><dt><span class="term"><code class="literal">sigInPage: oidc</code></span></dt><dd>
+									To enable the OIDC provider as default sign-in provider.
+								</dd></dl></div><p class="simpara">
+						Optional: Consider adding the following optional fields:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">dangerouslyAllowSignInWithoutUserInCatalog: true</code></span></dt><dd/></dl></div><p class="simpara">
+						To enable authentication without requiring to provision users in the Developer Hub software catalog.
+					</p><div class="admonition warning"><div class="admonition_header">Warning</div><div><p>
+							Use this option to explore Developer Hub features, but do not use it in production.
+						</p></div></div><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional field to allow authenticating users absent from the software catalog</strong></p><p>
+							
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
+signInPage: oidc
+dangerouslyAllowSignInWithoutUserInCatalog: true</pre>
+						</p></div></li></ol></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">callbackUrl</code></span></dt><dd/></dl></div><p>
+				RHBK callback URL.
+			</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">callbackURL</code> field</strong></p><p>
+					
+<pre class="programlisting language-yaml">auth:
+  providers:
+    oidc:
+      production:
+        callbackUrl: ${AUTH_OIDC_CALLBACK_URL}</pre>
+				</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">tokenEndpointAuthMethod</code></span></dt><dd/></dl></div><p>
+				Token endpoint authentication method.
+			</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">tokenEndpointAuthMethod</code> field</strong></p><p>
+					
+<pre class="programlisting language-yaml">auth:
+  providers:
+    oidc:
+      production:
+        tokenEndpointAuthMethod: ${AUTH_OIDC_TOKEN_ENDPOINT_METHOD}</pre>
+				</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">tokenSignedResponseAlg</code></span></dt><dd/></dl></div><p>
+				Token signed response algorithm.
+			</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">tokenSignedResponseAlg</code> field</strong></p><p>
+					
+<pre class="programlisting language-yaml">auth:
+  providers:
+    oidc:
+      production:
+        tokenSignedResponseAlg: ${AUTH_OIDC_SIGNED_RESPONSE_ALG}</pre>
+				</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">scope</code></span></dt><dd/></dl></div><p>
+				RHBK scope.
+			</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">scope</code> field</strong></p><p>
+					
+<pre class="programlisting language-yaml">auth:
+  providers:
+    oidc:
+      production:
+        scope: ${AUTH_OIDC_SCOPE}</pre>
+				</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">signIn.resolvers</code></span></dt><dd/></dl></div><p>
+				Declarative resolvers to override the default resolver: <code class="literal">emailLocalPartMatchingUserEntityName</code>. The authentication provider tries each sign-in resolver until it succeeds, and fails if none succeed.
+			</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">callbackURL</code> field</strong></p><p>
+					
+<pre class="programlisting language-yaml">auth:
+  providers:
+    oidc:
+      production:
+        signIn:
+          resolvers:
+            - resolver: preferredUsernameMatchingUserEntityName
+            - resolver: emailMatchingUserEntityProfileEmail
+            - resolver: emailLocalPartMatchingUserEntityName</pre>
+				</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">auth.backstageTokenExpiration</code></span></dt><dd/></dl></div><p>
+				To modify the Developer Hub token expiration from its default value of one hour, note that this refers to the validity of short-term cryptographic tokens, not the session duration. The expiration value must be set between 10 minutes and 24 hours.
+			</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">auth.backstageTokenExpiration</code> field</strong></p><p>
+					
+<pre class="programlisting language-yaml">auth:
+  backstageTokenExpiration: { minutes: <span class="emphasis"><em>&lt;user_defined_value&gt;</em></span> }</pre>
+				</p></div><div class="formalpara"><p class="title"><strong>Security consideration</strong></p><p>
+					If multiple valid refresh tokens are issued due to frequent refresh token requests, older tokens will remain valid until they expire. To enhance security and prevent potential misuse of older tokens, enable a refresh token rotation strategy in your RHBK realm.
+				</p></div><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+						From the <span class="strong strong"><strong>Configure</strong></span> section of the navigation menu, click <span class="strong strong"><strong>Realm Settings</strong></span>.
+					</li><li class="listitem">
+						From the <span class="strong strong"><strong>Realm Settings</strong></span> page, click the <span class="strong strong"><strong>Tokens</strong></span> tab.
+					</li><li class="listitem">
+						From the <span class="strong strong"><strong>Refresh tokens</strong></span> section of the <span class="strong strong"><strong>Tokens</strong></span> tab, toggle the <span class="strong strong"><strong>Revoke Refresh Token</strong></span> to the <span class="strong strong"><strong>Enabled</strong></span> position.
+					</li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+						Go to the Developer Hub login page.
+					</li><li class="listitem">
+						Your Developer Hub sign-in page displays <span class="strong strong"><strong>Sign in using OIDC</strong></span> and the Guest user sign-in is disabled.
+					</li><li class="listitem">
+						Log in with OIDC by using the saved <span class="strong strong"><strong>Username</strong></span> and <span class="strong strong"><strong>Password</strong></span> values.
+					</li></ol></div></section><section class="section" id="provisioning-users-from-rhbk-to-the-software-catalog"><div class="titlepage"><div><div><h3 class="title">2.2. Provisioning users from Red Hat Build of Keycloak (RHBK) to the software catalog</h3></div></div></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You <a class="link" href="#enabling-authentication-with-rhbk" title="2.1. Enabling authentication with Red Hat Build of Keycloak (RHBK)">enabled authentication with RHBK</a>.
+					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						To enable RHBK member discovery, edit your custom Developer Hub ConfigMap, such as <code class="literal">app-config-rhdh</code>, and add the following lines to the <code class="literal">app-config.yaml</code> content:
+					</p><div id="keycloakOrgProviderId" class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with mandatory <code class="literal">keycloakOrg</code> fields</strong></p><p>
+							
+<pre class="programlisting language-yaml">dangerouslyAllowSignInWithoutUserInCatalog: false
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        baseUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}</pre>
+						</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">dangerouslyAllowSignInWithoutUserInCatalog: false</code></span></dt><dd>
+									Allow authentication only for users present in the Developer Hub software catalog.
+								</dd><dt><span class="term"><code class="literal">baseUrl</code></span></dt><dd>
+									Your RHBK server URL, defined when <a class="link" href="#enabling-authentication-with-rhbk" title="2.1. Enabling authentication with Red Hat Build of Keycloak (RHBK)">enabling authentication with RHBK</a>.
+								</dd><dt><span class="term"><code class="literal">clientId</code></span></dt><dd>
+									Your Developer Hub application client ID in RHBK, defined when <a class="link" href="#enabling-authentication-with-rhbk" title="2.1. Enabling authentication with Red Hat Build of Keycloak (RHBK)">enabling authentication with RHBK</a>.
+								</dd><dt><span class="term"><code class="literal">clientSecret</code></span></dt><dd>
+									Your Developer Hub application client secret in RHBK, defined when <a class="link" href="#enabling-authentication-with-rhbk" title="2.1. Enabling authentication with Red Hat Build of Keycloak (RHBK)">enabling authentication with RHBK</a>.
+								</dd></dl></div><p class="simpara">
+						Optional: Consider adding the following optional fields:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">realm</code></span></dt><dd><p class="simpara">
+									Realm to synchronize. Default value: <code class="literal">master</code>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">realm</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        realm: master</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">loginRealm</code></span></dt><dd><p class="simpara">
+									Realm used to authenticate. Default value: <code class="literal">master</code>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">loginRealm</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        loginRealm: master</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">userQuerySize</code></span></dt><dd><p class="simpara">
+									User number to query simultaneously. Default value: <code class="literal">100</code>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">userQuerySize</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        userQuerySize: 100</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">groupQuerySize</code></span></dt><dd><p class="simpara">
+									Group number to query simultaneously. Default value: <code class="literal">100</code>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">groupQuerySize</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        groupQuerySize: 100</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">schedule.frequency</code></span></dt><dd><p class="simpara">
+									To specify custom schedule frequency. Supports cron, ISO duration, and "human duration" as used in code.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">schedule.frequency</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          frequency: { hours: 1 }</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">schedule.timeout</code></span></dt><dd><p class="simpara">
+									To specify custom timeout. Supports ISO duration and "human duration" as used in code.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">schedule.timeout</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          timeout: { minutes: 50 }</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">schedule.initialDelay</code></span></dt><dd><p class="simpara">
+									To specify custom initial delay. Supports ISO duration and "human duration" as used in code.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">schedule.initialDelay</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          initialDelay: { seconds: 15}</pre>
+									</p></div></dd></dl></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Check the console logs to verify that the synchronization is completed.
+					</p><div class="formalpara"><p class="title"><strong>Successful synchronization example:</strong></p><p>
+							
+<pre class="programlisting language-json">{"class":"KeycloakOrgEntityProvider","level":"info","message":"Read 3 Keycloak users and 2 Keycloak groups in 1.5 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
+{"class":"KeycloakOrgEntityProvider","level":"info","message":"Committed 3 Keycloak users and 2 Keycloak groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}</pre>
+						</p></div></li><li class="listitem">
+						Log in with an RHBK account.
+					</li></ol></div></section><section class="section" id="creating-a-custom-transformer-to-provision-users-from-rhbk-to-the-software-catalog"><div class="titlepage"><div><div><h3 class="title">2.3. Creating a custom transformer to provision users from Red Hat Build of Keycloak (RHBK) to the software catalog</h3></div></div></div><p>
+				To customize how RHBK users and groups are mapped to Red Hat Developer Hub entities, you can create a backend module that uses the <code class="literal">keycloakTransformerExtensionPoint</code> to provide custom user and group transformers for the Keycloak backend.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have <a class="link" href="#provisioning-users-from-rhbk-to-the-software-catalog" title="2.2. Provisioning users from Red Hat Build of Keycloak (RHBK) to the software catalog">enabled provisioning users from Red Hat Build of Keycloak (RHBK) to the software catalog</a>.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+						Create a new backend module with the <code class="literal">yarn new</code> command.
+					</li><li class="listitem"><p class="simpara">
+						Add your custom user and group transformers to the <code class="literal">keycloakTransformerExtensionPoint</code>.
+					</p><p class="simpara">
+						The following is an example of how the backend module can be defined:
+					</p><div class="formalpara"><p class="title"><strong><code class="literal">plugins/<span class="emphasis"><em>&lt;module-name&gt;</em></span>/src/module.ts</code></strong></p><p>
+							
+<pre class="programlisting language-javascript">import {
+  GroupTransformer,
+  keycloakTransformerExtensionPoint,
+  UserTransformer,
+} from '@backstage-community/plugin-catalog-backend-module-keycloak';
+
+const customGroupTransformer: GroupTransformer = async (
+  entity, // entity output from default parser
+  realm, // Keycloak realm name
+  groups, // Keycloak group representation
+) =&gt; {
+  /* apply transformations */
+  return entity;
+};
+const customUserTransformer: UserTransformer = async (
+  entity, // entity output from default parser
+  user, // Keycloak user representation
+  realm, // Keycloak realm name
+  groups, // Keycloak group representation
+) =&gt; {
+  /* apply transformations */
+  return entity;
+};
+
+export const keycloakBackendModuleTransformer = createBackendModule({
+  pluginId: 'catalog',
+  moduleId: 'keycloak-transformer',
+  register(reg) {
+    reg.registerInit({
+      deps: {
+        keycloak: keycloakTransformerExtensionPoint,
+      },
+      async init({ keycloak }) {
+        keycloak.setUserTransformer(customUserTransformer);
+        keycloak.setGroupTransformer(customGroupTransformer);
+        /* highlight-add-end */
+      },
+    });
+  },
+});</pre>
+						</p></div><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+							The module’s <code class="literal">pluginId</code> must be set to <code class="literal">catalog</code> to match the <code class="literal">pluginId</code> of the <code class="literal">keycloak-backend</code>; otherwise, the module fails to initialize.
+						</p></div></div></li><li class="listitem"><p class="simpara">
+						Install this new backend module into your Developer Hub backend.
+					</p><pre class="programlisting language-javascript">backend.add(import(backstage-plugin-catalog-backend-module-keycloak-transformer))</pre></li></ol></div><div class="itemizedlist"><p class="title"><strong>Verification</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						Developer Hub imports the users and groups each time when started. Check the console logs to verify that the synchronization is completed.
+					</p><div class="formalpara"><p class="title"><strong>Successful synchronization example:</strong></p><p>
+							
+<pre class="programlisting language-json">{"class":"KeycloakOrgEntityProvider","level":"info","message":"Read 3 Keycloak users and 2 Keycloak groups in 1.5 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
+{"class":"KeycloakOrgEntityProvider","level":"info","message":"Committed 3 Keycloak users and 2 Keycloak groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}</pre>
+						</p></div></li><li class="listitem">
+						After the first import is complete, navigate to the <span class="strong strong"><strong>Catalog</strong></span> page and select <span class="strong strong"><strong>User</strong></span> to view the list of users.
+					</li><li class="listitem">
+						When you select a user, you see the information imported from RHBK.
+					</li><li class="listitem">
+						You can select a group, view the list, and access or review the information imported from RHBK.
+					</li><li class="listitem">
+						You can log in with an RHBK account.
+					</li></ul></div></section></section><section class="section" id="authenticating-with-github"><div class="titlepage"><div><div><h2 class="title">3. Authenticating with GitHub</h2></div></div></div><p>
+			To authenticate users with GitHub or GitHub Enterprise:
+		</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+					<a class="link" href="#enabling-authentication-with-github" title="3.1. Enabling authentication with GitHub">Enable the GitHub authentication provider in Developer Hub</a>.
+				</li><li class="listitem">
+					<a class="link" href="#provisioning-users-from-github-to-the-software-catalog" title="3.2. Provisioning users from GitHub to the software catalog">Provision users from GitHub to the software catalog</a>.
+				</li></ol></div><section class="section" id="enabling-authentication-with-github"><div class="titlepage"><div><div><h3 class="title">3.1. Enabling authentication with GitHub</h3></div></div></div><p>
+				To authenticate users with GitHub, enable the GitHub authentication provider in Red Hat Developer Hub.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index">added a custom Developer Hub application configuration</a>, and have sufficient permissions to modify it.
+					</li><li class="listitem">
+						You have sufficient permissions in GitHub to create and manage a <a class="link" href="https://docs.github.com/en/apps/overview">GitHub App</a>.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						To allow Developer Hub to authenticate with GitHub, create a GitHub App. Opt for a GitHub App instead of an OAuth app to use fine-grained permissions, gain more control over which repositories the application can access, and use short-lived tokens.
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+								<a class="link" href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">Register a GitHub App</a> with the following configuration:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<span class="strong strong"><strong>GitHub App name</strong></span>: Enter a unique name identifying your GitHub App, such as <span class="emphasis"><em>&lt;Red Hat Developer Hub&gt;</em></span>-<span class="emphasis"><em>&lt;GUID&gt;</em></span>.
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Homepage URL</strong></span>: Your Developer Hub URL: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span></code>.
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Authorization callback URL</strong></span>: Your Developer Hub authentication backend URL: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span>/api/auth/github/handler/frame</code>.
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Webhook URL</strong></span>: Your Developer Hub URL: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span></code>.
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Webhook secret</strong></span>: Provide a strong secret.
+									</li><li class="listitem"><p class="simpara">
+										<span class="strong strong"><strong>Repository permissions</strong></span>:
+									</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem"><p class="simpara">
+												Enable <code class="literal">Read-only</code> access to:
+											</p><div class="itemizedlist"><ul class="itemizedlist" type="square"><li class="listitem">
+														<span class="strong strong"><strong>Administration</strong></span>
+													</li><li class="listitem">
+														<span class="strong strong"><strong>Commit statuses</strong></span>
+													</li><li class="listitem">
+														<span class="strong strong"><strong>Contents</strong></span>
+													</li><li class="listitem">
+														<span class="strong strong"><strong>Dependabot alerts</strong></span>
+													</li><li class="listitem">
+														<span class="strong strong"><strong>Deployments</strong></span>
+													</li><li class="listitem">
+														<span class="strong strong"><strong>Pull Requests</strong></span>
+													</li><li class="listitem"><p class="simpara">
+														<span class="strong strong"><strong>Webhooks</strong></span>
+													</p><div class="admonition tip"><div class="admonition_header">Tip</div><div><p>
+														If you plan to make changes using the GitHub API, ensure that <code class="literal">Read and write</code> permissions are enabled instead of <code class="literal">Read-only</code>.
+													</p></div></div></li></ul></div></li><li class="listitem">
+												Toggle other permissions as per your needs.
+											</li></ul></div></li><li class="listitem"><p class="simpara">
+										<span class="strong strong"><strong>Organization permissions</strong></span>:
+									</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+												Enable <code class="literal">Read-only</code> access to <span class="strong strong"><strong>Members</strong></span>.
+											</li></ul></div></li><li class="listitem">
+										For <span class="strong strong"><strong>Where can this GitHub App be installed?</strong></span>, select <code class="literal">Only on this account</code>.
+									</li></ul></div></li><li class="listitem">
+								In the <span class="strong strong"><strong>General</strong></span> → <span class="strong strong"><strong>Clients secrets</strong></span> section, click <span class="strong strong"><strong>Generate a new client secret</strong></span>.
+							</li><li class="listitem">
+								In the <span class="strong strong"><strong>General</strong></span> → <span class="strong strong"><strong>Private keys</strong></span> section, click <span class="strong strong"><strong>Generate a private key</strong></span>.
+							</li><li class="listitem">
+								In the <span class="strong strong"><strong>Install App</strong></span> tab, choose an account to install your GitHub App on.
+							</li><li class="listitem"><p class="simpara">
+								Save the following values for the next step:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<span class="strong strong"><strong>App ID</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Client ID</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Client secret</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Private key</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Webhook secret</strong></span>
+									</li></ul></div></li></ol></div></li><li class="listitem"><p class="simpara">
+						To add your GitHub credentials to Developer Hub, add the following key/value pairs to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html-single/configuring_dynamic_plugins/index#provisioning-your-custom-configuration">your Developer Hub secrets</a>:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">AUTH_GITHUB_APP_ID</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>App ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">AUTH_GITHUB_CLIENT_ID</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_HOST_DOMAIN</code></span></dt><dd>
+									Enter your GitHub host domain: <code class="literal">github.com</code> unless you are using GitHub Enterprise.
+								</dd><dt><span class="term"><code class="literal">GITHUB_ORGANIZATION</code></span></dt><dd>
+									Enter your GitHub organization name, such as `<span class="emphasis"><em>&lt;your_github_organization_name&gt;</em></span>'.
+								</dd><dt><span class="term"><code class="literal">GITHUB_ORG_URL</code></span></dt><dd>
+									Enter <code class="literal">$GITHUB_HOST_DOMAIN/$GITHUB_ORGANIZATION</code>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_CLIENT_SECRET</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client Secret</strong></span>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_PRIVATE_KEY_FILE</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Private key</strong></span>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_WEBHOOK_URL</code></span></dt><dd>
+									Enter your Developer Hub URL: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span></code>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_WEBHOOK_SECRET</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Webhook secret</strong></span>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						To set up the GitHub authentication provider and enable integration with the GitHub API in your Developer Hub custom configuration, edit your custom Developer Hub ConfigMap such as <code class="literal">app-config-rhdh</code>, and add the following lines to the <code class="literal">app-config-rhdh.yaml</code> content:
+					</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with mandatory fields to enable authentication with GitHub</strong></p><p>
+							
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+integrations:
+  github:
+    - host: ${GITHUB_HOST_DOMAIN}
+      apps:
+        - appId: ${AUTH_GITHUB_APP_ID}
+          clientId: ${AUTH_GITHUB_CLIENT_ID}
+          clientSecret: ${GITHUB_CLIENT_SECRET}
+          webhookUrl: ${GITHUB_WEBHOOK_URL}
+          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
+          privateKey: |
+            ${GITHUB_PRIVATE_KEY_FILE}
+signInPage: github</pre>
+						</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">environment: production</code></span></dt><dd>
+									Mark the environment as <code class="literal">production</code> to hide the Guest login in the Developer Hub home page.
+								</dd><dt><span class="term"><code class="literal">clientId</code>, <code class="literal">clientSecret</code>, <code class="literal">host</code>, <code class="literal">appId</code>, <code class="literal">webhookUrl</code>, <code class="literal">webhookSecret</code>, <code class="literal">privateKey</code></span></dt><dd>
+									Use the Developer Hub application information that you have created in GitHub and configured in OpenShift as secrets.
+								</dd><dt><span class="term"><code class="literal">sigInPage: github</code></span></dt><dd>
+									To enable the GitHub provider as default sign-in provider.
+								</dd></dl></div><p class="simpara">
+						Optional: Consider adding the following optional fields:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">dangerouslyAllowSignInWithoutUserInCatalog: true</code></span></dt><dd><p class="simpara">
+									To enable authentication without requiring to provision users in the Developer Hub software catalog.
+								</p><div class="admonition warning"><div class="admonition_header">Warning</div><div><p>
+										Use <code class="literal">dangerouslyAllowSignInWithoutUserInCatalog</code> to explore Developer Hub features, but do not use it in production.
+									</p></div></div><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with optional field to allow authenticating users absent from the software catalog</strong></p><p>
+										
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+integrations:
+  github:
+    - host: ${GITHUB_HOST_DOMAIN}
+      apps:
+        - appId: ${AUTH_GITHUB_APP_ID}
+          clientId: ${AUTH_GITHUB_CLIENT_ID}
+          clientSecret: ${GITHUB_CLIENT_SECRET}
+          webhookUrl: ${GITHUB_WEBHOOK_URL}
+          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
+          privateKey: |
+            ${GITHUB_PRIVATE_KEY_FILE}
+signInPage: github
+dangerouslyAllowSignInWithoutUserInCatalog: true</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">callbackUrl</code></span></dt><dd><p class="simpara">
+									The callback URL that GitHub uses when initiating an OAuth flow, such as: <span class="emphasis"><em>&lt;your_intermediate_service_url/handler&gt;</em></span>. Define it when Developer Hub is not the immediate receiver, such as in cases when you use one OAuth app for many Developer Hub instances.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with optional <code class="literal">enterpriseInstanceUrl</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">auth:
+  providers:
+    github:
+      production:
+        callbackUrl: <span class="emphasis"><em>&lt;your_intermediate_service_url/handler&gt;</em></span></pre>
+									</p></div></dd><dt><span class="term"><code class="literal">enterpriseInstanceUrl</code></span></dt><dd><p class="simpara">
+									Your GitHub Enterprise URL. Requires you defined the <code class="literal">GITHUB_HOST_DOMAIN</code> secret in the previous step.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with optional <code class="literal">enterpriseInstanceUrl</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">auth:
+  providers:
+    github:
+      production:
+        enterpriseInstanceUrl: ${GITHUB_HOST_DOMAIN}</pre>
+									</p></div></dd></dl></div><div class="admonition tip"><div class="admonition_header">Tip</div><div><p>
+						To enable GitHub integration with a different authentication provider, complete the following configurations:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								Add the GitHub provider to the existing <code class="literal">auth</code> section.
+							</li><li class="listitem">
+								Keep the <code class="literal">signInPage</code> section from your authentication provider configuration.
+							</li></ul></div><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with mandatory fields to enable GitHub integration and use a different authentication provider</strong></p><p>
+							
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+    <span class="emphasis"><em>&lt;your_other_authentication_providers_configuration&gt;</em></span>
+integrations:
+  github:
+    - host: ${GITHUB_HOST_DOMAIN}
+      apps:
+        - appId: ${AUTH_GITHUB_APP_ID}
+          clientId: ${AUTH_GITHUB_CLIENT_ID}
+          clientSecret: ${GITHUB_CLIENT_SECRET}
+          webhookUrl: ${GITHUB_WEBHOOK_URL}
+          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
+          privateKey: |
+            ${GITHUB_PRIVATE_KEY_FILE}
+signInPage: <span class="emphasis"><em>&lt;your_main_authentication_provider&gt;</em></span></pre>
+						</p></div></div></div></li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+						Go to the Developer Hub login page.
+					</li><li class="listitem">
+						Your Developer Hub sign-in page displays <span class="strong strong"><strong>Sign in using GitHub</strong></span> and the Guest user sign-in is disabled.
+					</li><li class="listitem">
+						Log in with GitHub.
+					</li></ol></div></section><section class="section" id="provisioning-users-from-github-to-the-software-catalog"><div class="titlepage"><div><div><h3 class="title">3.2. Provisioning users from GitHub to the software catalog</h3></div></div></div><p>
+				To authenticate users, Red Hat Developer Hub requires their presence in the software catalog. Consider configuring Developer Hub to provision users from GitHub to the software catalog on schedule, rather than provisioning the users manually.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						You have <a class="link" href="#enabling-authentication-with-github" title="3.1. Enabling authentication with GitHub">enabled authentication with GitHub</a>, including the following secrets:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								<code class="literal">GITHUB_HOST_DOMAIN</code>
+							</li><li class="listitem">
+								<code class="literal">GITHUB_ORGANIZATION</code>
+							</li></ul></div></li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						To enable GitHub member discovery, edit your custom Developer Hub ConfigMap, such as <code class="literal">app-config-rhdh</code>, and add the following lines to the <code class="literal">app-config.yaml</code> content:
+					</p><div id="githubProviderId" class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with mandatory <code class="literal">github</code> fields</strong></p><p>
+							
+<pre class="programlisting language-yaml">dangerouslyAllowSignInWithoutUserInCatalog: false
+catalog:
+  providers:
+    github:
+      providerId:
+        organization: "${GITHUB_ORGANIZATION}"
+        schedule:
+          frequency:
+            minutes: 30
+          initialDelay:
+            seconds: 15
+          timeout:
+            minutes: 15
+    githubOrg:
+      githubUrl: "${GITHUB_HOST_DOMAIN}"
+      orgs: [ "${GITHUB_ORGANIZATION}" ]
+      schedule:
+        frequency:
+          minutes: 30
+        initialDelay:
+          seconds: 15
+        timeout:
+          minutes: 15</pre>
+						</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">dangerouslyAllowSignInWithoutUserInCatalog: false</code></span></dt><dd>
+									Allow authentication only for users present in the Developer Hub software catalog.
+								</dd><dt><span class="term"><code class="literal">organization</code>, <code class="literal">githubUrl</code>, and <code class="literal">orgs</code></span></dt><dd>
+									Use the Developer Hub application information that you have created in GitHub and configured in OpenShift as secrets.
+								</dd><dt><span class="term"><code class="literal">schedule.frequency</code></span></dt><dd>
+									To specify custom schedule frequency. Supports cron, ISO duration, and "human duration" as used in code.
+								</dd><dt><span class="term"><code class="literal">schedule.timeout</code></span></dt><dd>
+									To specify custom timeout. Supports ISO duration and "human duration" as used in code.
+								</dd><dt><span class="term"><code class="literal">schedule.initialDelay</code></span></dt><dd>
+									To specify custom initial delay. Supports ISO duration and "human duration" as used in code.
+								</dd></dl></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Check the console logs to verify that the synchronization is completed.
+					</p><div class="formalpara"><p class="title"><strong>Successful synchronization example:</strong></p><p>
+							
+<pre class="programlisting language-json">{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Reading GitHub users and teams for org: rhdh-dast","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:production:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:58"}
+{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Read 7 GitHub users and 2 GitHub groups in 0.4 seconds. Committing...","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:production:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:59"}</pre>
+						</p></div></li><li class="listitem">
+						Log in with a GitHub account.
+					</li></ol></div></section></section><section class="section" id="assembly-authenticating-with-microsoft-azure"><div class="titlepage"><div><div><h2 class="title">4. Authentication with Microsoft Azure</h2></div></div></div><p>
+			To authenticate users with Microsoft Azure:
+		</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+					<a class="link" href="#enabling-authentication-with-microsoft-azure" title="4.1. Enabling authentication with Microsoft Azure">Enable authentication with Microsoft Azure</a>.
+				</li><li class="listitem">
+					<a class="link" href="#provisioning-users-from-microsoft-azure-to-the-software-catalog" title="4.2. Provisioning users from Microsoft Azure to the software catalog">Provision users from Microsoft Azure to the software catalog</a>.
+				</li></ol></div><section class="section" id="enabling-authentication-with-microsoft-azure"><div class="titlepage"><div><div><h3 class="title">4.1. Enabling authentication with Microsoft Azure</h3></div></div></div><p>
+				Red Hat Developer Hub includes a Microsoft Azure authentication provider that can authenticate users by using OAuth.
+			</p><div class="orderedlist"><p class="title"><strong>Prerequisites</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						You have the permission to register an application in Microsoft Azure.
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								You <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.4/html-single/configuring/index">added a custom Developer Hub application configuration</a>, and have sufficient permissions to modify it.
+							</li></ul></div></li></ol></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						To allow Developer Hub to authenticate with Microsoft Azure, <a class="link" href="https://learn.microsoft.com/en-us/entra/identity-platform/scenario-web-app-sign-user-app-registration?tabs=aspnetcore#register-an-app-by-using-the-azure-portal">create an OAuth application in Microsoft Azure</a>.
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+								In the Azure portal go to <a class="link" href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"><span class="strong strong"><strong>App registrations</strong></span></a>, create a <span class="strong strong"><strong>New registration</strong></span> with the configuration:
+							</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="strong strong"><strong>Name</strong></span></span></dt><dd>
+											The application name in Azure, such as <span class="emphasis"><em>&lt;My Developer Hub&gt;</em></span>.
+										</dd></dl></div></li><li class="listitem"><p class="simpara">
+								On the <span class="strong strong"><strong>Home &gt; App registrations &gt; <span class="emphasis"><em>&lt;My Developer Hub&gt;</em></span> &gt; Manage &gt; Authentication</strong></span> page, <span class="strong strong"><strong>Add a platform</strong></span>, with the following configuration:
+							</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="strong strong"><strong>Redirect URI</strong></span></span></dt><dd>
+											Enter the backend authentication URI set in Developer Hub: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span>/api/auth/microsoft/handler/frame</code>
+										</dd><dt><span class="term"><span class="strong strong"><strong>Front-channel logout URL</strong></span></span></dt><dd>
+											Leave blank.
+										</dd><dt><span class="term"><span class="strong strong"><strong>Implicit grant and hybrid flows</strong></span></span></dt><dd>
+											Leave all checkboxes cleared.
+										</dd></dl></div></li><li class="listitem"><p class="simpara">
+								On the <span class="strong strong"><strong>Home &gt; App registrations &gt; <span class="emphasis"><em>&lt;My Developer Hub&gt;</em></span> &gt; Manage &gt; API permissions</strong></span> page, <span class="strong strong"><strong>Add a Permission</strong></span>, then add the following <span class="strong strong"><strong>Delegated permission</strong></span> for the <span class="strong strong"><strong>Microsoft Graph API</strong></span>:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<code class="literal">email</code>
+									</li><li class="listitem">
+										<code class="literal">offline_access</code>
+									</li><li class="listitem">
+										<code class="literal">openid</code>
+									</li><li class="listitem">
+										<code class="literal">profile</code>
+									</li><li class="listitem">
+										<code class="literal">User.Read</code>
+									</li><li class="listitem"><p class="simpara">
+										Optional custom scopes for the Microsoft Graph API that you define both in this section and in the Developer Hub configuration (<code class="literal">app-config-rhdh.yaml</code>).
+									</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+											Your company might require you to grant admin consent for these permissions. Even if your company does not require admin consent, you might do so as it means users do not need to individually consent the first time they access backstage. To grant administrator consent, a directory administrator must go to the <a class="link" href="https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/user-admin-consent-overview">admin consent</a> page and click <span class="strong strong"><strong>Grant admin consent for COMPANY NAME</strong></span>.
+										</p></div></div></li></ul></div></li><li class="listitem">
+								On the <span class="strong strong"><strong>Home &gt; App registrations &gt; <span class="emphasis"><em>&lt;My Developer Hub&gt;</em></span> &gt; Manage &gt; Certificates &amp; Secrets</strong></span> page, in the <span class="strong strong"><strong>Client secrets</strong></span> tab, create a <span class="strong strong"><strong>New client secret</strong></span>.
+							</li><li class="listitem"><p class="simpara">
+								Save for the next step:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<span class="strong strong"><strong>Directory (tenant) ID</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Application (client) ID</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Application (client) secret</strong></span>
+									</li></ul></div></li></ol></div></li><li class="listitem"><p class="simpara">
+						To add your Microsoft Azure credentials to Developer Hub, add the following key/value pairs to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html-single/configuring_dynamic_plugins/index#provisioning-your-custom-configuration">your Developer Hub secrets</a>:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">AUTH_AZURE_TENANT_ID</code></span></dt><dd>
+									Enter your saved <span class="strong strong"><strong>Directory (tenant) ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">AUTH_AZURE_CLIENT_ID</code></span></dt><dd>
+									Enter your saved <span class="strong strong"><strong>Application (client) ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">AUTH_AZURE_CLIENT_SECRET</code></span></dt><dd>
+									Enter your saved <span class="strong strong"><strong>Application (client) secret</strong></span>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						Set up the Microsoft Azure authentication provider in your Developer Hub custom configuration, such as <code class="literal">app-config-rhdh</code>:
+					</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment</strong></p><p>
+							
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+signInPage: microsoft</pre>
+						</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">environment: production</code></span></dt><dd>
+									Mark the environment as production to hide the <span class="strong strong"><strong>Guest</strong></span> login in the Developer Hub home page.
+								</dd><dt><span class="term"><code class="literal">clientId</code>, <code class="literal">clientSecret</code> and <code class="literal">tenantId</code></span></dt><dd>
+									Use the Developer Hub application information that you have created in Microsoft Azure and configured in OpenShift as secrets.
+								</dd><dt><span class="term"><code class="literal">signInPage: microsoft</code></span></dt><dd>
+									Enable the Microsoft Azure provider as default sign-in provider.
+								</dd></dl></div><p class="simpara">
+						Optional: Consider adding following optional fields:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">dangerouslyAllowSignInWithoutUserInCatalog: true</code></span></dt><dd><p class="simpara">
+									To enable authentication without requiring to provision users in the Developer Hub software catalog.
+								</p><div class="admonition warning"><div class="admonition_header">Warning</div><div><p>
+										Use <code class="literal">dangerouslyAllowSignInWithoutUserInCatalog</code> to explore Developer Hub features, but do not use it in production.
+									</p></div></div><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with optional field to allow authenticating users absent from the software catalog</strong></p><p>
+										
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+signInPage: microsoft
+dangerouslyAllowSignInWithoutUserInCatalog: true</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">domainHint</code></span></dt><dd><p class="simpara">
+									Optional for single-tenant applications. You can reduce login friction for users with accounts in multiple tenants by automatically filtering out accounts from other tenants. If you want to use this parameter for a single-tenant application, uncomment and enter the tenant ID. If your application registration is multi-tenant, leave this parameter blank. For more information, see <a class="link" href="https://learn.microsoft.com/en-us/azure/active-directory/manage-apps/home-realm-discovery-policy">Home Realm Discovery</a>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with optional <code class="literal">domainHint</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        domainHint: ${AUTH_AZURE_TENANT_ID}</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">additionalScopes</code></span></dt><dd><p class="simpara">
+									Optional for additional scopes. To add scopes for the application registration, uncomment and enter the list of scopes that you want to add. The default and mandatory value lists: <code class="literal">'openid', 'offline_access', 'profile', 'email', 'User.Read'</code>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config-rhdh.yaml</code> fragment with optional <code class="literal">additionalScopes</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        additionalScopes:
+           - Mail.Send</pre>
+									</p></div></dd></dl></div></li></ol></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					This step is optional for environments with outgoing access restrictions, such as firewall rules. If your environment has such restrictions, ensure that your RHDH backend can access the following hosts:
+				</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+							<code class="literal">login.microsoftonline.com</code>: For obtaining and exchanging authorization codes and access tokens.
+						</li><li class="listitem">
+							<code class="literal">graph.microsoft.com</code>: For retrieving user profile information (as referenced in the source code). If this host is unreachable, you might see an <span class="emphasis"><em>Authentication failed, failed to fetch user profile</em></span> error when attempting to log in.
+						</li></ul></div></div></div></section><section class="section" id="provisioning-users-from-microsoft-azure-to-the-software-catalog"><div class="titlepage"><div><div><h3 class="title">4.2. Provisioning users from Microsoft Azure to the software catalog</h3></div></div></div><p>
+				To authenticate users with Microsoft Azure, after <a class="link" href="#enabling-authentication-with-microsoft-azure" title="4.1. Enabling authentication with Microsoft Azure">Enabling authentication with Microsoft Azure</a>, provision users from Microsoft Azure to the Developer Hub software catalog.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have <a class="link" href="#enabling-authentication-with-microsoft-azure" title="4.1. Enabling authentication with Microsoft Azure">enabled authentication with Microsoft Azure</a>.
+					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						To enable Microsoft Azure member discovery, edit your custom Developer Hub ConfigMap, such as <code class="literal">app-config-rhdh</code>, and add following lines to the <code class="literal">app-config.yaml</code> content:
+					</p><div id="microsoftGraphOrgProviderId" class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with mandatory <code class="literal">microsoftGraphOrg</code> fields</strong></p><p>
+							
+<pre class="programlisting language-yaml">dangerouslyAllowSignInWithoutUserInCatalog: false
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        target: https://graph.microsoft.com/v1.0
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}</pre>
+						</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">dangerouslyAllowSignInWithoutUserInCatalog: false</code></span></dt><dd>
+									Allow authentication only for users in the Developer Hub software catalog.
+								</dd><dt><span class="term"><code class="literal">target: <a class="link" href="https://graph.microsoft.com/v1.0">https://graph.microsoft.com/v1.0</a></code></span></dt><dd>
+									Defines the MSGraph API endpoint the provider is connecting to. You might change this parameter to use a different version, such as the <a class="link" href="https://learn.microsoft.com/en-us/graph/api/overview?view=graph-rest-beta#call-the-beta-endpoint">beta endpoint</a>.
+								</dd><dt><span class="term"><code class="literal">tenandId</code>, <code class="literal">clientId</code> and <code class="literal">clientSecret</code></span></dt><dd>
+									Use the Developer Hub application information you created in Microsoft Azure and configured in OpenShift as secrets.
+								</dd></dl></div><p class="simpara">
+						Optional: Consider adding the following optional <code class="literal">microsoftGraphOrg.providerId</code> fields:
+					</p><div class="variablelist" id="authority"><dl class="variablelist"><dt><span class="term"><code class="literal">authority: <a class="link" href="https://login.microsoftonline.com">https://login.microsoftonline.com</a></code></span></dt><dd><p class="simpara">
+									Defines the authority used. Change the value to use a different <a class="link" href="https://learn.microsoft.com/en-us/graph/deployments#app-registration-and-token-service-root-endpoints">authority</a>, such as Azure US government. Default value: <code class="literal"><a class="link" href="https://login.microsoftonline.com">https://login.microsoftonline.com</a></code>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">queryMode</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        authority: https://login.microsoftonline.com/</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="queryMode"><dl class="variablelist"><dt><span class="term"><code class="literal">queryMode: basic | advanced</code></span></dt><dd><p class="simpara">
+									By default, the Microsoft Graph API only provides the <code class="literal">basic</code> feature set for querying. Certain features require <code class="literal">advanced</code> querying capabilities. See <a class="link" href="https://docs.microsoft.com/en-us/graph/aad-advanced-queries">Microsoft Azure Advanced queries</a>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">queryMode</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        queryMode: advanced</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="userExpand"><dl class="variablelist"><dt><span class="term"><code class="literal">user.expand</code></span></dt><dd><p class="simpara">
+									To include the expanded resource or collection referenced by a single relationship (navigation property) in your results. Only one relationship can be expanded in a single request. See <a class="link" href="https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter">Microsoft Graph query expand parameter</a>. This parameter can be combined with <a class="link" href="#userGroupMemberFilter">] or xref:userFilter[</a>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">user.expand</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          expand: manager</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="userFilter"><dl class="variablelist"><dt><span class="term"><code class="literal">user.filter</code></span></dt><dd><p class="simpara">
+									To filter users. See <a class="link" href="https://docs.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0#properties">Microsoft Graph API</a> and <a class="link" href="https://docs.microsoft.com/en-us/graph/query-parameters#filter-parameter">Microsoft Graph API query filter parameters syntax</a>. This parameter and <a class="xref" href="#userGroupMemberFilter">???TITLE???</a> are mutually exclusive, only one can be specified.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">user.filter</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          filter: accountEnabled eq true and userType eq 'member'</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="userLoadPhotos"><dl class="variablelist"><dt><span class="term"><code class="literal">user.loadPhotos: true | false</code></span></dt><dd><p class="simpara">
+									Load photos by default. Set to <code class="literal">false</code> to not load user photos.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">user.loadPhotos</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          loadPhotos: true</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="userSelect"><dl class="variablelist"><dt><span class="term"><code class="literal">user.select</code></span></dt><dd><p class="simpara">
+									Define the <a class="link" href="https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0">Microsoft Graph resource types</a> to retrieve.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">user.select</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        user:
+          select: ['id', 'displayName', 'description']</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="userGroupMemberFilter"><dl class="variablelist"><dt><span class="term"><code class="literal">userGroupMember.filter</code></span></dt><dd><p class="simpara">
+									To use group membership to get users. To filter groups and fetch their members. This parameter and <a class="xref" href="#userFilter">???TITLE???</a> are mutually exclusive, only one can be specified.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">userGroupMember.filter</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        userGroupMember:
+          filter: "displayName eq 'Backstage Users'"</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="userGroupMemberSearch"><dl class="variablelist"><dt><span class="term"><code class="literal">userGroupMember.search</code></span></dt><dd><p class="simpara">
+									To use group membership to get users. To search for groups and fetch their members. This parameter and <a class="xref" href="#userFilter">???TITLE???</a> are mutually exclusive, only one can be specified.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">userGroupMember.search</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        userGroupMember:
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="groupExpand"><dl class="variablelist"><dt><span class="term"><code class="literal">group.expand</code></span></dt><dd><p class="simpara">
+									Optional parameter to include the expanded resource or collection referenced by a single relationship (navigation property) in your results. Only one relationship can be expanded in a single request. See <a class="link" href="https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter">https://docs.microsoft.com/en-us/graph/query-parameters#expand-parameter</a> This parameter can be combined with <a class="link" href="#userGroupMemberFilter">] instead of xref:userFilter[</a>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">group.expand</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          expand: member</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="groupFilter"><dl class="variablelist"><dt><span class="term"><code class="literal">group.filter</code></span></dt><dd><p class="simpara">
+									To filter groups. See <a class="link" href="https://docs.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0#properties">Microsoft Graph API query group syntax</a>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">group.filter</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          filter: securityEnabled eq false and mailEnabled eq true and groupTypes/any(c:c+eq+'Unified')</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="groupSearch"><dl class="variablelist"><dt><span class="term"><code class="literal">group.search</code></span></dt><dd><p class="simpara">
+									To search for groups. See <a class="link" href="https://docs.microsoft.com/en-us/graph/search-query-parameter">Microsoft Graph API query search parameter</a>.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">group.search</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'</pre>
+									</p></div></dd></dl></div><div class="variablelist" id="groupSelect"><dl class="variablelist"><dt><span class="term"><code class="literal">group.select</code></span></dt><dd><p class="simpara">
+									To define the <a class="link" href="https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0">Microsoft Graph resource types</a> to retrieve.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">group.select</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        group:
+          select: ['id', 'displayName', 'description']</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">schedule.frequency</code></span></dt><dd><p class="simpara">
+									To specify custom schedule frequency. Supports cron, ISO duration, and "human duration" as used in code.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">schedule.frequency</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        schedule:
+          frequency: { hours: 1 }</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">schedule.timeout</code></span></dt><dd><p class="simpara">
+									To specify custom timeout. Supports ISO duration and "human duration" as used in code.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">schedule.timeout</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        schedule:
+          timeout: { minutes: 50 }</pre>
+									</p></div></dd><dt><span class="term"><code class="literal">schedule.initialDelay</code></span></dt><dd><p class="simpara">
+									To specify custom initial delay. Supports ISO duration and "human duration" as used in code.
+								</p><div class="formalpara"><p class="title"><strong><code class="literal">app-config.yaml</code> fragment with optional <code class="literal">schedule.initialDelay</code> field</strong></p><p>
+										
+<pre class="programlisting language-yaml">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        schedule:
+          initialDelay: { seconds: 15}</pre>
+									</p></div></dd></dl></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Check the console logs to verify that the synchronization is completed.
+					</p><div class="formalpara"><p class="title"><strong>Successful synchronization example:</strong></p><p>
+							
+<pre class="programlisting language-json">backend:start: {"class":"MicrosoftGraphOrgEntityProvider$1","level":"info","message":"Read 1 msgraph users and 1 msgraph groups in 2.2 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"MicrosoftGraphOrgEntityProvider:default:refresh","taskInstanceId":"88a67ce1-c466-41a4-9760-825e16b946be","timestamp":"2024-06-26 12:23:42"}
+backend:start: {"class":"MicrosoftGraphOrgEntityProvider$1","level":"info","message":"Committed 1 msgraph users and 1 msgraph groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"MicrosoftGraphOrgEntityProvider:default:refresh","taskInstanceId":"88a67ce1-c466-41a4-9760-825e16b946be","timestamp":"2024-06-26 12:23:42"}</pre>
+						</p></div></li><li class="listitem">
+						Log in with a Microsoft Azure account.
+					</li></ol></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm45339207263600"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
