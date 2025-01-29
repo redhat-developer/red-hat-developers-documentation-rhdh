@@ -1,0 +1,231 @@
+[id="enabling-authentication-with-your-custom-authentication-provider"]
+= Enabling authentication with your custom authentication provider
+
+To authenticate users with your custom authentication provider, create, install and configure your custom authentication backend and frontend plugins in {product}.
+
+.Prerequisites
+* You link:{configuring-book-url}[added a custom {product-short} application configuration], and have sufficient permissions to modify it.
+* link:{installing-and-viewing-dynamic-plugins-url}#assembly-third-party-plugins[Exporting, packaging, and installing third-party plugins] knowledge.
+* You collected the relevant information to connect to your custom authentication provider.
++
+[WARNING]
+====
+This procedure is using a custom LDAP authentication provider as an example.
+This example is not intended for production use.
+====
+
+.Procedure
+
+. Add the identified key/value pairs to link:{plugins-configure-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
+.. To allow {product-short} to use plugins for authentication rather than the builtin authentication providers, set the `ENABLE_AUTH_PROVIDER_MODULE_OVERRIDE` environment variable to true.
+`ENABLE_AUTH_PROVIDER_MODULE_OVERRIDE`:: `true`
+.. To add your custom authentication provider credentials to {product-short}, add the identified key/value pairs.
++
+.Secrets for the LDAP example
+====
+LDAP_URL:: Your LDAP server URL, such as `ldap://_<my_host>_:3893`.
+LDAP_BIND_DN:: Your LDAP bind distinguished name, such as `cn=serviceuser,ou=svcaccts,dc=glauth,dc=com`.
+LDAP_BIND_PASSWORD:: Your LDAP password, such as `mysecret`.
+====
+
+. Create your custom authentication provider backend plugin, that:
+* Provides an authentication provider API.
+* Bridges authentication to your custom authentication provider.
+* Includes an example backend configuration in an `app-config.yaml`file.
++
+--
+.LDAP backend plugin
+====
+.`src/index.ts` wrapper re-exporting the original plugin
+[source,javascript]
+----
+export { default as default } from "@immobiliarelabs/backstage-plugin-ldap-auth-backend";
+----
+
+.`app-config.yaml` backend configuration
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    ldap:
+      production:
+        ldapAuthenticationOptions:
+          userSearchBase: ou=users,dc=glauth,dc=com
+          usernameAttribute: uid
+          adminDn: ${LDAP_BIND_DN}
+          adminPassword: ${LDAP_BIND_PASSWORD}
+          ldapOpts:
+            url:
+              - ${LDAP_URL}
+----
+====
+--
+
+. Create your custom authentication provider frontend plugin, that:
+* Provides a custom `SignInPage` component.
+The `SignInPage` component is the place in a {product-short} app where the frontend API reference is connected to the appropriate backend authentication provider API service.
+* Provides an API client for the backend authentication provider service.
+* Includes an example backend configuration in an `app-config.yaml`file.
++
+--
+.LDAP frontend plugin
+====
+The exported `SignInPage` component delegates to the `LDAPSignInPage` component that is provided by the `backstage-plugin-ldap-auth` package.
+
+.`src/index.ts` wrapper re-exporting the original plugin
+[source,javascript]
+----
+export * from '@immobiliarelabs/backstage-plugin-ldap-auth';
+export { SignInPage } from './components/SignInPage/SignInPage';
+----
+
+.`src/components/SignInPage.ts` `SignInPage` component
+[source,javascript]
+----
+import React from 'react';
+import { SignInPageProps } from '@backstage/core-plugin-api';
+import { LdapAuthFrontendPage } from '@immobiliarelabs/backstage-plugin-ldap-auth';
+
+export function SignInPage(props: SignInPageProps): React.JSX.Element {
+  return <LdapAuthFrontendPage {...props} provider="ldap" />;
+}
+----
+
+.`app-config.yaml` frontend configuration
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    immobiliarelabs-backstage-plugin-ldap-auth:
+      components:
+        - name: SignInPage
+          module: PluginRoot
+          importName: SignInPage
+----
+====
+--
+
+. link:{installing-and-viewing-dynamic-plugins-url}#assembly-third-party-plugins[Export, package, and install your custom plugins].
+. Add your custom plugins configuration to `dynamic-plugins.yaml` in {product-short}.
++
+.`dynamic-plugins.yaml` excerpt for LDAP catalog support
+====
+----
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-ldap-dynamic
+    disabled: false
+    pluginConfig:
+      catalog:
+        providers:
+          ldapOrg:
+            default:
+              target: ${LDAP_URL}
+              bind:
+                dn: ${LDAP_BIND_DN}
+                secret: ${LDAP_BIND_PASSWORD}
+              users:
+                - dn: ou=users,dc=glauth,dc=com
+                  options:
+                    scope: sub
+                    filter: (accountStatus=active)
+                    attributes: ['*', '+']
+                    paged: false
+                  map:
+                    rdn: uid
+                    name: uid
+                    description: description
+                    displayName: uid
+                    email: mail
+                    picture: <nothing, left out>
+                    memberOf: memberOf
+              groups:
+                - dn: ou=groups,dc=glauth,dc=com
+                  options:
+                    scope: sub
+                    filter: (gidNumber=*)
+                    attributes: ['*', '+']
+                    paged: false
+                  map:
+                    rdn: uid
+                    name: uid
+                    uid: uid
+                    displayName: uid
+                    description: description
+                    type: groupType
+                    email: <nothing, left out>
+                    picture: <nothing, left out>
+                    memberOf: memberOf
+                    members: member
+              schedule:
+                frequency: PT10M
+                timeout: PT10M
+# optional, this is just to suppress any examples
+        import: {}
+        rules:
+          - allow: [Component, System, Group, Resource, Location, Template, API, User]
+        locations: []
+  - package: ./local-plugins/immobiliarelabs-backstage-plugin-ldap-auth
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          immobiliarelabs-backstage-plugin-ldap-auth:
+            components:
+              - name: SignInPage
+                module: PluginRoot
+                importName: SignInPage
+----
+====
+
+
+. To set up your custom authentication provider, edit your custom {product-short} ConfigMap such as `app-config-rhdh`, and add the following lines to the `app-config-rhdh.yaml` content:
++
+--
+.`app-config-rhdh.yaml` fragment with mandatory fields to enable authentication with
+[source,yaml,subs="+attributes,+quotes"]
+----
+auth:
+  environment: production
+  providers:
+    _<your_custom_provider_id>_:
+      production:
+        _<your_custom_provider_configuration>_
+signInPage: _<your_custom_provider_id>_
+----
+
+.`app-config.yaml` excerpt for the LDAP example
+====
+----
+auth:
+  environment: production
+  providers:
+    ldap:
+      production:
+        ldapAuthenticationOptions:
+          userSearchBase: ou=users,dc=glauth,dc=com
+          usernameAttribute: uid
+          adminDn: ${LDAP_BIND_DN}
+          adminPassword: ${LDAP_BIND_PASSWORD}
+          ldapOpts:
+            url:
+              - ${LDAP_URL}
+signInPage: ldap
+----
+====
+
+`environment: production`::
+Mark the environment as `production` to hide the Guest login in the {product-short} home page.
+
+`_<your_custom_provider_id>_` section::
+Use the {product-short} application information that you have created in your custom authentication provider and configured in OpenShift as secrets.
+
+`sigInPage: _<your_custom_provider_id>_`::
+To enable the custom authentication provider as default sign-in provider.
+--
+
+.Verification
+. Go to the {product-short} login page.
+. Your {product-short} sign-in page displays *Sign in using _<your_custom_authentication_provider_name>_* and the Guest user sign-in is disabled.
+. Log in with your custom authentication provider.
+
