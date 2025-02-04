@@ -1,0 +1,46 @@
+[id="enabling-guest-access-for-the-rbac-frontend-plugin_{context}"]
+= Enabling guest access for the RBAC frontend plugin
+
+Use guest access for the Role-Based Access Control (RBAC) frontend plugin to test and develop, except in production. To enable the guest access for the RBAC frontend, configure the backend plugin and set up the guest authentication provider.
+
+.Prerequisites
+* You have installed the `@janus-idp/backstage-plugin-rbac` plugin in {product-short}. For more information, see link:{plugins-configure-book-url}[{plugins-configure-book-title}].
+
+== Configuring the RBAC backend plugin
+
+Update the `app-config.yaml` to enable the permission framework, include the user `user:default/guest` in the admin users section, and ensure that the plugins with permissions appear in the UI as shown:
+
+[source,yaml,subs=+quotes]
+----
+permission
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/guest
+    pluginsWithPermission:
+      - catalog
+      - permission
+      - scaffolder
+----
+
+[NOTE]
+====
+The `pluginsWithPermission` section includes only three plugins. Update the section as needed to include any additional plugins that also incorporate permissions.
+====
+
+== Setting up the guest authentication provider
+
+To enable guest authentication and to use it alongside the RBAC frontend plugin, update the `app-config.yaml`. Add the user entity reference to resolve and enable the `dangerouslyAllowOutsideDevelopment` option, as shown in the following example:
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+auth:
+  environment: development
+  providers:
+    guest:
+      userEntityRef: user:default/guest
+      dangerouslyAllowOutsideDevelopment: true
+----
+
+You can use `user:default/guest` as the user entity reference to match the added user under the `permission.rbac.admin.users` section of the `app-config.yaml`.
