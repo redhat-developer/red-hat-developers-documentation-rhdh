@@ -1611,6 +1611,7 @@ section {
 <li><a href="#feature-rhidp-3569">1.16. Restarting Red Hat Developer Hub faster</a></li>
 <li><a href="#feature-rhidp-3666">1.17. Monitoring active users on Developer Hub</a></li>
 <li><a href="#enhancement-rhidp-3826">1.18. Loading a custom Backstage theme from a dynamic plugin</a></li>
+<li><a href="#enhancement-rhidp-5833">1.19. Manage concurrent writing on install dynamic plugins [1.3.5]</a></li>
 </ul>
 </li>
 <li><a href="#breaking-changes">2. Breaking changes</a>
@@ -1654,7 +1655,7 @@ section {
 <li><a href="#bug-fix-rhidp-4069">5.4.1. Conditional alias <code>$ownerRefs</code> does not work</a></li>
 </ul>
 </li>
-<li><a href="#_fixed-issues-in-1-3">5.5. Fixed issues in 1.3</a>
+<li><a href="#_fixed-issues-in-1-3-0">5.5. Fixed issues in 1.3.0</a>
 <ul class="sectlevel3">
 <li><a href="#bug-fix-rhidp-1334">5.5.1. Removed unnecessary pull secret from the Red Hat Developer Hub Helm Chart</a></li>
 <li><a href="#bug-fix-rhidp-2139">5.5.2. Filtering for permissions policies that do not exist leads to an error being thrown</a></li>
@@ -1720,12 +1721,10 @@ section {
 </li>
 <li><a href="#known-issues">7. Known issues</a>
 <ul class="sectlevel2">
-<li><a href="#known-issue-rhidp-5342">7.1. [Helm] Cannot run two RHDH replicas on different nodes due to Multi-Attach errors on the dynamic plugins root PVC</a></li>
-<li><a href="#known-issue-rhidp-5284">7.2. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</a></li>
-<li><a href="#known-issue-rhidp-4695">7.3. [Doc] OIDC refresh token behavior</a></li>
-<li><a href="#known-issue-rhidp-4067">7.4. Bulk Import: Added repositories count is incorrect</a></li>
-<li><a href="#known-issue-rhidp-3396">7.5. Topology plugin permission is not displayed in the RBAC front-end UI</a></li>
-<li><a href="#known-issue-rhidp-4695">7.6. [Doc] OIDC refresh token behavior</a></li>
+<li><a href="#known-issue-rhidp-5284">7.1. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</a></li>
+<li><a href="#known-issue-rhidp-4695">7.2. OIDC refresh token behavior</a></li>
+<li><a href="#known-issue-rhidp-4067">7.3. Bulk Import: Added repositories count is incorrect</a></li>
+<li><a href="#known-issue-rhidp-3396">7.4. Topology plugin permission is not displayed in the RBAC front-end UI</a></li>
 </ul>
 </li>
 </ul>
@@ -1999,6 +1998,12 @@ export const lightThemeProvider = ({ children }: { children: ReactNode }) =&amp;
 </div>
 <div class="paragraph">
 <p>This update also introduced the ability to override core API service factories from a dynamic plugin, which can be helpful for more specialized use cases such as providing a custom ScmAuth configuration for the Developer Hub frontend.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="enhancement-rhidp-5833">1.19. Manage concurrent writing on install dynamic plugins [1.3.5]</h3>
+<div class="paragraph">
+<p>Previously, running multi-replica RHDH with a Persistent Volume for the Dynamic Plugins cache was not possible due to potential write conflicts. This update mitigates that risk</p>
 </div>
 </div>
 </div>
@@ -2402,7 +2407,7 @@ This dynamic plugin is disabled by default.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_fixed-issues-in-1-3">5.5. Fixed issues in 1.3</h3>
+<h3 id="_fixed-issues-in-1-3-0">5.5. Fixed issues in 1.3.0</h3>
 <div class="sect3">
 <h4 id="bug-fix-rhidp-1334">5.5.1. Removed unnecessary pull secret from the Red Hat Developer Hub Helm Chart</h4>
 <div class="paragraph">
@@ -3268,27 +3273,7 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 <p>This section lists known issues in Red Hat Developer Hub 1.3.</p>
 </div>
 <div class="sect2">
-<h3 id="known-issue-rhidp-5342">7.1. [Helm] Cannot run two RHDH replicas on different nodes due to Multi-Attach errors on the dynamic plugins root PVC</h3>
-<div class="paragraph">
-<p>Currently, when deploying Developer Hub using the Helm Chart, two replicas cannot run on different cluster nodes. This might also affect the upgrade from 1.3 to 1.4.0 if the new pod is scheduled on a different node.</p>
-</div>
-<div class="paragraph">
-<p>Possible workarounds for the upgrade include the following actions:
-* Manually scale down the number of replicas to 0 before upgrading your Helm release.
-* Manually remove the old Developer Hub pod after upgrading the Helm release. However, this would imply some application downtime.
-* Leverage a Pod Affinity rule to force the cluster scheduler to run your Developer Hub pods on the same node.</p>
-</div>
-<div class="ulist">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p><a href="https://issues.redhat.com/browse/RHIDP-5342">RHIDP-5342</a></p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="known-issue-rhidp-5284">7.2. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</h3>
+<h3 id="known-issue-rhidp-5284">7.1. Entities of repositories under a configured org in catalog-backend-module-github-org plugin are not deleted from the catalog when the imported repository is deleted from bulk imports</h3>
 <div class="paragraph">
 <p>Repositories might be added to Developer Hub from various sources (like statically in an app-config file or dynamically when enabling GitHub discovery). By design, the bulk import plugin will only track repositories that are accessible from the configured GitHub integrations. When both the Bulk Import and the GitHub Discovery plugins are enabled, the repositories the latter discovers might be listed in the Bulk Import pages. However, attempting to delete a repository added by the discovery plugin from the Bulk Import Jobs may have no effect, as any entities registered from this repository might still be present in the Developer Hub catalog. There is unfortunately no known workaround yet.</p>
 </div>
@@ -3302,7 +3287,7 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 </div>
 </div>
 <div class="sect2">
-<h3 id="known-issue-rhidp-4695">7.3. [Doc] OIDC refresh token behavior</h3>
+<h3 id="known-issue-rhidp-4695">7.2. OIDC refresh token behavior</h3>
 <div class="paragraph">
 <p>When using Red Hat Single-Sign On or {rhbk-brand-name} as an OIDC provider, the default access token lifespan is set to 5 minutes, which corresponds to the token refresh grace period set in Developer Hub. This 5-minute grace period is the threshold used to trigger a new refresh token call. Since the token is always near expiration, frequent refresh token requests will cause performance issues.</p>
 </div>
@@ -3319,7 +3304,7 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 </div>
 </div>
 <div class="sect2">
-<h3 id="known-issue-rhidp-4067">7.4. Bulk Import: Added repositories count is incorrect</h3>
+<h3 id="known-issue-rhidp-4067">7.3. Bulk Import: Added repositories count is incorrect</h3>
 <div class="paragraph">
 <p>Only the first 20 repositories (in alphabetical order) can be displayed at most on the Bulk Import Added Repositories page. Also, the count of Added Repositories displayed might be wrong. In future releases, we plan to address this with proper pagination. Meanwhile, as a workaround, searching would still work against all Added Repositories. So you can still search any Added Repository and get it listed on the table.</p>
 </div>
@@ -3333,7 +3318,7 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 </div>
 </div>
 <div class="sect2">
-<h3 id="known-issue-rhidp-3396">7.5. Topology plugin permission is not displayed in the RBAC front-end UI</h3>
+<h3 id="known-issue-rhidp-3396">7.4. Topology plugin permission is not displayed in the RBAC front-end UI</h3>
 <div class="paragraph">
 <p>Permissions associated only with front-end plugins do not appear in the UI because they require a backend plugin to expose the permission framework&#39;s well-known endpoint. As a workaround, you can apply these permissions by using a CSV file or directly calling the REST API of the RBAC backend plugin. Affected plugins include Topology (<code>topology.view.read</code>), Tekton (<code>tekton.view.read</code>), ArgoCD (<code>argocd.view.read</code>), and Quay (<code>quay.view.read</code>).</p>
 </div>
@@ -3346,29 +3331,12 @@ net, sunrpc: Remap EPERM in case of connection failure in xs_tcp_setup_socket</p
 </ul>
 </div>
 </div>
-<div class="sect2">
-<h3 id="known-issue-rhidp-4695">7.6. [Doc] OIDC refresh token behavior</h3>
-<div class="paragraph">
-<p>When using Red Hat Single-Sign On or {rhbk-brand-name} as an OIDC provider, the default access token lifespan is set to 5 minutes, which corresponds to the token refresh grace period set in Developer Hub. This 5-minute grace period is the threshold used to trigger a new refresh token call. Since the token is always near expiration, frequent refresh token requests will cause performance issues.</p>
-</div>
-<div class="paragraph">
-<p>This issue will be resolved in the 1.5 release. To prevent the performance issues, increase the lifespan in the Red Hat Single-Sign On or {rhbk-brand-name} server by setting <strong>Configure &gt; Realm Settings &gt; Access Token Lifespan</strong> to a value greater than five minutes (preferably 10 or 15 minutes).</p>
-</div>
-<div class="ulist">
-<div class="title">Additional resources</div>
-<ul>
-<li>
-<p><a href="https://issues.redhat.com/browse/RHIDP-4695">RHIDP-4695</a></p>
-</li>
-</ul>
-</div>
-</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2025-02-06 14:05:32 UTC
+Last updated 2025-02-11 14:19:11 UTC
 </div>
 </div>
 </body>
