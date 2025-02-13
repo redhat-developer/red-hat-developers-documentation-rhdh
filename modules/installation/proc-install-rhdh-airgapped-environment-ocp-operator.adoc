@@ -5,68 +5,159 @@
 [id="proc-install-rhdh-airgapped-environment-ocp-operator_{context}"]
 = Installing {product} in an air-gapped environment with the Operator
 
+You can install {product} in a fully disconnected or partially disconnected environment using the {product} Operator. For a list of supported platforms, see the link:https://access.redhat.com/support/policy/updates/developerhub[{product} Life Cycle page].
+
+== Installing {product} on {ocp-short} in a partially disconnected environment with the Operator
+
 On an {ocp-short} cluster operating on a restricted network, public resources are not available. However, deploying the {product} Operator and running {product-short} requires the following public resources:
 
 * Operator images (bundle, operator, catalog)
 * Operands images ({product-very-short}, PostgreSQL)
 
-To make these resources available, replace them with their equivalent resources in a mirror registry accessible to the {ocp-short} cluster.
+To make these resources available, replace them with their equivalent resources in a mirror registry accessible to your cluster.
 
-You can use a helper script that mirrors the necessary images and provides the necessary configuration to ensure those images will be used when installing the {product} Operator and creating {product-short} instances.
+You can use a helper script that mirrors the necessary images and provides the necessary configuration to ensure those images will be used when installing the {product} Operator and creating {product-short} instances. This script requires a target mirror registry. You likely have a target mirror registry ready to use if your cluster is already operating on a disconnected network. If you do not already have a target registry, and if you have an {ocp-short} cluster, you might want to expose and leverage the internal cluster registry.
 
-[NOTE]
-====
-This script requires a target mirror registry which you should already have installed if your {ocp-short} cluster is ready to operate on a restricted network. However, if you are preparing your cluster for disconnected usage, you can use the script to deploy a mirror registry in the cluster and use it for the mirroring process.
-====
+If you are connected to a {ocp-short} cluster, the helper script will detect it and will automatically expose the cluster registry. However, if you are connected to a Kubernetes cluster, you can manually specify the target registry that you want to mirror the images to.
 
 .Prerequisites
-* You have an active {openshift-cli} session with administrative permissions to the {ocp-short} cluster. See link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-getting-started[Getting started with the OpenShift CLI].
-* You have an active `oc registry` session to the `registry.redhat.io` {company-name} Ecosystem Catalog. See link:https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
-* The `opm` CLI tool is installed. See link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#olm-about-opm_cli-opm-install[Installing the opm CLI].
-* The jq package is installed. See link:https://jqlang.github.io/jq/download/[Download jq].
-* Podman is installed. See link:https://podman.io/docs/installation[Podman Installation Instructions].
-* Skopeo version 1.14 or higher is installed. link:https://github.com/containers/skopeo/blob/main/install.md[See Installing Skopeo].
-* If you already have a mirror registry for your cluster, an active Skopeo session with administrative access to this registry is required. See link:https://github.com/containers/skopeo#authenticating-to-a-registry[Authenticating to a registry] and link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/disconnected_installation_mirroring/index#prerequisites_installing-mirroring-installation-images[Mirroring images for a disconnected installation].
-
-[NOTE]
-====
-The internal {ocp-short} cluster image registry cannot be used as a target mirror registry. See link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/disconnected_installation_mirroring/index#installation-about-mirror-registry_installing-mirroring-installation-images[About the mirror registry].
-====
-
-* If you prefer to create your own mirror registry, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/disconnected_installation_mirroring/index#installing-mirroring-creating-registry[Creating a mirror registry with mirror registry for Red Hat OpenShift].
-
-* If you do not already have a mirror registry, you can use the helper script to create one for you and you need the following additional prerequisites:
-+
-** The cURL package is installed. For {rhel}, the curl command is available by installing the curl package. To use curl for other platforms, see the link:https://curl.se/[cURL website].
-** The `htpasswd` command is available. For {rhel}, the `htpasswd` command is available by installing the `httpd-tools` package.
+* You have an active `oc registry` session to the `registry.redhat.io` {company-name} Ecosystem Catalog. For more information, see link:https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+* You have an active `skopeo` session with administrative access to the target mirror registry. For more information, see link:https://github.com/containers/skopeo#authenticating-to-a-registry[Authenticating to a registry].
+* You have installed the `opm` CLI tool. For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/cli_tools/opm-cli#olm-about-opm_cli-opm-install[Installing the opm CLI].
+* You have installed Podman 5.3 or later. For more information, see link:https://podman.io/docs/installation[Podman Installation Instructions].
 
 .Procedure
-. Download and run the mirroring script to install a custom Operator catalog and mirror the related images: `prepare-restricted-environment.sh` (link:https://github.com/redhat-developer/rhdh-operator/blob/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh[source]).
+. In your terminal, navigate to the directory where you want to save the mirroring script.
+. Download the mirroring script by running the following command:
 +
-[source,yaml,subs="attributes+"]
+[source,terminal,subs="attributes+"]
 ----
-curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh
-
-# if you do not already have a target mirror registry
-# and want the script to create one for you
-# use the following example:
-bash prepare-restricted-environment.sh \
-   --prod_operator_index "registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}" \
-   --prod_operator_package_name "rhdh" \
-   --prod_operator_bundle_name "rhdh-operator" \
-   --prod_operator_version "v{product-bundle-version}"
-
-# if you already have a target mirror registry
-# use the following example:
+curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh
+----
++
+. Run the mirroring script by running the `bash` command with the appropriate set of options:
+* If you do not already have a target mirror registry and want the script to create one for you, use the following example:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
 bash prepare-restricted-environment.sh \
    --prod_operator_index "registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}" \
    --prod_operator_package_name "rhdh" \
    --prod_operator_bundle_name "rhdh-operator" \
    --prod_operator_version "v{product-bundle-version}" \
-   --use_existing_mirror_registry "my_registry"
+----
+* If you want to use an existing target mirror registry, specify it with the `--use_existing_mirror_registry` option. For example:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+bash prepare-restricted-environment.sh \
+   --prod_operator_index "registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}" \
+   --prod_operator_package_name "rhdh" \
+   --prod_operator_bundle_name "rhdh-operator" \
+   --prod_operator_version "v{product-bundle-version}" \
+   --use_existing_mirror_registry "_<my_registry>_"
 ----
 +
 [NOTE]
 ====
 The script can take several minutes to complete as it copies multiple images to the mirror registry.
 ====
+
+.Verification
+* If you are using {ocp-brand-name}, the {product} Operator is in the *Installed Operators* list in the web console.
+* If you are using a supported Kubernetes platform, you can check the list of pods running in the `rhdh-operator` namespace by running the following command in your terminal:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+kubectl -n rhdh-operator get pods
+----
+
+== Installing {product} on {ocp-short} in a fully disconnected environment with the Operator
+
+If your network has access to the registry through a bastion host or physical disk, you can use the Operator to install {product} by mirroring specified resources and transferring them to your air-gapped environment without any connection to the internet.
+
+.Prerequisites
+
+* You have set up your disconnected environment.
+** You have mirrored all of the required images to disk.
+** You have manually transferred the mirror folder to the network of the disconnected mirror registry.
+** You have mirrored the images from disk to the target mirror registry in your disconnected environment.
+** You have installed the Operator in your disconnected environment.
+* You have set up your workstation.
+** You have an active `oc registry` session to the `registry.redhat.io` {company-name} Ecosystem Catalog. For more information, see link:https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
+** You have installed the `opm` CLI tool. For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/cli_tools/opm-cli#olm-about-opm_cli-opm-install[Installing the opm CLI].
+** You have installed Podman 5.3 or later. For more information, see link:https://podman.io/docs/installation[Podman Installation Instructions].
+
+.Procedure
+. Download the mirroring script to disk by running the following command:
++
+[source,terminal,subs="attributes+"]
+----
+curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh
+----
++
+. Run the mirroring script by running the `bash` command with the appropriate set of options:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+bash prepare-restricted-environment.sh \
+    --index-image "quay.io/rhdh/iib:next-v4.18-x86_64" \
+    --ci-index true \
+    --to-dir _<my_pulled_image_location>_ \
+    [--filter-versions '*'] \
+    [--use-oc-mirror true]
+----
++
+where
+
+_<my_pulled_image_location>_ :: Specifies the directory where you want to pull all of the necessary images with the `--to-dir` option, for example, my.registry.example.com/namespace
++
+[NOTE]
+====
+The script can take several minutes to complete as it copies multiple images to the mirror registry.
+====
++
+. Transfer the directory specified by the `--to-dir` option to your disconnected environment.
+. From a machine in your disconnected environment that has access to both the cluster and the target mirror registry, download the mirroring script from disk by running the following command:
++
+[source,terminal,subs="attributes+"]
+----
+curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh
+----
++
+. Run the mirroring script by running the `bash` command with the appropriate set of options:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+bash prepare-restricted-environment.sh \
+    --from-dir _<my_pulled_image_location>_ \
+    [--to-registry _<my.registry.example.com>_/_<namespace>_] \
+    [--use-oc-mirror true]
+----
++
+where
+
+_<my_pulled_image_location>_ :: Specifies the directory where you want to pull all of the necessary images with the `--to-dir` option.
+
+_<my.registry.example.com>_ :: Specifies the URL for the target mirror registry where you want to mirror the images.
+
+_<namespace>_ :: Specifies the target namespace where you want to mirror the images.
++
+[NOTE]
+====
+If you used `oc-mirror` to mirror the images to disk, you must also use `oc-mirror` to mirror the images from disk due to the folder layout that `oc-mirror` uses.
+====
++
+[NOTE]
+====
+The script can take several minutes to complete as it automatically installs the {product} Operator.
+====
+
+.Verification
+* If you are using {ocp-brand-name}, the {product} Operator is in the *Installed Operators* list in the web console.
+* If you are using a supported Kubernetes platform, you can check the list of pods running in the `rhdh-operator` namespace by running the following command in your terminal:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+kubectl -n rhdh-operator get pods
+----
