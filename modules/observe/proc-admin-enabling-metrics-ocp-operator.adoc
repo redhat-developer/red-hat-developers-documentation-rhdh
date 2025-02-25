@@ -10,7 +10,7 @@ You can enable and view metrics for an Operator-installed {product} instance fro
 
 .Prerequisites
 
-* Your {ocp-short} cluster has link:https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html[monitoring for user-defined projects] enabled.
+* Your {ocp-short} cluster has link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/monitoring/index#enabling-monitoring-for-user-defined-projects[monitoring for user-defined projects] enabled.
 * You have installed {product} on {ocp-short} using the {product} Operator.
 * You have installed the {openshift-cli}.
 
@@ -20,29 +20,39 @@ Currently, the {product} Operator does not support creating a `ServiceMonitor` c
 
 . Create the `ServiceMonitor` CR as a YAML file:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: <custom_resource_name> # <1>
-  namespace: <project_name> # <2>
+  name: _<developer_hub_service_monitor_name>_ <1>
+  namespace: _<rhdh_namespace_name>_ <2>
   labels:
-    app.kubernetes.io/instance: <custom_resource_name>
-    app.kubernetes.io/name: backstage
+    app.kubernetes.io/instance: _<rhdh_cr_name>_ <3>
+    app.kubernetes.io/name: {product-custom-resource-type}
 spec:
   namespaceSelector:
     matchNames:
-      - <project_name>
+      - _<rhdh_namespace_name>_ <4>
   selector:
     matchLabels:
-      rhdh.redhat.com/app: backstage-<custom_resource_name>
+      app.kubernetes.io/instance: _<deployment_name>_ <5>
+      app.kubernetes.io/name: _<rhdh_cr_type>_ <6>
   endpoints:
   - port: http-metrics
     path: '/metrics'
 ----
-<1> Replace `<custom_resource_name>` with the name of your {product} CR.
-<2> Replace `<project_name>` with the name of the {ocp-short} project where your {product} instance is running.
+<1> The name of your `ServiceMonitor` resource, for example, `developer_hub_service_monitor`.
+<2> The namespace where your `ServiceMonitor` will live, for example, `{my-product-namespace}`.
+<3> The label name identifying the `ServiceMonitor` CR instance, for example, `{my-product-cr-name}`.
+<4> The namespace where your {product-very-short} instance is installed, for example, `{my-product-namespace}`.
+<5> The name of your {product-very-short} deployment, for example, `developer-hub`.
+<6> The name of your {product-very-short} application, for example, `backstage`.
++
+[NOTE]
+====
+`spec.selector.matchLabels` configuration must match the labels of your {product-very-short} installation.
+==== 
 
 . Apply the `ServiceMonitor` CR by running the following command:
 +
@@ -55,3 +65,4 @@ oc apply -f <filename>
 
 . From the *Developer* perspective in the {ocp-short} web console, select the *Observe* view.
 . Click the *Metrics* tab to view metrics for {product} pods.
+. From the Developer perspective in the {ocp-short} web console, click **Project > Services** and verify the labels for `backstage-developer-hub`.
