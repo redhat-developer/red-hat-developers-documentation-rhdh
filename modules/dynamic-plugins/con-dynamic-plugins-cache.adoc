@@ -13,10 +13,16 @@ When you enable dynamic plugins cache:
 == Enabling the dynamic plugins cache
 To enable the dynamic plugins cache in {product-very-short}, the plugins directory `dynamic-plugins-root` must be a persistent volume. 
 
-For Helm chart installations, a persistent volume named `dynamic-plugins-root` is automatically created.
+// For Helm chart installations, a persistent volume named `dynamic-plugins-root` is automatically created.
 
-For operator-based installations, you must manually create the PersistentVolumeClaim (PVC) as follows:
+=== Creating a PVC for Dynamic Plugins Cache using the Operator
+// For operator-based installations, you must manually create the PersistentVolumeClaim (PVC) as follows:
 
+For operator-based installations, you must manually create the PersistentVolumeClaim (PVC) by replacing the default `dynamic-plugins-root` volume with a Persistent Volume Claim (PVC) named `dynamic-plugins-root`. 
+
+Create the persistent volume definition and save it to a file, for example `pvc.yaml`.
+
+.Example creating the persistent volume definition
 [source,yaml]
 ----
 kind: PersistentVolumeClaim
@@ -29,10 +35,18 @@ spec:
   resources:
     requests:
       storage: 5Gi
+----
 
----
+Replace the default dynamic-plugins-root volume with a persistent volume claim (PVC) named dynamic-plugins-root. 
 
+<<<<<<< HEAD
 apiVersion: rhdh.redhat.com/v1alpha3
+=======
+.Example replacing the `dynamic-plugins-root` volume 
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha2
+>>>>>>> 5ef6a4fa9 (RHIDP-5570 - Document that the Dynamic Plugin cache PVC is disabled by default)
 kind: Backstage
 metadata:
   name: developer-hub
@@ -47,6 +61,75 @@ spec:
                 name: dynamic-plugins-root
                 persistentVolumeClaim:
                   claimName: dynamic-plugins-root
+----
+
+[NOTE]
+To avoid adding a new volume, you must use the `$patch: replace` directive.
+
+=== Creating a PVC for Dynamic Plugins Cache using the Helm Chart
+For Helm Chart installations, if you require the dynamic plugin cache to persist across pod restarts, you must create a PersistentVolumeClaim (PVC) and configure the Helm Chart to use it.
+
+.Example creating the persistent volume definition
+[source,yaml]
+----
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-root
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+----
+
+[NOTE]
+====
+This example uses `ReadWriteOnce` as the access mode which prevents multiple replicas from sharing the PVC across different nodes. 
+
+To run multiple replicas on different nodes, depending on your storage driver, you must use an access mode such as `ReadWriteMany`.
+====
+
+To apply this PVC to your cluster, run the following command:
+[source,terminal]
+----
+oc apply -f pvc.yaml
+----
+
+.Example configuring Helm to use the PVC
+[source,yaml]
+----
+extraVolumes:
+  - name: dynamic-plugins-root
+    persistentVolumeClaim:
+      claimName: dynamic-plugins-root
+  - name: dynamic-plugins
+    configMap:
+      defaultMode: 420
+      name: '{{ printf "%s-dynamic-plugins" .Release.Name }}'
+      optional: true
+  - name: dynamic-plugins-npmrc
+    secret:
+      defaultMode: 420
+      optional: true
+      secretName: '{{ printf "%s-dynamic-plugins-npmrc" .Release.Name }}'
+  - name: dynamic-plugins-registry-auth
+    secret:
+      defaultMode: 416
+      optional: true
+      secretName: '{{ printf "%s-dynamic-plugins-registry-auth" .Release.Name }}'
+  - name: npmcacache
+    emptyDir: {}
+  - name: temp
+    emptyDir: {}=
+----
+
+To deploy the Helm Chart, run the following command:
+[source,terminal]
+----
+helm upgrade --install rhdh-backstage charts/backstage --namespace rhdh -f values.yaml
 ----
 
 == Configuring the dynamic plugins cache
