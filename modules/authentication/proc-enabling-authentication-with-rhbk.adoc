@@ -39,20 +39,59 @@ Save the value for the next step:
 [source,yaml]
 ----
 auth:
-  environment: production # <1>
+  environment: production
   providers:
     oidc:
       production:
-        metadataUrl: ${AUTH_OIDC_METADATA_URL} # <2>
+        metadataUrl: ${AUTH_OIDC_METADATA_URL}
         clientId: ${AUTH_OIDC_CLIENT_ID}
         clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
-signInPage: oidc # <3>
+        prompt: auto
+signInPage: oidc
 ----
-<1>  Mark the environment as `production` and disable the Guest login option in the {product-short} login page.
-<2> Apply the {rhbk} credentials configured in your {product-short} secrets.
-<3> To enable the {rhbk} provider as your {product-short} sign-in provider.
+
+`environment: production`::
+Mark the environment as `production` to hide the Guest login in the {product-short} home page.
+
+`metadataUrl`, `clientId`, `clientSecret`::
+To configure the OIDC provider with your secrets.
+
+`sigInPage: oidc`::
+To enable the OIDC provider as default sign-in provider.
+
+`prompt: auto`::
+To allow the identity provider to automatically determine whether to prompt for credentials or bypass the login redirect if an active {rhsso} session exists.
+
+[NOTE]
+====
+If `prompt: auto` is not set, the identity provider defaults to `prompt: none`, which assumes that you are already logged in and rejects sign-in requests without an active session.
+====
+
+Optional: Consider adding the following optional fields:
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::
 +
-.. Optional: Consider adding the following optional fields:
+--
+To enable authentication without requiring to provision users in the {product-short} software catalog.
+
+WARNING: Use this option to explore {product-short} features, but do not use it in production.
+
+.`{my-app-config-file}` fragment with optional field to allow authenticating users absent from the software catalog
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
+        prompt: auto
+signInPage: oidc
+dangerouslyAllowSignInWithoutUserInCatalog: true
+----
+--
 
 `callbackUrl`::
 {rhbk} callback URL.
@@ -112,14 +151,14 @@ After successful authentication, the user signing in must be resolved to an exis
 +
 The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
 +
-WARNING: In production mode, only configure one resolver to ensure users are securely matched. 
+WARNING: In production mode, only configure one resolver to ensure users are securely matched.
 `resolver`::::
 Enter the sign-in resolver name.
 Available values:
 * `emailLocalPartMatchingUserEntityName`
 * `emailMatchingUserEntityProfileEmail`
 * `preferredUsernameMatchingUserEntityName`
-+
+
 .`{my-app-config-file}` fragment with optional `resolvers` list
 [source,yaml]
 ----
@@ -197,4 +236,3 @@ If multiple valid refresh tokens are issued due to frequent refresh token reques
 . Go to the {product-short} login page.
 . Your {product-short} sign-in page displays *Sign in using OIDC* and the Guest user sign-in is disabled.
 . Log in with OIDC by using the saved **Username** and **Password** values.
-
