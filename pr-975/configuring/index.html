@@ -1,0 +1,1109 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Configuring Red Hat Developer Hub</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="Learn how to configure Red Hat Developer Hub for production to work in your IT ecosystem by adding custom config maps and secrets."/><link rel="next" href="#provisioning-and-using-your-custom-configuration" title="1. Provisioning and using your custom Red Hat Developer Hub configuration"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45974031117520"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.5</span></div><div><h1 class="title">Configuring Red Hat Developer Hub</h1></div><div><h3 class="subtitle"><em>Add custom config maps and secrets to configure your Red Hat Developer Hub instance to work in your IT ecosystem.</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45973980662784">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				Learn how to configure Red Hat Developer Hub for production to work in your IT ecosystem by adding custom config maps and secrets.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#provisioning-and-using-your-custom-configuration">1. Provisioning and using your custom Red Hat Developer Hub configuration</a></span><ul><li><span class="section"><a href="#provisioning-your-custom-configuration">1.1. Provisioning your custom Red Hat Developer Hub configuration</a></span></li><li><span class="section"><a href="#using-the-operator-to-run-rhdh-with-your-custom-configuration">1.2. Using the Red Hat Developer Hub Operator to run Developer Hub with your custom configuration</a></span></li><li><span class="section"><a href="#using-the-helm-chart-to-run-rhdh-with-your-custom-configuration">1.3. Using the Red Hat Developer Hub Helm chart to run Developer Hub with your custom configuration</a></span></li></ul></li><li><span class="section"><a href="#configuring-external-postgresql-databases">2. Configuring external PostgreSQL databases</a></span><ul><li><span class="section"><a href="#proc-configuring-postgresql-instance-using-operator_configuring-external-postgresql-databases">2.1. Configuring an external PostgreSQL instance using the Operator</a></span></li><li><span class="section"><a href="#proc-configuring-postgresql-instance-using-helm_configuring-external-postgresql-databases">2.2. Configuring an external PostgreSQL instance using the Helm Chart</a></span></li><li><span class="section"><a href="#proc-migrating-databases-to-an-external-server_configuring-external-postgresql-databases">2.3. Migrating local databases to an external database server using the Operator</a></span></li></ul></li><li><span class="section"><a href="#configuring-the-deployment">3. Configuring Red Hat Developer Hub deployment when using the Operator</a></span></li><li><span class="section"><a href="#readonlyrootfilesystem">4. Configuring readOnlyRootFilesystem in Red Hat Developer Hub</a></span></li><li><span class="section"><a href="#running-behind-a-proxy">5. Running Red Hat Developer Hub behind a corporate proxy</a></span><ul><li><span class="section"><a href="#understanding-the-no-proxy-exclusion-rules">5.1. Understanding the <code class="literal">NO_PROXY</code> exclusion rules</a></span></li><li><span class="section"><a href="#proc-configuring-proxy-in-operator-deployment_running-behind-a-proxy">5.2. Configuring proxy information in Operator deployment</a></span></li><li><span class="section"><a href="#proc-configuring-proxy-in-helm-deployment_running-behind-a-proxy">5.3. Configuring proxy information in Helm deployment</a></span></li></ul></li><li><span class="section"><a href="#proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_running-behind-a-proxy">6. Configuring an RHDH instance with a TLS connection in Kubernetes</a></span></li><li><span class="section"><a href="#con-dynamic-plugin-cache_running-behind-a-proxy">7. Using the dynamic plugins cache</a></span><ul><li><span class="section"><a href="#enabling-the-dynamic-plugins-cache">7.1. Enabling the dynamic plugins cache</a></span></li><li><span class="section"><a href="#configuring-the-dynamic-plugins-cache">7.2. Configuring the dynamic plugins cache</a></span></li></ul></li><li><span class="section"><a href="#proc-installing-and-configuring-redis-cache_running-behind-a-proxy">8. Using Redis Cache with dynamic plugins</a></span><ul><li><span class="section"><a href="#installing-redis-cache-in-red-hat-developer-hub">8.1. Installing Redis Cache in Red Hat Developer Hub</a></span></li></ul></li></ul></div><p>
+		Learn how to configure Red Hat Developer Hub for production to work in your IT ecosystem by adding custom config maps and secrets.
+	</p><section class="section" id="provisioning-and-using-your-custom-configuration"><div class="titlepage"><div><div><h2 class="title">1. Provisioning and using your custom Red Hat Developer Hub configuration</h2></div></div></div><p>
+			To configure Red Hat Developer Hub, use these methods, which are widely used to configure a Red Hat OpenShift Container Platform application:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					Use config maps to mount files and directories.
+				</li><li class="listitem">
+					Use secrets to inject environment variables.
+				</li></ul></div><p>
+			Learn to apply these methods to Developer Hub:
+		</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+					<a class="link" href="#provisioning-your-custom-configuration" title="1.1. Provisioning your custom Red Hat Developer Hub configuration">Provision your custom config maps and secrets to OpenShift Container Platform</a>.
+				</li><li class="listitem"><p class="simpara">
+					Use your selected deployment method to mount the config maps and inject the secrets:
+				</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+							<a class="link" href="#using-the-operator-to-run-rhdh-with-your-custom-configuration" title="1.2. Using the Red Hat Developer Hub Operator to run Developer Hub with your custom configuration">Use the Red Hat Developer Hub operator to deploy Developer Hub</a>.
+						</li><li class="listitem">
+							<a class="link" href="#using-the-helm-chart-to-run-rhdh-with-your-custom-configuration" title="1.3. Using the Red Hat Developer Hub Helm chart to run Developer Hub with your custom configuration">Use the Red Hat Developer Hub Helm chart to deploy Developer Hub</a>.
+						</li></ul></div></li></ol></div><section class="section" id="provisioning-your-custom-configuration"><div class="titlepage"><div><div><h3 class="title">1.1. Provisioning your custom Red Hat Developer Hub configuration</h3></div></div></div><p>
+				To configure Red Hat Developer Hub, provision your custom Red Hat Developer Hub config maps and secrets to Red Hat OpenShift Container Platform before running Red Hat Developer Hub.
+			</p><div class="admonition tip"><div class="admonition_header">Tip</div><div><p>
+				You can skip this step to run Developer Hub with the default config map and secret. Your changes on this configuration might get reverted on Developer Hub restart.
+			</p></div></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						By using the <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/cli_tools/index#cli-about-cli_cli-developer-commands">OpenShift CLI (<code class="literal">oc</code>)</a>, you have access, with developer permissions, to the OpenShift Container Platform cluster aimed at containing your Developer Hub instance.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Author your custom <code class="literal">my-rhdh-secrets.txt</code> file to provision your secrets as environment variables values in an OpenShift Container Platform secret, rather than in clear text in your configuration files. It contains one secret per line in <code class="literal">KEY=value</code> form.
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.5/html-single/authentication/index">Enter your authentication secrets</a>.
+							</li></ul></div></li><li class="listitem"><p class="simpara">
+						Author your custom <code class="literal">app-config.yaml</code> file. This is the main Developer Hub configuration file.
+					</p><p class="simpara">
+						The <code class="literal">baseUrl</code> field is mandatory in your <code class="literal">app-config.yaml</code> file to ensure proper functionality of Developer Hub. You must specify the <code class="literal">baseUrl</code> in both the <code class="literal">app</code> and <code class="literal">backend</code> sections to avoid errors during initialization.
+					</p><div class="example" id="idm45974029669200"><p class="title"><strong>Example 1. Configuring the <code class="literal">baseUrl</code> in <code class="literal">app-config.yaml</code></strong></p><div class="example-contents"><pre class="programlisting language-yaml">app:
+  title: Red Hat Developer Hub
+  baseUrl: https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span>
+
+backend:
+  auth:
+    externalAccess:
+      - type: legacy
+        options:
+          subject: legacy-default-config
+          secret: "${BACKEND_SECRET}"
+  baseUrl: https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span>
+  cors:
+    origin: https://<span class="emphasis"><em>&lt;my_developer_hub_url&gt;</em></span></pre></div></div><p class="simpara">
+						Optionally, enter your configuration such as:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.5/html-single/authentication/index">Authentication</a>.
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.5/html-single/authorization/index">Authorization</a>.
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.5/html-single/customizing/index">Customization</a>.
+							</li><li class="listitem">
+								<a class="link" href="#proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_running-behind-a-proxy" title="6. Configuring an RHDH instance with a TLS connection in Kubernetes">Configure your OpenShift Container Platform integration</a>.
+							</li></ul></div></li><li class="listitem"><p class="simpara">
+						Provision your custom configuration files to your OpenShift Container Platform cluster.
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+								Create the <span class="emphasis"><em>&lt;my-rhdh-project&gt;</em></span> project aimed at containing your Developer Hub instance.
+							</p><pre class="programlisting language-terminal">$ oc create namespace my-rhdh-project</pre><p class="simpara">
+								Alternatively, <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/building_applications/index#creating-a-project-using-the-web-console_projects">create the project by using the web console</a>.
+							</p></li><li class="listitem"><p class="simpara">
+								Provision your <code class="literal">app-config.yaml</code> file to the <code class="literal">my-rhdh-app-config</code> config map in the <span class="emphasis"><em>&lt;my-rhdh-project&gt;</em></span> project.
+							</p><pre class="programlisting language-terminal">$ oc create configmap my-rhdh-app-config --from-file=app-config.yaml --namespace=my-rhdh-project</pre><p class="simpara">
+								Alternatively, <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps">create the config map by using the web console</a>.
+							</p></li><li class="listitem"><p class="simpara">
+								Provision your <code class="literal">my-rhdh-secrets.txt</code> file to the <code class="literal">my-rhdh-secrets</code> secret in the <span class="emphasis"><em>&lt;my-rhdh-project&gt;</em></span> project.
+							</p><pre class="programlisting language-terminal">$ oc create secret generic my-rhdh-secrets --from-file=my-rhdh-secrets.txt --namespace=my-rhdh-project</pre><p class="simpara">
+								Alternatively, <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets">create the secret by using the web console</a>.
+							</p></li></ol></div></li></ol></div><div class="formalpara"><p class="title"><strong>Next steps</strong></p><p>
+					Consider provisioning additional config maps and secrets:
+				</p></div><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						To use an external PostgreSQL database, <a class="link" href="#configuring-external-postgresql-databases" title="2. Configuring external PostgreSQL databases">provision your PostgreSQL database secrets</a>.
+					</li><li class="listitem">
+						To enable dynamic plugins, <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.5/html-single/installing_and_viewing_dynamic_plugins/index">provision your dynamic plugins config map</a>.
+					</li><li class="listitem">
+						To configure authorization by using external files, <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.5/html-single/authorization/index#managing-authorizations-by-using-external-files">provision your RBAC policies config map</a>.
+					</li></ul></div></section><section class="section" id="using-the-operator-to-run-rhdh-with-your-custom-configuration"><div class="titlepage"><div><div><h3 class="title">1.2. Using the Red Hat Developer Hub Operator to run Developer Hub with your custom configuration</h3></div></div></div><p>
+				To use the Developer Hub Operator to run Red Hat Developer Hub with your custom configuration, create your Backstage custom resource (CR) that:
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						Mounts files provisioned in your custom config maps.
+					</li><li class="listitem">
+						Injects environment variables provisioned in your custom secrets.
+					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						By using the <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/cli_tools/index#cli-about-cli_cli-developer-commands">OpenShift CLI (<code class="literal">oc</code>)</a>, you have access, with developer permissions, to the OpenShift Container Platform cluster aimed at containing your Developer Hub instance.
+					</li><li class="listitem">
+						<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.5/html-single/installing_red_hat_developer_hub_on_openshift_container_platform/index">Your OpenShift Container Platform administrator has installed the Red Hat Developer Hub Operator in OpenShift Container Platform</a>.
+					</li><li class="listitem">
+						<a class="link" href="#provisioning-your-custom-configuration" title="1.1. Provisioning your custom Red Hat Developer Hub configuration">You have provisioned your custom config maps and secrets in your <code class="literal"><span class="emphasis"><em>&lt;my-rhdh-project&gt;</em></span></code> project</a>.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Author your Backstage CR in a <code class="literal">my-rhdh-custom-resource.yaml</code> file to use your custom config maps and secrets.
+					</p><div class="example" id="idm45973982739792"><p class="title"><strong>Example 2. Minimal <code class="literal">my-rhdh-custom-resource.yaml</code> custom resource example</strong></p><div class="example-contents"><pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: my-rhdh-custom-resource
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: my-rhdh-app-config
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+    extraFiles:
+      mountPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true</pre></div></div><div class="example" id="idm45973982863152"><p class="title"><strong>Example 3. <code class="literal">my-rhdh-custom-resource.yaml</code> custom resource example with dynamic plugins and RBAC policies config maps, and external PostgreSQL database secrets.</strong></p><div class="example-contents"><pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: <span class="emphasis"><em>&lt;my-rhdh-custom-resource&gt;</em></span>
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: my-rhdh-app-config
+         - name: rbac-policies
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+         - name: my-rhdh-database-secrets
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: my-rhdh-database-certificates-secrets
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: false</pre></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">Mandatory fields</span></dt><dd>
+									No fields are mandatory. You can create an empty Backstage CR and run Developer Hub with the default configuration.
+								</dd><dt><span class="term">Optional fields</span></dt><dd><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">spec.application.appConfig.configMaps</code></span></dt><dd>
+												Enter your config map name list.
+											</dd></dl></div><p class="simpara">
+									.Mount files in the <code class="literal">my-rhdh-app-config</code> config map.
+								</p><div class="informalexample"><pre class="programlisting language-yaml">spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: my-rhdh-app-config</pre></div><div class="example" id="idm45973980515632"><p class="title"><strong>Example 4. Mount files in the <code class="literal">my-rhdh-app-config</code> and <code class="literal">rbac-policies</code> config maps.</strong></p><div class="example-contents"><pre class="programlisting language-yaml">spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: my-rhdh-app-config
+         - name: rbac-policies</pre></div></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">spec.application.extraEnvs.envs</code></span></dt><dd><p class="simpara">
+												Optionally, enter your additional environment variables that are not secrets, such as <a class="link" href="#proc-configuring-proxy-in-operator-deployment_running-behind-a-proxy" title="5.2. Configuring proxy information in Operator deployment">your proxy environment variables</a>.
+											</p><div class="example" id="idm45973982810064"><p class="title"><strong>Example 5. Inject your <code class="literal">HTTP_PROXY</code>, <code class="literal">HTTPS_PROXY</code> and <code class="literal">NO_PROXY</code> environment variables.</strong></p><div class="example-contents"><pre class="programlisting language-yaml">spec:
+  application:
+    extraEnvs:
+      envs:
+        - name: HTTP_PROXY
+          value: 'http://10.10.10.105:3128'
+        - name: HTTPS_PROXY
+          value: 'http://10.10.10.106:3128'
+        - name: NO_PROXY
+          value: 'localhost,example.org'</pre></div></div></dd><dt><span class="term"><code class="literal">spec.application.extraEnvs.secrets</code></span></dt><dd><p class="simpara">
+												Enter your environment variables secret name list.
+											</p><div class="example" id="idm45973977534944"><p class="title"><strong>Example 6. Inject the environment variables in your <code class="literal">my-rhdh-secrets</code> secret</strong></p><div class="example-contents"><pre class="programlisting language-yaml">spec:
+  application:
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets</pre></div></div><div class="example" id="idm45973980282528"><p class="title"><strong>Example 7. Inject the environment variables in the <code class="literal">my-rhdh-secrets</code> and <code class="literal">my-rhdh-database-secrets</code> secrets</strong></p><div class="example-contents"><pre class="programlisting language-yaml">spec:
+  application:
+    extraEnvs:
+      secrets:
+         - name: my-rhdh-secrets
+         - name: my-rhdh-database-secrets</pre></div></div></dd><dt><span class="term"><code class="literal">spec.application.extraFiles.secrets</code></span></dt><dd><p class="simpara">
+												Enter your certificates files secret name and files list.
+											</p><div class="formalpara"><p class="title"><strong>Mount the <code class="literal">postgres-crt.pem</code>, <code class="literal">postgres-ca.pem</code>, and <code class="literal">postgres-key.key</code> files contained in the <code class="literal">my-rhdh-database-certificates-secrets</code> secret</strong></p><p>
+													
+<pre class="programlisting language-yaml">spec:
+  application:
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: my-rhdh-database-certificates-secrets
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key</pre>
+												</p></div></dd><dt><span class="term"><code class="literal">spec.database.enableLocalDb</code></span></dt><dd><p class="simpara">
+												Enable or disable the local PostgreSQL database.
+											</p><div class="formalpara"><p class="title"><strong>Disable the local PostgreSQL database generation to use an external postgreSQL database</strong></p><p>
+													
+<pre class="programlisting language-yaml">spec:
+  database:
+    enableLocalDb: false</pre>
+												</p></div><div class="formalpara"><p class="title"><strong>On a development environment, use the local PostgreSQL database</strong></p><p>
+													
+<pre class="programlisting language-yaml">spec:
+  database:
+    enableLocalDb: true</pre>
+												</p></div></dd><dt><span class="term"><code class="literal">spec.deployment</code></span></dt><dd>
+												Optionally, <a class="link" href="#configuring-the-deployment" title="3. Configuring Red Hat Developer Hub deployment when using the Operator">enter your deployment configuration</a>.
+											</dd></dl></div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Apply your Backstage CR to start or update your Developer Hub instance.
+					</p><pre class="programlisting language-terminal">$ oc apply --filename=my-rhdh-custom-resource.yaml --namespace=my-rhdh-project</pre></li></ol></div><section class="section" id="mounting-additional-files-in-your-custom-configuration-using-rhdh-operator"><div class="titlepage"><div><div><h4 class="title">1.2.1. Mounting additional files in your custom configuration using the Red Hat Developer Hub Operator</h4></div></div></div><p>
+					You can use the Developer Hub Operator to mount extra files, such as a ConfigMap or Secret, to the container in a preferred location.
+				</p><p>
+					The <code class="literal">mountPath</code> field specifies the location where a ConfigMap or Secret is mounted. The behavior of the mount, whether it includes or excludes a <code class="literal">subPath</code>, depends on the specification of the <code class="literal">key</code> or <code class="literal">mountPath</code> fields.
+				</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+							If <code class="literal">key</code> and <code class="literal">mountPath</code> are not specified: Each key or value is mounted as a <code class="literal">filename</code> or content with a <code class="literal">subPath</code>.
+						</li><li class="listitem">
+							If <code class="literal">key</code> is specified with or without <code class="literal">mountPath</code>: The specified key or value is mounted with a <code class="literal">subPath</code>.
+						</li><li class="listitem">
+							If only <code class="literal">mountPath</code> is specified: A directory containing all the keys or values is mounted without a <code class="literal">subPath</code>.
+						</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								OpenShift Container Platform does not automatically update a volume mounted with <code class="literal">subPath</code>. By default, the RHDH Operator monitors these ConfigMaps or Secrets and refreshes the RHDH Pod when changes occur.
+							</li><li class="listitem">
+								For security purposes, Red Hat Developer Hub does not give the Operator Service Account read access to Secrets. As a result, mounting files from Secrets without specifying both mountPath and key is not supported.
+							</li></ul></div></div></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+							You have developer permissions to access the OpenShift Container Platform cluster containing your Developer Hub instance using the OpenShift CLI (<code class="literal">oc</code>).
+						</li><li class="listitem">
+							<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.5/html-single/installing_red_hat_developer_hub_on_openshift_container_platform/index">Your OpenShift Container Platform administrator has installed the Red Hat Developer Hub Operator in OpenShift Container Platform</a>.
+						</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+							In OpenShift Container Platform, create your ConfigMap or Secret with the following YAML codes:
+						</p><div class="example" id="idm45973983879936"><p class="title"><strong>Example 8. Minimal <code class="literal">my-project-configmap</code> ConfigMap example</strong></p><div class="example-contents"><pre class="programlisting language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-project-configmap
+data:
+  file11.txt: |
+    My file11 content
+  file 12.txt: |
+    My file12 content</pre></div></div><div class="example" id="idm45973983937488"><p class="title"><strong>Example 9. Minimal <code class="literal">my-rhdh-secrets</code> Secret example</strong></p><div class="example-contents"><pre class="programlisting language-yaml">apiVersion: v1
+kind: Secret
+metadata:
+  name: my-rhdh-secrets
+StringData:
+  secret11.txt: |
+    secret-content</pre></div></div><p class="simpara">
+							For more information, see <a class="link" href="#provisioning-your-custom-configuration" title="1.1. Provisioning your custom Red Hat Developer Hub configuration">Provisioning and using your custom Red Hat Developer Hub configuration</a>.
+						</p></li><li class="listitem"><p class="simpara">
+							Set the value of the <code class="literal">configMaps name</code> to the name of the ConfigMap or <code class="literal">secrets name</code> to the name of the Secret in your <code class="literal">Backstage</code> CR. For example:
+						</p><div class="informalexample"><pre class="programlisting language-yaml">spec:
+  application:
+    extraFiles:
+      mountPath: /my/path
+      configMaps:
+        - name: my-project-configmap
+          key: file12.txt
+          mountPath: /my/my-rhdh-config-map/path
+      secrets:
+        - name: my-rhdh-secrets
+          key: secret11.txt
+          mountPath: /my/my-rhdh-secret/path</pre></div></li></ol></div></section></section><section class="section" id="using-the-helm-chart-to-run-rhdh-with-your-custom-configuration"><div class="titlepage"><div><div><h3 class="title">1.3. Using the Red Hat Developer Hub Helm chart to run Developer Hub with your custom configuration</h3></div></div></div><p>
+				You can use the Red Hat Developer Hub Helm chart to add a custom application configuration file to your OpenShift Container Platform instance.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						By using the OpenShift Container Platform web console, you have access with developer permissions, to <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/building_applications/index#working-with-projects">an OpenShift Container Platform project</a> named <span class="emphasis"><em>&lt;my-rhdh-project&gt;</em></span>, aimed at containing your Developer Hub instance.
+					</li><li class="listitem">
+						<a class="link" href="#provisioning-your-custom-configuration" title="1.1. Provisioning your custom Red Hat Developer Hub configuration">You have uploaded your custom configuration files and secrets in your <code class="literal"><span class="emphasis"><em>&lt;my-rhdh-project&gt;</em></span></code> project</a>.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Configure Helm to use your custom configuration files in Developer Hub.
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+								Go to the <span class="strong strong"><strong>Helm</strong></span> tab to see the list of Helm releases.
+							</li><li class="listitem">
+								Click the overflow menu on the Helm release that you want to use and select <span class="strong strong"><strong>Upgrade</strong></span>.
+							</li><li class="listitem">
+								Use the <span class="strong strong"><strong>YAML view</strong></span> to edit the Helm configuration.
+							</li><li class="listitem"><p class="simpara">
+								Set the value of the <code class="literal">upstream.backstage.extraAppConfig.configMapRef</code> and <code class="literal">upstream.backstage.extraAppConfig.filename</code> parameters as follows:
+							</p><div class="formalpara"><p class="title"><strong>Helm configuration excerpt</strong></p><p>
+									
+<pre class="programlisting language-yaml">upstream:
+  backstage:
+    extraAppConfig:
+      - configMapRef: my-rhdh-app-config
+        filename: app-config.yaml</pre>
+								</p></div></li><li class="listitem">
+								Click <span class="strong strong"><strong>Upgrade</strong></span>.
+							</li></ol></div></li></ol></div><div class="itemizedlist"><p class="title"><strong>Next steps</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						Install Developer Hub by using Helm.
+					</li></ul></div></section></section><section class="section" id="configuring-external-postgresql-databases"><div class="titlepage"><div><div><h2 class="title">2. Configuring external PostgreSQL databases</h2></div></div></div><p>
+			As an administrator, you can configure and use external PostgreSQL databases in Red Hat Developer Hub. You can use a PostgreSQL certificate file to configure an external PostgreSQL instance using the Operator or Helm Chart.
+		</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+				Developer Hub supports the configuration of external PostgreSQL databases. You can perform maintenance activities, such as backing up your data or configuring high availability (HA) for the external PostgreSQL databases.
+			</p><p>
+				By default, the Red Hat Developer Hub operator or Helm Chart creates a local PostgreSQL database. However, this configuration is not suitable for the production environments. For production deployments, disable the creation of local database and configure Developer Hub to connect to an external PostgreSQL instance instead.
+			</p></div></div><section class="section" id="proc-configuring-postgresql-instance-using-operator_configuring-external-postgresql-databases"><div class="titlepage"><div><div><h3 class="title">2.1. Configuring an external PostgreSQL instance using the Operator</h3></div></div></div><p>
+				You can configure an external PostgreSQL instance using the Red Hat Developer Hub Operator. By default, the Operator creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the RHDH instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, Amazon Web Services (AWS) Relational Database Service (RDS) or Azure database.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You are using a supported version of PostgreSQL. For more information, see the <a class="link" href="https://access.redhat.com/support/policy/updates/developerhub">Product life cycle page</a>.
+					</li><li class="listitem"><p class="simpara">
+						You have the following details:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								<code class="literal">db-host</code>: Denotes your PostgreSQL instance Domain Name System (DNS) or IP address
+							</li><li class="listitem">
+								<code class="literal">db-port</code>: Denotes your PostgreSQL instance port number, such as <code class="literal">5432</code>
+							</li><li class="listitem">
+								<code class="literal">username</code>: Denotes the user name to connect to your PostgreSQL instance
+							</li><li class="listitem">
+								<code class="literal">password</code>: Denotes the password to connect to your PostgreSQL instance
+							</li></ul></div></li><li class="listitem">
+						You have installed the Red Hat Developer Hub Operator.
+					</li><li class="listitem">
+						Optional: You have a CA certificate, Transport Layer Security (TLS) private key, and TLS certificate so that you can secure your database connection by using the TLS protocol. For more information, refer to your PostgreSQL vendor documentation.
+					</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					By default, Developer Hub uses a database for each plugin and automatically creates it if none is found. You might need the <code class="literal">Create Database</code> privilege in addition to <code class="literal">PSQL Database</code> privileges for configuring an external PostgreSQL instance.
+				</p></div></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Optional: Create a certificate secret to configure your PostgreSQL instance with a TLS connection:
+					</p><pre class="programlisting language-yaml">cat &lt;&lt;EOF | oc -n my-rhdh-project create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: my-rhdh-database-certificates-secrets <span id="CO1-1"/><span class="callout">1</span>
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+  -----BEGIN CERTIFICATE-----
+  &lt;ca-certificate-key&gt; <span id="CO1-2"/><span class="callout">2</span>
+ postgres-key.key: |-
+  -----BEGIN CERTIFICATE-----
+  &lt;tls-private-key&gt; <span id="CO1-3"/><span class="callout">3</span>
+ postgres-crt.pem: |-
+  -----BEGIN CERTIFICATE-----
+  &lt;tls-certificate-key&gt; <span id="CO1-4"/><span class="callout">4</span>
+  # ...
+EOF</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO1-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Provide the name of the certificate secret.
+							</div></dd><dt><a href="#CO1-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								Provide the CA certificate key.
+							</div></dd><dt><a href="#CO1-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								Optional: Provide the TLS private key.
+							</div></dd><dt><a href="#CO1-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								Optional: Provide the TLS certificate key.
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Create a credential secret to connect with the PostgreSQL instance:
+					</p><pre class="programlisting language-yaml">cat &lt;&lt;EOF | oc -n my-rhdh-project create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: my-rhdh-database-secrets <span id="CO2-1"/><span class="callout">1</span>
+type: Opaque
+stringData: <span id="CO2-2"/><span class="callout">2</span>
+ POSTGRES_PASSWORD: &lt;password&gt;
+ POSTGRES_PORT: "&lt;db-port&gt;"
+ POSTGRES_USER: &lt;username&gt;
+ POSTGRES_HOST: &lt;db-host&gt;
+ PGSSLMODE: &lt;ssl-mode&gt; # for TLS connection <span id="CO2-3"/><span class="callout">3</span>
+ NODE_EXTRA_CA_CERTS: &lt;abs-path-to-pem-file&gt; # for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem <span id="CO2-4"/><span class="callout">4</span>
+EOF</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO2-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Provide the name of the credential secret.
+							</div></dd><dt><a href="#CO2-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								Provide credential data to connect with your PostgreSQL instance.
+							</div></dd><dt><a href="#CO2-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								Optional: Provide the value based on the required <a class="link" href="https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNECT-SSLMODE">Secure Sockets Layer (SSL) mode</a>.
+							</div></dd><dt><a href="#CO2-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								Optional: Provide the value only if you need a TLS connection for your PostgreSQL instance.
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Create your <code class="literal">Backstage</code> custom resource (CR):
+					</p><pre class="programlisting language-terminal">cat &lt;&lt;EOF | oc -n my-rhdh-project create -f -
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: &lt;backstage-instance-name&gt;
+spec:
+  database:
+    enableLocalDb: false <span id="CO3-1"/><span class="callout">1</span>
+  application:
+    extraFiles:
+      mountPath: &lt;path&gt; # e g /opt/app-root/src
+      secrets:
+        - name: my-rhdh-database-certificates-secrets <span id="CO3-2"/><span class="callout">2</span>
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key # key name as in my-rhdh-database-certificates-secrets Secret
+    extraEnvs:
+      secrets:
+        - name: my-rhdh-database-secrets <span id="CO3-3"/><span class="callout">3</span>
+        # ...</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO3-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Set the value of the <code class="literal">enableLocalDb</code> parameter to <code class="literal">false</code> to disable creating local PostgreSQL instances.
+							</div></dd><dt><a href="#CO3-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								Provide the name of the certificate secret if you have configured a TLS connection.
+							</div></dd><dt><a href="#CO3-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								Provide the name of the credential secret that you created.
+							</div></dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							The environment variables listed in the <code class="literal">Backstage</code> CR work with the Operator default configuration. If you have changed the Operator default configuration, you must reconfigure the <code class="literal">Backstage</code> CR accordingly.
+						</p></div></div></li><li class="listitem">
+						Apply the <code class="literal">Backstage</code> CR to the namespace where you have deployed the Developer Hub instance.
+					</li></ol></div></section><section class="section" id="proc-configuring-postgresql-instance-using-helm_configuring-external-postgresql-databases"><div class="titlepage"><div><div><h3 class="title">2.2. Configuring an external PostgreSQL instance using the Helm Chart</h3></div></div></div><p>
+				You can configure an external PostgreSQL instance by using the Helm Chart. By default, the Helm Chart creates and manages a local instance of PostgreSQL in the same namespace where you have deployed the RHDH instance. However, you can change this default setting to configure an external PostgreSQL database server, for example, Amazon Web Services (AWS) Relational Database Service (RDS) or Azure database.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You are using a supported version of PostgreSQL. For more information, see the <a class="link" href="https://access.redhat.com/support/policy/updates/developerhub">Product life cycle page</a>.
+					</li><li class="listitem"><p class="simpara">
+						You have the following details:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								<code class="literal">db-host</code>: Denotes your PostgreSQL instance Domain Name System (DNS) or IP address
+							</li><li class="listitem">
+								<code class="literal">db-port</code>: Denotes your PostgreSQL instance port number, such as <code class="literal">5432</code>
+							</li><li class="listitem">
+								<code class="literal">username</code>: Denotes the user name to connect to your PostgreSQL instance
+							</li><li class="listitem">
+								<code class="literal">password</code>: Denotes the password to connect to your PostgreSQL instance
+							</li></ul></div></li><li class="listitem">
+						You have installed the RHDH application by using the Helm Chart.
+					</li><li class="listitem">
+						Optional: You have a CA certificate, Transport Layer Security (TLS) private key, and TLS certificate so that you can secure your database connection by using the TLS protocol. For more information, refer to your PostgreSQL vendor documentation.
+					</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					By default, Developer Hub uses a database for each plugin and automatically creates it if none is found. You might need the <code class="literal">Create Database</code> privilege in addition to <code class="literal">PSQL Database</code> privileges for configuring an external PostgreSQL instance.
+				</p></div></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Optional: Create a certificate secret to configure your PostgreSQL instance with a TLS connection:
+					</p><pre class="programlisting language-terminal">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: my-rhdh-database-certificates-secrets <span id="CO4-1"/><span class="callout">1</span>
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+  -----BEGIN CERTIFICATE-----
+  &lt;ca-certificate-key&gt; <span id="CO4-2"/><span class="callout">2</span>
+ postgres-key.key: |-
+  -----BEGIN CERTIFICATE-----
+  &lt;tls-private-key&gt; <span id="CO4-3"/><span class="callout">3</span>
+ postgres-crt.pem: |-
+  -----BEGIN CERTIFICATE-----
+  &lt;tls-certificate-key&gt; <span id="CO4-4"/><span class="callout">4</span>
+  # ...
+EOF</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO4-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Provide the name of the certificate secret.
+							</div></dd><dt><a href="#CO4-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								Provide the CA certificate key.
+							</div></dd><dt><a href="#CO4-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								Optional: Provide the TLS private key.
+							</div></dd><dt><a href="#CO4-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								Optional: Provide the TLS certificate key.
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Create a credential secret to connect with the PostgreSQL instance:
+					</p><pre class="programlisting language-terminal">cat &lt;&lt;EOF | oc -n &lt;your-namespace&gt; create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: my-rhdh-database-secrets <span id="CO5-1"/><span class="callout">1</span>
+type: Opaque
+stringData: <span id="CO5-2"/><span class="callout">2</span>
+ POSTGRES_PASSWORD: &lt;password&gt;
+ POSTGRES_PORT: "&lt;db-port&gt;"
+ POSTGRES_USER: &lt;username&gt;
+ POSTGRES_HOST: &lt;db-host&gt;
+ PGSSLMODE: &lt;ssl-mode&gt; # for TLS connection <span id="CO5-3"/><span class="callout">3</span>
+ NODE_EXTRA_CA_CERTS: &lt;abs-path-to-pem-file&gt; # for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem <span id="CO5-4"/><span class="callout">4</span>
+EOF</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO5-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Provide the name of the credential secret.
+							</div></dd><dt><a href="#CO5-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								Provide credential data to connect with your PostgreSQL instance.
+							</div></dd><dt><a href="#CO5-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								Optional: Provide the value based on the required <a class="link" href="https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNECT-SSLMODE">Secure Sockets Layer (SSL) mode</a>.
+							</div></dd><dt><a href="#CO5-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								Optional: Provide the value only if you need a TLS connection for your PostgreSQL instance.
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Configure your PostgreSQL instance in the Helm configuration file named <code class="literal">values.yaml</code>:
+					</p><pre class="programlisting language-yaml"># ...
+upstream:
+  postgresql:
+    enabled: false  # disable PostgreSQL instance creation <span id="CO6-1"/><span class="callout">1</span>
+    auth:
+      existingSecret: my-rhdh-database-secrets # inject credentials secret to Backstage <span id="CO6-2"/><span class="callout">2</span>
+  backstage:
+    appConfig:
+      backend:
+        database:
+          connection:  # configure Backstage DB connection parameters
+            host: ${POSTGRES_HOST}
+            port: ${POSTGRES_PORT}
+            user: ${POSTGRES_USER}
+            password: ${POSTGRES_PASSWORD}
+            ssl:
+              rejectUnauthorized: true,
+              ca:
+                $file: /opt/app-root/src/postgres-ca.pem
+              key:
+                $file: /opt/app-root/src/postgres-key.key
+              cert:
+                $file: /opt/app-root/src/postgres-crt.pem
+  extraEnvVarsSecrets:
+    - my-rhdh-database-secrets # inject credentials secret to Backstage <span id="CO6-3"/><span class="callout">3</span>
+  extraEnvVars:
+    - name: BACKEND_SECRET
+      valueFrom:
+        secretKeyRef:
+          key: backend-secret
+          name: '{{ include "janus-idp.backend-secret-name" $ }}'
+  extraVolumeMounts:
+    - mountPath: /opt/app-root/src/dynamic-plugins-root
+      name: dynamic-plugins-root
+    - mountPath: /opt/app-root/src/postgres-crt.pem
+      name: postgres-crt # inject TLS certificate to Backstage cont. <span id="CO6-4"/><span class="callout">4</span>
+      subPath: postgres-crt.pem
+    - mountPath: /opt/app-root/src/postgres-ca.pem
+      name: postgres-ca # inject CA certificate to Backstage cont. <span id="CO6-5"/><span class="callout">5</span>
+      subPath: postgres-ca.pem
+    - mountPath: /opt/app-root/src/postgres-key.key
+      name: postgres-key # inject TLS private key to Backstage cont. <span id="CO6-6"/><span class="callout">6</span>
+      subPath: postgres-key.key
+  extraVolumes:
+    - ephemeral:
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+      name: dynamic-plugins-root
+    - configMap:
+        defaultMode: 420
+        name: dynamic-plugins
+        optional: true
+      name: dynamic-plugins
+    - name: dynamic-plugins-npmrc
+      secret:
+        defaultMode: 420
+        optional: true
+        secretName: dynamic-plugins-npmrc
+    - name: postgres-crt
+      secret:
+        secretName: my-rhdh-database-certificates-secrets <span id="CO6-7"/><span class="callout">7</span>
+        # ...</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO6-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Set the value of the <code class="literal">upstream.postgresql.enabled</code> parameter to <code class="literal">false</code> to disable creating local PostgreSQL instances.
+							</div></dd><dt><a href="#CO6-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								Provide the name of the credential secret.
+							</div></dd><dt><a href="#CO6-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								Provide the name of the credential secret.
+							</div></dd><dt><a href="#CO6-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								Optional: Provide the name of the TLS certificate only for a TLS connection.
+							</div></dd><dt><a href="#CO6-5"><span class="callout">5</span></a> </dt><dd><div class="para">
+								Optional: Provide the name of the CA certificate only for a TLS connection.
+							</div></dd><dt><a href="#CO6-6"><span class="callout">6</span></a> </dt><dd><div class="para">
+								Optional: Provide the name of the TLS private key only if your TLS connection requires a private key.
+							</div></dd><dt><a href="#CO6-7"><span class="callout">7</span></a> </dt><dd><div class="para">
+								Provide the name of the certificate secret if you have configured a TLS connection.
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Apply the configuration changes in your Helm configuration file named <code class="literal">values.yaml</code>:
+					</p><pre class="programlisting language-terminal">helm upgrade -n &lt;your-namespace&gt; &lt;your-deploy-name&gt; openshift-helm-charts/redhat-developer-hub -f values.yaml --version 1.5.0</pre></li></ol></div></section><section class="section" id="proc-migrating-databases-to-an-external-server_configuring-external-postgresql-databases"><div class="titlepage"><div><div><h3 class="title">2.3. Migrating local databases to an external database server using the Operator</h3></div></div></div><p>
+				By default, Red Hat Developer Hub hosts the data for each plugin in a PostgreSQL database. When you fetch the list of databases, you might see multiple databases based on the number of plugins configured in Developer Hub. You can migrate the data from an RHDH instance hosted on a local PostgreSQL server to an external PostgreSQL service, such as AWS RDS, Azure database, or Crunchy database. To migrate the data from each RHDH instance, you can use PostgreSQL utilities, such as <a class="link" href="https://www.postgresql.org/docs/current/app-pgdump.html"><code class="literal">pg_dump</code></a> with <a class="link" href="https://www.postgresql.org/docs/current/app-psql.html"><code class="literal">psql</code></a> or <a class="link" href="https://www.pgadmin.org/"><code class="literal">pgAdmin</code></a>.
+			</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					The following procedure uses a database copy script to do a quick migration.
+				</p></div></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have installed the <a class="link" href="https://www.postgresql.org/docs/current/app-pgdump.html"><code class="literal">pg_dump</code></a> and <a class="link" href="https://www.postgresql.org/docs/current/app-psql.html"><code class="literal">psql</code></a> utilities on your local machine.
+					</li><li class="listitem">
+						For data export, you have the PGSQL user privileges to make a full dump of local databases.
+					</li><li class="listitem">
+						For data import, you have the PGSQL admin privileges to create an external database and populate it with database dumps.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Configure port forwarding for the local PostgreSQL database pod by running the following command on a terminal:
+					</p><pre class="programlisting language-terminal">oc port-forward -n &lt;your-namespace&gt; &lt;pgsql-pod-name&gt; &lt;forward-to-port&gt;:&lt;forward-from-port&gt;</pre><p class="simpara">
+						Where:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								The <code class="literal">&lt;pgsql-pod-name&gt;</code> variable denotes the name of a PostgreSQL pod with the format <code class="literal">backstage-psql-&lt;deployment-name&gt;-&lt;_index&gt;</code>.
+							</li><li class="listitem">
+								The <code class="literal">&lt;forward-to-port&gt;</code> variable denotes the port of your choice to forward PostgreSQL data to.
+							</li><li class="listitem"><p class="simpara">
+								The <code class="literal">&lt;forward-from-port&gt;</code> variable denotes the local PostgreSQL instance port, such as <code class="literal">5432</code>.
+							</p><div class="formalpara"><p class="title"><strong>Example: Configuring port forwarding</strong></p><p>
+									
+<pre class="programlisting language-terminal">oc port-forward -n developer-hub backstage-psql-developer-hub-0 15432:5432</pre>
+								</p></div></li></ul></div></li><li class="listitem"><p class="simpara">
+						Make a copy of the following <code class="literal">db_copy.sh</code> script and edit the details based on your configuration:
+					</p><pre class="programlisting language-bash">#!/bin/bash
+
+to_host=&lt;db-service-host&gt; <span id="CO7-1"/><span class="callout">1</span>
+to_port=5432 <span id="CO7-2"/><span class="callout">2</span>
+to_user=postgres <span id="CO7-3"/><span class="callout">3</span>
+
+from_host=127.0.0.1 <span id="CO7-4"/><span class="callout">4</span>
+from_port=15432 <span id="CO7-5"/><span class="callout">5</span>
+from_user=postgres <span id="CO7-6"/><span class="callout">6</span>
+
+allDB=("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search") <span id="CO7-7"/><span class="callout">7</span>
+
+for db in ${!allDB[@]};
+do
+  db=${allDB[$db]}
+  echo Copying database: $db
+  PGPASSWORD=$TO_PSW psql -h $to_host -p $to_port -U $to_user -c "create database $db;"
+  pg_dump -h $from_host -p $from_port -U $from_user -d $db | PGPASSWORD=$TO_PSW psql -h $to_host -p $to_port -U $to_user -d $db
+done</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO7-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								The destination host name, for example, <code class="literal">&lt;db-instance-name&gt;.rds.amazonaws.com</code>.
+							</div></dd><dt><a href="#CO7-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								The destination port, such as <code class="literal">5432</code>.
+							</div></dd><dt><a href="#CO7-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								The destination server username, for example, <code class="literal">postgres</code>.
+							</div></dd><dt><a href="#CO7-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								The source host name, such as <code class="literal">127.0.0.1</code>.
+							</div></dd><dt><a href="#CO7-5"><span class="callout">5</span></a> </dt><dd><div class="para">
+								The source port number, such as the <code class="literal">&lt;forward-to-port&gt;</code> variable.
+							</div></dd><dt><a href="#CO7-6"><span class="callout">6</span></a> </dt><dd><div class="para">
+								The source server username, for example, <code class="literal">postgres</code>.
+							</div></dd><dt><a href="#CO7-7"><span class="callout">7</span></a> </dt><dd><div class="para">
+								The name of databases to import in double quotes separated by spaces, for example, <code class="literal">("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")</code>.
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Create a destination database for copying the data:
+					</p><pre class="programlisting language-terminal">/bin/bash TO_PSW=&lt;destination-db-password&gt; /path/to/db_copy.sh <span id="CO8-1"/><span class="callout">1</span></pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO8-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								The <code class="literal">&lt;destination-db-password&gt;</code> variable denotes the password to connect to the destination database.
+							</div></dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							You can stop port forwarding when the copying of the data is complete. For more information about handling large databases and using the compression tools, see the <a class="link" href="https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-LARGE">Handling Large Databases</a> section on the PostgreSQL website.
+						</p></div></div></li><li class="listitem">
+						Reconfigure your <code class="literal">Backstage</code> custom resource (CR). For more information, see <a class="link" href="https://docs.redhat.com/documentation/en-us/red_hat_developer_hub/1.5/html-single/configuring/index#proc-configuring-postgresql-instance-using-operator_configuring-external-postgresql-databases">Configuring an external PostgreSQL instance using the Operator</a>.
+					</li><li class="listitem"><p class="simpara">
+						Check that the following code is present at the end of your <code class="literal">Backstage</code> CR after reconfiguration:
+					</p><pre class="programlisting language-yaml"># ...
+spec:
+  database:
+    enableLocalDb: false
+  application:
+  # ...
+    extraFiles:
+      secrets:
+        - name: my-rhdh-database-certificates-secrets
+          key: postgres-crt.pem # key name as in my-rhdh-database-certificates-secrets Secret
+    extraEnvs:
+      secrets:
+        - name: my-rhdh-database-secrets
+# ...</pre><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							Reconfiguring the <code class="literal">Backstage</code> CR deletes the corresponding <code class="literal">StatefulSet</code> and <code class="literal">Pod</code> objects, but does not delete the <code class="literal">PersistenceVolumeClaim</code> object. Use the following command to delete the local <code class="literal">PersistenceVolumeClaim</code> object:
+						</p><pre class="programlisting language-terminal">oc -n developer-hub delete pvc &lt;local-psql-pvc-name&gt;</pre><p>
+							where, the <code class="literal">&lt;local-psql-pvc-name&gt;</code> variable is in the <code class="literal">data-&lt;psql-pod-name&gt;</code> format.
+						</p></div></div></li><li class="listitem">
+						Apply the configuration changes.
+					</li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Verify that your RHDH instance is running with the migrated data and does not contain the local PostgreSQL database by running the following command:
+					</p><pre class="programlisting language-terminal">oc get pods -n &lt;your-namespace&gt;</pre></li><li class="listitem"><p class="simpara">
+						Check the output for the following details:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								The <code class="literal">backstage-developer-hub-xxx</code> pod is in running state.
+							</li><li class="listitem"><p class="simpara">
+								The <code class="literal">backstage-psql-developer-hub-0</code> pod is not available.
+							</p><p class="simpara">
+								You can also verify these details using the <span class="strong strong"><strong>Topology</strong></span> view in the OpenShift Container Platform web console.
+							</p></li></ul></div></li></ol></div></section></section><section class="section" id="configuring-the-deployment"><div class="titlepage"><div><div><h2 class="title">3. Configuring Red Hat Developer Hub deployment when using the Operator</h2></div></div></div><p>
+			The Red Hat Developer Hub Operator exposes a <code class="literal">rhdh.redhat.com/v1alpha3</code> API Version of its custom resource (CR). This CR exposes a generic <code class="literal">spec.deployment.patch</code> field, which gives you full control over the Developer Hub Deployment resource. This field can be a fragment of the standard <code class="literal">apps.Deployment</code> Kubernetes object.
+		</p><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+					Create a <code class="literal">Backstage</code> CR with the following fields:
+				</li></ol></div><div class="formalpara"><p class="title"><strong>Example</strong></p><p>
+				
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:</pre>
+			</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">labels</code></span></dt><dd><p class="simpara">
+						Add labels to the Developer Hub pod.
+					</p><div class="formalpara"><p class="title"><strong>Example adding the label <code class="literal">my=true</code></strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          metadata:
+            labels:
+              my: true</pre>
+						</p></div></dd><dt><span class="term"><code class="literal">volumes</code></span></dt><dd/></dl></div><p>
+			Add an additional volume named <code class="literal">my-volume</code> and mount it under <code class="literal">/my/path</code> in the Developer Hub application container.
+		</p><div class="formalpara"><p class="title"><strong>Example additional volume</strong></p><p>
+				
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                volumeMounts:
+                  - mountPath: /my/path
+                    name: my-volume
+            volumes:
+              - ephemeral:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: "special"
+                name: my-volume</pre>
+			</p></div><p>
+			Replace the default <code class="literal">dynamic-plugins-root</code> volume with a persistent volume claim (PVC) named <code class="literal">dynamic-plugins-root</code>. Note the <code class="literal">$patch: replace</code> directive, otherwise a new volume will be added.
+		</p><div class="formalpara"><p class="title"><strong>Example <code class="literal">dynamic-plugins-root</code> volume replacement</strong></p><p>
+				
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root</pre>
+			</p></div><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">cpu</code> request</span></dt><dd><p class="simpara">
+						Set the CPU request for the Developer Hub application container to 250m.
+					</p><div class="formalpara"><p class="title"><strong>Example CPU request</strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                resources:
+                  requests:
+                    cpu: 250m</pre>
+						</p></div></dd><dt><span class="term"><code class="literal">my-sidecar</code> container</span></dt><dd><p class="simpara">
+						Add a new <code class="literal">my-sidecar</code> sidecar container into the Developer Hub Pod.
+					</p><div class="formalpara"><p class="title"><strong>Example side car container</strong></p><p>
+							
+<pre class="programlisting language-yaml">apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: my-sidecar
+                image: quay.io/my-org/my-sidecar:latest</pre>
+						</p></div></dd></dl></div><div class="itemizedlist _additional-resources"><p class="title"><strong>Additional resources</strong></p><ul class="itemizedlist _additional-resources" type="disc"><li class="listitem">
+					To learn more about merging, see <a class="link" href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format">Strategic Merge Patch</a>.
+				</li></ul></div></section><section class="section" id="readonlyrootfilesystem"><div class="titlepage"><div><div><h2 class="title">4. Configuring readOnlyRootFilesystem in Red Hat Developer Hub</h2></div></div></div><p>
+			The Red Hat Developer Hub deployment consists of two containers: an <code class="literal">initContainer</code> that installs the Dynamic Plugins, and a backend container that runs the application. The <code class="literal">initContainer</code> has the <code class="literal">readOnlyRootFilesystem</code> option enabled by default. To enable this option on the backend container, you must either have permission to deploy resources through Helm or to create or update a CR for Operator-backed deployments. You can manually configure the <code class="literal">readOnlyRootFilesystem</code> option on the backend container by using the following methods:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					The Red Hat Developer Hub Operator
+				</li><li class="listitem"><p class="simpara">
+					The Red Hat Developer Hub Helm chart
+				</p><pre class="literallayout">include::modules/configuring-readonlyrootfilesystem/proc-configuring-readonlyrootfilesystem-option-in-rhdh-operator-deployment.adoc[leveloffset=+1]</pre><pre class="literallayout">include::modules/configuring-readonlyrootfilesystem/proc-configuring-readonlyrootfilesystem-option-in-rhdh-helm-chart-deployment.adoc[leveloffset=+1]</pre></li></ul></div></section><section class="section" id="running-behind-a-proxy"><div class="titlepage"><div><div><h2 class="title">5. Running Red Hat Developer Hub behind a corporate proxy</h2></div></div></div><p>
+			In a network restricted environment, configure Red Hat Developer Hub to use your proxy to access remote network resources.
+		</p><p>
+			You can run the Developer Hub application behind a corporate proxy by setting any of the following environment variables before starting the application:
+		</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">HTTP_PROXY</code></span></dt><dd>
+						Denotes the proxy to use for HTTP requests.
+					</dd><dt><span class="term"><code class="literal">HTTPS_PROXY</code></span></dt><dd>
+						Denotes the proxy to use for HTTPS requests.
+					</dd><dt><span class="term"><code class="literal">NO_PROXY</code></span></dt><dd>
+						Set the environment variable to bypass the proxy for certain domains. The variable value is a comma-separated list of hostnames or IP addresses that can be accessed without the proxy, even if one is specified.
+					</dd></dl></div><section class="section" id="understanding-the-no-proxy-exclusion-rules"><div class="titlepage"><div><div><h3 class="title">5.1. Understanding the <code class="literal">NO_PROXY</code> exclusion rules</h3></div></div></div><p>
+				<code class="literal">NO_PROXY</code> is a comma or space-separated list of hostnames or IP addresses, with optional port numbers. If the input URL matches any of the entries listed in <code class="literal">NO_PROXY</code>, a direct request fetches that URL, for example, bypassing the proxy settings.
+			</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					The default value for <code class="literal">NO_PROXY</code> in RHDH is <code class="literal">localhost,127.0.0.1</code>. If you want to override it, include at least <code class="literal">localhost</code> or <code class="literal">localhost:7007</code> in the list. Otherwise, the RHDH backend might fail.
+				</p></div></div><p>
+				Matching follows the rules below:
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						<code class="literal">NO_PROXY=*</code> will bypass the proxy for all requests.
+					</li><li class="listitem">
+						Space and commas might separate the entries in the <code class="literal">NO_PROXY</code> list. For example, <code class="literal">NO_PROXY="localhost,example.com"</code>, or <code class="literal">NO_PROXY="localhost example.com"</code>, or <code class="literal">NO_PROXY="localhost, example.com"</code> would have the same effect.
+					</li><li class="listitem">
+						If <code class="literal">NO_PROXY</code> contains no entries, configuring the <code class="literal">HTTP(S)_PROXY</code> settings makes the backend send all requests through the proxy.
+					</li><li class="listitem">
+						The backend does not perform a DNS lookup to determine if a request should bypass the proxy or not. For example, if DNS resolves <code class="literal">example.com</code> to <code class="literal">1.2.3.4</code>, setting <code class="literal">NO_PROXY=1.2.3.4</code> has no effect on requests sent to <code class="literal">example.com</code>. Only requests sent to the IP address <code class="literal">1.2.3.4</code> bypass the proxy.
+					</li><li class="listitem">
+						If you add a port after the hostname or IP address, the request must match both the host/IP and port to bypass the proxy. For example, <code class="literal">NO_PROXY=example.com:1234</code> would bypass the proxy for requests to <code class="literal">http(s)://example.com:1234</code>, but not for requests on other ports, like <code class="literal">http(s)://example.com</code>.
+					</li><li class="listitem">
+						If you do not specify a port after the hostname or IP address, all requests to that host/IP address will bypass the proxy regardless of the port. For example, <code class="literal">NO_PROXY=localhost</code> would bypass the proxy for requests sent to URLs like <code class="literal">http(s)://localhost:7077</code> and <code class="literal">http(s)://localhost:8888</code>.
+					</li><li class="listitem">
+						IP Address blocks in CIDR notation will not work. So setting <code class="literal">NO_PROXY=10.11.0.0/16</code> will not have any effect, even if the backend sends a request to an IP address in that block.
+					</li><li class="listitem">
+						Supports only IPv4 addresses. IPv6 addresses like <code class="literal">::1</code> will not work.
+					</li><li class="listitem">
+						Generally, the proxy is only bypassed if the hostname is an exact match for an entry in the <code class="literal">NO_PROXY</code> list. The only exceptions are entries that start with a dot (<code class="literal">.</code>) or with a wildcard (<code class="literal">*</code>). In such a case, bypass the proxy if the hostname ends with the entry.
+					</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					List the domain and the wildcard domain if you want to exclude a given domain and all its subdomains. For example, you would set <code class="literal">NO_PROXY=example.com,.example.com</code> to bypass the proxy for requests sent to <code class="literal">http(s)://example.com</code> and <code class="literal">http(s)://subdomain.example.com</code>.
+				</p></div></div></section><section class="section" id="proc-configuring-proxy-in-operator-deployment_running-behind-a-proxy"><div class="titlepage"><div><div><h3 class="title">5.2. Configuring proxy information in Operator deployment</h3></div></div></div><p>
+				For Operator-based deployment, the approach you use for proxy configuration is based on your role:
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						As a cluster administrator with access to the Operator namespace, you can configure the proxy variables in the Operator’s default ConfigMap file. This configuration applies the proxy settings to all the users of the Operator.
+					</li><li class="listitem">
+						As a developer, you can configure the proxy variables in a custom resource (CR) file. This configuration applies the proxy settings to the RHDH application created from that CR.
+					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have installed the Red Hat Developer Hub application.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Perform one of the following steps based on your role:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+								As an administrator, set the proxy information in the Operator’s default ConfigMap file:
+							</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+										Search for a ConfigMap file named <code class="literal">backstage-default-config</code> in the default namespace <code class="literal">rhdh-operator</code> and open it.
+									</li><li class="listitem">
+										Find the <code class="literal">deployment.yaml</code> key.
+									</li><li class="listitem"><p class="simpara">
+										Set the value of the <code class="literal">HTTP_PROXY</code>, <code class="literal">HTTPS_PROXY</code>, and <code class="literal">NO_PROXY</code> environment variables in the <code class="literal">Deployment</code> spec as shown in the following example:
+									</p><div class="formalpara"><p class="title"><strong>Example: Setting proxy variables in a ConfigMap file</strong></p><p>
+											
+<pre class="programlisting language-yaml"># Other fields omitted
+  deployment.yaml: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      template:
+        spec:
+          # Other fields omitted
+          initContainers:
+            - name: install-dynamic-plugins
+              # command omitted
+              env:
+                - name: NPM_CONFIG_USERCONFIG
+                  value: /opt/app-root/src/.npmrc.dynamic-plugins
+                - name: HTTP_PROXY
+                  value: 'http://10.10.10.105:3128'
+                - name: HTTPS_PROXY
+                  value: 'http://10.10.10.106:3128'
+                - name: NO_PROXY
+                  value: 'localhost,example.org'
+              # Other fields omitted
+          containers:
+            - name: backstage-backend
+              # Other fields omitted
+              env:
+                - name: APP_CONFIG_backend_listen_port
+                  value: "7007"
+                - name: HTTP_PROXY
+                  value: 'http://10.10.10.105:3128'
+                - name: HTTPS_PROXY
+                  value: 'http://10.10.10.106:3128'
+                - name: NO_PROXY
+                  value: 'localhost,example.org'</pre>
+										</p></div></li></ol></div></li><li class="listitem"><p class="simpara">
+								As a developer, set the proxy information in your <code class="literal">Backstage</code> CR file as shown in the following example:
+							</p><div class="formalpara"><p class="title"><strong>Example: Setting proxy variables in a CR file</strong></p><p>
+									
+<pre class="programlisting language-yaml">spec:
+  # Other fields omitted
+  application:
+    extraEnvs:
+      envs:
+        - name: HTTP_PROXY
+          value: 'http://10.10.10.105:3128'
+        - name: HTTPS_PROXY
+          value: 'http://10.10.10.106:3128'
+        - name: NO_PROXY
+          value: 'localhost,example.org'</pre>
+								</p></div></li></ul></div></li><li class="listitem">
+						Save the configuration changes.
+					</li></ol></div></section><section class="section" id="proc-configuring-proxy-in-helm-deployment_running-behind-a-proxy"><div class="titlepage"><div><div><h3 class="title">5.3. Configuring proxy information in Helm deployment</h3></div></div></div><p>
+				For Helm-based deployment, either a developer or a cluster administrator with permissions to create resources in the cluster can configure the proxy variables in a <code class="literal">values.yaml</code> Helm configuration file.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have installed the Red Hat Developer Hub application.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Set the proxy information in your Helm configuration file:
+					</p><pre class="programlisting language-yaml">upstream:
+  backstage:
+    extraEnvVars:
+      - name: HTTP_PROXY
+        value: '&lt;http_proxy_url&gt;'
+      - name: HTTPS_PROXY
+        value: '&lt;https_proxy_url&gt;'
+      - name: NO_PROXY
+        value: '&lt;no_proxy_settings&gt;'</pre><p class="simpara">
+						Where,
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;http_proxy_url&gt;</code></span></dt><dd>
+									Denotes a variable that you must replace with the HTTP proxy URL.
+								</dd><dt><span class="term"><code class="literal">&lt;https_proxy_url&gt;</code></span></dt><dd>
+									Denotes a variable that you must replace with the HTTPS proxy URL.
+								</dd><dt><span class="term"><code class="literal">&lt;no_proxy_settings&gt;</code></span></dt><dd><p class="simpara">
+									Denotes a variable that you must replace with comma-separated URLs, which you want to exclude from proxying, for example, <code class="literal">foo.com,baz.com</code>.
+								</p><div class="formalpara"><p class="title"><strong>Example: Setting proxy variables using Helm Chart</strong></p><p>
+										
+<pre class="programlisting language-yaml">upstream:
+  backstage:
+    extraEnvVars:
+      - name: HTTP_PROXY
+        value: 'http://10.10.10.105:3128'
+      - name: HTTPS_PROXY
+        value: 'http://10.10.10.106:3128'
+      - name: NO_PROXY
+        value: 'localhost,example.org'</pre>
+									</p></div></dd></dl></div></li><li class="listitem">
+						Save the configuration changes.
+					</li></ol></div></section></section><section class="section" id="proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_running-behind-a-proxy"><div class="titlepage"><div><div><h2 class="title">6. Configuring an RHDH instance with a TLS connection in Kubernetes</h2></div></div></div><p>
+			You can configure a RHDH instance with a Transport Layer Security (TLS) connection in a Kubernetes cluster, such as an Azure Red Hat OpenShift (ARO) cluster, any cluster from a supported cloud provider, or your own cluster with proper configuration. Transport Layer Security (TLS) ensures a secure connection for the RHDH instance with other entities, such as third-party applications, or external databases. However, you must use a public Certificate Authority (CA)-signed certificate to configure your Kubernetes cluster.
+		</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+					You have set up an Azure Red Hat OpenShift (ARO) cluster with a public CA-signed certificate. For more information about obtaining CA certificates, refer to your vendor documentation.
+				</li><li class="listitem"><p class="simpara">
+					You have created a namespace and setup a service account with proper read permissions on resources.
+				</p><div class="formalpara"><p class="title"><strong>Example: Kubernetes manifest for role-based access control</strong></p><p>
+						
+<pre class="programlisting language-yaml">apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backstage-read-only
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - pods
+      - configmaps
+      - services
+      - deployments
+      - replicasets
+      - horizontalpodautoscalers
+      - ingresses
+      - statefulsets
+      - limitranges
+      - resourcequotas
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - watch
+#...</pre>
+					</p></div></li><li class="listitem">
+					You have obtained the secret and the service CA certificate associated with your service account.
+				</li><li class="listitem"><p class="simpara">
+					You have created some resources and added annotations to them so they can be discovered by the Kubernetes plugin. You can apply these Kubernetes annotations:
+				</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+							<code class="literal">backstage.io/kubernetes-id</code> to label components
+						</li><li class="listitem">
+							<code class="literal">backstage.io/kubernetes-namespace</code> to label namespaces
+						</li></ul></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+					Enable the Kubernetes plugins in the <code class="literal">dynamic-plugins-rhdh.yaml</code> file:
+				</p><pre class="programlisting language-yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-kubernetes-backend-dynamic
+        disabled: false <span id="CO9-1"/><span class="callout">1</span>
+      - package: ./dynamic-plugins/dist/backstage-plugin-kubernetes
+        disabled: false <span id="CO9-2"/><span class="callout">2</span>
+        # ...</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO9-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+							Set the value to <code class="literal">false</code> to enable the <code class="literal">backstage-plugin-kubernetes-backend-dynamic</code> plugin.
+						</div></dd><dt><a href="#CO9-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+							Set the value to <code class="literal">false</code> to enable the <code class="literal">backstage-plugin-kubernetes</code> plugin.
+						</div></dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+						The <code class="literal">backstage-plugin-kubernetes</code> plugin is currently in <a class="link" href="https://access.redhat.com/support/offerings/techpreview">Technology Preview</a>. As an alternative, you can use the <code class="literal">./dynamic-plugins/dist/backstage-plugin-topology-dynamic</code> plugin, which is Generally Available (GA).
+					</p></div></div></li><li class="listitem"><p class="simpara">
+					Set the kubernetes cluster details and configure the catalog sync options in the <code class="literal">app-config-rhdh.yaml</code> file:
+				</p><pre class="programlisting language-yaml">kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+  # ...
+  catalog:
+    rules:
+      - allow: [Component, System, API, Resource, Location]
+    providers:
+      kubernetes:
+        openshift:
+          cluster: openshift
+          processor:
+            namespaceOverride: default
+            defaultOwner: guests
+          schedule:
+            frequency:
+              seconds: 30
+            timeout:
+              seconds: 5
+  kubernetes:
+    serviceLocatorMethod:
+      type: 'multiTenant'
+    clusterLocatorMethods:
+      - type: 'config'
+        clusters:
+          - url: &lt;target-cluster-api-server-url&gt; <span id="CO10-1"/><span class="callout">1</span>
+            name: openshift
+            authProvider: 'serviceAccount'
+            skipTLSVerify: false <span id="CO10-2"/><span class="callout">2</span>
+            skipMetricsLookup: true
+            dashboardUrl: &lt;target-cluster-console-url&gt; <span id="CO10-3"/><span class="callout">3</span>
+            dashboardApp: openshift
+            serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN} <span id="CO10-4"/><span class="callout">4</span>
+            caData: ${K8S_CONFIG_CA_DATA} <span id="CO10-5"/><span class="callout">5</span>
+            # ...</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO10-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+							The base URL to the Kubernetes control plane. You can run the <code class="literal">kubectl cluster-info</code> command to get the base URL.
+						</div></dd><dt><a href="#CO10-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+							Set the value of this parameter to <code class="literal">false</code> to enable the verification of the TLS certificate.
+						</div></dd><dt><a href="#CO10-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+							Optional: The link to the Kubernetes dashboard managing the ARO cluster.
+						</div></dd><dt><a href="#CO10-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+							Optional: Pass the service account token using a <code class="literal">K8S_SERVICE_ACCOUNT_TOKEN</code> environment variable that you can define in your my-rhdh-secrets secret.
+						</div></dd><dt><a href="#CO10-5"><span class="callout">5</span></a> </dt><dd><div class="para">
+							Pass the CA data using a <code class="literal">K8S_CONFIG_CA_DATA</code> environment variable that you can define in your my-rhdh-secrets secret.
+						</div></dd></dl></div></li><li class="listitem">
+					Save the configuration changes.
+				</li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+					Run the RHDH application to import your catalog:
+				</p><pre class="programlisting language-terminal">kubectl -n rhdh-operator get pods -w</pre></li><li class="listitem">
+					Verify that the pod log shows no errors for your configuration.
+				</li><li class="listitem">
+					Go to <span class="strong strong"><strong>Catalog</strong></span> and check the component page in the Developer Hub instance to verify the cluster connection and the presence of your created resources.
+				</li></ol></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+				If you encounter connection errors, such as certificate issues or permissions, check the message box in the component page or view the logs of the pod.
+			</p></div></div></section><section class="section" id="con-dynamic-plugin-cache_running-behind-a-proxy"><div class="titlepage"><div><div><h2 class="title">7. Using the dynamic plugins cache</h2></div></div></div><p>
+			The dynamic plugins cache in Red Hat Developer Hub (RHDH) enhances the installation process and reduces platform boot time by storing previously installed plugins. If the configuration remains unchanged, this feature prevents the need to re-download plugins on subsequent boots.
+		</p><p>
+			When you enable dynamic plugins cache:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					The system calculates a checksum of each plugin’s YAML configuration (excluding <code class="literal">pluginConfig</code>).
+				</li><li class="listitem">
+					The checksum is stored in a file named <code class="literal">dynamic-plugin-config.hash</code> within the plugin’s directory.
+				</li><li class="listitem">
+					During boot, if a plugin’s package reference matches the previous installation and the checksum is unchanged, the download is skipped.
+				</li><li class="listitem">
+					Plugins that are disabled since the previous boot are automatically removed.
+				</li></ul></div><section class="section" id="enabling-the-dynamic-plugins-cache"><div class="titlepage"><div><div><h3 class="title">7.1. Enabling the dynamic plugins cache</h3></div></div></div><p>
+				To enable the dynamic plugins cache in RHDH, the plugins directory <code class="literal">dynamic-plugins-root</code> must be a persistent volume.
+			</p><p>
+				For Helm chart installations, a persistent volume named <code class="literal">dynamic-plugins-root</code> is automatically created.
+			</p><p>
+				For operator-based installations, you must manually create the PersistentVolumeClaim (PVC) as follows:
+			</p><pre class="programlisting language-yaml">kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-root
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root</pre><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					Future versions of the RHDH operator are planned to automatically create the PVC.
+				</p></div></div></section><section class="section" id="configuring-the-dynamic-plugins-cache"><div class="titlepage"><div><div><h3 class="title">7.2. Configuring the dynamic plugins cache</h3></div></div></div><p>
+				You can set the following optional dynamic plugin cache parameters:
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						<code class="literal">forceDownload</code>: Set to <code class="literal">true</code> to force a reinstall of the plugin, bypassing the cache. Default is <code class="literal">false</code>. For example, modify your <code class="literal">dynamic-plugins.yaml</code> file as follows:
+					</p><pre class="programlisting language-yaml">plugins:
+  - disabled: false
+    forceDownload: true
+    package: 'oci://quay.io/example-org/example-plugin:v1.0.0!internal-backstage-plugin-example'</pre></li></ul></div></section></section><section class="section" id="proc-installing-and-configuring-redis-cache_running-behind-a-proxy"><div class="titlepage"><div><div><h2 class="title">8. Using Redis Cache with dynamic plugins</h2></div></div></div><p>
+			You can use the Redis cache store to improve RHDH performance and reliability. Plugins in RHDH receive dedicated cache connections, which are powered by Keyv.
+		</p><section class="section" id="installing-redis-cache-in-red-hat-developer-hub"><div class="titlepage"><div><div><h3 class="title">8.1. Installing Redis Cache in Red Hat Developer Hub</h3></div></div></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have installed Red Hat Developer Hub by using either the Operator or Helm chart.
+					</li><li class="listitem">
+						You have an active Redis server. For more information on setting up an external Redis server, see the <a class="link" href="https://www.redis.io/docs/latest/"><code class="literal">Redis official documentation</code></a>.
+					</li></ul></div><div class="formalpara"><p class="title"><strong>Procedure</strong></p><p>
+					Add the following code to your <code class="literal">app-config.yaml</code> file:
+				</p></div><pre class="programlisting language-yaml">backend:
+  cache:
+    store: redis
+    connection: redis://user:pass@cache.example.com:6379</pre></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm45973980662784"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
