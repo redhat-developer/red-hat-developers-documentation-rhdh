@@ -1,0 +1,97 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-techdocs-addons-installing.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-techdocs-addon-install-third-party_{context}"]
+== Installing and configuring a third-party TechDocs add-on
+
+You can install compatible third-party TechDocs add-on on your {product} instance as a front-end dynamic plugin.
+
+.Prerequisites
+* The third-party TechDocs add-on has a valid `package.json` file in its root directory, containing all required metadata and dependencies.
+* You have installed the @janus-idp/cli package.
+* You have installed and configured Node.js and NPM.
+* You have installed the `scalprum` CLI tool for configuring front-end plugins.
+
+.Procedure
+. Obtain the source code for the third-party TechDocs add-on that you want to use.
+. Export the TechDocs add-on as a dynamic plugin using the following command:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+npx @janus-idp/cli@latest package export-dynamic-plugin
+----
++
+[NOTE]
+====
+The `@latest` tag uses the latest version of the `package.json` file for compatibility with the most recent features and fixes.
+====
++
+.Example output
+[source,terminal,subs="+quotes,+attributes"]
+----
+Using scalpum config inlined in the `package.json`
+Packing main package to dist-dynamic/package.json
+Customizing main package in dist-dynamic/package.json for dynamic loading
+Generating dynamic frontend plugin assets in _<path_to_add-on_package>_/_<third-party_add-on_package>_/dist-dynamic/dist-scalprum
+...
+----
++
+where
+
+_<path_to_add-on_package>_ :: Specifies the package for the third-party add-on that you want to export, for example, `backstage-plugin-techdocs-module-addon-mermaid`.
+
+. To package the third-party TechDocs add-on as a dynamic plugin, navigate to the root directory where the plugin is stored (not the dist-dynamic directory) and run the `npx` command with the `--tag` option to specify the image name and tag. For example:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+npx @janus-idp/cli@latest package package-dynamic-plugins --tag quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
+----
++
+[NOTE]
+====
+The output of the package-dynamic-plugins command provides the file path to the plugin for use in the `dynamic-plugin-config.yaml` file.
+====
++
+. To publish the third-party TechDocs add-on to a Quay repository, push the image to a registry using one of the following commands, depending on your virtualization tool:
+* To use `podman`, enter the following command:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+podman push quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
+----
+* To use `docker`, enter the following command:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+docker push quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
+----
+. Open your `dynamic-plugins.yaml` file to view or modify the configuration for the third-party TechDocs add-on. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+plugins:
+      - package: oci://quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest!_<techdocs_add-on_package>_
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+             _<techdocs_add-on_package>_
+                techdocsAddons:
+                  - importName: _<third-party_add-on_name>_
+                   config:
+                    props:
+                     config:
+                      theme: _<theme_name>_
+                      themeVariables: { lineColor: "_<line_color_variable>_"}
+----
++
+where
+
+_<user_name>>_ :: Specifies your Quay user name or organization name.
+_<techdocs_add-on_image>_ :: Specifies the name of the image for the third-party add-on that you want to use, for example, `mermaid`.
+_<techdocs_add-on_package>_ :: Specifies the , for example, `backstage-plugin-techdocs-addon-mermaid`.
+_<third-party_add-on_name>_ :: Specifies the name of the third-party add-on that you want to use, for example, `Mermaid`.
+_<theme_name>_ :: Specifies the name of the visual theme that you want to apply to your third-party TechDocs add-on, for example, `forest`. Depending on the third-party add-on, this field can be optional or required.
+_<line_color_variable>_ :: Specifies the line color that you want to use in the visual theme, for example, #000000. Depending on the third-party add-on, this field can be optional or required.
