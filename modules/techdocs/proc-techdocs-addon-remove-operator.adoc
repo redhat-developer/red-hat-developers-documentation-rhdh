@@ -1,0 +1,47 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-techdocs-addons-removing.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-techdocs-addon-remove-operator_{context}"]
+== Removing an external TechDocs add-on from your ConfigMap
+
+If you no longer want to use the functionality of a TechDocs add-on that you installed on your {product} instance using the Operator, remove it from your ConfigMap.
+
+.Procedure
+
+. From the Developer perspective in the {ocp-short} web console, click *ConfigMaps*.
+. From the *ConfigMaps* page, click the ConfigMap that contains the TechDocs add-on that you want to remove.
+. Select the *YAML view* option in the *Configure via* field.
+. In the `techdocsAddons` section of the ConfigMap, delete `importName: _<external_techdocs_add-on>` for each external TechDocs add-on that you want to remove. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-techdocs-module-addons-contrib
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              backstage.plugin-techdocs-module-addons-contrib:
+                techdocsAddons:
+                  - importName: ReportIssue
+                  - importName: _<external_techdocs_add-on>_
+----
++
+where:
+
+_<external_techdocs_add-on>_:: Specifies the external TechDocs add-on that you want to remove, for example, `TextSize`.
+. Click *Save*.
+. In the web console navigation menu, click *Topology* and wait for the {product} pod to start.
+. Click the *Open URL* icon to start using the {product} platform with the new configuration changes.
+
+//.Next steps
