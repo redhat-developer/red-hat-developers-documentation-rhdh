@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Monitoring and logging</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub Operations or Project Manager, you can monitor performance and gather insights using Red Hat Developer Hub's monitoring and logging tools."/><link rel="next" href="#assembly-rhdh-observability" title="1. Enabling observability for Red Hat Developer Hub on OpenShift Container Platform"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm46125005207664"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.5</span></div><div><h1 class="title">Monitoring and logging</h1></div><div><h3 class="subtitle"><em>Tracking performance and capturing insights with monitoring and logging tools in Red Hat Developer Hub</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm46124988167984">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Monitoring and logging</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub Operations or Project Manager, you can monitor performance and gather insights using Red Hat Developer Hub's monitoring and logging tools."/><link rel="next" href="#assembly-rhdh-observability" title="1. Enabling observability for Red Hat Developer Hub on OpenShift Container Platform"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45905056247344"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.5</span></div><div><h1 class="title">Monitoring and logging</h1></div><div><h3 class="subtitle"><em>Tracking performance and capturing insights with monitoring and logging tools in Red Hat Developer Hub</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45905040975600">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
 				As a Red Hat Developer Hub Operations or Project Manager, you can monitor performance and gather insights using Red Hat Developer Hub's monitoring and logging tools.
 			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#assembly-rhdh-observability">1. Enabling observability for Red Hat Developer Hub on OpenShift Container Platform</a></span><ul><li><span class="section"><a href="#proc-admin-enabling-metrics-ocp-operator_assembly-rhdh-observability">1.1. Enabling metrics monitoring in a Red Hat Developer Hub Operator installation on an OpenShift Container Platform cluster</a></span></li><li><span class="section"><a href="#proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability">1.2. Enabling metrics monitoring in a Helm chart installation on an OpenShift Container Platform cluster</a></span></li></ul></li><li><span class="section"><a href="#proc-rhdh-monitoring-logging-aws_assembly-rhdh-observability">2. Monitoring and logging with Amazon Web Services (AWS) in Red Hat Developer Hub</a></span><ul><li><span class="section"><a href="#monitoring-with-amazon-prometheus">2.1. Monitoring with Amazon Prometheus</a></span></li><li><span class="section"><a href="#logging-with-amazon-cloudwatch-logs">2.2. Logging with Amazon CloudWatch logs</a></span></li></ul></li><li><span class="section"><a href="#assembly-monitoring-and-logging-aks">3. Monitoring and logging with Azure Kubernetes Services (AKS) in Red Hat Developer Hub</a></span><ul><li><span class="section"><a href="#proc-enabling-azure-monitor-metrics_assembly-monitoring-and-logging-aks">3.1. Enabling Azure Monitor metrics</a></span></li><li><span class="section"><a href="#proc-configure-annotations-for-aks-monitoring_assembly-monitoring-and-logging-aks">3.2. Configuring annotations for monitoring</a></span></li><li><span class="section"><a href="#proc-view-logs-aks_assembly-monitoring-and-logging-aks">3.3. Viewing logs with Azure Kubernetes Services (AKS)</a></span></li></ul></li></ul></div><section class="section" id="assembly-rhdh-observability"><div class="titlepage"><div><div><h2 class="title">1. Enabling observability for Red Hat Developer Hub on OpenShift Container Platform</h2></div></div></div><p>
 			In OpenShift Container Platform, metrics are exposed through an HTTP service endpoint under the <code class="literal">/metrics</code> canonical name. You can create a <code class="literal">ServiceMonitor</code> custom resource (CR) to scrape metrics from a service endpoint in a user-defined project.
@@ -19,30 +19,43 @@
 					</p><pre class="programlisting language-yaml">apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: &lt;custom_resource_name&gt; <span id="CO1-1"/><span class="callout">1</span>
-  namespace: my-rhdh-project <span id="CO1-2"/><span class="callout">2</span>
+  name: <span class="emphasis"><em>&lt;developer_hub_service_monitor_name&gt;</em></span> <span id="CO1-1"/><span class="callout">1</span>
+  namespace: <span class="emphasis"><em>&lt;rhdh_namespace_name&gt;</em></span> <span id="CO1-2"/><span class="callout">2</span>
   labels:
-    app.kubernetes.io/instance: &lt;custom_resource_name&gt;
-    app.kubernetes.io/name: backstage
+    app.kubernetes.io/instance: <span class="emphasis"><em>&lt;rhdh_cr_name&gt;</em></span> <span id="CO1-3"/><span class="callout">3</span>
+    app.kubernetes.io/name: Backstage
 spec:
   namespaceSelector:
     matchNames:
-      - my-rhdh-project
+      - <span class="emphasis"><em>&lt;rhdh_namespace_name&gt;</em></span> <span id="CO1-4"/><span class="callout">4</span>
   selector:
     matchLabels:
-      rhdh.redhat.com/app: backstage-&lt;custom_resource_name&gt;
+      app.kubernetes.io/instance: <span class="emphasis"><em>&lt;deployment_name&gt;</em></span> <span id="CO1-5"/><span class="callout">5</span>
+      app.kubernetes.io/name: <span class="emphasis"><em>&lt;rhdh_cr_type&gt;</em></span> <span id="CO1-6"/><span class="callout">6</span>
   endpoints:
   - port: http-metrics
     path: '/metrics'</pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO1-1"><span class="callout">1</span></a> </dt><dd><div class="para">
-								Replace <code class="literal">&lt;custom_resource_name&gt;</code> with the name of your <code class="literal">Backstage</code> custom resource.
+								The name of your <code class="literal">ServiceMonitor</code> resource, for example, <code class="literal">developer_hub_service_monitor</code>.
 							</div></dd><dt><a href="#CO1-2"><span class="callout">2</span></a> </dt><dd><div class="para">
-								Replace <code class="literal">&lt;project_name&gt;</code> with the name of the OpenShift Container Platform project where your Red Hat Developer Hub instance is running.
-							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+								The namespace where your <code class="literal">ServiceMonitor</code> will live, for example, <code class="literal">my-rhdh-project</code>.
+							</div></dd><dt><a href="#CO1-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								The label name identifying the <code class="literal">ServiceMonitor</code> CR instance, for example, <code class="literal">my-rhdh-custom-resource</code>.
+							</div></dd><dt><a href="#CO1-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								The namespace where your RHDH instance is installed, for example, <code class="literal">my-rhdh-project</code>.
+							</div></dd><dt><a href="#CO1-5"><span class="callout">5</span></a> </dt><dd><div class="para">
+								The name of your RHDH deployment, for example, <code class="literal">developer-hub</code>.
+							</div></dd><dt><a href="#CO1-6"><span class="callout">6</span></a> </dt><dd><div class="para">
+								The name of your RHDH application, for example, <code class="literal">backstage</code>.
+							</div></dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							<code class="literal">spec.selector.matchLabels</code> configuration must match the labels of your RHDH installation.
+						</p></div></div></li><li class="listitem"><p class="simpara">
 						Apply the <code class="literal">ServiceMonitor</code> CR by running the following command:
 					</p><pre class="programlisting language-terminal">oc apply -f &lt;filename&gt;</pre></li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
 						From the <span class="strong strong"><strong>Developer</strong></span> perspective in the OpenShift Container Platform web console, select the <span class="strong strong"><strong>Observe</strong></span> view.
 					</li><li class="listitem">
 						Click the <span class="strong strong"><strong>Metrics</strong></span> tab to view metrics for Red Hat Developer Hub pods.
+					</li><li class="listitem">
+						From the Developer perspective in the OpenShift Container Platform web console, click <span class="strong strong"><strong>Project &gt; Services</strong></span> and verify the labels for <code class="literal">backstage-developer-hub</code>.
 					</li></ol></div></section><section class="section" id="proc-admin-enabling-metrics-ocp-helm_assembly-rhdh-observability"><div class="titlepage"><div><div><h3 class="title">1.2. Enabling metrics monitoring in a Helm chart installation on an OpenShift Container Platform cluster</h3></div></div></div><p>
 				You can enable and view metrics for a Red Hat Developer Hub Helm deployment from the <span class="strong strong"><strong>Developer</strong></span> perspective of the OpenShift Container Platform web console.
 			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
@@ -232,7 +245,7 @@ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"</pre></li><l
 									Go to the <span class="strong strong"><strong>Containers</strong></span> tab.
 								</li><li class="listitem">
 									Find the backend-backstage container and click it to view real-time log data as it’s generated by the Container Engine.
-								</li></ol></div></dd></dl></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm46124988167984"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+								</li></ol></div></dd></dl></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm45905040975600"><h1 class="legalnotice">Legal Notice</h1><div class="para">
 		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
 	</div><div class="para">
 		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
