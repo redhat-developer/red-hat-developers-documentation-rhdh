@@ -70,6 +70,159 @@ global:
         disabled: false
 ----
 
+== Enabling Argo CD Rollouts
+
+The optional Argo CD Rollouts feature enhances Kubernetes by providing advanced deployment strategies, such as blue-green and canary deployments, for your applications. When integrated into the backstage Kubernetes plugin, it allows developers and operations teams to visualize and manage Argo CD Rollouts seamlessly within the Backstage interface.
+
+.Prerequisites
+
+* The Backstage Kubernetes plugin (`@backstage/plugin-kubernetes`) is installed and configured. 
+
+** To install and configure Kubernetes plugin in Backstage, see link:https://backstage.io/docs/features/kubernetes/installation/[Installaltion] and link:https://backstage.io/docs/features/kubernetes/configuration/[Configuration] guide.
+
+* You have access to the Kubernetes cluster with the necessary permissions to create and manage custom resources and `ClusterRoles`.
+
+* The Kubernetes cluster has the `argoproj.io` group resources (for example, Rollouts and AnalysisRuns) installed.
+
+.Procedure
+
+. In the `app-config.yaml` file in your Backstage instance, add the following `customResources` component under the `kubernetes` configuration to enable Argo Rollouts and AnalysisRuns:
+
++
+[source,yaml]
+----
+kubernetes:
+  ...
+  customResources:
+    - group: 'argoproj.io'
+      apiVersion: 'v1alpha1'
+      plural: 'Rollouts'
+    - group: 'argoproj.io'
+      apiVersion: 'v1alpha1'
+      plural: 'analysisruns'
+----
+
+. Grant `ClusterRole` permissions for custom resources.
+
++
+[NOTE]
+====
+
+* If the Backstage Kubernetes plugin is already configured, the `ClusterRole` permissions for Rollouts and AnalysisRuns might already be granted.
+
+* Use the link:https://raw.githubusercontent.com/backstage/community-plugins/main/workspaces/redhat-argocd/plugins/argocd/manifests/clusterrole.yaml[prepared manifest] to provide read-only `ClusterRole` access to both the Kubernetes and ArgoCD plugins.
+====
+
+.. If the `ClusterRole` permission is not granted, use the following YAML manifest to create the `ClusterRole`:
+
++
+[source,yaml]
+----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backstage-read-only
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - rollouts
+      - analysisruns
+    verbs:
+      - get
+      - list
+----
+
+.. Apply the manifest to the cluster using `kubectl`:
++
+[source,bash]
+----
+kubectl apply -f <your-clusterrole-file>.yaml
+----
+
+.. Ensure the `ServiceAccount` accessing the cluster has this `ClusterRole` assigned.
+
+. Add annotations to `catalog-info.yaml` to identify Kubernetes resources for Backstage.
+
+.. For identifying resources by entity ID:
++
+[source,yaml]
+----
+annotations:
+  ...
+  backstage.io/kubernetes-id: <BACKSTAGE_ENTITY_NAME>
+----
+
+.. (Optional) For identifying resources by namespace:
++
+[source,yaml]
+----
+annotations:
+  ...
+  backstage.io/kubernetes-namespace: <RESOURCE_NAMESPACE>
+----
+
+.. For using custom label selectors, which override resource identification by entity ID or namespace:
++
+[source,yaml]
+----
+annotations:
+  ...
+  backstage.io/kubernetes-label-selector: 'app=my-app,component=front-end'
+----
++
+[NOTE]
+====
+Ensure you specify the labels declared in `backstage.io/kubernetes-label-selector` on your Kubernetes resources. This annotation overrides entity-based or namespace-based identification annotations, such as `backstage.io/kubernetes-id` and `backstage.io/kubernetes-namespace`.
+====
+
+. Add label to Kubernetes resources to enable Backstage to find the appropriate Kubernetes resources.
+
+.. Backstage Kubernetes plugin label: Add this label to map resources to specific Backstage entities.
++
+[source,yaml]
+----
+labels:
+  ...
+  backstage.io/kubernetes-id: <BACKSTAGE_ENTITY_NAME>
+----
+
+.. GitOps application mapping: Add this label to map Argo CD Rollouts to a specific GitOps application
++
+[source,yaml]
+----
+labels:
+  ...
+  app.kubernetes.io/instance: <GITOPS_APPLICATION_NAME>
+----
+
++
+[NOTE]
+====
+If using the label selector annotation (backstage.io/kubernetes-label-selector), ensure the specified labels are present on the resources. The label selector will override other annotations like kubernetes-id or kubernetes-namespace.
+====
+
+.Verification
+
+. Push the updated configuration to your GitOps repository to trigger a rollout.
+
+. Open {Product} interface and navigate to the entity you configured.
+
+. Select the *CD* tab and then select the *GitOps application*. The side panel opens. 
+
+. In the *Resources* table of the side panel, verify that the following resources are displayed:
+
+* Rollouts
+
+* AnalysisRuns (optional)
+
+. Expand a rollout resource and review the following details:
+
+* The Revisions row displays traffic distribution details for different rollout versions.
+
+* The Analysis Runs row displays the status of analysis tasks that evaluate rollout success.
+
+
 [role="_additional-resources"]
 .Additional resources
 
