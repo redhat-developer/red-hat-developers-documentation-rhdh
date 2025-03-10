@@ -1,68 +1,9 @@
 = Configuring Entity Page widget and tab layout
 
+.Procedure
 
-== Changing entity detail page tabs (title and order)
-
-Some technical documentation on that could be found at https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/frontend-plugin-wiring.md#customizing-and-adding-entity-tabs
-
-To customize the tab names you have currently two options in your {product} configuration.
-
-* You can override the title of the entityTabs in the dynamic.plugins section as mentioned in the document above.
-* Or in the upstream.backstage.appConfig section which brings you some advantage in {product-short} 1.3 because this configuration doesn’t require you to include other plugin configurations like the mountPoints.
-
-Based on the documentation above you can change the entity tab like this:
-
-[source,yaml]
-----
-global:
-  dynamic:
-    plugins:
-      - package: ./dynamic-plugins/dist/backstage-community-plugin-topology
-        disabled: false
-        pluginConfig:
-          dynamicPlugins:
-            frontend:
-              backstage-community.plugin-topology:
-                entityTabs:
-                  - path: /topology
-                    title: Topology Test
-                    mountPoint: entity.page.topology
-                mountPoints:
-                - mountPoint: entity.page.topology/cards
-                  importName: TopologyPage
-                  config:
-                    layout:
-                      gridColumn: "1 / -1"
-                      height: 75vh
-                    if:
-                      anyOf:
-                        - hasAnnotation: backstage.io/kubernetes-id
-                        - hasAnnotation: backstage.io/kubernetes-namespace
-----
-
-The default configuration for {product-short} 1.3 could be found here: https://github.com/redhat-developer/rhdh/blob/release-1.3/dynamic-plugins.default.yaml#L234-L250 which doesn’t include this entityTabs configuration.
-
-In the upstream.backstage.appConfig section you can override the tab titles without the need to repeat all mountPoints, which removes the need to update them with minor {product-short} releases.
-
-[source,yaml]
-----
-upstream:
-  backstage:
-    appConfig:
-      dynamicPlugins:
-        frontend:
-          # the name must not match the plugin
-             backstage-community.plugin-topology:
-               entityTabs:
-                 - path: /topology
-                   title: Changed Topology title
-                   mountPoint: entity.page.topology
-----
-
-
-The issue with both is to understand what default entity tabs do exist. So we like to share here the list of the default tabs (already prefixed with “Changed”). So when you apply the following configuration to your {product-short}, you could rename and reorder this tabs:
-
-
+. To rename and reorder the entity page tab titles, add the following `entityTabs` section in your `{my-app-config-file}` file, change the `title` values, and reorder the list items:
++
 [source,yaml]
 ----
 upstream:
@@ -73,143 +14,82 @@ upstream:
           entity-tabs-customization:
             entityTabs:
               - path: /
-                title: Changed Overview
+                title: Overview
                 mountPoint: entity.page.overview
               - path: /topology
-                title: Changed Topology
+                title: Topology
                 mountPoint: entity.page.topology
               - path: /issues
-                title: Changed Issues
+                title: Issues
                 mountPoint: entity.page.issues
               - path: /pr
-                title: Changed Pull/Merge Requests
+                title: Pull/Merge Requests
                 mountPoint: entity.page.pull-requests
               - path: /ci
-                title: Changed CI
+                title: CI
                 mountPoint: entity.page.ci
               - path: /cd
-                title: Changed CD
+                title: CD
                 mountPoint: entity.page.cd
               - path: /kubernetes
-                title: Changed Kubernetes
+                title: Kubernetes
                 mountPoint: entity.page.kubernetes
               - path: /image-registry
-                title: Changed Image Registry
+                title: Image Registry
                 mountPoint: entity.page.image-registry
               - path: /monitoring
-                title: Changed Monitoring
+                title: Monitoring
                 mountPoint: entity.page.monitoring
               - path: /lighthouse
-                title: Changed Lighthouse
+                title: Lighthouse
                 mountPoint: entity.page.lighthouse
               - path: /api
-                title: Changed Api
+                title: Api
                 mountPoint: entity.page.api
               - path: /dependencies
-                title: Changed Dependencies
+                title: Dependencies
                 mountPoint: entity.page.dependencies
               - path: /docs
-                title: Changed Docs
+                title: Docs
                 mountPoint: entity.page.docs
               - path: /definition
-                title: Changed Definition
+                title: Definition
                 mountPoint: entity.page.definition
               - path: /system
-                title: Changed Diagram
+                title: Diagram
                 mountPoint: entity.page.diagram
 ----
 
-
-
-(Really technical note on that: The list of default tabs in 1.3 is defined in code, not YAML: https://github.com/redhat-developer/rhdh/blob/release-1.3/packages/app/src/components/catalog/EntityPage/defaultTabs.tsx#L12-L79)
-
-
-Changing entity detail tab content
-The complexity of the entity detail page configuration comes from the fact that different plugins can contribute cards or complete tabs.
-
-The Overview, Dependencies and API tabs contain a high number of not customizable default cards that depend on the entity kind and type.
-
-Technically they are defined here if you want go really deep and see which cards are defined by default:
-https://github.com/redhat-developer/rhdh/blob/release-1.3/packages/app/src/components/catalog/EntityPage/OverviewTabContent.tsx
-https://github.com/redhat-developer/rhdh/blob/release-1.3/packages/app/src/components/catalog/EntityPage/DependenciesTabContent.tsx
-https://github.com/redhat-developer/rhdh/blob/release-1.3/packages/app/src/components/catalog/EntityPage/ApiTabContent.tsx
-
-Dynamic plugins that are included in {product-short} 1.3 you can find the default card layout configuration in this long YAML: https://github.com/redhat-developer/rhdh/blob/release-1.3/dynamic-plugins.default.yaml
-
-To change, for example, the position of one of these cards, you must replicate the default configuration in your configuration and change the layout.gridColumn and layout.gridColumnEnd properties.
-
-This is for example the default Tekton plugin configuration from that file:
-
-
-.This is an example for {product-short} 1.3, the plugin path has changed in {product-short} 1.4
-[source,yaml]
+. You might change the entity detail tab content when the plugin that contributes the tab content allows a configuration, such as https://github.com/redhat-developer/rhdh/blob/release-{product-version}/dynamic-plugins.default.yaml[{product-short} plugins defining a default configuration  in a `config` section].
++
+Copy the default configuration in your `{my-app-config-file}` file, and change the `config` properties.
++
+[source,yaml,subs="+quotes"]
 ----
 global:
   dynamic:
     plugins:
-      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-tekton
+      - package: _<your_package_location>_ # <1>
         disabled: false
         pluginConfig:
           dynamicPlugins:
             frontend:
-              janus-idp.backstage-plugin-tekton:
+              _<your_plugin_name>_: # <2>
                 mountPoints:
-                  - mountPoint: entity.page.ci/cards
+                  - mountPoint: entity.page.ci/cards # <3>
                     importName: TektonCI
                     config:
-                      layout:
-                        gridColumn: "1 / -1"
-                      if:
-                        allOf:
-                          - isTektonCIAvailable
-                  - mountPoint: entity.page.ci/cards
-                    importName: TektonCI
-                    config:
-                      layout:
-                        gridColumn: "1 / -1"
+                      layout: # <4>
+                        gridColumn:
+                          lg: span 6
+                          xs: span 12
                       if:
                         allOf:
                           - isTektonCIAvailable
 ----
-
-To show the same card side by side on the CI tab you can replicate the mount point and change the config.layout option.
-
+<1> `package:` Enter your package location, such as `./dynamic-plugins/dist/backstage-community-plugin-tekton`
+<2> `_<your_plugin_name>_:` Enter your plugin name, such as  backstage-community.plugin-tekton`
+<3> `mountPoint:` Enter the same mountpoint as defined in the plugin default configuration.
+<4> `layout:` Enter your layout configuration.
 The tab content is displayed in a responsive grid that uses a 12 column-grid and supports different breakpoints (xs, sm, md, lg, xl) that can be specified for a CSS property (gridColumn in our example).
-
-The example below uses 6 of the 12 columns to show two Tekton CI cards side-by-side on large (lg) screens (span 6 columns) and show them among themselves (xs and above span all 12 columns).
-
-
-.This is an example for {product-short} 1.3, the plugin path has changed in {product-short} 1.4
-[source,yaml]
-----
-global:
-  dynamic:
-    plugins:
-      - package: ./dynamic-plugins/dist/janus-idp-backstage-plugin-tekton
-        disabled: false
-        pluginConfig:
-          dynamicPlugins:
-            frontend:
-              janus-idp.backstage-plugin-tekton:
-                mountPoints:
-                  - mountPoint: entity.page.ci/cards
-                    importName: TektonCI
-                    config:
-                      layout:
-                        gridColumn:
-                          lg: span 6
-                          xs: span 12
-                      if:
-                        allOf:
-                          - isTektonCIAvailable
-                  - mountPoint: entity.page.ci/cards
-                    importName: TektonCI
-                    config:
-                      layout:
-                        gridColumn:
-                          lg: span 6
-                          xs: span 12
-                      if:
-                        allOf:
-                          - isTektonCIAvailable
-----
+The example uses 6 of the 12 columns to show two Tekton CI cards side-by-side on large (lg) screens (span 6 columns) and show them among themselves (xs and above span all 12 columns).
