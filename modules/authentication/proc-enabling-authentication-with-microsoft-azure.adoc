@@ -51,53 +51,26 @@ To grant administrator consent, a directory administrator must go to the link:ht
 `AUTH_AZURE_CLIENT_SECRET`:: Enter your saved *Application (client) secret*.
 
 . Set up the Microsoft Azure authentication provider in your {product-short} custom configuration, such as `app-config-rhdh`:
+.. Configure mandatory fields:
 +
---
 .`app-config-rhdh.yaml` fragment
 [source,yaml,subs="+quotes,+attributes"]
 ----
 auth:
-  environment: production
+  environment: production # <1>
   providers:
     microsoft:
       production:
-        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientId: ${AUTH_AZURE_CLIENT_ID} # <2>
         clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
         tenantId: ${AUTH_AZURE_TENANT_ID}
-signInPage: microsoft
+signInPage: microsoft # <3>
 ----
+<1> Mark the environment as production to hide the **Guest** login in the {product-short} home page.
+<2> Use the {product-short} application information that you have created in Microsoft Azure and configured in OpenShift as secrets.
+<3> Enable the Microsoft Azure provider as default sign-in provider.
 
-`environment: production`::
-Mark the environment as production to hide the **Guest** login in the {product-short} home page.
-
-`clientId`, `clientSecret` and `tenantId`::
-Use the {product-short} application information that you have created in Microsoft Azure and configured in OpenShift as secrets.
-
-`signInPage: microsoft`::
-Enable the Microsoft Azure provider as default sign-in provider.
-
-Optional: Consider adding following optional fields:
-
-`dangerouslyAllowSignInWithoutUserInCatalog: true`::
-+
-To enable authentication without requiring to provision users in the {product-short} software catalog.
-+
-WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-short} features, but do not use it in production.
-+
-.`app-config-rhdh.yaml` fragment with optional field to allow authenticating users absent from the software catalog
-[source,yaml]
-----
-auth:
-  environment: production
-  providers:
-    microsoft:
-      production:
-        clientId: ${AUTH_AZURE_CLIENT_ID}
-        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
-        tenantId: ${AUTH_AZURE_TENANT_ID}
-signInPage: microsoft
-dangerouslyAllowSignInWithoutUserInCatalog: true
-----
+.. Optional: Consider adding following optional fields:
 
 `domainHint`::
 Optional for single-tenant applications.
@@ -148,7 +121,41 @@ auth:
         sessionDuration: { hours: 24 }
 ----
 
---
+`signIn` ::
+
+`resolvers`:::
+Enter the resolver list to override the default resolver: `emailLocalPartMatchingUserEntityName`. The authentication provider tries each sign-in resolver until it succeeds, and fails if none succeed.
+
+`resolver`::::
+Enter the sign-in resolver name.
+Available values:
+* `userIdMatchingUserEntityAnnotation`
+* `emailLocalPartMatchingUserEntityName`
+* `emailMatchingUserEntityProfileEmail`
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::::
++
+Configure the sign-in resolver to enable authentication without requiring to provision users in the {product-short} software catalog.
++
+WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-short} features, but do not use it in production.
++
+.`app-config-rhdh.yaml` fragment with optional field to allow authenticating users absent from the software catalog
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+signInPage: microsoft
+----
 
 [NOTE]
 ====
