@@ -4,5 +4,187 @@
 
 This section highlights new features in {product} {product-version}.
 
-None.
+[id="feature-rhidp-5499"]
+== `techdocsAddons` configuration for dynamic plugins
+
+{product-short} introduces the `techdocsAddons` configuration option for a dynamic plugin's front-end configuration. This feature allows dynamic plugins to export one or more components as TechDocs add-ons, enhancing the TechDocs experience. Add-ons can be configured using props to modify their behavior, such as manipulating a TechDocs site's Document Object Model (DOM).
+For more information, see <link to docs>.
+
+[id="feature-rhidp-5125"]
+== Configurable global header plugin
+
+With this update, {product-short} introduces a new global header plugin, providing a configurable and extendable header in {product-very-short}. You can use the default header with key {product-very-short} components or fully customize it by enabling, disabling, or extending its functionality through the dynamic plugin system.
+
+The key features and enhancements include:
+
+* Global header as a dynamic plugin
+** Enabled by default with a provided wrapper
+** Can be disabled by turning off the dynamic plugin
+** Supports customization by adding, reordering, or removing components
+
+* Extendable default header components
+** Search input field
+** *Create* button linking to templates
+** Support for internal or external links, such as support and notification icons
+** **Profile** and **Create** drop-down menus
+
+* Plugin extension capabilities
+** Other plugins can add custom components or links
+** Extend the `CreateDropdown` or `ProfileDropdown` menus
+
+The global header plugin also introduces new mount points in the dynamic plugin system, offering enhanced flexibility in positioning, styling, and extending the header, enabling a fully customizable experience in {product-very-short}.
+
+For more information about global header, see <doc links>.
+
+[id="feature-rhidp-4676"]
+== New dynamic plugin for Kubernetes scaffolder actions
+
+With this update, {product-short} introduces the `@backstage-community/plugin-scaffolder-backend-module-kubernetes` plugin as a dynamic plugin, enabling Backstage template actions for Kubernetes. Currently, it includes the `create-namespace` action. The plugin for Kubernetes scaffolder actions is disabled by default.
+
+For more information, see <doc links>.
+
+[id="feature-rhidp-5484"]
+== Support for loading authentication providers from dynamic plugins
+
+{product} {product-version} introduces support for loading authentication providers or modules from dynamic plugins, enabling greater flexibility and customization. The key improvements include:
+
+* Environment variable control:
+** A new `ENABLE_AUTH_PROVIDER_MODULE_OVERRIDE` environment variable determines whether the backend installs the default authentication provider module.
+** When the new environment variable is enabled, dynamic plugins can be used to supply custom authentication providers.
+
+* Custom sign-in page support:
++
+--
+** A new `signInPage` configuration allows front-end dynamic plugins to provide a custom `SignInPage` component.
++
+.Example configuration
+[source,yaml]
+----
+dynamicPlugins:
+ frontend:
+   my-plugin-package:
+     signInPage:
+       importName: CustomSignInPage
+----
+
+** The exported `CustomSignInPage` will be mapped to `components.SignInPage` during front-end initialization.
+--
+
+* Authentication provider settings:
++
+--
+** A new `providerSettings` configuration field allows front-end dynamic plugins to define authentication provider settings for display in the *Authentication Providers* tab on the *Settings* page.
++
+.Example configuration
+[source,yaml]
+----
+dynamicPlugins:
+ frontend:
+   my-plugin-package:
+     providerSettings:
+- title: Github Two
+description: Sign in with GitHub Org Two
+provider: core.auth.github-two
+----
+
+** Each `providerSettings` entry creates a corresponding row in the *Authentication Providers* tab. The provider field must match the string used in `createApiRef` when defining the API reference:
++
+.Example configuration
+[source,javascript]
+----
+export const ghTwoAuthApiRef: ApiRef<
+ OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+> = createApiRef({
+ id: 'core.auth.github-two', // <--- this string
+})
+----
+--
+
+For more information, see <doc links>.
+
+[id="feature-rhidp-5513"]
+== Floating action button support for plugins
+
+{product-very-short} now supports adding plugins as floating action on selected pages. This feature allows you to configure commonly used plugins as floating buttons, providing quick access and improving navigation by centralizing essential plugins on a single page.
+
+For more information, see <doc links>.
+
+[id="feature-rhidp-4235"]
+== Support for top visited and recently visited cards on the customizable home page
+
+With {product-very-short} {product-version}, two new cards are available for the customizable home page:
+
+* **Top Visited Pages**: Displays the most frequently visited pages.
+* **Recently Visited Pages**: Displays the latest pages accessed.
+
+These cards track visited pages for each user within their browser and can be configured in the dynamic home page as follows:
+
+.Example configuration
+[source,yaml]
+----
+- mountPoint: home.page/cards
+ importName: TopVisitedCard
+ config:
+   layouts:
+     xl: { w: 6, h: 4 }
+     lg: { w: 6, h: 4 }
+     md: { w: 6, h: 4 }
+     sm: { w: 6, h: 4 }
+     xs: { w: 6, h: 4 }
+     xxs: { w: 6, h: 4 }
+
+
+- mountPoint: home.page/cards
+ importName: RecentlyVisitedCard
+ config:
+   layouts:
+     xl: { w: 6, h: 4, x: 6 }
+     lg: { w: 6, h: 4, x: 6 }
+     md: { w: 6, h: 4, x: 6 }
+     sm: { w: 6, h: 4, x: 6 }
+     xs: { w: 6, h: 4, x: 6 }
+     xxs: { w: 6, h: 4, x: 6 }
+----
+
+The new cards enhance the user experience by providing quick access to frequently used and recently viewed content.
+
+[id="enhancement-rhidp-5815"]
+== Improved rate limit handling for GitHub organization entity provider
+
+The GitHub organization entity provider now manages both primary and secondary GitHub rate limits. It automatically pauses operations when these limits are reached, ensuring greater reliability, especially when ingesting large GitHub organizations.
+
+[id="feature-rhidp-5814"]
+== New configuration option for improved catalog performance
+
+A new `catalog.disableRelationsCompatibility` configuration option has been introduced. Enabling this option enhances catalog performance and reduces memory usage. However, it may impact consumers that depend on the target field in relation objects.
+
+[id="feature-rhidp-5813"]
+== New Scaffolder permission for front-end template management
+
+The `scaffolder.template.management` permission has been introduced to restrict access to front-end template management features, ensuring better control over template modifications. For more information, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html-single/authorization/index#ref-rbac-permission-policies_title-authorization[Permission policies reference].
+
+[id="enhancement-rhidp-5732"]
+== Support for multi-replica RHDH with persistent volume for dynamic plugins cache
+
+Previously, running multi-replica {product-very-short} with a persistent volume for the dynamic plugins cache was not possible due to potential write conflicts. {product-very-short} {product-version} mitigates that risk, allowing for better scalability and stability.
+
+[id="enhancement-rhidp-4595"]
+== Configurable PVC mounting for containers
+
+Previously, the default Persistent Volume Claim (PVC) could only be mounted to the Backstage container. With this update, you can now configure which container(s) the PVC must be mounted to, providing greater flexibility in storage management.
+
+[id="enhancement-rhidp-4785"]
+== Enhanced secret configuration for YAML files
+{product-very-short} now introduces the ability to configure multiple secrets within a single YAML file, similar to PVCs. Additionally, it allows annotations to specify:
+
+* The mount path for each secret
+* The specific containers where the secret must be mounted
+
+This enhancement provides greater flexibility in managing secrets across different containers.
+
+[id="enhancement-rhidp-5601"]
+== Enhanced title customization options for the home page plugin
+
+The home page plugin now provides more ways to customize and personalize the title. If your user catalog entity includes a `displayName`, the title can dynamically display your first name or display name for a more personalized experience.
+
 
