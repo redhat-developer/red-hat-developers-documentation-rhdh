@@ -1,0 +1,44 @@
+= Configuring Entity Page widget and tab layout
+
+Each {product} entity detail tab has a default opinionated layout.
+For consistency with your organization needs, you can change the entity detail tab content when the plugin that contributes the tab content allows a configuration.
+
+.Prerequisites
+
+* The plugin that contributes the tab content allows a configuration, such as https://github.com/redhat-developer/rhdh/blob/release-{product-version}/dynamic-plugins.default.yaml[{product-short} plugins defining a default configuration in a `config` section].
+
+.Procedure
+
+* Copy the plugin default configuration in your `{my-app-config-file}` file, and change the `layout` properties.
++
+[source,yaml,subs="+quotes"]
+----
+global:
+  dynamic:
+    plugins:
+      - package: _<your_package_location>_ # <1>
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              _<your_plugin_name>_: # <2>
+                mountPoints:
+                  - mountPoint: entity.page.ci/cards # <3>
+                    importName: TektonCI # <4>
+                    config:
+                      layout: # <5>
+                        gridColumn:
+                          lg: span 6
+                          xs: span 12
+                      if:
+                        allOf:
+                          - isTektonCIAvailable
+----
+<1> `package:` Enter your package location, such as `./dynamic-plugins/dist/backstage-community-plugin-tekton`.
+<2> `_<your_plugin_name>_:` Enter your plugin name, such as: `backstage-community.plugin-tekton`.
+<3> `mountPoint:` Copy the mount point defined in the plugin default configuration, such as: `entity.page.ci/cards`.
+<4> `importName:` Copy the import name defined in the plugin default configuration, such as: `TektonCI`.
+<4> `layout:` Enter your layout configuration.
+The tab content is displayed in a responsive grid that uses a 12 column-grid and supports different breakpoints (`xs`,
+`sm`, `md`, `lg`, `xl`) that can be specified for a CSS property, such as `gridColumn`.
+The example uses 6 of the 12 columns to show two Tekton CI cards side-by-side on large (`lg`) screens (`span 6` columns) and show them among themselves (`xs` and above `span 12` columns).
