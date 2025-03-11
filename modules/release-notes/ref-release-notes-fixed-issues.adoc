@@ -4,6 +4,208 @@
 
 This section lists issues fixed in {product} {product-version}.
 
+== Fixed issues in 1.5.0
 
-None.
+[id="bug-fix-rhidp-5803"]
+=== Entity tab reordering now works as expected
+
+You can now reorder entity tabs by specifying a priority value in the configuration. Tabs with higher priority values appear first, while default tabs can be hidden by assigning a negative priority value.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5803[RHIDP-5803]
+
+[id="bug-fix-rhidp-5119"]
+=== Report issue feature and oversized icon in TechDocs (RHIDP-5119)
+
+Previously, the *Report a documentation issue* feature in TechDocs was not functional. Additionally, selecting text in a TechDoc displayed an oversized icon instead of the intended tooltip button.
+
+This issue has been fixed, ensuring that users can now select content and report issues correctly using the tooltip button.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5119[RHIDP-5119]
+
+[id="bug-fix-rhidp-5023"]
+=== Keycloak access token lifespan and refresh performance (RHIDP-5023)
+
+When using {rhbk} as an OIDC provider, the default access token lifespan was set to five minutes, causing frequent refresh token requests as the token neared expiration. This resulted in performance issues due to the frequent token refreshes.
+
+To resolve this, you can increase the access token lifespan on the Keycloak server by adjusting the *Access Token Lifespan* setting under *Configure -> Realm Settings* to a value greater than five minutes. This adjustment prevents unnecessary refresh token calls and improves performance.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5023[RHIDP-5023]
+
+[id="bug-fix-rhidp-5609"]
+=== Improved OCI artifact handling and prevented unintended deletion
+
+This update introduces a new `pullPolicy` configuration to enhance support for floating tags in OCI artifacts. The `pullPolicy` setting provides more consistent behavior across platforms handling image containers and offers two options:
+
+* `Always`: Compares the image digest in the remote registry and downloads the artifact if it has changed, even if the plugin was previously downloaded.
+* `IfNotPresent`: Downloads the artifact only if it is not already present in the dynamic-plugins-root folder, without checking image digests.
+
+The `pullPolicy` setting is also applied to the NPM downloading method, though `Always` will download the remote artifact without a digest check. While the existing `forceDownload` option remains functional, `pullPolicy` takes precedence, and `forceDownload` might be deprecated in a future release.
+
+Additionally, this update fixes an issue where OCI artifacts were unintentionally deleted during the clean up phase if only the URL was modified.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5609[RHIDP-5609]
+
+[id="bug-fix-rhidp-5594"]
+=== Corrected enabled status display for external plugins
+
+Previously, plugins installed from external sources were incorrectly displayed with a *No* in the *Enabled* column on the *Plugins* page. This update fixes the UI logic to ensure that externally installed plugins now correctly appear with a *Yes* in the *Enabled* column as expected.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5594[RHIDP-5594]
+
+[id="bug-fix-rhidp-5573"]
+=== Dynamic plugins PVC now ephemeral by default to prevent upgrade issues
+In {product-short} Helm Chart version 1.4.2+, it was possible to configure the storage class and access mode for the dynamic plugins Persistent Volume Claim (PVC) using the `dynamicPlugins.cache.volumeClaimSpec` field in the Helm values file.
+
+In version {product-version}, this behavior has been reverted, making the dynamic plugins root PVC ephemeral by default. This change addresses issues encountered when upgrading the Helm Chart or running multiple replicas of {product-short}.
+
+You can still customize the ephemeral volume claim’s storage class and access mode using the `upstream.backstage.extraVolumes` field, as shown in the following example:
+
+.Example configuration
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      - name: dynamic-plugins-root
+        ephemeral:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                # TODO: Change the access mode below
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 5Gi
+              # TODO: Add your storage class below
+              storageClassName: "<my-custom-storage-class>"
+
+      - name: dynamic-plugins
+        configMap:
+          defaultMode: 420
+          name: '{{ printf "%s-dynamic-plugins" .Release.Name }}'
+          optional: true
+
+      - name: dynamic-plugins-npmrc
+        secret:
+          defaultMode: 420
+          optional: true
+          secretName: '{{ printf "%s-dynamic-plugins-npmrc" .Release.Name }}'
+
+      - name: dynamic-plugins-registry-auth
+        secret:
+          defaultMode: 416
+          optional: true
+          secretName: '{{ printf "%s-dynamic-plugins-registry-auth" .Release.Name }}'
+
+      - name: npmcacache
+        emptyDir: {}
+
+      - name: temp
+        emptyDir: {}
+----
+
+However, ensure that all link:https://github.com/redhat-developer/rhdh-chart/blob/release-1.5/charts/backstage/values.yaml#L145-L181[other volumes] declared in the default `{rhdh-chart}` are also included.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5573[RHIDP-5573]
+
+[id="bug-fix-rhidp-5342"]
+=== Support for multiple replicas across cluster nodes
+
+Previously, the {product-short} Helm Chart did not support running multiple replicas on different cluster nodes due to the automatic creation of a dynamic plugins root Persistent Volume Claim (PVC). This issue has been resolved by reverting the PVC creation and switching to an ephemeral volume by default, allowing multiple replicas to function properly.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5342[RHIDP-5342]
+
+[id="bug-fix-rhidp-5558"]
+=== Configurable image and disable option for `test-connection` pod
+
+In previous versions of the {product-short} Helm Chart, the image for the `test-connection` pod could not be configured, which posed challenges for air-gapped environments. The `test-connection` pod is created when running helm test to validate a deployed release.
+
+This issue has been resolved by introducing configuration options to specify the image and allowing the `test-connection` pod to be disabled entirely. The following fields are now available in the Helm Chart:
+
+.Example configuration fields in Helm Chart
+[source,yaml]
+----
+# -- Test pod parameters
+test:
+  # -- Whether to enable the test-connection pod used for testing the Release using `helm test`.
+  enabled: true
+
+  image:
+    # -- Test connection pod image registry
+    registry: quay.io
+
+    # -- Test connection pod image repository. Note that the image needs to have both the `sh` and `curl` binaries in it.
+    repository: curl/curl
+
+    # -- Test connection pod image tag. Note that the image needs to have both the `sh` and `curl` binaries in it.
+    tag: latest
+----
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5558[RHIDP-5558]
+
+[id="bug-fix-rhidp-5476"]
+=== `MODULE_NOT_FOUND` error in GitLab org catalog and Notification backend plugin
+
+Previously, the GitLab org catalog backend plugin and Notification backend plugin failed to load when configured, displaying a `MODULE_NOT_FOUND` error. This issue has been fixed by embedding the missing dependencies within the GitLab org catalog backend dynamic plugin, ensuring proper functionality.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5308[RHIDP-5308]
+* link:https://issues.redhat.com/browse/RHIDP-5476[RHIDP-5476]
+
+[id="bug-fix-rhidp-5219"]
+=== Monorepo detection in `package-dynamic-plugins` CLI command
+
+The `janus-idp` CLI command `package-dynamic-plugins` is designed to work with both monorepos and single plugin projects. This update resolves a bug in the tool’s monorepo detection, which previously caused the tool to fail with the error `TypeError: Cannot read properties of undefined (reading 'packages')` when run in a single plugin project.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5219[RHIDP-5219]
+
+[id="bug-fix-rhidp-5014"]
+=== Improved dependency resolution for embedded packages in CLI
+
+Previously, the CLI examined the dependencies of embedded packages during the export process by calling require from the monorepo root. This could lead to incorrect dependency resolution, especially when wrapping an existing plugin.
+
+With this update, the CLI now calls require from the embedded package's parent directory, ensuring that the most relevant dependencies are correctly identified and used.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-5014[RHIDP-5014]
+
+[id="bug-fix-rhidp-4828"]
+=== Improved CLI handling for dynamic plugin export
+
+Previously, the CLI required each dynamic plugin project to define an `export-dynamic` script for the `package-dynamic-plugin` command to successfully export the plugin.
+
+With this update, defining an `export-dynamic` script is no longer necessary. The `package-dynamic-plugin` command now automatically attempts to run the `export-dynamic-plugin` command with default arguments, simplifying the export process.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-4828[RHIDP-4828]
+
+[id="bug-fix-rhidp-4687"]
+=== Fix for channel upgrade issues
+
+Previously, administrators faced difficulties when updating {product-short} across channels. This issue has been resolved, and the following steps are now recommended to upgrade across channels:
+
+. Delete the {product-very-short} Operator subscription (do not delete the operands).
+. Create a new subscription pointing to the desired channel (`fast` or `fast-1.4`), using the latest CSV.
+
+Upon installation of the new operator, existing Backstage objects will be upgraded.
+
+[NOTE]
+====
+If plugin names or configuration requirements have changed, updating your application configuration may be necessary.
+====
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-4687[RHIDP-4687]
+
+
+
 
