@@ -16,16 +16,16 @@ On an {ocp-short} cluster operating on a restricted network, public resources ar
 
 To make these resources available, replace them with their equivalent resources in a mirror registry accessible to your cluster.
 
-You can use a helper script that mirrors the necessary images and provides the necessary configuration to ensure those images will be used when installing the {product} Operator and creating {product-short} instances. This script requires a target mirror registry. You likely have a target mirror registry ready to use if your cluster is already operating on a disconnected network. If you do not already have a target registry, and if you have an {ocp-short} cluster, you might want to expose and leverage the internal cluster registry.
+You can use a helper script that mirrors the necessary images and provides the necessary configuration to ensure those images are used when installing the {product} Operator and creating {product-short} instances. This script requires a target mirror registry. You likely have a target mirror registry if your cluster is already operating on a disconnected network. If you do not already have a target registry, and if you have an {ocp-short} cluster, you might want to expose and leverage the internal cluster registry.
 
-If you are connected to a {ocp-short} cluster, the helper script will detect it and will automatically expose the cluster registry. However, if you are connected to a Kubernetes cluster, you can manually specify the target registry that you want to mirror the images to.
+When connected to a {ocp-short} cluster, the helper script detects it and automatically exposes the cluster registry. If connected to a Kubernetes cluster, you can manually specify the target registry to mirror the images.
 
 .Prerequisites
 * You have installed Podman 5.3 or later. For more information, see link:https://podman.io/docs/installation[Podman Installation Instructions].
 * You have installed Skopeo 1.17 or later.
-* You have installed yq 4.44 or later.
-* You have installed the GNU sed command line text editor.
-* You have installed umoci CLI tool.
+* You have installed `yq` 4.44 or later.
+* You have installed the GNU `sed` command line text editor.
+* You have installed `umoci` CLI tool.
 * You have an active `oc registry`, `podman`, or `skopeo` session to the `registry.redhat.io` {company-name} Ecosystem Catalog. For more information, see link:https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
 * You have an active `skopeo` session with administrative access to the target mirror registry. For more information, see link:https://github.com/containers/skopeo#authenticating-to-a-registry[Authenticating to a registry].
 * You have installed the `opm` CLI tool. For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/cli_tools/opm-cli#olm-about-opm_cli-opm-install[Installing the opm CLI].
@@ -44,7 +44,7 @@ If you are connected to a {ocp-short} cluster, the helper script will detect it 
 curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh
 ----
 +
-. Run the mirroring script by running the `bash` command with the appropriate set of options:
+. Run the mirroring script by using the `bash` command with the appropriate set of options:
 +
 [source,terminal,subs="+quotes,+attributes"]
 ----
@@ -86,13 +86,11 @@ If your network has access to the registry through a bastion host, you can use t
 
 * You have installed Podman 5.3 or later. For more information, see link:https://podman.io/docs/installation[Podman Installation Instructions].
 * You have installed Skopeo 1.17 or later.
-* You have installed yq 4.44 or later.
-* You have installed the GNU sed command line text editor.
-* You have installed umoci CLI tool.
+* You have installed `yq` 4.44 or later.
+* You have installed the GNU `sed` command line text editor.
+* You have installed `umoci` CLI tool.
 * You have an active `oc registry`, `podman`, or `skopeo` session to the `registry.redhat.io` {company-name} Ecosystem Catalog. For more information, see link:https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
-* You have an active `oc registry` session to the `registry.redhat.io` {company-name} Ecosystem Catalog. For more information, see link:https://access.redhat.com/RegistryAuthentication[{company-name} Container Registry Authentication].
 * You have installed the `opm` CLI tool. For more information, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/cli_tools/opm-cli#olm-about-opm_cli-opm-install[Installing the opm CLI].
-* You have installed Podman 5.3 or later. For more information, see link:https://podman.io/docs/installation[Podman Installation Instructions].
 
 .Procedure
 . Download the mirroring script to disk by running the following command:
@@ -102,12 +100,12 @@ If your network has access to the registry through a bastion host, you can use t
 curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh
 ----
 +
-. Run the mirroring script by running the `bash` command with the appropriate set of options:
+. Run the mirroring script by using the `bash` command with the appropriate set of options:
 +
-[source,terminal,subs="+quotes,+attributes"]
+[source,terminal,subs="attributes+"]
 ----
-bash prepare-restricted-environment.sh \
- --filter-versions "{product-version}" \
+bash prepare-restricted-environment.sh
+ --filter-versions "{product-version}"
  --to-dir _<my_pulled_image_location>_ <1>
  [--use-oc-mirror true] <2>
 ----
@@ -120,13 +118,13 @@ The script can take several minutes to complete as it copies multiple images to 
 ====
 +
 . Transfer the directory specified by the `--to-dir` option to your disconnected environment.
-. From a machine in your disconnected environment that has access to both the cluster and the target mirror registry, run the mirroring script by running the `bash` command with the appropriate set of options:
+. From a machine in your disconnected environment that has access to both the cluster and the target mirror registry, run the mirroring script by using the `bash` command with the appropriate set of options:
 +
 [source,terminal,subs="+quotes,+attributes"]
 ----
-bash _<my_pulled_image_location>_/install.sh  \ <1>
-    --from-dir _<my_pulled_image_location>_ \  <2>
-    [--to-registry _<my.registry.example.com>_] \ <3>
+bash _<my_pulled_image_location>_/install.sh <1>
+    --from-dir _<my_pulled_image_location>_ <2>
+    [--to-registry _<my.registry.example.com>_] <3>
     [--use-oc-mirror true] <4>
 ----
 <1> The downloaded image and the absolute path to the directory where it is stored on your system.
@@ -134,7 +132,7 @@ bash _<my_pulled_image_location>_/install.sh  \ <1>
 <3> Specifies the URL for the target mirror registry where you want to mirror the images.
 <4> (Optional) Uses the `oc-mirror` {ocp-short} CLI plugin to mirror images.
 +
-[NOTE]
+[IMPORTANT]
 ====
 If you used `oc-mirror` to mirror the images to disk, you must also use `oc-mirror` to mirror the images from disk due to the folder layout that `oc-mirror` uses.
 ====
