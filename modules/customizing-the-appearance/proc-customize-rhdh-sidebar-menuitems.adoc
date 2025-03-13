@@ -17,7 +17,7 @@ dynamicPlugins:
     <plugin_name>: # <1>
       menuItems:
         <menu_item_name>: # <2>
-          icon: # home | group | category | extension | school | _<your_icon>_ # <3>
+          icon: # home | group | category | extension | school | _<my_icon>_ # <3>
           title: _<plugin_page_title>_ # <4>
           priority: 10 # <5>
           parent: favorites # <6>
@@ -33,6 +33,38 @@ dynamicPlugins:
 <5> `priority`: (Optional) Sets the order in which menu items appear in the sidebar. The default priority is 0, which places the item at the bottom of the list. A higher priority value places the item higher in the sidebar. You can define this field for each section.
 <6> `parent`: (Optional) Enter the parent menu item under which the current item is nested. If this field is used, the parent menu item must be defined elsewhere in the `menuItems` configuration of any enabled plugin. You can define this field for each section.
 
++
+.Example `menuItems` configuration
+[source,yaml,subs="+attributes"]
+----
+dynamicPlugins:
+  frontend:
+    <package_name>:
+      dynamicRoutes:
+        - path: /my-plugin
+          module: CustomModule
+          importName: FooPluginPage
+          menuItem:
+            icon: fooIcon
+            text: Foo Plugin Page
+      menuItems:
+        my-plugin: # <1>
+          priority: 10 # <2>
+          parent: favorites # <3>
+        favorites: # <4>
+          icon: favorite # <5>
+          title: Favorites # <6>
+          priority: 100 # <7>
+----
+  <1> `my-plugin`: Matches `path` in `dynamicRoutes`
+  <2> `priority`: Controls order of plugins under the parent menu item.
+  <3> `parent`: Nests this plugin under the `favorites` parent menu item.
+  <4> `favourites`: Configuration for the parent menu item.
+  <5> `icon`: Displays the `favorite` icon from the {product-very-short} system icons.
+  <6> `title`: Displays the title name for the parent menu item.
+  <7> `priority`: Order of the `favourites` menu item in the sidebar.
+
+
 . To modify a main menu item or add a custom menu item, add a section to the `default.main-menu-items` > `menuItems` section in your `{my-app-config-file}` file. Use the `default.` prefix to identify the key as a main menu item.
 + 
 [source,yaml]
@@ -41,21 +73,64 @@ dynamicPlugins:
   frontend:
     default.main-menu-items:
       menuItems:
-        default._<menu_item_name>_: # <1>
-          parent: _<my_menu_group>_ # <2>
-          priority: 10 # <3>
-        default._<menu_group_parent_item_name>_: # <4>
-          icon:  # home | group | category | extension | school | _<your_icon>_ # <5>
-          title: _<my_menu_title>_ # <6>
-          to: _<path_to_the_target_page>_ # <7>
-          priority: 100 # <8>
+        default._<menu_group_parent_item_name>_: # <1>
+          icon: # home | group | category | extension | school | _<my_icon>_ # <2>
+          title: _<menu_group_parent_title>_ # <3>
+          priority: 10 # <4>
+        default._<menu_item_name>_: # <5>
+          parent: _<menu_group_parent_item_name>_ # <6>
+          icon:  # home | group | category | extension | school | _<my_icon>_ # <7>
+          title: _<my_menu_title>_ # <8>
+          to: _<path_to_the_menu_target_page>_ # <9>
+          priority: 100 # <10>
 ----
-<1> `default._<menu_item_name>_`: Enter the menu item name for which you want to override the default value. Add the `default.` prefix to identify a main menu item.
-<2> `parent`: (Optional) Enter the parent menu item for this item. Required if <menu_item_name> is specified as the child of any menu items.
-<3> `priority`: (Optional) Enter the order of this menu item within its menu level.
-<4> `default._<menu_group_parent_item_name>_`: Enter the menu group parent item name to configure static main menu items.
-<5> `icon`: Enter the menu group icon. Required for parent menu items.
-<6> `title`: Enter the menu group title. Required for parent menu items. To hide the title from the sidebar, set the title as an (`" "`) empty string.
-// Update <6> for release 1.6 as this option (currently a  workaround) would be added as a functionality. RHIDP-6333.
-<7> `to`: (Optional) Enter the path that the menu item navigates to. If not set, it defaults to the home page.
-<8> `priority`: (Optional) Enter the order of the parent menu item in the sidebar.
+  <1> `default._<menu_group_parent_item_name>_`: Enter the menu group parent item name to configure static main menu items.
+  <2> `icon`: Enter the menu icon. Required for parent menu items.
+  <3> `title`: Enter the menu group title. Required for parent menu items. To hide the title from the sidebar, set the title as an (`" "`) empty string.
+  <4> `priority`: (Optional) Enter the order of this menu item within its menu level.
+  <5> `default._<menu_item_name>_`: Enter the menu item name for which you want to override the default value. Add the `default.` prefix to identify a main menu item.
+  <6> `parent`: (Optional) Enter the parent menu item for this item. Required if <menu_item_name> is specified as the child of any menu items.
+  <7> `icon`: (Optional) Enter the menu icon.
+  <8> `title`: Enter the menu group title. To hide the title from the sidebar, set the title as an (`" "`) empty string.
+// Update <8> for release 1.6 as this option (currently a  workaround) would be added as a functionality. RHIDP-6333.
+  <9> `to`: (Optional) Enter the path that the menu item navigates to. If not set, it defaults to the home page.
+  <10> `priority`: (Optional) Enter the order of this menu item within its menu level.
+
++
+.Example `mainItems` configuration
+
+[source,yaml]
+----
+default.main-menu-items:
+      menuItems:
+        default.catalog:
+          icon: school
+          title: Catalog124
+          priority: 5
+        default.learning-path:
+          title: ''
+        default.list:
+          title: Home
+          icon: bookmarks
+        default.home2:
+          parent: default.list
+          title: home2
+          icon: bookmarks
+          priority: 105
+        default.home1:
+          parent: default.list
+          title: home1
+          icon: bookmarks
+          priority: 205
+        default.home: # <1>
+          parent: default.home2 # <2>
+        default.list2:
+          title: References # <3>
+          icon: bookmarks # <4>
+          to: /create # <5>
+----
+  <1> `default.home`: Specifies the main item name.
+  <2> `parent`: Nests this plugin under the `favorites` parent menu item.
+  <3> `title`: Specifies the name of `default.list2`
+  <4> `icon`: Displays the `bookmarks` icon.
+  <5> `to`: Redirects `default.list2` to the `/create` page.
