@@ -64,17 +64,17 @@ TIP: If you plan to make changes using the GitHub API, ensure that `Read and wri
 `GITHUB_WEBHOOK_SECRET`:: Enter the saved *Webhook secret*.
 
 . To set up the GitHub authentication provider and enable integration with the GitHub API in your {product-short} custom configuration, edit your custom {product-short} ConfigMap such as `app-config-rhdh`, and add the following lines to the `app-config-rhdh.yaml` content:
+.. Configure mandatory fields:
 +
---
 .`app-config-rhdh.yaml` fragment with mandatory fields to enable authentication with GitHub
 [source,yaml]
 ----
 auth:
-  environment: production
+  environment: production # <1>
   providers:
     github:
       production:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientId: ${AUTH_GITHUB_CLIENT_ID} # <2>
         clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
 integrations:
   github:
@@ -87,49 +87,13 @@ integrations:
           webhookSecret: ${GITHUB_WEBHOOK_SECRET}
           privateKey: |
             ${GITHUB_PRIVATE_KEY_FILE}
-signInPage: github
+signInPage: github # <3>
 ----
+<1> Mark the environment as `production` and disable the Guest login option in the {product-short} login page.
+<2> Apply the GitHub credentials configured in your {product-short} secrets.
+<3> To enable the GitHub provider as your {product-short} sign-in provider.
 
-`environment: production`::
-Mark the environment as `production` to hide the Guest login in the {product-short} home page.
-
-`clientId`, `clientSecret`, `host`, `appId`, `webhookUrl`, `webhookSecret`, `privateKey`::
-Use the {product-short} application information that you have created in GitHub and configured in OpenShift as secrets.
-
-`sigInPage: github`::
-To enable the GitHub provider as default sign-in provider.
-
-Optional: Consider adding the following optional fields:
-
-`dangerouslyAllowSignInWithoutUserInCatalog: true`::
-To enable authentication without requiring to provision users in the {product-short} software catalog.
-+
-WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-short} features, but do not use it in production.
-+
-.`app-config-rhdh.yaml` fragment with optional field to allow authenticating users absent from the software catalog
-[source,yaml]
-----
-auth:
-  environment: production
-  providers:
-    github:
-      production:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-integrations:
-  github:
-    - host: ${GITHUB_HOST_DOMAIN}
-      apps:
-        - appId: ${AUTH_GITHUB_APP_ID}
-          clientId: ${AUTH_GITHUB_CLIENT_ID}
-          clientSecret: ${GITHUB_CLIENT_SECRET}
-          webhookUrl: ${GITHUB_WEBHOOK_URL}
-          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
-          privateKey: |
-            ${GITHUB_PRIVATE_KEY_FILE}
-signInPage: github
-dangerouslyAllowSignInWithoutUserInCatalog: true
-----
+.. Optional: Consider adding the following optional fields:
 
 `callbackUrl`::
 The callback URL that GitHub uses when initiating an OAuth flow, such as: __<your_intermediate_service_url/handler>__.
@@ -157,6 +121,56 @@ auth:
     github:
       production:
         enterpriseInstanceUrl: ${GITHUB_HOST_DOMAIN}
+----
+
+`signIn` ::
+
+`resolvers`:::
+After successful authentication, the user signing in must be resolved to an existing user in the {product-short} catalog. To best match users securely for your use case, consider configuring a specific resolver. Enter the resolver list to override the default resolver: `usernameMatchingUserEntityName`.
++
+The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
++
+WARNING: In production mode, only configure one resolver to ensure users are securely matched. 
+
+`resolver`::::
+Enter the sign-in resolver name.
+Available resolvers:
+
+* `usernameMatchingUserEntityName`
+* `preferredUsernameMatchingUserEntityName`
+* `emailMatchingUserEntityProfileEmail`
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::::
+Configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
++
+WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-short} features, but do not use it in production.
++
+.`app-config-rhdh.yaml` fragment with optional field to allow signing in users absent from the software catalog
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+integrations:
+  github:
+    - host: ${GITHUB_HOST_DOMAIN}
+      apps:
+        - appId: ${AUTH_GITHUB_APP_ID}
+          clientId: ${AUTH_GITHUB_CLIENT_ID}
+          clientSecret: ${GITHUB_CLIENT_SECRET}
+          webhookUrl: ${GITHUB_WEBHOOK_URL}
+          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
+          privateKey: |
+            ${GITHUB_PRIVATE_KEY_FILE}
+signInPage: github
 ----
 
 [TIP]
@@ -191,8 +205,6 @@ integrations:
 signInPage: __<your_main_authentication_provider>__
 ----
 ====
-
---
 
 .Verification
 . Go to the {product-short} login page.
