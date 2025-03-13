@@ -47,11 +47,8 @@ with open(attributes_file) as file:
       items = lines.rsplit(':', 2)
       attributes[items[1]] = items[2].strip()
 
-product_version_minor = attributes["product-version"]
+product_version_minor = attributes["product-version"] + ".0"
 product_version_patch = attributes["product-bundle-version"]
-# Until 1.4 at least, Jira has no z-stream 0. Use the y-stream instead.
-if re.search('.0$',product_version_patch):
-  product_version_patch = product_version_minor
 
 # Load the configuration file to get the sections and their Jira queries.
 with open(config_file) as file:
