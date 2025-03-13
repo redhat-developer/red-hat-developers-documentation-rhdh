@@ -44,7 +44,7 @@ To grant administrator consent, a directory administrator must go to the link:ht
 - **Application (client) ID**
 - **Application (client) secret**
 
-. To add your Microsoft Azure credentials to {product-short}, add the following key/value pairs to link:{plugins-configure-book-url}#provisioning-your-custom-configuration[your {product-short} secrets]:
+. To add your Microsoft Azure credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets]:
 +
 `AUTH_AZURE_TENANT_ID`:: Enter your saved *Directory (tenant) ID*.
 `AUTH_AZURE_CLIENT_ID`:: Enter your saved *Application (client) ID*.
@@ -57,15 +57,18 @@ To grant administrator consent, a directory administrator must go to the link:ht
 [source,yaml,subs="+quotes,+attributes"]
 ----
 auth:
-  environment: production
+  environment: production # <1>
   providers:
     microsoft:
       production:
-        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientId: ${AUTH_AZURE_CLIENT_ID} # <2>
         clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
         tenantId: ${AUTH_AZURE_TENANT_ID}
-signInPage: microsoft
+signInPage: microsoft # <3>
 ----
+<1> Mark the environment as production and disable the **Guest** login option in the {product-short} login page.
+<2> Apply the Microsoft Azure credentials configured in your {product-short} secrets.
+<3> Set the Microsoft Azure provider as your {product-short} sign-in provider.
 
 `environment: production`::
 Mark the environment as production to hide the **Guest** login in the {product-short} home page.
@@ -133,7 +136,60 @@ auth:
         additionalScopes:
            - Mail.Send
 ----
---
+
+`sessionDuration`::
+Lifespan of the user session.
+Enter a duration in `ms` library format (such as '24h', '2 days'), ISO duration, or "human duration" as used in code.
++
+.`app-config-rhdh.yaml` fragment with optional `sessionDuration` field
+[source,yaml,subs="+quotes"]
+----
+auth:
+  providers:
+    microsoft:
+      production:
+        sessionDuration: { hours: 24 }
+----
+
+`signIn` ::
+
+`resolvers`:::
+After successful authentication, the user signing in must be resolved to an existing user in the {product-short} catalog. To best match users securely for your use case, consider configuring a specific resolver. Enter the resolver list to override the default resolver: `emailLocalPartMatchingUserEntityName`.
++
+The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
++
+WARNING: In production mode, only configure one resolver to ensure users are securely matched. 
+
+`resolver`::::
+Enter the sign-in resolver name.
+Available resolvers:
+
+* `userIdMatchingUserEntityAnnotation`
+* `emailLocalPartMatchingUserEntityName`
+* `emailMatchingUserEntityProfileEmail`
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::::
+Configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
++
+WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-short} features, but do not use it in production.
++
+.`app-config-rhdh.yaml` fragment with optional field to allow signing in users absent from the software catalog
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTH_AZURE_CLIENT_ID}
+        clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTH_AZURE_TENANT_ID}
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+signInPage: microsoft
+----
 
 [NOTE]
 ====
