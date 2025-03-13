@@ -6,14 +6,42 @@
 [id="proc-techdocs-addon-remove-operator_{context}"]
 == Removing an external TechDocs add-on from your ConfigMap
 
-If you no longer want to use the functionality of a TechDocs add-on that you installed on your {product} instance using the Operator, remove it from your ConfigMap.
+If you no longer want to use the functionality of a TechDocs add-on that are imported from a particular plugin that you installed on your {product} instance with the Operator, you can temporarily disabled it or permanently remove it from your ConfigMap. The `disabled` status is controlled at the plugin level, therefore, disabling the plugin disables all of the TechDocs add-ons in the disabled plugin package.
 
 .Procedure
 
 . From the Developer perspective in the {ocp-short} web console, click *ConfigMaps*.
 . From the *ConfigMaps* page, click the ConfigMap that contains the TechDocs add-on that you want to remove.
 . Select the *YAML view* option in the *Configure via* field.
-. In the `techdocsAddons` section of the ConfigMap, delete `importName: _<external_techdocs_add-on>` for each external TechDocs add-on that you want to remove. For example:
+. In the `plugins` section of the ConfigMap, do one of the following actions based on whether you want to disable or remove a TechDocs add-on:
+** To temporarily disable all of the TechDocs add-ons in a particular plugin package, change the value of the `disabled` field to `true`. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-techdocs-module-addons-contrib
+        disabled: true
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              backstage.plugin-techdocs-module-addons-contrib:
+                techdocsAddons:
+                  - importName: ReportIssue
+                  - importName: _<external_techdocs_add-on>_
+----
++
+where:
+
+_<external_techdocs_add-on>_:: Specifies the external TechDocs add-on that you want to remove, for example, `TextSize`.
+** To permanently remove one or more TechDocs add-ons from a plugin package, delete `importName: _<external_techdocs_add-on>` for each external TechDocs add-on that you want to remove. For example:
 +
 [source,yaml,subs="+quotes,+attributes"]
 ----
