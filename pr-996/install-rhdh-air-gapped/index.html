@@ -1,0 +1,379 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Installing Red Hat Developer Hub in an air-gapped environment</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="Platform administrators can configure roles, permissions, and other settings to enable other authorized users to deploy an air-gapped Developer Hub instance on any supported platform using either the Operator or Helm chart."/><link rel="next" href="#con-airgapped-environment_title-install-rhdh-air-grapped" title="1. Air-gapped environment"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45179257843104"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.5</span></div><div><h1 class="title">Installing Red Hat Developer Hub in an air-gapped environment</h1></div><div><h3 class="subtitle"><em>Running Red Hat Developer Hub on Red Hat OpenShift Container Platform in a networik restricted environment by using either the Operator or Helm chart.</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45179234406688">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				Platform administrators can configure roles, permissions, and other settings to enable other authorized users to deploy an air-gapped Developer Hub instance on any supported platform using either the Operator or Helm chart.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#con-airgapped-environment_title-install-rhdh-air-grapped">1. Air-gapped environment</a></span></li><li><span class="section"><a href="#proc-install-rhdh-airgapped-environment-ocp-operator_title-install-rhdh-air-grapped">2. Installing Red Hat Developer Hub in an air-gapped environment with the Operator</a></span><ul><li><span class="section"><a href="#installing-red-hat-developer-hub-in-a-partially-disconnected-environment-with-the-operator">2.1. Installing Red Hat Developer Hub in a partially disconnected environment with the Operator</a></span></li><li><span class="section"><a href="#installing-red-hat-developer-hub-in-a-fully-disconnected-environment-with-the-operator">2.2. Installing Red Hat Developer Hub in a fully disconnected environment with the Operator</a></span></li></ul></li><li><span class="section"><a href="#proc-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped">3. Installing Red Hat Developer Hub on OpenShift Container Platform in an air-gapped environment with the Helm chart</a></span><ul><li><span class="section"><a href="#installing-red-hat-developer-hub-on-openshift-container-platform-in-a-partially-disconnected-environment-with-the-helm-chart">3.1. Installing Red Hat Developer Hub on OpenShift Container Platform in a partially disconnected environment with the Helm chart</a></span></li><li><span class="section"><a href="#installing-red-hat-developer-hub-on-openshift-container-platform-in-a-fully-disconnected-environment-with-the-helm-chart">3.2. Installing Red Hat Developer Hub on OpenShift Container Platform in a fully disconnected environment with the Helm chart</a></span></li></ul></li></ul></div><section class="section" id="con-airgapped-environment_title-install-rhdh-air-grapped"><div class="titlepage"><div><div><h2 class="title">1. Air-gapped environment</h2></div></div></div><p>
+			An air-gapped environment, also known as an air-gapped network or isolated network, ensures security by physically segregating the system or network. This isolation is established to prevent unauthorized access, data transfer, or communication between the air-gapped system and external sources.
+		</p><p>
+			You can install the Red Hat Developer Hub in an air-gapped environment to ensure security and meet specific regulatory requirements.
+		</p></section><section class="section" id="proc-install-rhdh-airgapped-environment-ocp-operator_title-install-rhdh-air-grapped"><div class="titlepage"><div><div><h2 class="title">2. Installing Red Hat Developer Hub in an air-gapped environment with the Operator</h2></div></div></div><p>
+			You can install Red Hat Developer Hub in a fully disconnected or partially disconnected environment using the Red Hat Developer Hub Operator. For a list of supported platforms, see the <a class="link" href="https://access.redhat.com/support/policy/updates/developerhub">Red Hat Developer Hub Life Cycle page</a>.
+		</p><section class="section" id="installing-red-hat-developer-hub-in-a-partially-disconnected-environment-with-the-operator"><div class="titlepage"><div><div><h3 class="title">2.1. Installing Red Hat Developer Hub in a partially disconnected environment with the Operator</h3></div></div></div><p>
+				On an OpenShift Container Platform cluster operating on a restricted network, public resources are not available. However, deploying the Red Hat Developer Hub Operator and running Developer Hub requires the following public resources:
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						Operator images (bundle, operator, catalog)
+					</li><li class="listitem">
+						Operands images (RHDH, PostgreSQL)
+					</li></ul></div><p>
+				To make these resources available, replace them with their equivalent resources in a mirror registry accessible to your cluster.
+			</p><p>
+				You can use a helper script that mirrors the necessary images and provides the necessary configuration to ensure those images are used when installing the Red Hat Developer Hub Operator and creating Developer Hub instances. This script requires a target mirror registry. You likely have a target mirror registry if your cluster is already operating on a disconnected network. If you do not already have a target registry, and if you have an OpenShift Container Platform cluster, you might want to expose and leverage the internal cluster registry.
+			</p><p>
+				When connected to a OpenShift Container Platform cluster, the helper script detects it and automatically exposes the cluster registry. If connected to a Kubernetes cluster, you can manually specify the target registry to mirror the images.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have installed Podman 5.3 or later. For more information, see <a class="link" href="https://podman.io/docs/installation">Podman Installation Instructions</a>.
+					</li><li class="listitem">
+						You have installed Skopeo 1.17 or later.
+					</li><li class="listitem">
+						You have installed <code class="literal">yq</code> 4.44 or later.
+					</li><li class="listitem">
+						You have installed the GNU <code class="literal">sed</code> command line text editor.
+					</li><li class="listitem">
+						You have installed <code class="literal">umoci</code> CLI tool.
+					</li><li class="listitem">
+						You have an active <code class="literal">oc registry</code>, <code class="literal">podman</code>, or <code class="literal">skopeo</code> session to the <code class="literal">registry.redhat.io</code> Red Hat Ecosystem Catalog. For more information, see <a class="link" href="https://access.redhat.com/RegistryAuthentication">Red Hat Container Registry Authentication</a>.
+					</li><li class="listitem">
+						You have an active <code class="literal">skopeo</code> session with administrative access to the target mirror registry. For more information, see <a class="link" href="https://github.com/containers/skopeo#authenticating-to-a-registry">Authenticating to a registry</a>.
+					</li><li class="listitem">
+						You have installed the <code class="literal">opm</code> CLI tool. For more information, see <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/cli_tools/opm-cli#olm-about-opm_cli-opm-install">Installing the opm CLI</a>.
+					</li><li class="listitem"><p class="simpara">
+						If you are using an OpenShift Container Platform cluster, you have the following prerequisites:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								(Optional) You have installed the <code class="literal">oc-mirror</code> OpenShift Container Platform CLI plugin if you want to use it to mirror images.
+							</li></ul></div></li><li class="listitem"><p class="simpara">
+						If you are using a supported Kubernetes cluster, you have the following prerequisites:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								You have installed the Operator Lifecycle Manager (OLM) on the disconnected cluster.
+							</li><li class="listitem">
+								You have a mirror registry that is reachable from the disconnected cluster.
+							</li></ul></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+						In your terminal, navigate to the directory where you want to save the mirroring script.
+					</li><li class="listitem"><p class="simpara">
+						Download the mirroring script by running the following command:
+					</p><pre class="programlisting language-terminal">curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-1.5/.rhdh/scripts/prepare-restricted-environment.sh</pre></li><li class="listitem"><p class="simpara">
+						Run the mirroring script by using the <code class="literal">bash</code> command with the appropriate set of options:
+					</p><pre class="programlisting language-terminal">bash prepare-restricted-environment.sh \
+ --filter-versions "1.5" \
+  [--to-registry <span class="emphasis"><em>&lt;my.registry.example.com&gt;</em></span>] \ <span id="CO1-1"/><span class="callout">1</span>
+  [--use-oc-mirror true] <span id="CO1-2"/><span class="callout">2</span></pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO1-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Specifies the URL for the target mirror registry where you want to mirror the images.
+							</div></dd><dt><a href="#CO1-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								(Optional) Uses the <code class="literal">oc-mirror</code> OpenShift Container Platform CLI plugin to mirror images.
+							</div></dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							The script can take several minutes to complete as it copies multiple images to the mirror registry.
+						</p></div></div></li></ol></div><div class="itemizedlist"><p class="title"><strong>Verification</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						If you are using Red Hat OpenShift Container Platform, the Red Hat Developer Hub Operator is in the <span class="strong strong"><strong>Installed Operators</strong></span> list in the web console.
+					</li><li class="listitem"><p class="simpara">
+						If you are using a supported Kubernetes platform, you can check the list of pods running in the <code class="literal">rhdh-operator</code> namespace by running the following command in your terminal:
+					</p><pre class="programlisting language-terminal">kubectl -n rhdh-operator get pods</pre></li></ul></div><div class="itemizedlist"><p class="title"><strong>Next steps</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						Use the Operator to create a Red Hat Developer Hub instance on a supported platform. For more information, see the following documentation for the platform that you want to use:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_openshift_container_platform/assembly-install-rhdh-ocp-operator">Installing Red Hat Developer Hub on OpenShift Container Platform with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_amazon_elastic_kubernetes_service/proc-rhdh-deploy-eks-operator_title-install-rhdh-eks">Installing Developer Hub on EKS with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_microsoft_azure_kubernetes_service/proc-rhdh-deploy-aks-operator_title-install-rhdh-aks">Installing Developer Hub on AKS with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_openshift_dedicated_on_google_cloud_platform/proc-install-rhdh-osd-gcp-operator_title-install-rhdh-osd-gcp">Installing Developer Hub on GCP with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_google_kubernetes_engine/proc-rhdh-deploy-gke-operator.adoc_title-install-rhdh-gke#proc-deploy-rhdh-instance-gke.adoc_title-install-rhdh-gke">Deploying Developer Hub on GKE with the Operator</a>
+							</li></ul></div></li></ul></div></section><section class="section" id="installing-red-hat-developer-hub-in-a-fully-disconnected-environment-with-the-operator"><div class="titlepage"><div><div><h3 class="title">2.2. Installing Red Hat Developer Hub in a fully disconnected environment with the Operator</h3></div></div></div><p>
+				In environments without internet access — whether for security, compliance, or operational reasons — a fully disconnected installation ensures that Red Hat Developer Hub can run reliably without external dependencies.
+			</p><p>
+				If your network has access to the registry through a bastion host, you can use the helper script to install Red Hat Developer Hub by mirroring the Operator-related images to disk and transferring them to your air-gapped environment without any connection to the internet.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have installed Podman 5.3 or later. For more information, see <a class="link" href="https://podman.io/docs/installation">Podman Installation Instructions</a>.
+					</li><li class="listitem">
+						You have installed Skopeo 1.17 or later.
+					</li><li class="listitem">
+						You have installed <code class="literal">yq</code> 4.44 or later.
+					</li><li class="listitem">
+						You have installed the GNU <code class="literal">sed</code> command line text editor.
+					</li><li class="listitem">
+						You have installed <code class="literal">umoci</code> CLI tool.
+					</li><li class="listitem">
+						You have an active <code class="literal">oc registry</code>, <code class="literal">podman</code>, or <code class="literal">skopeo</code> session to the <code class="literal">registry.redhat.io</code> Red Hat Ecosystem Catalog. For more information, see <a class="link" href="https://access.redhat.com/RegistryAuthentication">Red Hat Container Registry Authentication</a>.
+					</li><li class="listitem">
+						You have installed the <code class="literal">opm</code> CLI tool. For more information, see <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/cli_tools/opm-cli#olm-about-opm_cli-opm-install">Installing the opm CLI</a>.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Download the mirroring script to disk by running the following command:
+					</p><pre class="programlisting language-terminal">curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-1.5/.rhdh/scripts/prepare-restricted-environment.sh</pre></li><li class="listitem"><p class="simpara">
+						Run the mirroring script by using the <code class="literal">bash</code> command with the appropriate set of options:
+					</p><pre class="programlisting language-terminal">bash prepare-restricted-environment.sh
+ --filter-versions "1.5"
+ --to-dir _&lt;my_pulled_image_location&gt;_ <span id="CO2-1"/><span class="callout">1</span>
+ [--use-oc-mirror true] <span id="CO2-2"/><span class="callout">2</span></pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO2-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								Specifies the absolute path to a directory where you want to pull all of the necessary images with the <code class="literal">--to-dir</code> option, for example, <code class="literal">/home/user/rhdh-operator-mirror-dir</code>.
+							</div></dd><dt><a href="#CO2-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								(Optional) Uses the <code class="literal">oc-mirror</code> OpenShift Container Platform CLI plugin to mirror images.
+							</div></dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							The script can take several minutes to complete as it copies multiple images to the mirror registry.
+						</p></div></div></li><li class="listitem">
+						Transfer the directory specified by the <code class="literal">--to-dir</code> option to your disconnected environment.
+					</li><li class="listitem"><p class="simpara">
+						From a machine in your disconnected environment that has access to both the cluster and the target mirror registry, run the mirroring script by using the <code class="literal">bash</code> command with the appropriate set of options:
+					</p><pre class="programlisting language-terminal">bash <span class="emphasis"><em>&lt;my_pulled_image_location&gt;</em></span>/install.sh <span id="CO3-1"/><span class="callout">1</span>
+    --from-dir <span class="emphasis"><em>&lt;my_pulled_image_location&gt;</em></span> <span id="CO3-2"/><span class="callout">2</span>
+    [--to-registry <span class="emphasis"><em>&lt;my.registry.example.com&gt;</em></span>] <span id="CO3-3"/><span class="callout">3</span>
+    [--use-oc-mirror true] <span id="CO3-4"/><span class="callout">4</span></pre><div class="calloutlist"><dl class="calloutlist"><dt><a href="#CO3-1"><span class="callout">1</span></a> </dt><dd><div class="para">
+								The downloaded image and the absolute path to the directory where it is stored on your system.
+							</div></dd><dt><a href="#CO3-2"><span class="callout">2</span></a> </dt><dd><div class="para">
+								Specifies the directory where you want to pull all of the necessary images with the <code class="literal">--to-dir</code> option.
+							</div></dd><dt><a href="#CO3-3"><span class="callout">3</span></a> </dt><dd><div class="para">
+								Specifies the URL for the target mirror registry where you want to mirror the images.
+							</div></dd><dt><a href="#CO3-4"><span class="callout">4</span></a> </dt><dd><div class="para">
+								(Optional) Uses the <code class="literal">oc-mirror</code> OpenShift Container Platform CLI plugin to mirror images.
+							</div></dd></dl></div><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+							If you used <code class="literal">oc-mirror</code> to mirror the images to disk, you must also use <code class="literal">oc-mirror</code> to mirror the images from disk due to the folder layout that <code class="literal">oc-mirror</code> uses.
+						</p></div></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							The script can take several minutes to complete as it automatically installs the Red Hat Developer Hub Operator.
+						</p></div></div></li></ol></div><div class="itemizedlist"><p class="title"><strong>Verification</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						If you are using Red Hat OpenShift Container Platform, the Red Hat Developer Hub Operator is in the <span class="strong strong"><strong>Installed Operators</strong></span> list in the web console.
+					</li><li class="listitem"><p class="simpara">
+						If you are using a supported Kubernetes platform, you can check the list of pods running in the <code class="literal">rhdh-operator</code> namespace by running the following command in your terminal:
+					</p><pre class="programlisting language-terminal">kubectl -n rhdh-operator get pods</pre></li></ul></div><div class="itemizedlist"><p class="title"><strong>Next steps</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						Use the Operator to create a Red Hat Developer Hub instance on a supported platform. For more information, see the following documentation for the platform that you want to use:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_openshift_container_platform/assembly-install-rhdh-ocp-operator">Installing Red Hat Developer Hub on OpenShift Container Platform with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_amazon_elastic_kubernetes_service/proc-rhdh-deploy-eks-operator_title-install-rhdh-eks">Installing Developer Hub on EKS with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_microsoft_azure_kubernetes_service/proc-rhdh-deploy-aks-operator_title-install-rhdh-aks">Installing Developer Hub on AKS with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_openshift_dedicated_on_google_cloud_platform/proc-install-rhdh-osd-gcp-operator_title-install-rhdh-osd-gcp">Installing Developer Hub on GCP with the Operator</a>
+							</li><li class="listitem">
+								<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.4/html/installing_red_hat_developer_hub_on_google_kubernetes_engine/proc-rhdh-deploy-gke-operator.adoc_title-install-rhdh-gke#proc-deploy-rhdh-instance-gke.adoc_title-install-rhdh-gke">Deploying Developer Hub on GKE with the Operator</a>
+							</li></ul></div></li></ul></div></section></section><section class="section" id="proc-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped"><div class="titlepage"><div><div><h2 class="title">3. Installing Red Hat Developer Hub on OpenShift Container Platform in an air-gapped environment with the Helm chart</h2></div></div></div><p>
+			You can install Red Hat Developer Hub in a fully disconnected or partially disconnected environment using the Red Hat Developer Hub Helm chart.
+		</p><div class="itemizedlist _additional-resources"><p class="title"><strong>Additional resources</strong></p><ul class="itemizedlist _additional-resources" type="disc"><li class="listitem">
+					For more information about registry authentication, see <a class="link" href="https://access.redhat.com/RegistryAuthentication">Red Hat Container Registry Authentication</a>.
+				</li></ul></div><section class="section" id="installing-red-hat-developer-hub-on-openshift-container-platform-in-a-partially-disconnected-environment-with-the-helm-chart"><div class="titlepage"><div><div><h3 class="title">3.1. Installing Red Hat Developer Hub on OpenShift Container Platform in a partially disconnected environment with the Helm chart</h3></div></div></div><p>
+				If your network has access to the <code class="literal">registry.redhat.io</code> registry and the <code class="literal">charts.openshift.io</code> Helm chart repository, you can deploy your Red Hat Developer Hub instance in your partially disconnected environment by mirroring the specified resources directly to the target registry.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have installed Red Hat OpenShift Container Platform 4.14 or later.
+					</li><li class="listitem">
+						You have access to the <code class="literal">charts.openshift.io</code> Helm chart repository.
+					</li><li class="listitem">
+						You have access to the <code class="literal">registry.redhat.io</code>.
+					</li><li class="listitem">
+						You have access to a mirror registry that can be reached from the disconnected cluster, for example, the OpenShift Container Platform image registry. For more information about exposing the OpenShift Container Platform image registry, see <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/registry/index#securing-exposing-registry">Exposing the registry</a>.
+					</li><li class="listitem">
+						You are logged in to your target mirror registry and have permissions to push images to it. For more information, see <a class="link" href="https://docs.openshift.com/container-platform/4.17/disconnected/mirroring/installing-mirroring-disconnected.html#installation-adding-registry-pull-secret_installing-mirroring-disconnected">Configuring credentials that allow images to be mirrored</a>.
+					</li><li class="listitem">
+						You have installed the OpenShift CLI (<code class="literal">oc</code>) on your workstation.
+					</li><li class="listitem">
+						You have installed the oc-mirror OpenShift CLI (<code class="literal">oc</code>) plugin, for more information see <a class="link" href="https://docs.openshift.com/container-platform/4.17/disconnected/mirroring/installing-mirroring-disconnected.html#installation-oc-mirror-installing-plugin_installing-mirroring-disconnected">Installing the oc-mirror OpenShift CLI plugin</a>.
+					</li><li class="listitem">
+						You have an account in <a class="link" href="https://developers.redhat.com/">Red Hat Developer</a> portal.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Log in to your OpenShift Container Platform account using the OpenShift CLI (<code class="literal">oc</code>) by running the following command:
+					</p><pre class="programlisting language-terminal">oc login -u &lt;user&gt; -p &lt;password&gt; https://api.&lt;hostname&gt;:6443</pre></li><li class="listitem">
+						From your disconnected cluster, log in to the image registry that you want to mirror, for example, the OpenShift Container Platform image registry.
+					</li><li class="listitem">
+						Create an <code class="literal">ImageSetConfiguration.yaml</code> file.
+					</li><li class="listitem"><p class="simpara">
+						In your <code class="literal">ImageSetConfiguration.yaml</code> file, specify the resources that you want to mirror. For example:
+					</p><pre class="programlisting language-terminal">apiVersion: mirror.openshift.io/v1alpha2
+kind: ImageSetConfiguration
+mirror:
+  helm:
+    repositories:
+      - name: <span class="emphasis"><em>&lt;repository_name&gt;</em></span> (1)
+        url: <span class="emphasis"><em>&lt;repository_url&gt;</em></span> (2)
+        charts:
+          - name: <span class="emphasis"><em>&lt;chart_name&gt;</em></span> (3)
+            version: "<span class="emphasis"><em>&lt;rhdh_version&gt;</em></span>" (4)</pre><div class="calloutlist"><dl class="calloutlist"><dt/><dd><div class="para">
+								The name of the repository containing the Helm chart that you want to mirror, for example, <code class="literal">openshift-charts</code>.
+							</div></dd><dt/><dd><div class="para">
+								The URL for the repository containing the Helm chart that you want to mirror, for example, <code class="literal"><a class="link" href="https://charts.openshift.io">https://charts.openshift.io</a></code>.
+							</div></dd><dt/><dd><div class="para">
+								The name of the Helm chart containing the images that you want to mirror, for example, <code class="literal">redhat-developer-hub</code>.
+							</div></dd><dt/><dd><div class="para">
+								The Red Hat Developer Hub version that you want to use, for example, <code class="literal">1.5</code>
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Mirror the resources specified in the image set configuration file directly to the target registry by running the <code class="literal">oc-mirror</code> command. For example:
+					</p><pre class="programlisting language-terminal">oc-mirror --config=<span class="emphasis"><em>&lt;mirror_config_directory&gt;</em></span>/ImageSetConfiguration.yaml <span class="emphasis"><em>&lt;target-mirror-registry&gt;</em></span></pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;mirror_config_directory&gt;</code> </span></dt><dd>
+									Specifies the location of your image set configuration file on your system, for example, <code class="literal">.user</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;target_mirror_registry&gt;</code> </span></dt><dd>
+									Specifies the location and name of your target mirror registry, for example,<code class="literal">docker://registry.example:5000</code>.
+								</dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							Running the <code class="literal">oc-mirror</code> command creates a local workspace containing the Helm chart and a <code class="literal">ImageContentSourcePolicy</code> (ICSP) manifest. The ICSP manifest contains an automatically-generated <code class="literal">imageContentSourcePolicy.yaml</code> file that you must apply against the cluster in a later step.
+						</p></div></div><div class="formalpara"><p class="title"><strong>Example output</strong></p><p>
+							
+<pre class="programlisting language-terminal">Writing image mapping to oc-mirror-workspace/results-1738070846/mapping.txt
+Writing ICSP manifests to oc-mirror-workspace/results-1738070846</pre>
+						</p></div></li><li class="listitem"><p class="simpara">
+						In your workspace, locate the <code class="literal">imageContentSourcePolicy.yaml</code> file by running the <code class="literal">ls</code> command. For example:
+					</p><pre class="programlisting language-terminal">ls <span class="emphasis"><em>&lt;workspace_directory&gt;</em></span>/<span class="emphasis"><em>&lt;results_directory&gt;</em></span></pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;workspace_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your workspace directory, for example, <code class="literal">oc-mirror-workspace</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;results_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your results directory, for example, <code class="literal">results-1738070846</code>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						To mirror the Helm chart, deploy the <code class="literal">imageContentSourcePolicy.yaml</code> file in the disconnected cluster by running the <code class="literal">oc apply</code> command. For example:
+					</p><pre class="programlisting language-terminal">oc apply -f <span class="emphasis"><em>&lt;workspace_directory&gt;</em></span>/<span class="emphasis"><em>&lt;results_directory&gt;</em></span>/<code class="literal">ImageContentSourcePolicy.yaml</code></pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;workspace_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your workspace directory, for example, <code class="literal">oc-mirror-workspace</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;results_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your results directory, for example, <code class="literal">results-1738070846</code>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						In your air-gapped environment, deploy the Helm chart to the namespace that you want to use by running the <code class="literal">helm install</code> command with <code class="literal">namespace</code> and <code class="literal">set</code> options. For example:
+					</p><pre class="programlisting language-terminal">CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/<sup>[</sup>.]*\.//')
+
+helm install <span class="emphasis"><em>&lt;rhdh_instance&gt;</em></span> <span class="emphasis"><em>&lt;workspace_directory&gt;</em></span>/<span class="emphasis"><em>&lt;results_directory&gt;</em></span>/charts/<span class="emphasis"><em>&lt;archive_file&gt;</em></span> --namespace <span class="emphasis"><em>&lt;your_namespace&gt;</em></span> --create-namespace \
+  --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE"</pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;rhdh_instance&gt;</code> </span></dt><dd>
+									Specifies the name of your Red Hat Developer Hub instance, for example, <code class="literal">my-rhdh</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;workspace_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your workspace directory, for example, <code class="literal">oc-mirror-workspace</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;results_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your results directory, for example, <code class="literal">results-1738070846</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;archive_file&gt;</code> </span></dt><dd>
+									Specifies the name of the archive file containing the resources that you want to mirror, for example, <code class="literal">redhat-developer-hub-1.4.1.tgz</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;your_namespace&gt;</code> </span></dt><dd>
+									Specifies the namespace that you want to deploy the Helm chart to, for example, <code class="literal">my-rhdh-project</code>.
+								</dd></dl></div></li></ol></div></section><section class="section" id="installing-red-hat-developer-hub-on-openshift-container-platform-in-a-fully-disconnected-environment-with-the-helm-chart"><div class="titlepage"><div><div><h3 class="title">3.2. Installing Red Hat Developer Hub on OpenShift Container Platform in a fully disconnected environment with the Helm chart</h3></div></div></div><p>
+				If your network has access to the registry through a bastion host, you can use the Helm chart to install Red Hat Developer Hub by mirroring specified resources to disk and transferring them to your air-gapped environment without any connection to the internet.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+						You have set up your workstation.
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								You have access to the registry.redhat.io.
+							</li><li class="listitem">
+								You have access to the charts.openshift.io Helm chart repository.
+							</li><li class="listitem">
+								You have installed the OpenShift CLI (<code class="literal">oc</code>) on your workstation.
+							</li><li class="listitem">
+								You have installed the oc-mirror OpenShift CLI (<code class="literal">oc</code>) plugin, for more information see <a class="link" href="https://docs.openshift.com/container-platform/4.17/disconnected/mirroring/installing-mirroring-disconnected.html#installation-oc-mirror-installing-plugin_installing-mirroring-disconnected">Installing the oc-mirror OpenShift CLI plugin</a>.
+							</li><li class="listitem">
+								You have an account in <a class="link" href="https://developers.redhat.com/">Red Hat Developer</a> portal.
+							</li></ul></div></li><li class="listitem"><p class="simpara">
+						You have set up your intermediary host.
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+								Your host has access to the disconnected cluster and to the target mirror registry, for example, the Red Hat OpenShift Container Platform image registry. For more information about exposing the OpenShift Container Platform image registry, see <a class="link" href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/registry/index#securing-exposing-registry">Exposing the registry</a>.
+							</li><li class="listitem">
+								You have installed the oc-mirror OpenShift CLI (<code class="literal">oc</code>) plugin, for more information see <a class="link" href="https://docs.openshift.com/container-platform/4.17/disconnected/mirroring/installing-mirroring-disconnected.html#installation-oc-mirror-installing-plugin_installing-mirroring-disconnected">Installing the oc-mirror OpenShift CLI plugin</a>.
+							</li><li class="listitem">
+								You have installed Red Hat OpenShift Container Platform 4.14 or later.
+							</li><li class="listitem">
+								You have installed the OpenShift CLI (<code class="literal">oc</code>) on your workstation.
+							</li></ul></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Create an <code class="literal">ImageSetConfiguration</code> file to specify the resources that you want to mirror. For example:
+					</p><pre class="programlisting language-terminal">apiVersion: mirror.openshift.io/v1alpha2
+kind: ImageSetConfiguration
+mirror:
+  helm:
+    repositories:
+           - name: <span class="emphasis"><em>&lt;repository_name&gt;</em></span> (1)
+        url: <span class="emphasis"><em>&lt;repository_url&gt;</em></span> (2)
+        charts:
+          - name: <span class="emphasis"><em>&lt;chart_name&gt;</em></span> (3)
+            version: "<span class="emphasis"><em>&lt;rhdh_version&gt;</em></span>" (4)</pre><div class="calloutlist"><dl class="calloutlist"><dt/><dd><div class="para">
+								The name of the repository that you want to mirror, for example, <code class="literal">openshift-charts</code>.
+							</div></dd><dt/><dd><div class="para">
+								The URL for the repository that you want to mirror, for example, <code class="literal"><a class="link" href="https://charts.openshift.io">https://charts.openshift.io</a></code>.
+							</div></dd><dt/><dd><div class="para">
+								The name of the Helm chart that you want to mirror, for example, <code class="literal">redhat-developer-hub</code>.
+							</div></dd><dt/><dd><div class="para">
+								The version of Red Hat Developer Hub that you want to use, for example, <code class="literal">1.5</code>
+							</div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Mirror the resources specified in the <code class="literal">ImageSetConfiguration.yaml</code> file by running the <code class="literal">oc-mirror</code> command. For example:
+					</p><pre class="programlisting language-terminal">oc-mirror --config=<span class="emphasis"><em>&lt;mirror_config_directory&gt;</em></span>/ImageSetConfiguration.yaml <span class="emphasis"><em>&lt;mirror_archive_directory&gt;</em></span>/</pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;mirror_config_directory&gt;</code> </span></dt><dd>
+									Specifies the location of your image set configuration file on your system, for example, <code class="literal">.user</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;mirror_configuration_file&gt;</code> </span></dt><dd>
+									Specifies the name of your mirror configuration yaml file, for example, <code class="literal">mirror-config.yaml</code>
+								</dd><dt><span class="term"><code class="literal">&lt;mirror_archive_directory&gt;</code> </span></dt><dd>
+									Specifies the location of your directory where the mirror archive will be created, for example,<code class="literal"><a class="link" href="file://.user">file://.user</a></code>.
+								</dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+							Running the <code class="literal">oc-mirror</code> command generates a local workspace containing the mirror archive file, the Helm chart, and a <code class="literal">ImageContentSourcePolicy</code> (ICSP) manifest. The ICSP manifest contains an <code class="literal">imageContentSourcePolicy.yaml</code> file that you must apply against the cluster in a later step.
+						</p></div></div><div class="formalpara"><p class="title"><strong>Example output</strong></p><p>
+							
+<pre class="programlisting language-terminal">Creating archive /path/to/mirror-archive/mirror_seq1_000000.tar</pre>
+						</p></div></li><li class="listitem">
+						Transfer the generated archive file (for example, <code class="literal">mirror_seq1_000000.tar</code>) to the air-gapped environment.
+					</li><li class="listitem"><p class="simpara">
+						Connect to your air-gapped environment and make sure that you are also connected to the following objects:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								The local target registry
+							</li><li class="listitem">
+								The target OpenShift Container Platform cluster
+							</li></ul></div></li><li class="listitem"><p class="simpara">
+						From your air-gapped environment, mirror the resources from the archive to the target registry by running the <code class="literal">oc-mirror</code> command. For example:
+					</p><pre class="programlisting language-terminal">oc-mirror --from <span class="emphasis"><em>&lt;mirror-archive-file&gt;</em></span> <span class="emphasis"><em>&lt;target-registry&gt;</em></span></pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;mirror_archive_file&gt;</code> </span></dt><dd>
+									Specifies the name of the file containing the resources that you want to mirror, for example,<code class="literal">mirror_seq1_0000.tar</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;target_registry&gt;</code> </span></dt><dd>
+									Specifies the name of the target registry that you want to push the mirrored images to, for example, <code class="literal">docker://registry.localhost:5000</code>.
+								</dd></dl></div><div class="formalpara"><p class="title"><strong>Example output</strong></p><p>
+							
+<pre class="programlisting language-terminal">Wrote release signatures to oc-mirror-workspace/results-1738075410
+Writing image mapping to oc-mirror-workspace/results-1738075410/mapping.txt
+Writing ICSP manifests to oc-mirror-workspace/results-1738075410</pre>
+						</p></div></li><li class="listitem"><p class="simpara">
+						In your workspace, locate the <code class="literal">imageContentSourcePolicy.yaml</code> file by running the <code class="literal">ls</code> command. For example:
+					</p><pre class="programlisting language-terminal">ls <span class="emphasis"><em>&lt;workspace_directory&gt;</em></span>/<span class="emphasis"><em>&lt;results_directory&gt;</em></span></pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;workspace_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your workspace directory, for example, <code class="literal">oc-mirror-workspace</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;results_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your results directory, for example, <code class="literal">results-1738070846</code>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						To mirror the Helm chart, deploy the <code class="literal">imageContentSourcePolicy.yaml</code> file in the disconnected cluster by running the <code class="literal">oc apply</code> command. For example:
+					</p><pre class="programlisting language-terminal">oc apply -f <span class="emphasis"><em>&lt;workspace_directory&gt;</em></span>/<span class="emphasis"><em>&lt;results_directory&gt;</em></span>/ImageContentSourcePolicy.yaml</pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;workspace-directory&gt;</code> </span></dt><dd>
+									Specifies the name of your workspace directory, for example, <code class="literal">oc-mirror-workspace</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;results-directory&gt;</code> </span></dt><dd>
+									Specifies the name of your results directory, for example, <code class="literal">results-1738070846</code>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						In your air-gapped environment, deploy the Helm chart to the namespace that you want to use by running the <code class="literal">helm install</code> command with <code class="literal">namespace</code> and <code class="literal">set</code> options. For example:
+					</p><pre class="programlisting language-terminal">CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/<sup>[</sup>.]*\.//')
+
+helm install <span class="emphasis"><em>&lt;rhdh_instance&gt;</em></span> <span class="emphasis"><em>&lt;workspace_directory&gt;</em></span>/<span class="emphasis"><em>&lt;results_directory&gt;</em></span>/charts/<span class="emphasis"><em>&lt;archive_file&gt;</em></span> --namespace <span class="emphasis"><em>&lt;your_namespace&gt;</em></span> --create-namespace \
+  --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE"</pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;rhdh_instance&gt;</code> </span></dt><dd>
+									Specifies the name of your Red Hat Developer Hub instance, for example, <code class="literal">my-rhdh</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;workspace_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your workspace directory, for example, <code class="literal">oc-mirror-workspace</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;results_directory&gt;</code> </span></dt><dd>
+									Specifies the name of your results directory, for example, <code class="literal">results-1738070846</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;archive_file&gt;</code> </span></dt><dd>
+									Specifies the name of the archive file containing the resources that you want to mirror, for example, <code class="literal">redhat-developer-hub-1.4.1.tgz</code>.
+								</dd><dt><span class="term"><code class="literal">&lt;your_namespace&gt;</code> </span></dt><dd>
+									Specifies the namespace that you want to deploy the Helm chart to, for example, <code class="literal">my-rhdh-project</code>.
+								</dd></dl></div></li></ol></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm45179234406688"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
