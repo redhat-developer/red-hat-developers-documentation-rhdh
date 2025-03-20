@@ -13,10 +13,13 @@ When you enable dynamic plugins cache:
 == Enabling the dynamic plugins cache
 To enable the dynamic plugins cache in {product-very-short}, the plugins directory `dynamic-plugins-root` must be a persistent volume. 
 
-For Helm chart installations, a persistent volume named `dynamic-plugins-root` is automatically created.
+=== Creating a PVC for the dynamic plugin cache by using the Operator
+For operator-based installations, you must manually create the persistent volume claim (PVC) by replacing the default `dynamic-plugins-root` volume with a PVC named `dynamic-plugins-root`. 
 
-For operator-based installations, you must manually create the PersistentVolumeClaim (PVC) as follows:
+.Procedure 
 
+. Create the persistent volume definition and save it to a file, such as `pvc.yaml`. For example:
++
 [source,yaml]
 ----
 kind: PersistentVolumeClaim
@@ -29,9 +32,26 @@ spec:
   resources:
     requests:
       storage: 5Gi
+----
++
+[NOTE]
+====
+This example uses `ReadWriteOnce` as the access mode which prevents multiple replicas from sharing the PVC across different nodes. 
 
----
+To run multiple replicas on different nodes, depending on your storage driver, you must use an access mode such as `ReadWriteMany`.
+====
 
+. To apply this PVC to your cluster, run the following command:
++
+[source,terminal]
+----
+oc apply -f pvc.yaml
+----
+
+. Replace the default `dynamic-plugins-root` volume with a PVC named `dynamic-plugins-root`. For example:
++
+[source,yaml]
+----
 apiVersion: rhdh.redhat.com/v1alpha3
 kind: Backstage
 metadata:
@@ -48,21 +68,98 @@ spec:
                 persistentVolumeClaim:
                   claimName: dynamic-plugins-root
 ----
++
+[NOTE]
+To avoid adding a new volume, you must use the `$patch: replace` directive.
 
+=== Creating a PVC for the dynamic plugin cache using the Helm Chart
+For Helm chart installations, if you require the dynamic plugin cache to persist across pod restarts, you must create a persistent volume claim (PVC) and configure the Helm chart to use it.
+
+.Procedure 
+. Create the persistent volume definition. For example: 
++
+[source,yaml]
+----
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-root
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+----
++
 [NOTE]
 ====
-Future versions of the {product-very-short} operator are planned to automatically create the PVC.
+This example uses `ReadWriteOnce` as the access mode which prevents multiple replicas from sharing the PVC across different nodes. 
+
+To run multiple replicas on different nodes, depending on your storage driver, you must use an access mode such as `ReadWriteMany`.
+====
+
+. To apply this PVC to your cluster, run the following command:
++
+[source,terminal]
+----
+oc apply -f pvc.yaml
+----
+. Configure the Helm chart to use the PVC. For example:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      - name: dynamic-plugins-root
+        persistentVolumeClaim:
+          claimName: dynamic-plugins-root
+      - name: dynamic-plugins
+        configMap:
+          defaultMode: 420
+          name: '{{ printf "%s-dynamic-plugins" .Release.Name }}'
+          optional: true
+      - name: dynamic-plugins-npmrc
+        secret:
+          defaultMode: 420
+          optional: true
+          secretName: '{{ printf "%s-dynamic-plugins-npmrc" .Release.Name }}'
+      - name: dynamic-plugins-registry-auth
+        secret:
+          defaultMode: 416
+          optional: true
+          secretName: '{{ printf "%s-dynamic-plugins-registry-auth" .Release.Name }}'
+      - name: npmcacache
+        emptyDir: {}
+      - name: temp
+        emptyDir: {}
+----
++
+[NOTE]
+====
+When you configure the Helm chart to use the PVC, you must also include the link:https://github.com/redhat-developer/rhdh-chart/blob/release-{product-version}/charts/backstage/values.yaml#L145-L181[`extraVolumes`] defined in the default Helm chart.
 ====
 
 == Configuring the dynamic plugins cache
-You can set the following optional dynamic plugin cache parameters:
+You can set the following optional dynamic plugin cache parameters in your `dynamic-plugins.yaml` file:
 
-* `forceDownload`: Set to `true` to force a reinstall of the plugin, bypassing the cache. Default is `false`. For example, modify your `dynamic-plugins.yaml` file as follows:
+* `forceDownload`: Set the value to `true` to force a reinstall of the plugin, bypassing the cache. The default value is `false`. 
+
+* `pullPolicy`: Similar to the `forceDownload` parameter and is consistent with other image container platforms. You can use one of the following values for this key:
+
+** `Always`: This value compares the image digest in the remote registry and downloads the artifact if it has changed, even if the plugin was previously downloaded.
+** `IfNotPresent`: This value downloads the artifact if it is not already present in the dynamic-plugins-root folder, without checking image digests.
 +
+[NOTE] 
+The `pullPolicy` setting is also applied to the NPM downloading method, although `Always` will download the remote artifact without a digest check. The existing `forceDownload` option remains functional, however, the `pullPolicy` option takes precedence. The `forceDownload` option may be deprecated in a future {product-short} release.
+
+.Example `dynamic-plugins.yaml` file configuration to download the remote artifact without a digest check:
+
 [source,yaml]
 ----
 plugins:
   - disabled: false
-    forceDownload: true
+    pullPolicy: Always
     package: 'oci://quay.io/example-org/example-plugin:v1.0.0!internal-backstage-plugin-example'
 ----
