@@ -1,0 +1,86 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-techdocs-addons-installing.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-techdocs-addon-install-third-party_{context}"]
+== Installing and configuring a third-party TechDocs add-on
+
+You can install compatible third-party TechDocs add-on on your {product} instance as a front-end dynamic plugin.
+
+.Prerequisites
+* The third-party TechDocs add-on has a valid `package.json` file in its root directory, containing all required metadata and dependencies.
+* The third-party plugin is packaged as a dynamic plugin in an OCI image. For alternative package types, see link:https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/release-1.5/plugins-rhdh-install/#assembly-install-third-party-plugins-rhdh[Installing third-party plugins in Red Hat Developer Hub].
+* You have installed the `yarn` package manager.
+* The third-party plugin is packaged as a dynamic plugin in an OCI image.* You have installed and configured Node.js and NPM.
+
+.Procedure
+. Install the third-party plugin that you want to use to import your third-party add-on by entering the following command:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+yarn install
+----
+. Obtain the source code for the third-party TechDocs add-on that you want to use.
+. Export the TechDocs add-on as a dynamic plugin using the following command:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+npx @janus-idp/cli@latest package export-dynamic-plugin
+----
++
+[NOTE]
+====
+The `@latest` tag pulls the latest version of the @janus-idp/cli package, which is compatible with the most recent features and fixes. Use a version that is compatible with your {product} version.
+====
+. To package the third-party TechDocs add-on as a dynamic plugin, navigate to the root directory where the plugin is stored (not the dist-dynamic directory) and run the `npx` command with the `--tag` option to specify the image name and tag. For example:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+npx @janus-idp/cli@latest package package-dynamic-plugins --tag quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
+----
++
+[NOTE]
+====
+The output of the package-dynamic-plugins command provides the file path to the plugin for use in the `dynamic-plugin-config.yaml` file.
+====
++
+. To publish the third-party TechDocs add-on to a Quay repository, push the image to a registry using one of the following commands, depending on your virtualization tool:
+* To use `podman`, enter the following command:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+podman push quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
+----
+* To use `docker`, enter the following command:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+docker push quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
+----
+. Open your `dynamic-plugins.yaml` file to view or modify the configuration for the third-party TechDocs add-on. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+plugins:
+      - package: oci://quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest!_<techdocs_add-on_package>_
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+             _<techdocs_add-on_package>_
+                techdocsAddons:
+                  - importName: _<third-party_add-on_name>_
+                   config:
+                      props:
+                       _<techdocs_add-on_property_key>_: _<techdocs_add-on_property_value>_
+----
++
+where
+
+_<user_name>_ :: Specifies your Quay user name or organization name.
+_<techdocs_add-on_image>_ :: Specifies the name of the image for the third-party add-on that you want to use, for example, `mermaid`.
+_<techdocs_add-on_package>_ :: Specifies the , for example, `backstage-plugin-techdocs-addon-mermaid`.
+_<third-party_add-on_name>_ :: Specifies the name of the third-party add-on that you want to use, for example, `Mermaid`.
+_<techdocs_add-on_property_key>_ :: Specifies the name of the custom property that can be passed to the third-party add-on, for example, `themeVariables`. Properties are specific to each add-on. You can list multiple properties for an add-on.
+_<techdocs_add-on_property_value>_ :: Specifies the value of a property key for the third-party add-on, for example, `lineColor: #000000`.
