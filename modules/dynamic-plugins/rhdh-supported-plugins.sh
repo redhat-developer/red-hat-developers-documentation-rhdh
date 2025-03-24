@@ -325,7 +325,7 @@ for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plug
     this_num_plugins=${num_plugins[$index]}
     echo "[$count] Processing $d ..."
     adocfile="${0/.sh/.${d}}"
-    sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd}' \
+    sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd;}' \
         -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
         "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
     rm -f "$adocfile"
@@ -333,7 +333,7 @@ for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plug
 done
 
 # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
-sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd}' \
+sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
     "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.template.adoc}" > "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.adoc}"
 
 # summary of changes since last time
