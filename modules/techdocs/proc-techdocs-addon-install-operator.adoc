@@ -1,0 +1,91 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-techdocs-addons-installing.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-techdocs-addon-install-operator_{context}"]
+== Installing and configuring an external TechDocs add-on using the Operator
+
+You can use a dynamic plugin to import TechDocs add-ons into your TechDocs plugin. If you use the {product} Operator to install the dynamic plugin, you can add TechDocs add-ons to the plugin package in your ConfigMap.
+
+Preinstalled add-ons, such as `ReportIssue`, are included in the default `backstage-plugin-techdocs-module-addons-contrib` package configuration. External add-ons that are supported by {company-name} are installed by manually adding them to the `techdocsAddons` section of the configuration file.
+
+.Procedure
+
+. From the Developer perspective in the {ocp-short} web console, click *ConfigMaps* > *Create ConfigMap*.
+. From the *Create ConfigMap* page, select the *YAML view* option in the *Configure via* field.
+. In the newly created ConfigMap, add the default `backstage-plugin-techdocs-module-addons-contrib` package configuration. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-techdocs-module-addons-contrib
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              backstage.plugin-techdocs-module-addons-contrib:
+                techdocsAddons:
+                  - importName: ReportIssue
+----
+. In the `techdocsAddons` section of the ConfigMap, add `importName: _<external_techdocs_add-on>_` for each external TechDocs add-on that you want to add from the specified plugin package. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-plugin-techdocs-module-addons-contrib
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              backstage.plugin-techdocs-module-addons-contrib:
+                techdocsAddons:
+                  - importName: ReportIssue
+                  - importName: _<external_techdocs_add-on>_
+----
++
+where:
+
+_<external_techdocs_add-on>_:: Specifies the external TechDocs add-on that you want to install, for example, `TextSize` or `LightBox`.
+. Click *Create*.
+. In the web console navigation menu, click *Topology*.
+. Click on the overflow menu for the {product} instance that you want to use and select *Edit Backstage* to load the YAML view of the {product} instance.
+. In your `{product-custom-resource-type}` CR, add the `dynamicPluginsConfigMapName: _<dynamic_plugins_configmap>_` key-value pair. For example:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: my-rhdh
+spec:
+  application:
+# ...
+    dynamicPluginsConfigMapName: _<dynamic_plugins_configmap>_
+# ...
+----
++
+where:
+
+_<dynamic_plugins_configmap>_:: Specifies the name of your dynamic plugins ConfigMap for your {product} instance, for example, `dynamic-plugins-rhdh`.
+. Click *Save*.
+. In the web console navigation menu, click *Topology* and wait for the {product} pod to start.
+. Click the *Open URL* icon to start using the {product} platform with the new configuration changes.
+
+//.Next steps
