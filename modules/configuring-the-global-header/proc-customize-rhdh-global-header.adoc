@@ -1,0 +1,167 @@
+[id="customizing-your-product-global-header_{context}"]
+= Customizing your {product} global header
+
+You can use the `red-hat-developer-hub.backstage-plugin-global-header` dynamic plugin to extend the global header with additional buttons and customize the order and position of icons and features. Additionally, you can create and integrate your custom dynamic header plugins using the mount points provided by this new header feature, allowing you to further tailor to suit your needs.
+For more information on enabling dynamic plugins, see link:{installing-and-viewing-dynamic-plugins-url}[{installing-and-viewing-dynamic-plugins-title}].
+
+.Default global header configuration
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-global-header
+    disabled: false
+    pluginConfig:
+      app:
+        sidebar:
+          search: false    <1>
+          settings: false  <2>
+      dynamicPlugins:
+        frontend:
+          default.main-menu-items: <3>
+            menuItems:
+              default.create:
+                title: ''
+          red-hat-developer-hub.backstage-plugin-global-header: # the default enabled dynamic header plugin
+            mountPoints:
+              - mountPoint: application/header
+                importName: GlobalHeader
+                config:
+                  position: above-main-content <4>
+              - mountPoint: global.header/component
+                importName: SearchComponent
+                config:
+                  priority: 100
+              - mountPoint: global.header/component
+                importName: Spacer
+                config:
+                  priority: 99
+                  props:
+                    growFactor: 0
+              - mountPoint: global.header/component
+                importName: HeaderIconButton
+                config:
+                  priority: 90
+                  props:
+                    title: Create...
+                    icon: add
+                    to: create
+              - mountPoint: global.header/component
+                importName: SupportButton
+                config:
+                  priority: 80
+              - mountPoint: global.header/component
+                importName: NotificationButton
+                config:
+                  priority: 70
+              - mountPoint: global.header/component
+                importName: Divider
+                config:
+                  priority: 50
+              - mountPoint: global.header/component
+                importName: ProfileDropdown
+                config:
+                  priority: 10
+              - mountPoint: global.header/profile
+                importName: MenuItemLink
+                config:
+                  priority: 100
+                  props:
+                    title: Settings
+                    link: /settings
+                    icon: manageAccounts
+              - mountPoint: global.header/profile
+                importName: LogoutButton
+                config:
+                  priority: 10
+----
+<1> *search*: Hides the *Search* modal in the sidebar menu. Change it to `true` to display the *Search* modal in the sidebar.
+<2> *settings*: Hides the *Settings* button in the sidebar menu. Change it to `true` to display the *Settings* button in the sidebar.
+<3> `default.main-menu-items`: Hides the *Create* button from the sidebar menu. Remove this field to display the *Create* button in the sidebar.
+<4> *position*: Defines the position of the header. Options: `above-main-content` or `above-sidebar`.
+
+To extend the functionality of the default global header, include any the following attributes in your global header entry:
+
+`mountPoint`::
+Specifies the location of the header. Use `application/header` to specify it as a global header. You can configure several global headers at different positions by adding entries to the `mountPoints` field.
+
+`importName`::
+Specifies the component exported by the global header plugin.
++
+The `red-hat-developer-hub.backstage-plugin-global-header` package (enabled by default) offers the following header components as possible mount point values:
+
+- **`SearchComponent`**: Adds a search bar (enabled by default).
+- **`Spacer`**: Adds spacing in the header to position buttons at the end. Useful when you disable `SearchComponent`.
+- **`HeaderIconButton`**: Adds an icon button. By default, the *Create* icon button remains enabled.
+- **`SupportButton`**: Adds a *Support* icon button, allowing users to configure a link to an internal or external page. Enabled by default but requires additional configuration to display.
+- **`NotificationButton`**: Adds a *Notifications* icon button to display unread notifications in real time and navigate to the *Notifications* page. Enabled by default (requires the notifications plugin).
+- **`Divider`**: Adds a vertical divider. By default, a divider appears between the profile dropdown and other header components.
+- **`ProfileDropdown`**: Adds a profile dropdown showing the logged-in user's name. By default, it contains two menu items.
+- **`MenuItemLink`**: Adds a link item in a dropdown menu. By default, the profile dropdown includes a link to the *Settings* page.
+- **`LogoutButton`**: Adds a logout button in the profile dropdown (enabled by default).
+- **`CreateDropdown`**: Adds a *Create* dropdown button (disabled by default). The menu items are configurable.
+- **`SoftwareTemplatesSection`**: Adds a list of software template links to the *Create* dropdown menu (disabled by default). You must enable `CreateDropdown`.
+- **`RegisterAComponentSection`**: Adds a link to the *Register a Component* page in the *Create* dropdown menu (disabled by default). You must enable `CreateDropdown`.
+
+`config.position`::
+Specifies the position of the header. Supported values are `above-main-content` and `above-sidebar`.
+
+.Prerequisites
+* You must configure the support URL in the `{my-app-config-file}` file to display the *Support* button in the header.
+* You must install the notifications plugin to display the *Notifications* button in the header.
+
+.Procedure
+
+. Copy the default configuration and modify the field values to suit your needs. You can adjust the `priority` value of each header component to control its position. Additionally, you can enable or disable components by adding or removing them from the configuration. To ensure that the remaining header buttons align with the end of the header before the profile dropdown button, set `config.props.growFactor` to `1` in the `Spacer` mount point to enable the `Spacer` component. For example:
++
+[source,yaml]
+----
+- mountPoint: global.header/component
+  importName: Spacer
+  config:
+    priority: 100
+    props:
+      growFactor: 1
+----
+
+. To use your custom header, you must install it as a dynamic plugin by adding your plugin configuration to your `app-config-dynamic.yaml` file. For example:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+- package: _<npm_or_oci_package-reference>_
+  disabled: false
+  pluginConfig:
+    dynamicPlugins:
+      frontend:
+        <package_name>:
+          mountPoints:
+            - mountPoint: application/header
+              importName: _<application_header_name>_
+              config:
+                position: above-main-content
+            - mountPoint: global.header/component
+              importName: _<header_component_name>_
+              config:
+                priority: 100
+            - mountPoint: global.header/component
+              importName: _<header_component_name>_
+              config:
+                priority: 90
+----
++
+where:
+
+<npm_or_oci_package-reference>:: Specifies the package name.
+<application_header_name>:: Specifies the name of the application header. For example: `MyHeader`
+<header_component_name>:: Specifies the name of the header component. For example: `MyHeaderComponent`
++
+[NOTE]
+====
+`importName` is an optional name referencing the value returned by the scaffolder field extension API.
+====
+. Optional: To disable the global header, set the value of the `disabled` field to `true` in your `dynamic-plugins.yaml` file. For example:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+- package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-global-header
+  disabled: true
+----
