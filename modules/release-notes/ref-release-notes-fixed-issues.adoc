@@ -4,6 +4,92 @@
 
 This section lists issues fixed in {product} {product-version}.
 
+== Fixed issues in 1.3.5
+
+[id="bug-fix-rhidp-5835"]
+=== In the Helm chart, dynamic plugins PVC Storage class and Access mode are not configurable
+
+In the previous versions of the {product-short} Helm Chart, it was not possible to configure the storage class and access mode to use in the dynamic plugins PVC created by the Chart. This could cause the {product-short} Deployment to remain stuck forever in clusters without a default storage class or where the default storage class cannot be used.
+This issue has been fixed by making the whole dynamic plugins PVC specification configurable. This way, it is possible to configure various aspects of the PVC, like the storage class or the access mode.
+The following fields are now exposed in the Helm Chart:
+
+[source,yaml]
+----
+dynamicPlugins:
+  cache:
+    # -- Spec of the dynamic plugins root volume claim.
+    # Note that, by default, this is set to use the default storage class, if available in the cluster.
+    volumeClaimSpec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: null
+----
+
+
+.Additional resources
+
+* link:https://issues.redhat.com/browse/RHIDP-5835[RHIDP-5835]
+
+
+[id="bug-fix-rhidp-5837"]
+=== In the Helm chart, test-connection pod Image is hardcoded, which can be an issue in air-gapped environments
+
+In the previous versions of the {product-short} Helm Chart, it was not possible to configure the image for the `test-connection` pod, which could be a problem for air-gapped environments.
+The `test-connection` pod is a Pod created by the Helm Chart when a user runs the `helm test` command to test a deployed Release.
+This issue has been fixed by making the image configurable and also allowing disabling the `test-connection` pod creation altogether. The following fields are now exposed in the Helm Chart:
+
+[source,yaml]
+----
+# -- Test pod parameters
+test:
+  # -- Whether to enable the test-connection pod used for testing the Release using `helm test`.
+  enabled: true
+  image:
+    # -- Test connection pod image registry
+    registry: quay.io
+    # -- Test connection pod image repository. Note that the image needs to have both the `sh` and `curl` binaries in it.
+    repository: curl/curl
+    # -- Test connection pod image tag. Note that the image needs to have both the `sh` and `curl` binaries in it.
+    tag: latest
+----
+
+
+.Additional resources
+
+* link:https://issues.redhat.com/browse/RHIDP-5837[RHIDP-5837]
+
+
+[id="bug-fix-rhidp-5839"]
+=== In the Helm chart, the audit log PVC Storage class and Access mode are not configurable
+
+In the previous versions of the {product-short} Helm Chart, it was not possible to configure the storage class and access mode to use in the audit log PVC created by the Chart. This could cause the {product-short} Deployment to remain stuck forever in clusters without a default storage class or where the default storage class cannot be used.
+This issue has been fixed in this version by making the whole audit log PVC specification configurable. This way, it is possible to configure various aspects of the PVC, like the storage class or the access mode.
+Please note that the audit log PVC has been removed in 1.4.
+
+The following fields are now exposed in this release of the Helm Chart:
+
+[source,yaml]
+----
+auditLog:
+  # -- Spec of the audit log volume claim.
+  # Note that, by default, this is set to use the default storage class, if available in the cluster.
+  volumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+    storageClassName: null
+----
+
+
+.Additional resources
+
+* link:https://issues.redhat.com/browse/RHIDP-5839[RHIDP-5839]
+
 == Fixed issues in 1.3.4
 
 [id="bug-fix-rhidp-5477"]
@@ -57,7 +143,7 @@ With this update, a conditional alias can use `$ownerRefs`.
 
 * link:https://issues.redhat.com/browse/RHIDP-4069[RHIDP-4069]
 
-== Fixed issues in 1.3
+== Fixed issues in 1.3.0
 
 [id="bug-fix-rhidp-1334"]
 === Removed unnecessary pull secret from the {product} Helm Chart

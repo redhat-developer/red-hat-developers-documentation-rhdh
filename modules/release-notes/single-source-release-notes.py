@@ -72,7 +72,7 @@ for filePath in fileList:
 for section in config['sections']:
   # Search in Jira for issues to publish defined in jira_query
   query = section["query"].format(
-    version_minor=product_version_minor,
+    version_minor=product_version_minor + '.0',
     version_patch=product_version_patch
   )
   print(query)
