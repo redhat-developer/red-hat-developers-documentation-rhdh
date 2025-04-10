@@ -1,64 +1,42 @@
-[id="proc-mount-directories-pvcs_{context}"]
-= Mounting directories from pre-created PVCs
+:_mod-docs-content-type: PROCEDURE
+[id="proc-configure-mount-path-secrets-pvcs_{context}"]
+= Configuring mount paths for Secrets and PVCs
 
-Starting from `v1alpha3`, you can mount directories from pre-created PersistentVolumeClaims (PVCs) using the `spec.application.extraFiles.pvcs` field.
+By default, the mount path is the {product-short} container's working directory. If you do not define the mount path, it defaults to `/opt/app-root/src`.
 
-.Prerequisites
-* You have understanding of the mounting logic:
-** If `spec.application.extraFiles.pvcs[].mountPath` is defined, the PVC is mounted to the specified path.
-** If `spec.application.extraFiles.pvcs[].mountPath` is not defined, the PVC is mounted under the path specified in `spec.application.extraFiles.mountPath/`.
-** If `mountPath` is not defined, the PVC defaults to `/opt/app-root/src`, or you can use the {product-very-short} container's working directory if it is specified.
+You can add the `rhdh.redhat.com/mount-path` annotation to specify a custom path.
 
 .Procedure
-. Define the PVCs using the following YAML example:
+
+. To specify a PVC mount path, add the `rhdh.redhat.com/mount-path` annotation to your configuration file as shown in the following example:
 +
---
-.Example YAML file to define PVCs
-[source,yaml]
+.Example specifying where the PVC mounts
+[source,yaml,subs="+attributes,+quotes"]
 ----
-apiVersion: v1  
-kind: PersistentVolumeClaim  
-metadata:  
-  name: myclaim1  
-spec:  
-  accessModes:  
-    - ReadWriteOnce  
-  resources:  
-    requests:  
-      storage: 2Gi  
----  
-apiVersion: v1  
-kind: PersistentVolumeClaim  
-metadata:  
-  name: myclaim2  
-spec:  
-  accessModes:  
-    - ReadWriteOnce  
-  resources:  
-    requests:  
-      storage: 2Gi 
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: _<my_claim>_
+  annotations:
+    rhdh.redhat.com/mount-path: /mount/path/from/annotation
 ----
---
+where:
 
-. Use the following configuration to specify how the PVCs are mounted in the container:
+`rhdh.redhat.com/mount-path`:: Specifies which mount path the PVC mounts to (in this case, `/mount/path/from/annotation` directory).
+<my_claim>:: Specifies the PVC to mount.
+
+. To specify a Secret mount path, add the `rhdh.redhat.com/mount-path` annotation to your configuration file as shown in the following example:
 +
---
-.Example configuration for mounting PVCs in a container
-[source,yaml]
+.Example specifying where the Secret mounts
+[source,yaml,subs="+attributes,+quotes"]
 ----
-spec:  
-  application:  
-    extraFiles:  
-      mountPath: /my/path  
-      pvcs:  
-        - name: myclaim1  
-        - name: myclaim2  
-          mountPath: /vol/my/claim
+apiVersion: v1
+kind: Secret
+metadata:
+  name: _<my_secret>_
+  annotations:
+    rhdh.redhat.com/mount-path: /mount/path/from/annotation
 ----
---
+where:
 
-.Verification
-Based on the configuration, the following directories are mounted in the container:
-
-* `/my/path/myclaim1`
-* `/vol/my/claim`
+<my_secret>:: Specifies the Secret name.
