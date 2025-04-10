@@ -1,0 +1,45 @@
+[id='proc-customize-rhdh-learning-paths_{context}']
+= Customizing the Learning Paths by using hosted JSON files
+
+For ease of use and simplicity, you can configure the Learning Paths by using hosted JSON files.
+
+
+.Procedure
+. Publish the JSON files containing your Learning Paths data to a web server, such as GitHub or Gitlab. You can find an example at link:https://raw.githubusercontent.com/redhat-developer/rhdh/main/packages/app/public/learning-paths/data.json[].
+
+. Configure the {product-short} proxy to access the Learning Paths data from the hosted JSON files, by adding the following code to the `{my-app-config-file}` file:
++
+[source,yaml]
+----
+proxy:
+  endpoints:
+    '/developer-hub':
+      target: https://raw.githubusercontent.com/
+      pathRewrite:
+        '^/api/proxy/developer-hub/learning-paths': '/redhat-developer/rhdh/main/packages/app/public/learning-paths/data.json'
+      changeOrigin: true
+      secure: true
+----
++
+[TIP]
+====
+When also configuring the home page, due to the use of overlapping `pathRewrites` for both the `learning-path` and `homepage` quick access proxies, create the `learning-paths` configuration (`^api/proxy/developer-hub/learning-paths`) before you create the `homepage` configuration (`^/api/proxy/developer-hub`).
+For example:
+
+[source,yaml]
+----
+proxy:
+  endpoints:
+    '/developer-hub':
+      target: https://raw.githubusercontent.com/
+      pathRewrite:
+        '^/api/proxy/developer-hub/learning-paths': '/redhat-developer/rhdh/main/packages/app/public/learning-paths/data.json'
+        '^/api/proxy/developer-hub/tech-radar': '/redhat-developer/rhdh/main/packages/app/public/tech-radar/data-default.json'
+        '^/api/proxy/developer-hub': '/redhat-developer/rhdh/main/packages/app/public/homepage/data.json'
+      changeOrigin: true
+      secure: true
+----
+====
+
+.Additional resources
+* xref:customizing-the-home-page[Customizing the Home page in {product}].
