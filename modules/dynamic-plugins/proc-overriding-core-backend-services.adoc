@@ -1,0 +1,105 @@
+[id="overriding-core-backend-services_{context}"]
+= Overriding Core Backend Service Configuration
+
+The {product} ({product-very-short}) backend platform consists of a number of core services that are well encapsulated.
+The {product-very-short} backend installs these default core services statically during initialization.
+
+Customize a core service by installing it as a `BackendFeature` by using dynamic plugin functionality.
+
+.Procedure
+. Configure {product-short} to allow a core service override, by setting the corresponding core service ID environment variable set to `true` in the {product-short} `{my-app-config-file}` configuration file.
++
+.Environment variables and core service IDs
+[cols="50%,50%",frame="all",options="header"]
+|===
+|Variable
+|Overrides the related service
+
+|`ENABLE_CORE_AUTH_OVERRIDE`
+|`core.auth`
+
+| `ENABLE_CORE_CACHE_OVERRIDE`
+| `core.cache`
+
+| `ENABLE_CORE_ROOTCONFIG_OVERRIDE`
+| `core.rootConfig`
+
+| `ENABLE_CORE_DATABASE_OVERRIDE`
+| `core.database`
+
+| `ENABLE_CORE_DISCOVERY_OVERRIDE`
+| `core.discovery`
+
+| `ENABLE_CORE_HTTPAUTH_OVERRIDE`
+| `core.httpAuth`
+
+| `ENABLE_CORE_HTTPROUTER_OVERRIDE`
+| `core.httpRouter`
+
+| `ENABLE_CORE_LIFECYCLE_OVERRIDE`
+| `core.lifecycle`
+
+| `ENABLE_CORE_LOGGER_OVERRIDE`
+| `core.logger`
+
+| `ENABLE_CORE_PERMISSIONS_OVERRIDE`
+| `core.permissions`
+
+| `ENABLE_CORE_ROOTHEALTH_OVERRIDE`
+| `core.rootHealth`
+
+| `ENABLE_CORE_ROOTHTTPROUTER_OVERRIDE`
+| `core.rootHttpRouter`
+
+| `ENABLE_CORE_ROOTLIFECYCLE_OVERRIDE`
+| `core.rootLifecycle`
+
+| `ENABLE_CORE_SCHEDULER_OVERRIDE`
+| `core.scheduler`
+
+| `ENABLE_CORE_USERINFO_OVERRIDE`
+| `core.userInfo`
+
+| `ENABLE_CORE_URLREADER_OVERRIDE`
+| `core.urlReader`
+
+| `ENABLE_EVENTS_SERVICE_OVERRIDE`
+| `events.service`
+|===
+
+. Install your custom core service as a `BackendFeature`.
++
+For example,
+adding a middleware function to handle all incoming requests can be done
+by installing a custom `configure` function for the root `HTTP` router backend service
+which allows access to the underlying Express application.
++
+.Example of a `BackendFeature` middleware function to handle incoming `HTTP` requests
+[source,javascript]
+----
+// Create the BackendFeature
+export const customRootHttpServerFactory: BackendFeature =
+  rootHttpRouterServiceFactory({
+    configure: ({ app, routes, middleware, logger }) => {
+      logger.info(
+        'Using custom root HttpRouterServiceFactory configure function',
+      );
+      app.use(middleware.helmet());
+      app.use(middleware.cors());
+      app.use(middleware.compression());
+      app.use(middleware.logging());
+      // Add a the custom middleware function before all
+      // of the route handlers
+      app.use(addTestHeaderMiddleware({ logger }));
+      app.use(routes);
+      app.use(middleware.notFound());
+      app.use(middleware.error());
+    },
+  });
+
+// Export the BackendFeature as the default entrypoint
+export default customRootHttpServerFactory;
+----
++
+In the above example, as the `BackendFeature` overrides the default implementation of the HTTP router service, you must set the `ENABLE_CORE_ROOTHTTPROUTER_OVERRIDE` environment variable to `true` so that the {product-short} does not install the default implementation automatically.
+
