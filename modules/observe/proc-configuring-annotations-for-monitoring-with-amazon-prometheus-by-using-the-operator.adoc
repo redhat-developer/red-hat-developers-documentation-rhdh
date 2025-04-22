@@ -1,0 +1,53 @@
+[id="configuring-annotations-for-monitoring-with-amazon-prometheur-by-using-the-operator_{context}"]
+= Configuring annotations for monitoring with Amazon Prometheus by using the {product} Operator
+
+You can configure the annotations for monitoring by using the {product} Operator.
+
+.Procedure
+. As an administrator of the operator, edit the default configuration to add Prometheus annotations as follows:
++
+[source]
+----
+# Update OPERATOR_NS accordingly
+$ OPERATOR_NS=rhdh-operator
+$ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"
+----
+
+. Find the `deployment.yaml` key in the ConfigMap and add the annotations to the `spec.template.metadata.annotations` field as follows:
++
+[source,yaml]
+----
+deployment.yaml: |-
+  apiVersion: apps/v1
+  kind: Deployment
+  # --- truncated ---
+  spec:
+    template:
+      # --- truncated ---
+      metadata:
+        labels:
+         rhdh.redhat.com/app:  # placeholder for 'backstage-<cr-name>'
+        # --- truncated ---
+        annotations:
+          prometheus.io/scrape: 'true'
+          prometheus.io/path: '/metrics'
+          prometheus.io/port: '9464'
+          prometheus.io/scheme: 'http'
+  # --- truncated ---
+----
+
+. Save your changes.
+
+.Verification
+To verify if the scraping works:
+
+. Use `kubectl` to port-forward the Prometheus console to your local machine as follows:
++
+[source]
+----
+$ kubectl --namespace=prometheus port-forward deploy/prometheus-server 9090
+----
+
+. Open your web browser and navigate to `pass:c[http://localhost:9090]` to access the Prometheus console.
+. Monitor relevant metrics, such as `process_cpu_user_seconds_total`.
+
