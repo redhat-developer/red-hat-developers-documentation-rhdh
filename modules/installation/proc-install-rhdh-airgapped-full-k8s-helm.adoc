@@ -1,0 +1,234 @@
+[id="proc-install-rhdh-airgapped-full-k8s-helm_{context}"]
+= Installing {product} on a supported Kubernetes platform in a fully disconnected environment with the Helm chart
+
+In environments without internet access, a fully disconnected installation ensures that {product} can run reliably without external dependencies. This approach involves mirroring images and transferring them manually to the air-gapped environment.
+
+.Prerequisites
+
+* Skopeo 1.17 or later
+* Yq 4.4 or later
+* Access to registry.redhat.io for pulling images by using Skopeo login
+* Access to the Kubernetes cluster with `kubectl` configured
+* Helm 3.13 or later installed on the air-gapped host
+
+.Procedure
+
+. In a terminal, fetch the Helm charts values by running the following commands:
++
+[source,terminal,subs="+quotes"]
+----
+helm repo add _<helm_chart_repo_name>_ https://charts.openshift.io/
+helm repo update
+helm show values _<helm_chart_repo_name>_/redhat-developer-hub --version _<rhdh_version>_  values.default.yaml
+helm pull _<helm_chart_repo_name>_/redhat-developer-hub --version _<rhdh_version>_
+----
++
+where
+
+_<helm_chart_repo_name>_ :: Specifies the name of the Helm chart repository, for example, `openshift-helm-charts`.
+_<rhdh_version>_ :: Specifies the {product} version that you want to use, for example, `1.4.0`.
++
+[NOTE]
+====
+The `helm pull _<helm_chart_repo_name>_/redhat-developer-hub --version _<rhdh_version>_` command automatically creates the Helm chart archive file and downloads the Helm chart to your current working directory.
+====
++
+. Extract the image digests by running the following commands:
++
+[source,terminal,subs="+quotes"]
+----
+RHDH_IMAGE=$(yq '.upstream.backstage.image | .registry + "/" + .repository' values.default.yaml)
+RHDH_DIGEST=$(yq '.upstream.backstage.image.tag' values.default.yaml)
+PG_IMAGE=$(yq '.upstream.postgresql.image | .registry + "/" + .repository' values.default.yaml)
+PG_DIGEST=$(yq '.upstream.postgresql.image.tag' values.default.yaml)
+----
+. Mirror the images to your local archive by running the following commands:
++
+[source,terminal,subs="+quotes"]
+----
+skopeo login registry.redhat.io
+skopeo copy --all docker://${RHDH_IMAGE}:${RHDH_DIGEST} dir:./rhdh-hub
+skopeo copy --all docker://${PG_IMAGE}:${PG_DIGEST} dir:./postgresql
+----
+
+. Transfer the following files and directories to your air-gapped environment:
++
+* rhdh-hub
+* postgresql
+* Helm chart archive file, for example, `redhat-developer-hub-1.4.0.tgz`
++
+. Load the images onto the air-gapped host by running the following command:
++
+[source,terminal,subs="+quotes"]
+----
+skopeo copy --all dir:./rhdh-hub docker://_<mirror_registry_name>_/_<rhdh_repo_name>_:${RHDH_DIGEST}
+
+skopeo copy --all dir:./postgresql docker://_<mirror_registry_name>_/_<postgresql_repo_name>_:${PG_DIGEST}
+----
++
+where
+
+_<mirror_registry_name>_ :: Specifies the name of the target mirror registry that you want to push the images to, for example, `registry.example.com`.
+
+_<rhdh_repo_name>_ :: Specifies the name of the repository where your {product} image is stored, for example, `rhdh/rhdh-hub-rhel9`. This value must match the name of the {product} image that you loaded onto the air-gapped host.
+
+_<postgresql_repo_name>_ :: Specifies the name of the repository where your PostgreSQL image is stored, for example, `rhdh/postgresql-15`.
++
+. Create a `values.yaml` file for the Kubernetes platform that you want to use and add the following image references to the file to reflect local use:
++
+[source,yaml,subs="+quotes"]
+----
+upstream:
+  backstage:
+    image:
+      registry: "_<mirror_registry_name>_"
+      repository: _<rhdh_repo_name>_
+      tag: "${RHDH_DIGEST}"
+
+  postgresql:
+    image:
+      registry: "_<mirror_registry_name>_"
+      repository: _<postgresql_repo_name>_
+      tag: "${PG_DIGEST}"
+
+----
++
+where
+
+_<mirror_registry_name>_ :: Specifies the name of the target mirror registry that you want to push the images to, for example, `registry.example.com`.
+
+_<rhdh_repo_name>_ :: Specifies the name of the repository where your {product} image is stored, for example, `rhdh/rhdh-hub-rhel9`. This value must match the name of the {product} image that you loaded onto the air-gapped host.
+
+_<postgresql_repo_name>_ :: Specifies the name of the repository where your PostgreSQL image is stored, for example, `rhdh/postgresql-15`.
++
+* For {aks-short}, use the following `values.yaml` file template:
++
+[source,yaml,subs="+quotes"]
+----
+global:
+  host: <app_address>
+route:
+  enabled: false
+upstream:
+  ingress:
+    enabled: true
+    className: webapprouting.kubernetes.azure.com
+    host:
+  backstage:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
+    podSecurityContext:
+      fsGroup: 3000
+  postgresql:
+    image:
+      pullSecrets:
+        - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
+----
++
+* For {eks-short}, use the following `values.yaml` file template:
++
+[source,yaml,subs="+quotes"]
+----
+global:
+  # TODO: Set your application domain name.
+  host: <your Developer Hub domain name>
+
+route:
+  enabled: false
+
+upstream:
+  service:
+    # NodePort is required for the ALB to route to the Service
+    type: NodePort
+
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: alb
+
+      alb.ingress.kubernetes.io/scheme: internet-facing
+
+      # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxx:xxxx:certificate/xxxxxx
+
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+
+      # TODO: Set your application domain name.
+      external-dns.alpha.kubernetes.io/hostname: <your rhdh domain name>
+
+  backstage:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    podSecurityContext:
+      # you can assign any random value as fsGroup
+      fsGroup: 2000
+  postgresql:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        # you can assign any random value as fsGroup
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
+----
++
+* For {gke-short}, use the following `values.yaml` file template:
++
+[source,yaml,subs="+quotes"]
+----
+global:
+  host: <rhdh_domain_name>
+route:
+  enabled: false
+upstream:
+  service:
+    type: NodePort
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: gce
+      kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
+      networking.gke.io/managed-certificates: <rhdh_certificate_name>
+      networking.gke.io/v1beta1.FrontendConfig: <ingress_security_config>
+    className: gce
+  backstage:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    podSecurityContext:
+      fsGroup: 2000
+  postgresql:
+    image:
+      pullSecrets:
+      - rhdh-pull-secret
+    primary:
+      podSecurityContext:
+        enabled: true
+        fsGroup: 3000
+  volumePermissions:
+    enabled: true
+----
++
+. Install the Helm chart in the current namespace by running the following command:
++
+[source,terminal,subs="+quotes"]
+----
+helm install rhdh ./_<helm_chart_archive_file_name>_ -f values.yaml
+----
++
+where
+
+_<helm_chart_archive_file_name>_ :: Specifies the name of the Helm chart archive file, for example, `redhat-developer-hub-1.4.0.tgz`.
