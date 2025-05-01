@@ -1,0 +1,179 @@
+[id='proc-delegating-rbac-access_{context}']
+= Delegating role-based access controls (RBAC) access in {product}
+
+An enterprise customer requires the ability to delegate role-based access control (RBAC) responsibilities to other individuals in the organization. In this scenario, you, as the administrator, can provide access to the RBAC plugin specifically to designated users, such as team leads. Each team lead is then able to manage permissions exclusively for users within their respective team or department, without visibility into or control over permissions outside their assigned scope. This approach allows team leads to manage access and permissions for their own teams independently, while administrators maintain global oversight.
+
+In {product-very-short}, you can delegate RBAC access using the multitenancy feature of RBAC plugin, specifically the `IS_OWNER` conditional rule.
+
+By delegating the RBAC access, you can expect the following outcomes:
+
+* Team leads can manage RBAC settings for their teams independently.
+* Visibility of other users' or teams' permissions is restricted.
+* Administrators retain overarching control while delegating team-specific access.
+
+.Prerequisites
+* Your {product-very-short} instance is up and running with RBAC plugin installed and configured.
+* You have administrative access to {product-very-short}.
+* You have API access using `curl` or another tool.
+
+.Procedure
+. In your {product-very-short} instance, navigate to the *Administration -> RBAC* page.
+. Create a new role designated for team leads using the Web UI or API:
++
+--
+.Example of creating a new role for the team lead using the RBAC backend API
+[source,bash]
+----
+curl -X POST 'http://localhost:7007/api/permission/roles' \
+--header "Authorization: Bearer $ADMIN_TOKEN" \
+--header "Content-Type: application/json" \
+--data '{
+  "memberReferences": ["user:default/team_lead"],
+  "name": "role:default/team_lead",
+  "metadata": {
+    "description": "This is an example team lead role"
+  }
+}'
+----
+
+For more information about creating a role using the Web UI, see xref:proc-rbac-ui-create-role_title-authorization[Creating a role in the {product} Web UI].
+--
+
+. Allow team leads to read catalog entities and create permissions in the RBAC plugin using the Web UI or the following API request:
++
+--
+.Example of granting the team lead role permission to create RBAC policies and read catalog entities
+[source,bash]
+----
+curl -X POST 'http://localhost:7007/api/permission/policies' \
+--header "Authorization: Bearer $ADMIN_TOKEN" \
+--header "Content-Type: application/json" \
+--data '[
+  {
+    "entityReference": "role:default/team_lead",
+    "permission": "policy.entity.create",
+    "policy": "create",
+    "effect": "allow"
+  },
+  {
+    "entityReference": "role:default/team_lead",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+  }
+]'
+----
+--
+
+. To ensure team leads can only manage what they own, use the `IS_OWNER` conditional rule as follows:
++
+--
+.Example `curl` of applying a conditional access policy using the `IS_OWNER` rule for the team lead role
+[source,bash]
+----
+curl -X POST 'http://localhost:7007/api/permission/roles/conditions' \
+--header "Authorization: Bearer $ADMIN_TOKEN" \
+--header "Content-Type: application/json" \
+--data '{
+ "result": "CONDITIONAL",
+ "pluginId": "permission",
+ "resourceType": "policy-entity",
+ "conditions": {
+   "rule": "IS_OWNER",
+   "resourceType": "policy-entity",
+   "params": {
+     "owners": [
+       "user:default/team_lead"
+     ]
+   }
+ },
+ "roleEntityRef": "role:default/team_lead",
+ "permissionMapping": [
+   "read",
+   "update",
+   "delete"
+ ]
+}'
+----
+The previous example of conditional policy limits visibility and control to only owned roles and policies.
+--
+
+. Log in to {product-very-short} as team lead and verify the following:
++
+--
+.. Use the following request and verify that you do not see any roles:
++
+.Example `curl` to retrieve roles visible to the team lead
+[source,bash]
+----
+curl -X GET 'http://localhost:7007/api/permission/roles' \
+--header "Authorization: Bearer $TEAM_LEAD_TOKEN"
+
+----
+
+.. Use the following request to create a new role for their team:
++
+.Example `curl` of team lead creating a new role for their team with ownership assigned
+[source,bash]
+----
+curl -X POST 'http://localhost:7007/api/permission/roles' \
+--header "Authorization: Bearer $TEAM_LEAD_TOKEN" \
+--header "Content-Type: application/json" \
+--data '{
+  "memberReferences": ["user:default/team_member"],
+  "name": "role:default/team_a",
+  "metadata": {
+    "description": "This is an example team_a role",
+    "owner": "user:default/team_lead"
+  }
+}'
+----
++
+[NOTE]
+====
+You can set the ownership during creation, but you can also update the ownership at any time.
+====
+
+.. Use the following request to assign a permission policy to the new role:
++
+.Example `curl` for granting read access to catalog entities for the new role
+[source,bash]
+----
+curl -X POST 'http://localhost:7007/api/permission/policies' \
+--header "Authorization: Bearer $ADMIN_TOKEN" \
+--header "Content-Type: application/json" \
+--data '[
+  {
+    "entityReference": "role:default/team_a",
+    "permission": "catalog-entity",
+    "policy": "read",
+    "effect": "allow"
+  }
+]'
+----
+
+.. Use the following request to verify that only team-owned roles and policies are visible:
++
+.Example `curl` to retrieve roles and permission policies visible to the team lead
+[source,bash]
+----
+curl -X GET 'http://localhost:7007/api/permission/roles' \
+--header "Authorization: Bearer $TEAM_LEAD_TOKEN"
+
+curl -X GET 'http://localhost:7007/api/permission/policies' \
+--header "Authorization: Bearer $TEAM_LEAD_TOKEN"
+----
+--
+
+.Verification
+* Log in as a team lead and verify the following:
++
+--
+** The RBAC UI is accessible.
+** Only the assigned users or group is visible.
+** Permissions outside the scoped team are not viewable or editable.
+--
+* Log in as an administrator and verify that you retain full visibility and control.
+
+
+
