@@ -4,6 +4,59 @@
 
 This section lists breaking changes in {product} {product-version}.
 
+[id="removed-functionality-rhidp-6215"]
+== The Topology-specific permission `topology.view.read` is removed
 
-None.
+Previously, the Topology plugin used `topology.view.read` permission to control access. Users were unable to configure Topology permissions using the RBAC UI. With this update, users can configure Kubernetes plugin permissions using the RBAC UI, which now governs the access to the Topology plugin. You can now use Kubernetes plugin permissions `kubernetes.clusters.read` and `kubernetes.resources.read` for the Topology plugin, as the topology-specific permission `topology.view.read` is removed. 
+
+If you are using a CSV permission file, update the following line:
+
+.Old topology permission definition
+[source,csv]
+----
+p, role:default/topology-viewer, topology.view.read, read, allow
+----
+
+.New topology permission definition
+[source,csv]
+----
+p, role:default/topology-viewer, kubernetes.clusters.read, read, allow
+p, role:default/topology-viewer, kubernetes.resources.read, read, allow
+----
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-6215[RHIDP-6215]
+
+[id="removed-functionality-rhidp-7365"]
+== Migration to the core Auditor service
+
+The Auditor format, including audit fields and event names, and IDs, has been updated to align with the new Auditor service conventions defined by the upstream Backstage Auditor Service. Filtering queries based on the old format may fail to work as expected.
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-7365[RHIDP-7365]
+
+[id="removed-functionality-rhidp-7373"]
+== {product} introduces the Backstage Audit Log Service
+
+{product} {product-version} introduces the Backstage Audit Log Service, which replaces the custom audit logging system. This is a significant structural and behavioral change to how audit events are generated and consumed.
+
+The key changes introduced by this transition include the following:
+
+* Audit logging is now delegated to Backstage plugins. Each plugin in Backstage is responsible for implementing and emitting its own audit events.
+
+* Audit event names, structure, and content may differ per plugin. Audit events are scoped and designed independently within each plugin using the standardized upstream mechanism, which automatically captures actor details and plugin context.
+
+* New Event Structure and Naming: Audit event names now follow Backstage’s conventions (for example, lowercase, kebab-case names), and include structured metadata such as `actionType`. Legacy {product-short} event names (for example, `ScaffolderTaskCreation`, `CatalogEntityDeletion`) are no longer used.
+
+* Enhanced Log Context: Each audit event includes the plugin context, making it easier to filter logs for specific functional areas. You can filter by the event IDs or metadata associated with that plugin. 
+
+
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHIDP-7373[RHIDP-7373]
+
+
 
