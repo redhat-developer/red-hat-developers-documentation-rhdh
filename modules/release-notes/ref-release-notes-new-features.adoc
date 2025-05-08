@@ -4,5 +4,168 @@
 
 This section highlights new features in {product} {product-version}.
 
-None.
+[id="feature-rhidp-3597"]
+== OpenTelemetry metrics support added to the Keycloak backend plugin
+
+With this update, the Keycloak backend plugin supports OpenTelemetry metrics, which monitors fetch operations and diagnoses potential issues.
+
+The available counters include the following:
+
+* `backend_keycloak_fetch_task_failure_count_total`: Counts fetch task failures where no data was returned due to an error.​
+
+*  `backend_keycloak_fetch_data_batch_failure_count_total`: Counts partial data batch failures. Even if some batches fail, the plugin continues fetching others.​
+
+These counters include the `taskInstanceId` label, which uniquely identifies each scheduled fetch task, and allows you to trace failures back to individual task executions.
+
+Example configuration:
+
+```text
+backend_keycloak_fetch_data_batch_failure_count_total{taskInstanceId=&#34;df040f82-2e80-44bd-83b0-06a984ca05ba&#34;} 1
+```
+
+You can export metrics using any OpenTelemetry-compatible backend, such as **Prometheus**.
+
+
+[id="enhancement-rhidp-5039"]
+== Enhanced session duration control and refresh token cookie policy
+
+With this update, a new configurable field, `sessionDuration`, has been introduced in the supported authentication providers. This allows administrators to specify custom user session durations, enabling better control over session timeouts and enforced logouts. Additionally, the default maximum age of the refresh token cookie has been reduced to 400 days to align with the modern web browser policies.
+
+For more information, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.5/html-single/authentication_in_red_hat_developer_hub/index#idm140459408106672[Authentication in {product}].
+
+[id="enhancement-rhidp-5211"]
+== Support for custom version information on the settings page
+
+{product} now supports the extension or replacement of version information on the settings page. This feature allows customers and partners to replace the version information on the settings page with their own versions.
+
+
+
+[id="enhancement-rhidp-5987"]
+== Updated Auditor Service
+
+{product} {product-version} introduces an enhancement to the RBAC and Bulk Import plugins, enabling users to utilize Backstage&#39;s new Auditor service. The key features include: ​
+
+* Audit log format update: 
+
+The audit log format has been updated to align with the new Auditor service conventions. Audit fields and event identifiers have been updated. Filtering queries based on the old format may no longer function as expected.​
+
+* Backend Plugin API integration: 
+
+The audit log is now backed by the `@backstage/backend-plugin-api` package.​
+
+* Audit events Grouping: 
+
+The Bulk Import backend plugin and RBAC backend plugin emit audit events for various operations, with the events grouped logically by `eventId`.​
+
+
+
+
+[id="feature-rhidp-6158"]
+== Renamed `Create` to `Self-service`
+
+The term `Create` has been renamed to `Self-service` across key UI areas to better align with the self-service functionality provided through the Backstage scaffolder, enhancing clarity for users.
+
+This change applies to the following areas:
+
+* Sidebar navigation
+* Global header
+* Catalog page
+* Scaffolder page
+
+[id="feature-rhidp-6170"]
+== Enhanced plugin visibility in the Extensions catalog
+
+With this update, the Extensions catalog now displays the default configuration of included plugins directly in {product}. This feature helps administrators better understand available plugins and their configuration options before enabling them. While plugin configurations are now visible, administrators still need to manually copy these configurations into their Helm Charts or Operator custom resource to install or configure a plugin.
+
+[id="enhancement-rhidp-6173"]
+== Simplify Operator-backed deployments on OpenShift with automatic `baseUrl` configuration
+
+Previously, deploying {product-short} using the Operator required manually configuring the `baseUrl` settings in the custom app-config ConfigMap.
+
+With this update, the Operator can now automatically compute the default application URL based on the OpenShift cluster ingress domain and the custom Route settings in the `Backstage` Custom Resource. It will then populate this as the default `baseUrl` in the app-config ConfigMap that it generates for the {product-short} instance. This functionality is specific to OpenShift. The Operator fills the following fields in the default app-config ConfigMap: `app.baseUrl`, `backend.baseUrl`, and `backend.cors.origin`. As a result, this eliminates the need to manually set such values for most Operator-backed deployments on OpenShift, though you can still override these settings in your custom app-config ConfigMap.
+
+[id="enhancement-rhidp-6184"]
+== New sidebar item visibility configuration
+
+{product} now supports a clean and flexible way to hide sidebar items using a new enabled key in the sidebar menu configuration. If set to false, the specified sidebar item will no longer appear in the UI, while maintaining full backward compatibility with existing configurations. 
+
+Example configuration:
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    default.main-menu-items:
+      menuItems:
+        default.home:
+          title: Home
+          icon: home
+          enabled: false
+        default.list:
+          title: References
+          icon: bookmarks
+        default.my-group:
+          parent: default.list
+        default.learning-path:
+          parent: default.list
+          title: &#39;&#39;     
+        default.homepage:
+          title: HomePage 123
+          icon: home
+          enabled: false
+        default.create:
+          title: Create
+          icon: add
+          parent: default.homepage
+----
+
+You can now also toggle visibility of core sidebar elements like the logo, search, settings, and administration as shown:
+
+[source,yaml]
+----
+app:
+  sidebar:
+    search: false           # hides sidebar search
+    logo: false             # hides sidebar logo
+    settings: false         # hides settings item
+    administration: false   # hides administration item
+----
+
+[id="feature-rhidp-6253"]
+== {product-short} community plugins updated to Backstage 1.36
+
+The {product-short} community plugins have been updated to Backstage version 1.36.
+
+[id="feature-rhidp-6269"]
+== Added a new RBAC conditional rule `IS_OWNER` to RBAC plugin
+
+{product} introduces a new RBAC conditional rule, `IS_OWNER`, that allows administrators to assign ownership to roles and control access to the RBAC plugin. This enhancement enables more granular access control by allowing ownership-based filtering of roles, permission policies, and conditional policies.
+
+This enhancement removes the resource type from the `policy.entity.create` permission, preventing conditional rules from being applied to the permission. You can update all permission policies that utilize the resource type `policy-entity` with the action `create` (for example `role:default/some_role, policy-entity, create, allow` to `role:default/some_role, policy.entity.create, create, allow`) to prevent degradation in the future.
+
+
+[id="feature-rhidp-6555"]
+== Support for high availability in {aks-brand-name} 
+
+{product} now supports high availability setups in {aks-brand-name} ({aks-short}). This enhancement allows the deployment to scale beyond a single replica, ensuring the application remains operational and accessible even in the event of failures or disruptions.
+
+For more information, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.5/html-single/configuring_red_hat_developer_hub/index#HighAvailability[_Configuring high availability in Red Hat Developer Hub_].
+
+[id="feature-rhidp-6764"]
+== Added `@backstage/plugin-scaffolder-backend-module-github` plugin for {product-short}
+
+{product} now supports the `@backstage/plugin-scaffolder-backend-module-github` plugin, enabling GitHub Actions within software templates. With this integration, you can securely create and manage repositories, open pull requests, trigger GitHub Actions workflows, and more, all directly from the software template. This plugin empowers users to automate GitHub interactions and workflows with ease.
+
+[id="enhancement-rhidp-6882"]
+== Default OIDC sign-in resolver updated
+
+With this update, the default resolver for OIDC sign-in is set to `oidcSubClaimMatchingKeycloakUserId` to enhance security. This resolver is now also available as a configurable option under the sign-in resolver settings.
+
+[id="feature-rhidp-7424"]
+== New dynamic plugin for Kubernetes scaffolder actions
+
+With this update, {product-short} introduces the @backstage-community/plugin-scaffolder-backend-module-kubernetes plugin as a dynamic plugin, enabling Backstage template actions for Kubernetes. Currently, it includes the create-namespace action. This dynamic plugin is disabled by default. 
+
+For more information, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html-single/configuring_dynamic_plugins/index#con-Kubernetes-custom-actions_title-plugins-rhdh-configure[Kubernetes custom actions in {product}].
+
+
 
