@@ -143,6 +143,64 @@ When using client credentials, the access type must be set to `confidential` and
 * `query-users`
 * `view-users`
 
+== Metrics
+
+The Keycloak backend plugin supports link:https://opentelemetry.io/[OpenTelemetry] metrics that you can use to monitor fetch operations and diagnose potential issues.
+
+=== Available Counters
+
+.Keycloak metrics
+[cols="60%,40%", frame="all", options="header"]
+|===
+|Metric Name
+|Description
+| `backend_keycloak_fetch_task_failure_count_total`       | Counts fetch task failures where no data was returned due to an error.
+| `backend_keycloak_fetch_data_batch_failure_count_total` | Counts partial data batch failures. Even if some batches fail, the plugin continues fetching others.
+|===
+
+=== Labels
+
+All counters include the `taskInstanceId` label, which uniquely identifies each scheduled fetch task. You can use this label to trace failures back to individual task executions. 
+
+Users can enter queries in the Prometheus UI or Grafana to explore and manipulate metric data. 
+
+In the following examples, a Prometheus Query Language (PromQL) expression returns the number of backend failures.
+
+.Example to get the number of backend failures associated with a `taskInstanceId` 
+[source,subs="+attributes,+quotes"]
+----
+backend_keycloak_fetch_data_batch_failure_count_total{taskInstanceId="df040f82-2e80-44bd-83b0-06a984ca05ba"} 1
+----
+
+.Example to get the number of backend failures during the last hour
+
+[source,subs="+attributes,+quotes"]
+----
+sum(backend_keycloak_fetch_data_batch_failure_count_total) - sum(backend_keycloak_fetch_data_batch_failure_count_total offset 1h)
+----
+
+[NOTE]
+====
+PromQL supports arithmetic operations, comparison operators, logical/set operations, aggregation, and various functions. Users can combine these features to analyze time-series data effectively.
+
+Additionally, the results can be visualized using Grafana.
+====
+
+// === Use Case Example
+
+// Imagine your Keycloak instance is under-provisioned (e.g., low CPU/RAM limits), and the plugin is configured to send many parallel API requests.  
+// This could cause request timeouts or throttling. The metrics described above can help detect such behavior early, allowing administrators to:
+
+// - Tune the plugin configuration (e.g., reduce parallelism)
+// - Increase resources on the Keycloak server
+// - Investigate network or permission issues
+
+=== Exporting Metrics
+
+You can export metrics using any OpenTelemetry-compatible backend, such as *Prometheus*.
+
+See the link:https://backstage.io/docs/tutorials/setup-opentelemetry[Backstage OpenTelemetry setup guide] for integration instructions.
+
 == Limitations
 
 If you have self-signed or corporate certificate issues, you can set the following environment variable before starting {product-short}:
