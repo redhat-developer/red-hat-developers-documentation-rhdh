@@ -10,7 +10,7 @@ For more information about packaging a third-party plugin, see xref:assembly-pac
 . Define the plugin with the `oci://` prefix in the following format in `dynamic-plugins.yaml` file:
 +
 --
-`oci://<image-name>:<tag>!<plugin-name>`
+`oci://_<image_name>_:<tag>!_<plugin_name>_`
 
 .Example configuration in `dynamic-plugins.yaml` file
 [source,yaml]
@@ -20,9 +20,53 @@ plugins:
     package: oci://quay.io/example/image:v0.0.1!backstage-plugin-myplugin
 ----
 --
-
-. Configure authentication for private registries by setting the `REGISTRY_AUTH_FILE` environment variable to the path of the registry configuration file. For example, `~/.config/containers/auth.json` or `~/.docker/config.json`.
-
+. Configure authentication for private registries by using any of the following options:
+* For an {product-very-short} instance managed by the Operator, complete the following steps:
+.. Create a local file with the credentials of the container image registry. For example: `registry-auth.json`.
+.. Create a secret file using the `auth.json` key for the local file with the credentials of the container image registry. For example: 
++
+[source,yaml]
+----
+oc create secret generic dynamic-plugins-registry-auth --from-file=auth.json=registry-auth.json
+----
+For more information, see link:{configuring-book-url}#mounting-additional-files-in-your-custom-configuration-using-rhdh-operator[Mounting additional files in your custom configuration using the {product} Operator].
+* For an {product-very-short} instance managed by the Helm chart, complete the following steps:
+.. Create a local file with the credentials of the container image registry. For example: `registry-auth.json`.
+.. Create a secret file using the `auth.json` key for the local file with the credentials of the container image registry. For example: 
++
+[source,yaml]
+----
+oc create secret generic _<Helm_release_name>_-dynamic-plugins-registry-auth --from-file=auth.json=registry-auth.json
+----
++
+[NOTE]
+====
+This configuration overrides the secret in the `initContainer` to pull the images successfully from that private or authenticated container image registry.
+====
+* For registries that require authentication: Complete the following steps:
+.. Verify that you have logged in to the container image registry.
++
+[source,yaml]
+----
+podman login <registry>
+----
++
+[NOTE]
+====
+If you are using quay or another container registry, use the appropriate tokens. For more information, see link:https://access.redhat.com/articles/RegistryAuthentication#using-authentication-3[Using authentication].
+====
+.. Verify the content of the `auth.json` file created after the login.
++
+[source,yaml]
+----
+cat ${XDG_RUNTIME_DIR}/containers/auth.json | jq
+----
+.. Create a secret file using the `auth.json` key for the local file with the credentials of the container image registry. For example: 
++
+[source,yaml]
+----
+oc create secret generic _<your_install_method_>_-dynamic-plugins-registry-auth --from-file=auth.json=registry-auth.json
+----
 . To perform an integrity check, use the image digest in place of the tag in the `dynamic-plugins.yaml` file as follows:
 +
 --
