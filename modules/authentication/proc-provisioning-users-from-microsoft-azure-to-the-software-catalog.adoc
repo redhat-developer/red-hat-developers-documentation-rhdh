@@ -8,7 +8,17 @@ To authenticate users with Microsoft Azure, after xref:enabling-authentication-w
 * You have xref:enabling-authentication-with-microsoft-azure[enabled authentication with Microsoft Azure].
 
 .Procedure
-* To enable Microsoft Azure member discovery, edit your custom {product-short} ConfigMap, such as `app-config-rhdh`, and add following lines to the `{my-app-config-file}` content:
+. link:{installing-and-viewing-plugins-book-url}[Enable the `backstage-plugin-catalog-backend-module-msgraph-dynamic` plugin].
++
+.`dynamic-plugins.yaml` file fragment
+[code,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-msgraph-dynamic'
+    disabled: false
+----
+
+. To enable {azure-brand-name} member discovery, edit `{my-app-config-file}`, your custom {product-short} configuration file::
 +
 [id=microsoftGraphOrgProviderId]
 .`{my-app-config-file}` fragment with mandatory `microsoftGraphOrg` fields
@@ -22,6 +32,10 @@ catalog:
         tenantId: ${AUTH_AZURE_TENANT_ID}
         clientId: ${AUTH_AZURE_CLIENT_ID}
         clientSecret: ${AUTH_AZURE_CLIENT_SECRET}
+        schedule:
+          frequency: { hours: 1 }
+          timeout: { minutes: 50 }
+          initialDelay: { minutes: 50 }
 ----
 
 `target: https://graph.microsoft.com/v1.0`::
@@ -30,6 +44,19 @@ You might change this parameter to use a different version, such as the link:htt
 
 `tenandId`, `clientId` and `clientSecret`::
 Use the {product-short} application information you created in Microsoft Azure and configured in OpenShift as secrets.
+
+`schedule`::
+
+`frequency`:::
+Enter the schedule frequency as cron, ISO duration, or human duration as used in code.
+
+`timeout`:::
+Enter the schedule timeout as ISO duration or human duration as used in code.
+
+`initialDelay`:::
+Enter the schedule initial delay as ISO duration or human duration as used in code.
++
+TIP: In a large organization, this plugin can take a long time. Therefore, avoid setting a low frequency or timeout when importing a large number of users and groups for the first time.
 
 Optional: Consider adding the following optional `microsoftGraphOrg.providerId` fields:
 
@@ -226,51 +253,6 @@ catalog:
       providerId:
         group:
           select: ['id', 'displayName', 'description']
-----
-
-`schedule.frequency`::
-To specify custom schedule frequency.
-Supports cron, ISO duration, and "human duration" as used in code.
-+
-.`{my-app-config-file}` fragment with optional `schedule.frequency` field
-[source,yaml]
-----
-catalog:
-  providers:
-    microsoftGraphOrg:
-      providerId:
-        schedule:
-          frequency: { hours: 1 }
-----
-
-`schedule.timeout`::
-To specify custom timeout.
-Supports ISO duration and "human duration" as used in code.
-+
-.`{my-app-config-file}` fragment with optional `schedule.timeout` field
-[source,yaml]
-----
-catalog:
-  providers:
-    microsoftGraphOrg:
-      providerId:
-        schedule:
-          timeout: { minutes: 50 }
-----
-
-`schedule.initialDelay`::
-To specify custom initial delay.
-Supports ISO duration and "human duration" as used in code.
-+
-.`{my-app-config-file}` fragment with optional `schedule.initialDelay` field
-[source,yaml]
-----
-catalog:
-  providers:
-    microsoftGraphOrg:
-      providerId:
-        schedule:
-          initialDelay: { seconds: 15}
 ----
 
 .Verification
