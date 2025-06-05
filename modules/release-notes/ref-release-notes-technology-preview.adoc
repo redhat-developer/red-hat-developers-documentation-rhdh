@@ -22,3 +22,62 @@ For more information about Extensions, see link:https://docs.redhat.com/en/docum
 .Additional resources
 * link:https://issues.redhat.com/browse/RHIDP-2757[RHIDP-2757]
 
+[id="feature-rhidp-5484"]
+== Loading authentication providers from dynamic plugins
+
+In {product} {product-version}, loading authentication providers or modules from dynamic plugins is available as a Technology Preview feature, enabling greater flexibility and customization. The key improvements include:
+
+* Environment variable control:
+** A new `ENABLE_AUTH_PROVIDER_MODULE_OVERRIDE` environment variable determines whether the backend installs the default authentication provider module.
+** When the new environment variable is enabled, dynamic plugins can be used to supply custom authentication providers.
+
+* Custom sign-in page support:
++
+--
+** A new `signInPage` configuration allows front-end dynamic plugins to provide a custom `SignInPage` component.
++
+.Example configuration
+[source,yaml]
+----
+dynamicPlugins:
+ frontend:
+   my-plugin-package:
+     signInPage:
+       importName: CustomSignInPage
+----
+
+** The exported `CustomSignInPage` will be mapped to `components.SignInPage` during front-end initialization.
+--
+
+* Authentication provider settings:
++
+--
+** A new `providerSettings` configuration field allows front-end dynamic plugins to define authentication provider settings for display in the *Authentication Providers* tab on the *Settings* page.
++
+.Example configuration
+[source,yaml]
+----
+dynamicPlugins:
+ frontend:
+   my-plugin-package:
+     providerSettings:
+- title: Github Two
+description: Sign in with GitHub Org Two
+provider: core.auth.github-two
+----
+
+** Each `providerSettings` entry creates a corresponding row in the *Authentication Providers* tab. The provider field must match the string used in `createApiRef` when defining the API reference:
++
+.Example configuration
+[source,javascript]
+----
+export const ghTwoAuthApiRef: ApiRef<
+ OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+> = createApiRef({
+ id: 'core.auth.github-two', // <--- this string
+})
+----
+--
+
+For more information, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html-single/authentication_in_red_hat_developer_hub/index[Authentication in {product}].
+
