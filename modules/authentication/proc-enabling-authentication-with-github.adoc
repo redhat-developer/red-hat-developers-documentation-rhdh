@@ -12,90 +12,120 @@ To authenticate users with GitHub, enable the GitHub authentication provider in 
 Opt for a GitHub App instead of an OAuth app to use fine-grained permissions, gain more control over which repositories the application can access, and use short-lived tokens.
 
 .. link:https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app[Register a GitHub App] with the following configuration:
-+
-* *GitHub App name*: Enter a unique name identifying your GitHub App, such as __<{product}>__-__<GUID>__.
-* *Homepage URL*: Your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
-* *Authorization callback URL*: Your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/github/handler/frame]`.
-* *Webhook URL*: Your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
-* *Webhook secret*: Provide a strong secret.
-* *Repository permissions*:
-** Enable `Read-only` access to:
-*** *Administration*
-*** *Commit statuses*
-*** *Contents*
-*** *Dependabot alerts*
-*** *Deployments*
-*** *Pull Requests*
-*** *Webhooks*
-+
-TIP: If you plan to make changes using the GitHub API, ensure that `Read and write` permissions are enabled instead of `Read-only`.
 
-** Toggle other permissions as per your needs.
+GitHub App name::
+Enter a unique name identifying your GitHub App, such as `Authenticating-with-{product-very-short}-__<GUID>__`.
 
-* *Organization permissions*:
-** Enable `Read-only` access to *Members*.
+Homepage URL::
+Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
 
-* For *Where can this GitHub App be installed?*, select `Only on this account`.
+Authorization callback URL::
+Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/github/handler/frame]`.
+
+Webhook URL:: Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+
+Webhook secret::
+Not required.
+
+Repository permissions::
+Not required.
+
+Organization permissions::
+Enable `Read-only` access to *Members*.
+
+Where can this GitHub App be installed?::
+Select `Only on this account`.
 
 .. In the *General* -> *Clients secrets* section, click *Generate a new client secret*.
-
-.. In the *General* -> *Private keys* section, click *Generate a private key*.
 
 .. In the *Install App* tab, choose an account to install your GitHub App on.
 
 .. Save the following values for the next step:
 
-* **App ID**
 * **Client ID**
 * **Client secret**
-* **Private key**
-* **Webhook secret**
 
 . To add your GitHub credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets]:
 +
-`AUTH_GITHUB_APP_ID`:: Enter the saved **App ID**.
-`AUTH_GITHUB_CLIENT_ID`:: Enter the saved **Client ID**.
-//`GITHUB_HOST_DOMAIN`:: Enter your GitHub host domain: `github.com` unless you are using GitHub Enterprise.
-`GITHUB_ORGANIZATION`:: Enter your GitHub organization name, such as `__<your_github_organization_name>__'.
-`GITHUB_ORG_URL`:: Enter `$GITHUB_HOST_DOMAIN/$GITHUB_ORGANIZATION`.
-`GITHUB_CLIENT_SECRET`:: Enter the saved **Client Secret**.
-`GITHUB_PRIVATE_KEY_FILE`:: Enter the saved **Private key**.
-`GITHUB_WEBHOOK_URL`:: Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
-`GITHUB_WEBHOOK_SECRET`:: Enter the saved *Webhook secret*.
+`AUTHENTICATION_GITHUB_CLIENT_ID`::
+Enter the saved **Client ID**.
+`AUTHENTICATION_GITHUB_CLIENT_SECRET`::
+Enter the saved **Client Secret**.
+`AUTHENTICATION_GITHUB_HOST_DOMAIN`::
+Enter the GitHub host domain: `github.com`.
+`AUTHENTICATION_GITHUB_ORGANIZATION`::
+Enter your GitHub organization name, such as `__<your_github_organization_name>__'.
 
-. . To set up the GitHub authentication provider and enable integration with the GitHub API in your {product-short} custom configuration, edit your custom {product-short} config map such as `{my-app-config-config-map}`, and add the following lines to the `{my-app-config-file}` file content:
+. Enable the `backstage-plugin-catalog-backend-module-github-org` plugin.
++
+.`dynamic-plugins.yaml` file fragment
+[code,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org'
+    disabled: false
+----
+
+. To provision GitHub users and groups to the {product-short} software catalog, add the `catalog.providers.githubOrg` section to your custom {product-short} `{my-app-config-file}` configuration file:
++
+--
+[id=githubProviderId]
+.`{my-app-config-file}` fragment with mandatory `catalog.providers.githubOrg` fields
+[source,yaml]
+----
+catalog:
+  providers:
+    githubOrg:
+      githubUrl: "${GITHUB_HOST_DOMAIN}"
+      orgs: [ "${GITHUB_ORGANIZATION}" ]
+      schedule:
+        frequency:
+          minutes: 30
+        initialDelay:
+          seconds: 15
+        timeout:
+          minutes: 15
+----
+
+`githubUrl` and `orgs`::
+Use the {product-short} application information that you have created in GitHub and configured in OpenShift as secrets.
+
+`schedule.frequency`::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`schedule.timeout`::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+`schedule.initialDelay`::
+Enter your schedule initial delay, in the ISO duration or "human duration" format.
+--
+
+. To set up the GitHub authentication provider, add the `auth.providers.github` section to the `{my-app-config-file}` file content:
 +
 .`{my-app-config-file}` file fragment with mandatory fields to enable authentication with GitHub
 [source,yaml]
 ----
 auth:
-  environment: production # <1>
+  environment: production
   providers:
     github:
       production:
-        clientId: ${AUTH_GITHUB_CLIENT_ID} # <2>
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
         clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-integrations:
-  github:
-    - host: ${GITHUB_HOST_DOMAIN}
-      apps:
-        - appId: ${AUTH_GITHUB_APP_ID}
-          clientId: ${AUTH_GITHUB_CLIENT_ID}
-          clientSecret: ${GITHUB_CLIENT_SECRET}
-          webhookUrl: ${GITHUB_WEBHOOK_URL}
-          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
-          privateKey: |
-            ${GITHUB_PRIVATE_KEY_FILE}
-signInPage: github # <3>
+signInPage: github
 ----
-<1> Mark the environment as `production` and disable the Guest login option in the {product-short} login page.
-<2> Apply the GitHub credentials configured in your {product-short} secrets.
-<3> To enable the GitHub provider as your {product-short} sign-in provider.
-
-.. Optional: Consider adding the following optional fields:
-
++
+`environment: production`::
+Mark the environment as `production` and disable the Guest login option in the {product-short} login page.
+`clientId: ${AUTH_GITHUB_CLIENT_ID}` and `clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}`::
+Apply the GitHub credentials configured in your {product-short} secrets.
+`signInPage: github`::
+To enable the GitHub provider as your {product-short} sign-in provider.
++
+Optional: Consider adding the following optional fields:
++
 `callbackUrl`::
-The callback URL that GitHub uses when initiating an OAuth flow, such as: __<your_intermediate_service_url/handler>__.
+Enter the callback URL that GitHub uses when initiating an OAuth flow, such as: __<your_intermediate_service_url/handler>__.
 Define it when {product-short} is not the immediate receiver, such as in cases when you use one OAuth app for many {product-short} instances.
 +
 .`{my-app-config-file}` file fragment with optional `enterpriseInstanceUrl` field
@@ -108,24 +138,8 @@ auth:
         callbackUrl: __<your_intermediate_service_url/handler>__
 ----
 
-////
-`enterpriseInstanceUrl`::
-Your GitHub Enterprise URL.
-Requires you defined the `GITHUB_HOST_DOMAIN` secret in the previous step.
-+
-.`{my-app-config-file}` file fragment with optional `enterpriseInstanceUrl` field
-[source,yaml,subs="+quotes"]
-----
-auth:
-  providers:
-    github:
-      production:
-        enterpriseInstanceUrl: ${GITHUB_HOST_DOMAIN}
-----
-////
-
 `sessionDuration`::
-Lifespan of the user session.
+Enter the user session lifespan.
 Enter a duration in `ms` library format (such as '24h', '2 days'), ISO duration, or "human duration" as used in code.
 +
 .`app-config-rhdh.yaml` fragment with optional `sessionDuration` field
@@ -138,14 +152,16 @@ auth:
         sessionDuration: { hours: 24 }
 ----
 
-`signIn` ::
+`signIn`::
 
 `resolvers`:::
-After successful authentication, the user signing in must be resolved to an existing user in the {product-short} catalog. To best match users securely for your use case, consider configuring a specific resolver. Enter the resolver list to override the default resolver: `usernameMatchingUserEntityName`.
+After successful authentication, the user signing in must be resolved to an existing user in the {product-short} catalog.
+To best match users securely for your use case, consider configuring a specific resolver.
+Enter the resolver list to override the default resolver: `usernameMatchingUserEntityName`.
 +
 The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
 +
-WARNING: In production mode, only configure one resolver to ensure users are securely matched. 
+WARNING: In production mode, only configure one resolver to ensure users are securely matched.
 
 `resolver`::::
 Enter the sign-in resolver name.
@@ -174,55 +190,21 @@ auth:
           resolvers:
             - resolver: usernameMatchingUserEntityName
               dangerouslyAllowSignInWithoutUserInCatalog: true
-integrations:
-  github:
-    - host: ${GITHUB_HOST_DOMAIN}
-      apps:
-        - appId: ${AUTH_GITHUB_APP_ID}
-          clientId: ${AUTH_GITHUB_CLIENT_ID}
-          clientSecret: ${GITHUB_CLIENT_SECRET}
-          webhookUrl: ${GITHUB_WEBHOOK_URL}
-          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
-          privateKey: |
-            ${GITHUB_PRIVATE_KEY_FILE}
 signInPage: github
 ----
 
-[TIP]
-====
-To enable GitHub integration with a different authentication provider, complete the following configurations:
-
-* Add the GitHub provider to the existing `auth` section.
-* Keep the `signInPage` section from your authentication provider configuration.
-
-.`{my-app-config-file}` file fragment with mandatory fields to enable GitHub integration and use a different authentication provider
-[source,yaml,subs="+quotes"]
-----
-auth:
-  environment: production
-  providers:
-    github:
-      production:
-        clientId: ${AUTH_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
-    __<your_other_authentication_providers_configuration>__
-integrations:
-  github:
-    - host: ${GITHUB_HOST_DOMAIN}
-      apps:
-        - appId: ${AUTH_GITHUB_APP_ID}
-          clientId: ${AUTH_GITHUB_CLIENT_ID}
-          clientSecret: ${GITHUB_CLIENT_SECRET}
-          webhookUrl: ${GITHUB_WEBHOOK_URL}
-          webhookSecret: ${GITHUB_WEBHOOK_SECRET}
-          privateKey: |
-            ${GITHUB_PRIVATE_KEY_FILE}
-signInPage: __<your_main_authentication_provider>__
-----
-====
-
 .Verification
-. Go to the {product-short} login page.
-. Your {product-short} sign-in page displays *Sign in using GitHub* and the Guest user sign-in is disabled.
-. Log in with GitHub.
+. To verify user and group provisioning, check the console logs.
++
+.Successful synchronization example:
+[source,json]
+----
+{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Reading GitHub users and teams for org: rhdh-dast","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:production:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:58"}
+{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Read 7 GitHub users and 2 GitHub groups in 0.4 seconds. Committing...","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:production:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:59"}
+----
+
+. To verify GitHub authentication:
+.. Go to the {product-short} login page.
+.. Your {product-short} sign-in page displays *Sign in using GitHub* and the Guest user sign-in is disabled.
+.. Log in with a GitHub account.
 

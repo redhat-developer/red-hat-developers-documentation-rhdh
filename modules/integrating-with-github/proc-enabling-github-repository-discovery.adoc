@@ -1,0 +1,129 @@
+[id="enabling-github-repository-discovery"]
+= Enabling GitHub repository discovery
+
+To authenticate users with GitHub, enable the GitHub authentication provider in {product}.
+
+.Prerequisites
+* You link:{configuring-book-url}[added a custom {product-short} application configuration], and have sufficient permissions to modify it.
+* You have sufficient permissions in GitHub to create and manage a link:https://docs.github.com/en/apps/overview[GitHub App].
+
+.Procedure
+. To allow {product-short} to access the GitHub API, create a GitHub App.
+Opt for a GitHub App instead of an OAuth app to use fine-grained permissions, gain more control over which repositories the application can access, and use short-lived tokens.
+
+.. link:https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app[Register a GitHub App] with the following configuration:
++
+GitHub App name::
+Enter a unique name identifying your GitHub App, such as `Integrating-with-{product-very-short}-__<GUID>__`.
+
+Homepage URL::
+Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+
+Authorization callback URL::
+Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/github/handler/frame]`.
+
+Webhook URL::
+Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+
+Webhook secret::
+Enter a strong secret.
+
+Repository permissions::
+* Enable `Read-only` access to:
+*** *Administration*
+*** *Commit statuses*
+*** *Contents*
+*** *Dependabot alerts*
+*** *Deployments*
+*** *Pull Requests*
+*** *Webhooks*
++
+TIP: If you plan to make changes using the GitHub API, ensure that `Read and write` permissions are enabled instead of `Read-only`.
+
+* Enable other permissions as per your needs.
+
+Organization permissions::
+* Enable `Read-only` access to *Members*.
+
+Where can this GitHub App be installed?::
+Select `Only on this account`.
+
+.. In the *General* -> *Clients secrets* section, click *Generate a new client secret*.
+
+.. In the *General* -> *Private keys* section, click *Generate a private key*.
+
+.. In the *Install App* tab, choose an account to install your GitHub App on.
+
+.. Save the following values for the next step:
+
+* **App ID**
+* **Client ID**
+* **Client secret**
+* **Private key**
+* **Webhook secret**
+
+. To add your GitHub credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets]:
++
+`INTEGRATION_GITHUB_APP_ID`::
+Enter the saved **App ID**.
+`INTEGRATION_GITHUB_CLIENT_ID`::
+Enter the saved **Client ID**.
+`INTEGRATION_GITHUB_CLIENT_SECRET`::
+Enter the saved **Client Secret**.
+`INTEGRATION_GITHUB_HOST_DOMAIN`::
+Enter the GitHub host domain: `github.com`.
+`INTEGRATION_GITHUB_ORGANIZATION`::
+Enter your GitHub organization name, such as `__<your_github_organization_name>__'.
+`INTEGRATION_GITHUB_PRIVATE_KEY_FILE`::
+Enter the saved **Private key**.
+`INTEGRATION_GITHUB_WEBHOOK_SECRET`::
+Enter the saved *Webhook secret*.
+`INTEGRATION_GITHUB_WEBHOOK_URL`::
+Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+
+. Enable the `plugin-catalog-backend-module-github` plugin in your `dynamic-plugins.yaml` file.
++
+This plugin discovers catalog entities by scanning repositories within a GitHub organization for `catalog-info.yaml` files.
+It provides an automated alternative to manually registering components via `catalog.locations`.
+When a repository contains a `catalog-info.yaml` file, the entity is ingested into the catalog as a component.
++
+.`dynamic-plugins.yaml` file fragment
+[code,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github'
+    disabled: false
+----
+
+. To enable GitHub integration with a different authentication provider, add the `catalog.providers.github` and the `integration.github` sections to your custom {product-short} `{my-app-config-file}` configuration file:
++
+.`{my-app-config-file}` file fragment with mandatory fields to enable GitHub integration
+[source,yaml,subs="+quotes"]
+----
+catalog:
+  providers:
+    github:
+      providerId:
+        organization: "${INTEGRATION_GITHUB_ORGANIZATION}"
+        schedule:
+          frequency:
+            minutes: 30
+          initialDelay:
+            seconds: 15
+          timeout:
+            minutes: 15
+integrations:
+  github:
+    - host: ${INTEGRATION_GITHUB_HOST_DOMAIN}
+      apps:
+        - appId: ${INTEGRATION_GITHUB_APP_ID}
+          clientId: ${INTEGRATION_GITHUB_CLIENT_ID}
+          clientSecret: ${INTEGRATION_GITHUB_CLIENT_SECRET}
+          webhookUrl: ${INTEGRATION_GITHUB_WEBHOOK_URL}
+          webhookSecret: ${INTEGRATION_GITHUB_WEBHOOK_SECRET}
+          privateKey: |
+            ${INTEGRATION_GITHUB_PRIVATE_KEY_FILE}
+----
+
+.Verification
+. TODO
