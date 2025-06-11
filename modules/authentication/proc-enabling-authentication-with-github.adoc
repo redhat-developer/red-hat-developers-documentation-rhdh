@@ -37,7 +37,8 @@ Select `Only on this account`.
 * **Client ID**
 * **Client secret**
 
-. To add your GitHub credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets]:
+. To add your GitHub credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their respective environment variable name.
 +
 `AUTHENTICATION_GITHUB_CLIENT_ID`::
 Enter the saved **Client ID**.
@@ -49,7 +50,7 @@ Enter the saved **Client Secret**.
 Enter the GitHub host domain: `github.com`.
 
 `AUTHENTICATION_GITHUB_ORGANIZATION`::
-Enter your GitHub organization name, such as `__<your_github_organization_name>__'.
+Enter your GitHub organization name, such as `__<your_github_organization_name>__`.
 
 . Enable the `backstage-plugin-catalog-backend-module-github-org` plugin.
 +
@@ -82,8 +83,11 @@ catalog:
           minutes: 15
 ----
 
-`githubUrl` and `orgs`::
-Use the configured secrets.
+`githubUrl`::
+Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_HOST_DOMAIN}`.
+
+`orgs`::
+Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_ORGANIZATION}`.
 
 `schedule.frequency`::
 Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
@@ -97,6 +101,7 @@ Enter your schedule initial delay, in the ISO duration or "human duration" forma
 
 . To set up the GitHub authentication provider, add the `auth.providers.github` section to the `{my-app-config-file}` file content:
 +
+--
 .`{my-app-config-file}` file fragment with mandatory fields to enable authentication with GitHub
 [source,yaml]
 ----
@@ -109,16 +114,40 @@ auth:
         clientSecret: ${AUTHENTICATION_GITHUB_CLIENT_SECRET}
 signInPage: github
 ----
-+
-`environment: production`::
-Mark the environment as `production` and disable the Guest login option in the {product-short} login page.
-`clientId: ${AUTHENTICATION_GITHUB_CLIENT_ID}` and `clientSecret: ${AUTHENTICATION_GITHUB_CLIENT_SECRET}`::
-Apply the GitHub credentials configured in your {product-short} secrets.
-`signInPage: github`::
-To enable the GitHub provider as your {product-short} sign-in provider.
-+
+
+`environment`::
+Enter `production` to disable the Guest login option in the {product-short} login page.
+
+`clientId`::
+Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_CLIENT_SECRET}`.
+
+`signInPage`::
+Enter `github` to enable the GitHub provider as your {product-short} sign-in provider.
+
 Optional: Consider adding the following optional fields:
-+
+
+.`{my-app-config-file}` file fragment including optional fields to enable authentication with GitHub
+[source,yaml,subs="+quotes"]
+----
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${AUTHENTICATION_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTHENTICATION_GITHUB_CLIENT_SECRET}
+        callbackUrl: __<your_intermediate_service_url/handler>__
+        sessionDuration: { hours: 24 }
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+signInPage: github
+----
+
 `callbackUrl`::
 Enter the callback URL that GitHub uses when initiating an OAuth flow, such as: __<your_intermediate_service_url/handler>__.
 Define it when {product-short} is not the immediate receiver, such as in cases when you use one OAuth app for many {product-short} instances.
@@ -134,8 +163,7 @@ auth:
 ----
 
 `sessionDuration`::
-Enter the user session lifespan.
-Enter a duration in `ms` library format (such as '24h', '2 days'), ISO duration, or "human duration" as used in code.
+Enter the user session lifespan, in `ms` library format (such as '24h', '2 days'), ISO duration, or "human duration".
 +
 .`app-config-rhdh.yaml` fragment with optional `sessionDuration` field
 [source,yaml,subs="+quotes"]
@@ -150,7 +178,7 @@ auth:
 `signIn`::
 
 `resolvers`:::
-After successful authentication, the user signing in must be resolved to an existing user in the {product-short} catalog.
+After successful authentication, {product-short} resolves the user signing in to an existing user in the {product-short} catalog.
 To best match users securely for your use case, consider configuring a specific resolver.
 Enter the resolver list to override the default resolver: `usernameMatchingUserEntityName`.
 +
@@ -187,6 +215,7 @@ auth:
               dangerouslyAllowSignInWithoutUserInCatalog: true
 signInPage: github
 ----
+--
 
 .Verification
 . To verify user and group provisioning, check the console logs.
