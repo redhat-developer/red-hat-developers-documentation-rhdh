@@ -1,0 +1,154 @@
+[id="enabling-github-repository-discovery"]
+= Enabling GitHub repository discovery
+
+Consider configuring {product-short} to discover and ingest your GitHub repositories automatically.
+If a repository contains a `catalog-info.yaml` file, {product-short} ingests the repository into the catalog as a component.
+
+.Prerequisites
+* You link:{configuring-book-url}[added a custom {product-short} application configuration], and have sufficient permissions to modify it.
+
+* You have sufficient permissions in GitHub to create and manage a link:https://docs.github.com/en/apps/overview[GitHub App].
+
+.Procedure
+. To allow {product-short} to access the GitHub API, create a GitHub App.
+Opt for a GitHub App instead of an OAuth app to use fine-grained permissions, gain more control over which repositories the application can access, and use short-lived tokens.
+
+.. link:https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app[Register a GitHub App] with the following configuration:
+
+GitHub App name::
+Enter a unique name identifying your GitHub App, such as `integrating-with-rhdh-__<GUID>__`.
+
+Homepage URL::
+Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+
+Authorization callback URL::
+Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/github/handler/frame]`.
+
+Webhook::
+Clear "Active", as this is not needed for authentication and catalog providers. 
+
+App permissions::
+Select permissions to define the level of access for the app.
+Adapt permissions to your needs:
+
+Reading software components:::
+
+Contents::::
+`Read-only`
+
+Commit statuses::::
+`Read-only`
+
+Reading organization data:::
+
+Members::::
+`Read-only`
+
+Publishing software templates:::
+Set permissions if you intend to use the same GitHub App for software templates.
+
+Administration::::
+`Read & write` (for creating repositories)
+
+Contents::::
+`Read & write`
+
+Metadata::::
+`Read-only`
+
+Pull requests::::
+`Read & write`
+
+Issues::::
+`Read & write`
+
+Workflows::::
+`Read & write` (if templates include GitHub workflows)
+
+Variables::::
+`Read & write` (if templates include GitHub Action Repository Variables)
+
+Secrets::::
+`Read & write` (if templates include GitHub Action Repository Secrets)
+
+Environments::::
+`Read & write` (if templates include GitHub Environments)
+
+Organization permissions::
+Members:::
+`Read-only`
+
+Where can this GitHub App be installed?::
+Select `Only on this account`.
+
+.. In the *General* -> *Clients secrets* section, click *Generate a new client secret*.
+
+.. In the *General* -> *Private keys* section, click *Generate a private key*.
+
+.. In the *Install App* tab, choose an account to install your GitHub App on.
+
+.. Save the following values for the next step:
+
+* **App ID**
+* **Client ID**
+* **Client secret**
+* **Private key**
+
+. To add your GitHub credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their respective environment variable name.
+
+`GITHUB_INTEGRATION_APP_ID`::
+Enter the saved **App ID**.
+`GITHUB_INTEGRATION_CLIENT_ID`::
+Enter the saved **Client ID**.
+`GITHUB_INTEGRATION_CLIENT_SECRET`::
+Enter the saved **Client Secret**.
+`GITHUB_INTEGRATION_HOST_DOMAIN`::
+Enter the GitHub host domain: `github.com`.
+`GITHUB_INTEGRATION_ORGANIZATION`::
+Enter your GitHub organization name, such as `__<your_github_organization_name>__'.
+`GITHUB_INTEGRATION_PRIVATE_KEY_FILE`::
+Enter the saved **Private key**.
+
+. Enable the `plugin-catalog-backend-module-github` plugin in your `dynamic-plugins.yaml` file.
++
+This plugin discovers catalog entities by scanning repositories within a GitHub organization for `catalog-info.yaml` files.
+It provides an automated alternative to manually registering components via `catalog.locations`.
+When a repository contains a `catalog-info.yaml` file, the entity is ingested into the catalog as a component.
++
+.`dynamic-plugins.yaml` file fragment
+[code,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github'
+    disabled: false
+----
+
+. Configure the GitHub integration, by adding the `catalog.providers.github` and the `integrations.github` sections to your custom {product-short} `{my-app-config-file}` configuration file:
++
+.`{my-app-config-file}` file fragment with mandatory fields to enable GitHub integration
+[source,yaml,subs="+quotes"]
+----
+catalog:
+  providers:
+    github:
+      providerId:
+        organization: "${GITHUB_INTEGRATION_ORGANIZATION}"
+        schedule:
+          frequency:
+            minutes: 30
+          initialDelay:
+            seconds: 15
+          timeout:
+            minutes: 15
+integrations:
+  github:
+    - host: ${GITHUB_INTEGRATION_HOST_DOMAIN}
+      apps:
+        - appId: ${GITHUB_INTEGRATION_APP_ID}
+          clientId: ${GITHUB_INTEGRATION_CLIENT_ID}
+          clientSecret: ${GITHUB_INTEGRATION_CLIENT_SECRET}
+          privateKey: |
+            ${GITHUB_INTEGRATION_PRIVATE_KEY_FILE}
+----
+
