@@ -1,12 +1,12 @@
-[id="enabling-authentication-with-rhbk"]
-= Enabling authentication with {rhbk-brand-name} ({rhbk})
+[id="enabling-user-authentication-with-rhbk"]
+= Enabling user authentication with {rhbk-brand-name} ({rhbk})
 
-To authenticate users with {rhbk-brand-name} ({rhbk}), enable the OpenID Connect (OIDC) authentication provider in {product}.
-
+To authenticate users with {rhbk-brand-name} ({rhbk}), enable and configure the OpenID Connect (OIDC) authentication provider in {product} and provision the users and groups from {rhbk} to the {product-short} software catalog.
 
 .Prerequisites
 * You link:{configuring-book-url}[added a custom {product-short} application configuration], and have sufficient permissions to modify it.
 * You have sufficient permissions in {rhsso} to create and manage a realm.
+Alternatively, you can ask your {rhbk} administrator to prepare the required {rhbk} App.
 
 .Procedure
 . To allow {product-short} to authenticate with {rhbk}, complete the steps in {rhbk}, to link:https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-create-a-realm[create a realm and a user] and link:https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-secure-the-first-application[secure the first application]:
@@ -25,11 +25,158 @@ Save the value for the next step:
 
 .. To prepare for the verification steps, in the same realm, get the credential information for an existing user or link:https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html-single/getting_started_guide/index#getting-started-zip-create-a-user[create a user]. Save the user credential information for the verification steps.
 
-. To add your {rhsso} credentials to your {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets]:
+. To add your {rhsso} credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their respective environment variable name.
 +
-`AUTH_OIDC_CLIENT_ID`:: Enter the saved **Client ID**.
-`AUTH_OIDC_CLIENT_SECRET`:: Enter the saved **Client Secret**.
-`AUTH_OIDC_METADATA_URL`:: Enter the saved **{rhbk} realm base URL**.
+`AUTH_OIDC_CLIENT_ID`::
+Enter the saved **Client ID**.
+
+`AUTH_OIDC_CLIENT_SECRET`::
+Enter the saved **Client Secret**.
+
+`AUTH_OIDC_METADATA_URL`::
+Enter the saved **{rhbk} realm base URL**.
+
+. Enable the Keycloak organization plugin (`backstage-plugin-catalog-backend-module-keycloak-dynamic`).
+The plugin is named after {rhbk} upstream project.
+This plugin ingests {rhbk} users and groups to the {product-short} software catalog.
++
+.`dynamic-plugins.yaml` file fragment
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-keycloak-dynamic'
+    disabled: false
+----
+
+. To provision {rhbk} users and groups to the {product-short} software catalog, add the `catalog.providers.keycloakOrg` section to your custom {product-short} `{my-app-config-file}` configuration file:
++
+--
+[id=keycloakOrgProviderId]
+.`{my-app-config-file}` fragment with mandatory `keycloakOrg` fields
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        baseUrl: ${AUTH_OIDC_METADATA_URL}
+        clientId: ${AUTH_OIDC_CLIENT_ID}
+        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
+----
+
+`baseUrl`::
+Your {rhbk} server URL, defined when xref:enabling-user-authentication-with-rhbk[enabling authentication with {rhbk}].
+
+`clientId`::
+Your {product-short} application client ID in {rhbk}, defined when xref:enabling-user-authentication-with-rhbk[enabling authentication with {rhbk}].
+
+`clientSecret`::
+Your {product-short} application client secret in {rhbk}, defined when xref:enabling-user-authentication-with-rhbk[enabling authentication with {rhbk}].
+
+Optional: Consider adding the following optional fields:
+
+`realm`::
+Realm to synchronize.
+Default value: `master`.
++
+.`{my-app-config-file}` fragment with optional `realm` field
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        realm: master
+----
+
+`loginRealm`::
+Realm used to authenticate.
+Default value: `master`.
++
+.`{my-app-config-file}` fragment with optional `loginRealm` field
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        loginRealm: master
+----
+
+`userQuerySize`::
+User number to query simultaneously.
+Default value: `100`.
++
+.`{my-app-config-file}` fragment with optional `userQuerySize` field
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        userQuerySize: 100
+----
+
+`groupQuerySize`::
+Group number to query simultaneously.
+Default value: `100`.
++
+.`{my-app-config-file}` fragment with optional `groupQuerySize` field
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        groupQuerySize: 100
+----
+
+`schedule.frequency`::
+To specify custom schedule frequency.
+Supports cron, ISO duration, and "human duration" as used in code.
++
+.`{my-app-config-file}` fragment with optional `schedule.frequency` field
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          frequency: { hours: 1 }
+----
+
+`schedule.timeout`::
+To specify custom timeout.
+Supports ISO duration and "human duration" as used in code.
++
+.`{my-app-config-file}` fragment with optional `schedule.timeout` field
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          timeout: { minutes: 50 }
+----
+
+`schedule.initialDelay`::
+To specify custom initial delay.
+Supports ISO duration and "human duration" as used in code.
++
+.`{my-app-config-file}` fragment with optional `schedule.initialDelay` field
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        schedule:
+          initialDelay: { seconds: 15}
+----
+--
 
 . To set up the {rhbk} authentication provider in your {product-short} custom configuration, edit your custom {product-short} ConfigMap such as `app-config-rhdh`, and add the following lines to the `{my-app-config-file}` content:
 
@@ -132,10 +279,19 @@ WARNING: In production mode, only configure one resolver to ensure users are sec
 `resolver`::::
 Enter the sign-in resolver name.
 Available values:
-* `oidcSubClaimMatchingKeycloakUserId`
-* `emailLocalPartMatchingUserEntityName`
-* `emailMatchingUserEntityProfileEmail`
-* `preferredUsernameMatchingUserEntityName`
+
+`oidcSubClaimMatchingKeycloakUserId`:::::
+Matches the user with the immutable `sub` parameter from OIDC to the {RHBK} user ID.
+Consider using this resolver for enhanced security.
+
+`emailLocalPartMatchingUserEntityName`:::::
+Matches the email local part with the user entity name.
+
+`emailMatchingUserEntityProfileEmail`:::::
+Matches the email with the user entity profile email.
+
+`preferredUsernameMatchingUserEntityName`:::::
+Matches the preferred username with the user entity name.
 +
 .`{my-app-config-file}` fragment with optional `resolvers` list
 [source,yaml]
@@ -212,6 +368,17 @@ If multiple valid refresh tokens are issued due to frequent refresh token reques
 ====
 
 .Verification
-. Go to the {product-short} login page.
-. Your {product-short} sign-in page displays *Sign in using OIDC* and the Guest user sign-in is disabled.
-. Log in with OIDC by using the saved **Username** and **Password** values.
+
+. To verify user and group provisioning, check the console logs.
++
+.Successful synchronization example:
+[source,json]
+----
+{"class":"KeycloakOrgEntityProvider","level":"info","message":"Read 3 Keycloak users and 2 Keycloak groups in 1.5 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
+{"class":"KeycloakOrgEntityProvider","level":"info","message":"Committed 3 Keycloak users and 2 Keycloak groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
+----
+
+. To verify {rhbk} user authentication:
+.. Go to the {product-short} login page.
+.. Your {product-short} sign-in page displays *Sign in using OIDC* and the Guest user sign-in is disabled.
+.. Log in with OIDC by using the saved **Username** and **Password** values.
