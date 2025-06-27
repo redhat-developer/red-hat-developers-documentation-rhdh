@@ -1,0 +1,149 @@
+// Module included in the following assemblies:
+//
+// [WIP] file created but not currently part of any assembly or title
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-techdocs-addon-create_{context}"]
+== Creating a TechDocs add-on
+
+If your organization has documentation needs that are not met by the functions of existing TechDocs add-ons, developers can create a new add-on for your TechDocs plugin.
+
+A TechDocs add-on is a React component that is imported from a front-end plugin. If you do not have an existing plugin that you can use to export your TechDocs add-on, you can create a new plugin by using `backstage-cli` to generate a default front-end plugin structure that you can customize.
+
+The folder structure of a new plugin that can be used to import TechDocs add-ons into the TechDocs plugin looks similar to the following example:
+[source,json,subs="+attributes,+quotes"]
+----
+_<new_plugin_for_techdocs_add-on>_/
+   dev/
+       index.ts
+   src/
+       components/
+         _<new_techdocs_add-on_component>_/
+              _<new_techdocs_add-on_component>_.test.tsx
+              _<new_techdocs_add-on_component>_.tsx
+               index.ts
+         _<new_techdocs_add-on_fetch-component>_/
+              _<new_techdocs_add-on_fetch-component>_.test.tsx
+              _<new_techdocs_add-on_fetch-component>_.tsx
+               index.ts
+       index.ts
+       plugin.test.ts
+       plugin.ts
+       routes.ts
+       setupTests.ts
+   .eslintrc.js
+   package.json
+   README.md
+----
+
+.Prerequisites
+* The `yarn` package manager is installed.
+* Docker v3.2.0 or later or Podman v3.2.0 or later is installed and running.
+
+.Procedure
+. In the terminal, navigate to the root folder of the repository where you want to create your new plugin.
+. To create a new front-end plugin, run the following command:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+yarn new
+----
+.Example output
++
+[source,terminal,subs="+quotes"]
+----
+? What do you want to create? plugin - A new frontend plugin
+? Enter the ID of the plugin [required]
+----
++
+. In the terminal prompt, type a name for the new plugin. For example:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+? Enter the ID of the plugin [required] _<new_plugin_for_techdocs_add-on>_
+----
++
+.Example output
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+Successfully created plugin
+----
++
+.Result
+In the `plugins` directory, a sub-directory with the same name that you gave to your plugin is automatically generated. The directory contains all of the files that you need to configure to create your new plugin.
++
+. In the terminal, navigate to your new plugin directory. For example:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+cd plugins/_<new_techdocs_add-on_directory>_
+----
+. Add the`@backstage/plugin-techdocs-react` package to get frontend utilities for TechDocs add-ons. For example:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+yarn add @backstage/plugin-techdocs-react
+----
+. In the directory containing the components of your custom TechDocs add-on, delete any default files or file components that are not required for your add-on, such as the `routes.ts` file or components of the `index.tsx` and `plugins.ts` files.
+. In the `plugins.ts` file, add the following code:
++
+[source,java,subs="+attributes,+quotes"]
+----
+import { createPlugin } from '@backstage/core-plugin-api';
+import { createTechDocsAddonExtension } from '@backstage/plugin-techdocs-react';
+
+export const _<new_plugin_for_techdocs_add-on>_ = createPlugin({
+  id: '_<new_techdocs_add-on>_',
+ });
+
+ /*
+ *
+ * @public
+ */
+export const _<new_techdocs_add-on>_ = _<new_plugin_for_techdocs_add-on>_.provide(
+ createTechDocsAddonExtension<_<new_techdocs_addon_props>_>({
+    name: '_<new_techdocs_add-on>_',
+    location: TechDocsAddonLocations.Content,
+    component: _<new_techdocs_add-on_component>_,
+  }),
+);
+----
++
+where
+
+_<new_plugin_for_techdocs_add-on>_ :: Specifies the new plugin that you use to import the TechDocs add-on to your {product} instance.
+_<new_techdocs_add-on>_ :: Specifies the custom TechDocs add-on that you want to create.
+_<new_techdocs_addon_props>_ (Optional) :: Specifies the `props` for your new TechDocs add-on, as specified in your `_<new_techdocs_add-on>_.tsx` file, if applicable.
+_<new_techdocs_add-on_component>_ :: Specifies the React component for the custom TechDocs add-on that you want to create. You will create this component in a `.tsx` file in a later step.
+. In the `index.ts` file, export the custom TechDocs add-on that you want to create by adding the following code:
++
+[source,java,subs="+attributes,+quotes"]
+----
+export { _<new_plugin_for_techdocs_add-on>_, _<new_techdocs_add-on>_ } from './plugin';
+----
+. Create a new `_<new_techdocs_add-on>_.tsx` file and add the code for your new TechDocs add-on component.
++
+////
+[source,java,subs="+attributes,+quotes"]
+----
+can add example code for this file, if helpful
+can also mention a template that the user can configure, if there is one
+----
+////
+. Create a new `index.tsx` file and use it to export your new TechDocs add-on component by adding the following code:
++
+[source,java,subs="+attributes,+quotes"]
+----
+export { _<new_techdocs_add-on>_, type _<new_techdocs_addon_props>_} from './_<new_techdocs_add-on_directory>_'
+----
++
+where
+
+_<new_techdocs_addon_props>_ (Optional) :: Specifies the `props` for your new TechDocs add-on, as specified in your `_<new_techdocs_add-on>_.tsx` file, if applicable.
+. In the `plugins.ts` file, import your new TechDocs add-on component.
+. Install and configure your new TechDocs add-on by following the steps in link:{techdocs-book-url}#techdocs-addon-installing[Installing and configuring a TechDocs add-on]
+
+.Verification
+. Restart the RHDH application and verify that the plugin is successfully activated and configured.
+. Verify the application logs for confirmation and ensure the plugin is functioning as expected.

@@ -1,0 +1,61 @@
+[id="proc-creating-a-pvc-for-the-dynamic-plugin-cache-by-using-the-operator_{context}"]
+= Creating a PVC for the dynamic plugin cache by using the Operator
+
+For operator-based installations, you must manually create the persistent volume claim (PVC) by replacing the default `dynamic-plugins-root` volume with a PVC named `dynamic-plugins-root`.
+
+.Prerequisites
+* You have installed {product} on {ocp-short} using the {product} Operator.
+* You have installed the {openshift-cli}.
+
+.Procedure
+. Create the persistent volume definition and save it to a file, such as `pvc.yaml`. For example:
++
+[source,yaml]
+----
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-root
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+----
++
+[NOTE]
+====
+This example uses `ReadWriteOnce` as the access mode which prevents multiple replicas from sharing the PVC across different nodes. 
+To run multiple replicas on different nodes, depending on your storage driver, you must use an access mode such as `ReadWriteMany`.
+====
+. To apply this PVC to your cluster, run the following command:
++
+[source,terminal]
+----
+oc apply -f pvc.yaml
+----
+. Replace the default `dynamic-plugins-root` volume with a PVC named `dynamic-plugins-root`. For example:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root
+----
++
+[NOTE]
+To avoid adding a new volume, you must use the `$patch: replace` directive.
