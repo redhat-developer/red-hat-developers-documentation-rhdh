@@ -1,0 +1,82 @@
+[id="configuring-theme-specific-company-logos-for-global-header.adoc_{context}"]
+= Configuring theme-specific company logos for global header and sidebar
+
+You can configure theme-specific company logos in {product} ({product-very-short}) to align with the company's branding and improve visibility across light and dark themes.
+
+The {product-short} theme update changed the *Sidebar* and *Global Header* to use white backgrounds in the light theme.
+Previously, both used black backgrounds in light and dark modes. This change needs theme-aware logos to ensure strong contrast and consistent branding.
+
+.Prerequisites
+You have the required permissions to modify RHDH configuration.
+
+.Procedure
+
+.Updating *Global Header* logo
+* Use the `red-hat-developer-hub.backstage-plugin-global-header` configuration block:
+
+[source,yaml]
+----
+red-hat-developer-hub.backstage-plugin-global-header:
+  mountPoints:
+    - mountPoint: global.header/component
+      importName: CompanyLogo
+      config:
+        priority: 200
+        props:
+          to: '/'
+          logo: <base64_dark_logo>             # Used in dark theme
+          logoLightTheme: <base64_light_logo>   # Used in light theme
+----
+
+.Updating *Sidebar* logo
+
+* Configure the sidebar logos in the `app.branding` section:
+
+[source,yaml]
+----
+app:
+  branding:
+    fullLogo: <base64_dark_logo>               # Used in dark theme
+    fullLogoLightTheme: <base64_light_logo>    # Used in light theme
+----
+
+By default, if you do not provide `fullLogoLightTheme` or `logoLightTheme`, the application uses `logo` or `fullLogo` for both themes.
+
+If `app.sidebar.logo` is set to `true`, you must also configure `app.branding.fullLogoLightTheme` to display the correct logo in light theme.
+
+If you do not configure any logos, the *Sidebar* displays the default RHDH icon for both light and dark themes.
+
+The `CompanyLogo` component and the Sidebar automatically select the correct logo based on the active theme. The application uses the following order of priority:
+
+*Global Header*
+
+* Light theme (highest to Lowest priority):
+
+. `logoLightTheme` (from CompanyLogo props)
+. `app.branding.fullLogoLightTheme`
+. `logo (from `CompanyLogo` props)
+. `app.branding.fullLogo`
+. Default RHDH light theme logo
+
+* Dark theme (highest to lowest priority):
+
+. `logo` (from `CompanyLogo` props)
+. `app.branding.fullLogo`
+. Default RHDH dark theme logo
+
+*Sidebar* (When `app.sidebar.logo` is set to true)
+
+* Light theme:
+
+. `app.branding.fullLogoLightTheme`
+. `app.branding.fullLogo`
+. Default RHDH light theme icon
+
+* Dark Theme:
+
+. `app.branding.fullLogo`
+. Default RHDH dark theme icon
+
+.Verification
+. Switch between light and dark themes in the UI.
+. Confirm that the correct logo appears in both the *Global Header* and *Sidebar* according to the theme.
