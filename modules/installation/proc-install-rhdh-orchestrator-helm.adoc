@@ -1,0 +1,80 @@
+// Module included in the following assemblies
+// assembly-orchestrator-helm-modules.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-install-orchestrator-helm_{context}"]
+= Install Orchestrator Helm
+
+You can install the Orchestrator flavor of {product} ({product-very-short}) on OpenShift using Helm charts, enabling serverless workflows and workflow orchestration capabilities.
+
+.Prerequisites
+
+* You are logged in as an administrator on the OpenShift cluster.
+* You have installed Helm and configured locally.
+* You have access to the {product} Helm chart repository.
+
+.Procedure
+
+. Add required Helm repositories:
++
+[source,yaml]
+----
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add backstage https://backstage.github.io/charts
+helm repo add redhat-developer https://redhat-developer.github.io/rhdh-chart
+----
+
+. Install the orchestrator infrastructure Helm chart:
++
+[source,yaml]
+----
+helm install <release_name> redhat-developer/redhat-developer-hub-orchestrator-infra
+----
+
+. Manually approve the Install Plans for OpenShift Serverless and Serverless Logic Operators and wait for deployment.
+
+. Install the Backstage chart with the orchestrator enabled:
++
+[source,bash]
+----
+helm install <release_name> redhat-developer/backstage --set orchestrator.enabled=true
+----
+
+. To disable serverlessLogicOperator and serverlessOperator if managed externally:
++
+[source,bash]
+
+. (Optional) Enable Notifications and Signals plugins by adding the following to your values.yaml before installation or upgrade:
++
+[source,yaml]
+----
+disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-notifications"
+
+disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-signals"
+
+disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-notifications-backend-dynamic"
+
+disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-signals-backend-dynamic"
+----
+
+. (Optional) If using an external database, add the following configuration in your values.yaml:
++
+[source,yaml]
+----
+externalDBsecretRef:
+externalDBName: "<database_name>"
+externalDBHost: "<database_host>"
+externalDBPort: "<database_port>"
+----
+
+.Verification
+
+. Verify that the orchestrator plugin is visible in the {product} UI.
+
+. Test creating and executing workflows to confirm orchestration is functioning correctly.
+
+. Check orchestrator pod logs to confirm successful workflow execution and plugin readiness.
