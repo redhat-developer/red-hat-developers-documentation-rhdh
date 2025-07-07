@@ -1,0 +1,131 @@
+[id="proc-customizing-and-extending-entity-tabs"]
+
+= Customizing and extending entity tabs
+
+You can customize and extend the set of tabs using the `entityTabs` configuration as follows:
+
+[source,yaml]
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          <package_name>: # same as `scalprum.name` key in plugin's `package.json`
+            entityTabs:
+              # Adding a new tab
+              - path: /new-path
+                title: My New Tab
+                mountPoint: entity.page.my-new-tab
+              # Change an existing tab's title or mount point
+              - path: /
+                title: General
+                mountPoint: entity.page.overview #this can be customized too
+              # Prioritizing tabs (higher priority appears first)
+              - path: "/pr" #  <1>
+                title: "Changed Pull/Merge Requests" # <2>
+                priority: 1 # Added priority field
+                mountPoint: "entity.page.pull-requests" # <3>
+              # Negative priority hides default tabs
+              - path: "/"
+                title: "Changed Overview"
+                mountPoint: "entity.page.overview"
+                priority: -6 # <4>
+----
+<1> Specify the sub-path route in the catalog where this tab is available.
+<2> Specify the title you want to display.
+<3> The base mount point name that is available on the tab. This name is expanded to create two mount points per tab, one appended with` /context` and the second appended with `/cards`.
+<4> Specify the order of tabs. The tabs with higher priority values appear first.
+
+You can configure dynamic front-end plugins to target the mount points exposed by the entityTabs configuration. The following are the default catalog entity routes in the default order:
+
+.Input parameters
+[cols="20%,20%,30%,30%", frame="all", options="header"]
+|===
+|Route
+|Title
+|Mount Point
+|Entity Kind
+
+|`/`
+|Overview
+|`entity.page.overview`
+|Any
+
+|`/topology`
+|Topology
+|`entity.page.topology`
+|Any
+
+|`/issues`
+|Issues
+|`entity.page.issues`
+|Any
+
+|`/pr`
+|CPull/Merge Requests
+|`entity.page.pull-requests`
+|Any
+
+|`/ci`
+|CI
+|`entity.page.ci``
+|VAny
+
+|`/cd`
+|CD
+|`entity.page.cd`
+|Any
+
+|`/kubernetes`
+|Kubernetes
+|`entity.page.kubernetes`
+|Any
+
+|`/image-registry`
+|Image Registry
+|`entity.page.image-registry`
+|Any
+
+|`/monitoring`
+|Monitoring
+|`entity.page.monitoring`
+|Any
+
+|`/lighthouse`
+|Lighthouse
+|`entity.page.lighthouse`
+|Any
+
+|`/api`
+|Api
+|`entity.page.api`
+|kind: Service or kind: Component
+
+|`/dependencies`
+|Dependencies
+|`entity.page.dependencies`
+|kind: Component
+
+|`/docs`
+|Docs
+|`entity.page.docs`
+|Any
+
+|`/definition`
+|Definition
+|`entity.page.definition`
+|kind: API
+
+|`/system`
+|Diagram
+|`entity.page.diagram`
+|kind: System
+|===
+
+[NOTE]
+====
+Mount points within Catalog such as _`entity.page.*`_ are rendered as tabs and become visible only if at least one plugin contributes to them, or if they can render static content.
+====
