@@ -1,0 +1,43 @@
+[id="proc-binding-to-existing-plugins"]
+
+= Binding to existing plugins
+
+You can bind to existing plugins and their routes, and declare new targets sourced from dynamic plugins as shown in the following `routeBindings` configuration:
+
+[source,yaml]
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          <package_name>: # same as `scalprum.name` key in plugin's `package.json`
+            routeBindings:
+              targets: # Declare a new bind target
+                - name: barPlugin # Optional, defaults to importName. Explicit name of the plugin that exposes the bind target
+                  importName: barPlugin # Required. Explicit import name that reference a BackstagePlugin<{}> implementation.
+                  module: CustomModule # Optional, same as key in `scalprum.exposedModules` key in plugin's `package.json`
+              bindings:
+                - bindTarget: "barPlugin.externalRoutes" # Required. One of the supported or imported bind targets
+                  bindMap: # <1>
+                    headerLink: "fooPlugin.routes.root"
+----
+<1> A required map of route bindings and is similar to `bind` function options
+
+To configure `routeBindings`, complete the following steps:
+
+. Define new targets using `routeBindings.targets`. Set the required `importName` to a `BackstagePlugin<{}>` implementation.
+
+. Declare route bindings using the *routeBindings.bindings* field by setting `bindTarget` to the name of the target to bind to. This can be a dynamic or static target, such as:
++
+** `catalogPlugin.externalRoutes`
+
+** `catalogImportPlugin.externalRoutes`
+
+** `techdocsPlugin.externalRoutes`
+
+** `scaffolderPlugin.externalRoutes`
++
+You can extend existing pages with additional content using mount points, which are predefined identifiers available throughout the application.
