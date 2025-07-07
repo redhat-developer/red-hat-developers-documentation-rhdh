@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Orchestrator flavor installation using Helm</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub (RHDH) administrator, you can install and configure the Orchestrator flavor using Helm, ensuring your environment is prepared for workflow orchestration with Red Hat Developer Hub."/><link rel="next" href="#install-rhdh-orchestrator-helm_orchestrator-helm" title="1. Installing Red Hat Developer Hub with Orchestrator using Helm"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45390067640720"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.7</span></div><div><h1 class="title">Orchestrator flavor installation using Helm</h1></div><div><h3 class="subtitle"><em>Install, configure, and manage the Orchestrator flavor in Red Hat Developer Hub using Helm </em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45390053509984">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				As a Red Hat Developer Hub (RHDH) administrator, you can install and configure the Orchestrator flavor using Helm, ensuring your environment is prepared for workflow orchestration with Red Hat Developer Hub.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#install-rhdh-orchestrator-helm_orchestrator-helm">1. Installing Red Hat Developer Hub with Orchestrator using Helm</a></span><ul><li><span class="section"><a href="#proc-install-orchestrator-helm_install-rhdh-orchestrator-helm">1.1. Install Orchestrator Helm</a></span></li></ul></li></ul></div><section class="section" id="install-rhdh-orchestrator-helm_orchestrator-helm"><div class="titlepage"><div><div><h2 class="title">1. Installing Red Hat Developer Hub with Orchestrator using Helm</h2></div></div></div><p>
+			You can install Red Hat Developer Hub with Orchestrator using Helm, review resource requirements for Orchestrator, and plan for resource considerations in air-gapped environments.
+		</p><section class="section" id="proc-install-orchestrator-helm_install-rhdh-orchestrator-helm"><div class="titlepage"><div><div><h3 class="title">1.1. Install Orchestrator Helm</h3></div></div></div><p>
+				You can install the Orchestrator flavor of Red Hat Developer Hub (RHDH) on OpenShift using Helm charts, enabling serverless workflows and workflow orchestration capabilities.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You are logged in as an administrator on the OpenShift cluster.
+					</li><li class="listitem">
+						You have installed Helm and configured locally.
+					</li><li class="listitem">
+						You have access to the Red Hat Developer Hub Helm chart repository.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Add required Helm repositories:
+					</p><pre class="programlisting language-yaml">helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add backstage https://backstage.github.io/charts
+helm repo add redhat-developer https://redhat-developer.github.io/rhdh-chart</pre></li><li class="listitem"><p class="simpara">
+						Install the orchestrator infrastructure Helm chart:
+					</p><pre class="programlisting language-yaml">helm install &lt;release_name&gt; redhat-developer/redhat-developer-hub-orchestrator-infra</pre></li><li class="listitem">
+						Manually approve the Install Plans for OpenShift Serverless and Serverless Logic Operators and wait for deployment.
+					</li><li class="listitem"><p class="simpara">
+						Install the Backstage chart with the orchestrator enabled:
+					</p><pre class="programlisting language-bash">helm install &lt;release_name&gt; redhat-developer/backstage --set orchestrator.enabled=true</pre></li><li class="listitem">
+						To disable serverlessLogicOperator and serverlessOperator if managed externally:
+					</li><li class="listitem"><p class="simpara">
+						(Optional) Enable Notifications and Signals plugins by adding the following to your values.yaml before installation or upgrade:
+					</p><pre class="programlisting language-yaml">disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-notifications"
+
+disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-signals"
+
+disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-notifications-backend-dynamic"
+
+disabled: false
+package: "./dynamic-plugins/dist/backstage-plugin-signals-backend-dynamic"</pre></li><li class="listitem"><p class="simpara">
+						(Optional) If using an external database, add the following configuration in your values.yaml:
+					</p><pre class="programlisting language-yaml">externalDBsecretRef:
+externalDBName: "&lt;database_name&gt;"
+externalDBHost: "&lt;database_host&gt;"
+externalDBPort: "&lt;database_port&gt;"</pre></li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+						Verify that the orchestrator plugin is visible in the Red Hat Developer Hub UI.
+					</li><li class="listitem">
+						Test creating and executing workflows to confirm orchestration is functioning correctly.
+					</li><li class="listitem">
+						Check orchestrator pod logs to confirm successful workflow execution and plugin readiness.
+					</li></ol></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm45390053509984"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
