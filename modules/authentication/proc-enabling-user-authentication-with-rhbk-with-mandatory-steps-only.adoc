@@ -29,18 +29,25 @@ Save the user credential information for the verification steps.
 . To add your {rhsso} credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
 You can use these secrets in the {product-short} configuration files by using their respective environment variable name.
 +
-`AUTHENTICATION_OIDC_CLIENT_ID`::
+`KEYCLOAK_BASE_URL`::
+Enter the saved **{rhbk} realm base URL**.
+
+`KEYCLOAK_CLIENT_ID`::
 Enter the saved **Client ID**.
 
-`AUTHENTICATION_OIDC_CLIENT_SECRET`::
+`KEYCLOAK_CLIENT_SECRET`::
 Enter the saved **Client Secret**.
 
-`AUTHENTICATION_OIDC_METADATA_URL`::
-Enter the saved **{rhbk} realm base URL**.
+`KEYCLOAK_LOGIN_REALM`::
+Enter the saved **{rhbk} login realm**.
+
+`KEYCLOAK_REALM`::
+Enter the saved **{rhbk} realm**.
 
 . Enable the Keycloak organization plugin (`backstage-plugin-catalog-backend-module-keycloak-dynamic`).
 The plugin is named after {rhbk} upstream project.
 This plugin ingests {rhbk} users and groups to the {product-short} software catalog.
+With the default configuration, the plugin runs every hour and uses your `KEYCLOAK_`-prefixed variables.
 +
 .`dynamic-plugins.yaml` file fragment
 [source,yaml]
@@ -49,38 +56,6 @@ plugins:
   - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-keycloak-dynamic'
     disabled: false
 ----
-
-. To provision {rhbk} users and groups to the {product-short} software catalog, add the `catalog.providers.keycloakOrg` section to your custom {product-short} `{my-app-config-file}` configuration file:
-+
-[id=keycloakOrgProviderId]
-.`{my-app-config-file}` fragment with mandatory `keycloakOrg` fields
-[source,yaml]
-----
-catalog:
-  providers:
-    keycloakOrg:
-      default:
-        baseUrl: ${AUTHENTICATION_OIDC_METADATA_URL}
-        clientId: ${AUTHENTICATION_OIDC_CLIENT_ID}
-        clientSecret: ${AUTHENTICATION_OIDC_CLIENT_SECRET}
-        realm: master
-        loginRealm: master
-----
-
-`baseUrl`::
-Enter your {rhbk} server URL, defined in the previous steps.
-
-`clientId`::
-Enter your {product-short} application client ID in {rhbk}, defined in the previous steps.
-
-`clientSecret`::
-Enter your {product-short} application client secret in {rhbk}, defined in the previous steps.
-
-`realm`::
-Enter the realm name to provision users, such as `master`.
-
-`loginRealm`::
-Enter the realm name to authenticate users, such as `master`.
 
 . To set up the {rhbk} authentication provider in your {product-short} custom configuration, edit your custom {product-short} ConfigMap such as `app-config-rhdh`, and add the following lines to the `{my-app-config-file}` content:
 +
@@ -92,9 +67,9 @@ auth:
   providers:
     oidc:
       production:
-        metadataUrl: ${AUTHENTICATION_OIDC_METADATA_URL}
-        clientId: ${AUTHENTICATION_OIDC_CLIENT_ID}
-        clientSecret: ${AUTHENTICATION_OIDC_CLIENT_SECRET}
+        metadataUrl: ${KEYCLOAK_BASE_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
         prompt: auto
 signInPage: oidc
 ----
