@@ -5,7 +5,13 @@
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
-rhdhRepo="https://github.com/redhat-developer/rhdh"  # TODO move to rhd/rhdh
+norm="\033[0;39m"
+green="\033[1;32m"
+blue="\033[1;34m"
+red="\033[1;31m"
+QUIET=0
+
+rhdhRepo="https://github.com/redhat-developer/rhdh"
 usage() {
   cat <<EOF
 
@@ -23,6 +29,7 @@ $0 -b stable-ref-branch
 Options:
   -b, --ref-branch    : Reference branch against which plugin versions should be incremented, like release-1.y or main
   --clean             : Force a clean GH checkout (do not reuse files on disk)
+  -q                  : quieter output
   -h, --help          : Show this help
 
 Examples:
@@ -36,6 +43,7 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in
     '--clean') rm -fr /tmp/plugin-versions.txt /tmp/rhdh;;
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
+    '-q') QUIET=1;;
     '-h'|'--help') usage;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
   esac
@@ -108,7 +116,7 @@ ENABLED_PLUGINS="/tmp/ENABLED_PLUGINS.txt"; rm -f $ENABLED_PLUGINS; touch $ENABL
 
 for j in $jsons; do
     (( c++ )) || true
-    echo "[$c/$tot] Processing $j ..."
+    echo -e "${green}[$c/$tot] Processing $j${norm}"
     Required_Variables=""
     Required_Variables_=""
 
@@ -170,7 +178,7 @@ for j in $jsons; do
         if [[ $match ]]; then
             Version=$(echo "${match}" | sed -r -e "s/.+\": \"([0-9.]+)\"/\1/")
             if [[ "$Version" != "$VersionJQ" ]]; then
-                echo "[WARN] ! Using $pluginVersFile version = $Version, not $VersionJQ from $Path" | tee -a /tmp/warnings.txt
+                echo -e "${blue}[WARN] ! Using $pluginVersFile version = $Version, not $VersionJQ from $Path ${norm}" | tee -a /tmp/warnings.txt
             fi
         fi
 
@@ -186,7 +194,7 @@ for j in $jsons; do
         latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
         # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
         if [[ "$latestXYRelease" != "$Version" ]]; then
-            echo "[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease !" | tee -a /tmp/warnings.txt
+            echo -e "${blue}[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease ${norm}" | tee -a /tmp/warnings.txt
             # echo | tee -a /tmp/warnings.txt
         fi
 
@@ -217,13 +225,13 @@ for j in $jsons; do
                 # see https://issues.redhat.com/browse/RHIDP-3187 - only Production-level support (GA) plugins should be enabled by default
                 echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
             elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
-                # as discussed in RHDH SO on Jul 14, we are now opening the door for TP plugins to be on by default.
-                # PM and Support are cool with this as long as the docs clearly state
+                # as discussed in RHDH SOS on Jul 14, we are now opening the door for TP plugins to be on by default.
+                # PM (Ben) and Support (Tim) are cool with this as long as the docs clearly state
                 # what is TP, and how to disable the TP content
-                echo "[WARNING]: $Plugin is enabled by default but is only $Support_Level!" | tee -a ${ENABLED_PLUGINS}.errors
+                echo -e "${blue}[WARNING]: $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a ${ENABLED_PLUGINS}.errors
                 echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
             else
-                echo "[ERROR]: $Plugin should not be enabled by default as its support level is $Support_Level!" | tee -a ${ENABLED_PLUGINS}.errors
+                echo -e "${red}[ERROR]: $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a ${ENABLED_PLUGINS}.errors
             fi
         fi
 
@@ -257,9 +265,11 @@ for j in $jsons; do
         # echo " to $Name and $PrettyName"
 
         # useful console output
-        for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
-            echo "Got $col = ${!col}"
-        done
+        if [[ $QUIET -eq 0 ]]; then
+          for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
+              echo " * $col = ${!col}"
+          done
+        fi
 
         # save in an array sorted by name, then role, with frontend before backend plugins (for consistency with 1.1 markup)
         RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; Role="Backend"; else Role="Frontend"; fi
@@ -280,7 +290,7 @@ for j in $jsons; do
         csv["$Name-$RoleSort-$Role-$Plugin"]="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
     else
         (( tot-- )) || true
-        echo "        Skip: not in rhdh/dynamic-plugins.default.yaml !"
+        echo -e "${blue}        Skip: not in rhdh/dynamic-plugins.default.yaml !${norm}"
     fi
     echo
 done
@@ -328,12 +338,18 @@ index=0
 for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins; do
     (( index = count - 1 ))
     this_num_plugins=${num_plugins[$index]}
-    echo "[$count] Processing $d ..."
-    adocfile="${0/.sh/.${d}}"
-    sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd;}' \
-        -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
-        "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
-    rm -f "$adocfile"
+    echo -n -e "${green}[$count] Processing $d ${norm}..."
+    if [[ $this_num_plugins -gt 0 ]]; then
+      adocfile="${0/.sh/.${d}}"
+      sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd;}' \
+          -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
+          "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
+      rm -f "$adocfile"
+      echo ""
+    else
+      echo -e "${blue} no plugins to include: ${d}.adoc deleted.${norm}"
+      rm -f "${0/rhdh-supported-plugins.sh/${d}.adoc}"
+    fi
     (( count = count + 1 ))
 done
 
@@ -351,7 +367,7 @@ pushd "$SCRIPT_DIR" >/dev/null || exit
 popd >/dev/null || exit
 
 # see https://issues.redhat.com/browse/RHIDP-3187 - only GA plugins should be enabled by default
-if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then cat "${ENABLED_PLUGINS}.errors"; fi
+if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;cat "${ENABLED_PLUGINS}.errors"; fi
 
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
@@ -359,5 +375,5 @@ rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
 
 warnings=$(grep -c "WARN" "/tmp/warnings.txt")
 if [[ $warnings -gt 0 ]]; then
-    echo; echo "[WARN] $warnings warnings collected in /tmp/warnings.txt ! Consider upgrading upstream project to newer plugin versions !"
+    echo; echo -e "${blue}[WARN] $warnings warnings collected in /tmp/warnings.txt ! Consider upgrading upstream project to newer plugin versions !${norm}"
 fi
