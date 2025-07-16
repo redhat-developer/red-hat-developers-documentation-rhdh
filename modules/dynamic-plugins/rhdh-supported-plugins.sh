@@ -27,7 +27,7 @@ Options:
 
 Examples:
 
-  $0 -b release-1.4 --clean
+  $0 -b release-1.7 --clean
 
 EOF
 }
@@ -213,8 +213,14 @@ for j in $jsons; do
         if [[ $disabled == "true" ]]; then
             Default="Disabled"
         else
-            # see https://issues.redhat.com/browse/RHIDP-3187 - only Production-level support (GA) plugins should be enabled by default
             if [[ $Support_Level == "Production" ]]; then
+                # see https://issues.redhat.com/browse/RHIDP-3187 - only Production-level support (GA) plugins should be enabled by default
+                echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
+            elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
+                # as discussed in RHDH SO on Jul 14, we are now opening the door for TP plugins to be on by default.
+                # PM and Support are cool with this as long as the docs clearly state
+                # what is TP, and how to disable the TP content
+                echo "[WARNING]: $Plugin is enabled by default but is only $Support_Level!" | tee -a ${ENABLED_PLUGINS}.errors
                 echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
             else
                 echo "[ERROR]: $Plugin should not be enabled by default as its support level is $Support_Level!" | tee -a ${ENABLED_PLUGINS}.errors
