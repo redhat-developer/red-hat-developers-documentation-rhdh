@@ -347,8 +347,8 @@ for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plug
       rm -f "$adocfile"
       echo ""
     else
-      echo -e "${blue} no plugins to include: ${d}.adoc deleted.${norm}"
-      rm -f "${0/rhdh-supported-plugins.sh/${d}.adoc}"
+      echo -e "${blue} no plugins to include: ${d}.adoc emptied.${norm}"
+      echo "" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
     fi
     (( count = count + 1 ))
 done
