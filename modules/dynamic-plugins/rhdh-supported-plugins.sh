@@ -228,10 +228,10 @@ for j in $jsons; do
                 # as discussed in RHDH SOS on Jul 14, we are now opening the door for TP plugins to be on by default.
                 # PM (Ben) and Support (Tim) are cool with this as long as the docs clearly state
                 # what is TP, and how to disable the TP content
-                echo -e "${blue}[WARNING]: $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a ${ENABLED_PLUGINS}.errors
+                echo -e "${blue}[WARN] $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a ${ENABLED_PLUGINS}.errors
                 echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
             else
-                echo -e "${red}[ERROR]: $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a ${ENABLED_PLUGINS}.errors
+                echo -e "${red}[ERROR] $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a ${ENABLED_PLUGINS}.errors
             fi
         fi
 
@@ -295,6 +295,11 @@ for j in $jsons; do
     echo
 done
 
+c=0
+if [[ $QUIET -eq 0 ]]; then
+  echo "Creating .csv ..."
+fi
+
 # create .csv file with header
 echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
 
@@ -302,12 +307,19 @@ num_plugins=()
 # append to .csv and .adocN files
 rm -f "${0/.sh/.adoc1}"
 sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc1[@]}" | sort -z)
-for key in "${sorted[@]}"; do
-    echo -e "${adoc1[$key]}" >> "${0/.sh/.ref-rh-supported-plugins}"
-    if [[ $key != *"techdocs"* ]]; then
+if [[ $sorted ]] ;then
+  for key in "${sorted[@]}"; do
+      (( c = c + 1 ))
+      if [[ $QUIET -eq 0 ]]; then echo " * [$c] $key [ supported-plugins ] = ${csv[$key]}"; fi
+      echo -e "${adoc1[$key]}" >> "${0/.sh/.ref-rh-supported-plugins}"
+      # RHIDP-4196 omit techdocs plugins from the .csv
+      if [[ $key != *"techdocs"* ]]; then
         echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
-    fi
-done
+      else
+        if [[ $QUIET -eq 0 ]]; then echo -e "${blue}   [WARN] Omit plugin $key from .csv file${norm}"; fi
+      fi
+  done
+fi
 num_plugins+=(${#adoc1[@]})
 
 rm -f "${0/.sh/.adoc2}"
@@ -315,8 +327,10 @@ sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%
 # shellcheck disable=SC2128
 if [[ $sorted ]] ;then
     for key in "${sorted[@]}"; do
-        echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}";
-        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+      (( c = c + 1 ))
+      if [[ $QUIET -eq 0 ]]; then echo " * [$c] $key [ tech-preview-plugins ] = ${csv[$key]}"; fi
+      echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}";
+      echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
     done
 fi
 num_plugins+=(${#adoc2[@]})
@@ -326,11 +340,15 @@ sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%
 # shellcheck disable=SC2128
 if [[ $sorted ]] ;then
     for key in "${sorted[@]}"; do
-        echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}";
-        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+      (( c = c + 1 ))
+      if [[ $QUIET -eq 0 ]]; then echo " * [$c] $key [ community-plugins ] = ${csv[$key]}"; fi
+      echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}";
+      echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
     done
 fi
 num_plugins+=(${#adoc3[@]})
+
+if [[ $QUIET -eq 0 ]]; then echo; fi
 
 # merge the content from the three .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
 count=1
