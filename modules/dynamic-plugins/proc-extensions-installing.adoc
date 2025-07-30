@@ -1,4 +1,6 @@
 [id="rhdh-extensions-plugins-installing_{context}"]
+
+////
 = Installing a plugin by using Extensions
 You can install a plugin and configure it by updating the `dynamic-plugins.yaml` file by using *Extensions*.
 
@@ -47,7 +49,6 @@ If you have installed {product-very-short} by using the Helm Chart, to enable th
 . Go to the *Installed* tab to view a list of installed plugins.
 . Search for the plugin that you installed to confirm that it is available and enabled.
 
-////
 . To disable the the Extensions feature plugins, edit your `dynamic-plugins.yaml` with the following content.
 +
 .`dynamic-plugins.yaml` fragment
@@ -65,3 +66,157 @@ plugins:
 [NOTE]
 If you disable the Extensions feature plugins, the *Catalog* and *Installed* tabs will also be removed. You can still view installed plugins by clicking on *Administration* > *Extensions*.
 ////
+
+= Installing and configuring plugins by using Extensions
+
+[WARNING]
+Installation of plugins by using Extensions will only work in development environments. It is not supported in production environments.
+
+You can install and configure plugins by using Extensions. When you install a plugin by using Extensions, the configuration for the plugin is saved to a dynamic plugins cache. This ensures that the configuration is available when you edit a plugin configuration. To persist the cache when the {product-very-short} pod restarts, you must create a persistent volume claim (PVC) and configured in the Helm chart. 
+
+// I’m going to walk you through the end-to-end flow of how plugins can be installed in a development environment using the Extensions feature in the Red Hat Developer Hub.
+// [NOTE]
+// This installation feature is currently only meant for development environments. It is not supported in production environments yet.
+
+// Plugin configuration and installation
+// When installing a plugin, the configuration that is used during installing is saved to a dynamic plugins cache. This ensures that the same configuration is available when editing or re-enabling the plugin. The persist the cache across pod restarts, a persistent volume claim must be created and configured in the Helm chart.
+
+.Procedure
+//. Create a PVC with the name `dynamic-plugins-route`. This will be used in the Helm chart values when deploying the {product-very-short}.
+. Create the PVC and save it to a file, such as `pvc.yaml`. For example:
++
+.`pvc.yaml` fragment
+[source,yaml]
+----
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-root
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+----
+
+. To apply this PVC to your cluster, run the following command:
++
+[source,yaml]
+----
+oc apply -f pvc.yaml
+----
+
+. Configure the Helm chart to replace the ephermal volume claim with the PVC. For example:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      - name: dynamic-plugins-root
+        persistentVolumeClaim:
+          claimName: dynamic-plugins-root
+----
+
+// Now if i go to the extra volumes under upstream backstage app config, I’ll replace the ephermal volume claim with the PVC volume claim that I just created.
+
+. Create the Helm Release.
+
+. Create a new extensions backend configuration and save it to a file, such as `dynamic-plugins.marketplace.yaml`. For example:
++
+.`dynamic-plugins.marketplace.yaml` fragment
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace-backend-dynamic
+    disabled: false
+    pluginConfig:
+      extensions:
+        installation:
+          enabled: true
+          saveToSingleFile:
+            file: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-marketplace:
+            appIcons:
+              - name: marketplace
+                importName: MarketplaceIcon
+            dynamicRoutes:
+              - path: /extensions/catalog
+                importName: DynamicMarketplacePluginRouter
+            mountPoints:
+              - mountPoint: application/provider
+----
+
+. To copy the file to the cluster, run the following commands:
++
+[source,yaml]
+----
+oc get pods -n <your-namespace>
+oc cp ./dynamic-plugins.marketplace.yaml <your-namespace>/<pod-name>:/opt/app-root/src/dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+
+----
+
+. Upgrade helm to use this file and update environment variable to development:
++
+[source,yaml]
+----
+global:
+ auth:
+   backend:
+     enabled: true
+ clusterRouterBase: apps.rosa.iuosa-vcqyd-ek4.jryo.p3.openshiftapps.com
+ dynamic:
+   includes:
+     - dynamic-plugins.default.yaml
+     - /dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+upstream:
+ backstage:
+   extraEnvVars:
+     - name: NODE_ENV
+       value: development
+----
+
+////
+Manually create a YAML file containing our new extensions backend configuration. The extensions plugin requires the installation to be set to true and a YAML file where your plugin configurations will be written to.
+I have created a local file named dynamic-plugins.marketplace.yaml and added the extensions configuration to it. I have specified the file path to be /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+
+Now, copy the file to the RHDH pod, fetch the pods running under my namespace. Copy the yaml file to the rhdh pod.
+
+Finally, I’ll upgrade the RHDH helm release to point to this dynamic plugins marketplace yaml. So under global dynamic includes, I’ll add /dynamic-plugins-root/dynamic plugins marketplace yaml.
+Click upgrade
+In my dynamic plugins config map, I have added the extensions UI package configuration to include the newly added mount point:
+
+Once the RHDH pod is running, navigate to the extensions plugin.
+Select any plugin that you would like to install.
+The install button is disabled because the current user does not have access to manage plugin configurations.
+In RBAC, we need to create a role for this user to enable plugin installation.
+
+Select extensions from the plugin dropdown, expand it to view the newly added permissions for the extensions plugin.
+Select both and click next to create the role.
+Refresh the application 
+Now when I navigate to the extensions plugin and click on a plugin I see an Actions dropdown which means the plugin is preinstalled for me and I now have the access to edit or disable the plugin.
+
+If I disable the plugin, I’m notified to restart the backend to complete the action.
+
+Before I restart let’s install a plugin.
+I’ll filter out the custom plugins, and select the Service Now plugin
+
+I can see that the plugin is not already installed, so I’ll click on Install which takes me to the code editor. If I want to make any changes to this plugin configuration, I can. I’ll apply the default configuration for the front-end package:
+
+You can add a comment and click Install
+In this alert you can view all the plugins that require a backend restart
+
+Switch to my Openshift application and restart my RHDH pod (scale down/up).
+Once the pod is running, switch back to your RHDH application and refresh the browser.
+Verification
+Switch to the Adoption Insights plugin and I can see that it is disabled. The Service Now plugin shows the Actions dropdown with the option to edit and disable the plugin.
+If I click on Edit, the configuration that I used to install the plugin has been loaded in the editor.
+////
+
+
