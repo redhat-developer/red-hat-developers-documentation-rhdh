@@ -1,0 +1,125 @@
+[id="proc-extensions-enabling-plugins-installation_{context}"]
+= Plugins installation by using Extensions
+
+[WARNING]
+Installation and configuration of plugins by using Extensions will only work in development environments. This feature is not supported in production environments.
+
+== Overview
+* Users must have the new extensions permissions to access and manage plugin configurations.
+In production environment
+* Users will be notified that plugin installation is not permitted.
+* In development environment 
+** Admins can install a plugin using the default configuration preloaded in the editor, or modify the configuration before installing. Upon successful installation, users will be notified that a backend restart is required to complete the installation process.
+** Once a plugin is installed, admins can access the Actions drop-down in the plugin’s side panel. Available actions include:
+*** Editing the configuration used during installation
+*** Disabling or enabling the plugin
+*** After performing any of these actions, users will again be notified that a backend restart is required for the changes to take effect.
+
+== RBAC permissions
+When RBAC permission framework is enabled, for non-admin users to access Extensions UI, the role associated with your user should have the following permission policies associated with it. Add the following in your permission policies configuration file:
+[source,yaml]
+----
+p, role:default/team_a, extensions-plugin, read, allow
+p, role:default/team_a, extensions-plugin, create, allow
+g, user:default/<login-id/user-name>, role:default/team_a
+
+permission:
+      enabled: true
+      rbac:
+        admin:
+          users:
+          - name: user:default/gerry-forde
+        pluginsWithPermission:
+        - catalog
+        - scaffolder
+        - permission
+        - extensions
+----
+
+== Configuring {product-very-short} to install plugins by using Extensions
+
+.Prequisites
+* You have created a persistent volume claim (PVC) for the dynamic plugins cache with the name *dynamic-plugins-route*. For more details, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html-single/configuring_red_hat_developer_hub/index#using-the-dynamic-plugins-cache_running-behind-a-proxy[Using the dynamic plugins cache]
+* You have installed Red Hat Developer Hub using the Helm chart.
+* You have installed the OpenShift CLI (`oc`).
+
+.Procedure
+. Create the marketplace configuration file and save it as `dynamic-plugins.marketplace.yaml`. For example:
++
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace-backend-dynamic
+    disabled: false
+    pluginConfig:
+      extensions:
+        installation:
+          enabled: true
+          saveToSingleFile:
+            file: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+----
+. Copy the file to your cluster by running the following commands:
++
+[source,yaml]
+----
+oc get pods -n <your-namespace>
+
+oc cp ./dynamic-plugins.marketplace.yaml <your-namespace>/<pod-name>:/opt/app-root/src/dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+----
+. Upgrade the Helm release to use this file and update environment variable to development:
++
+[source,yaml]
+----
+global:
+ auth:
+   backend:
+     enabled: true
+ clusterRouterBase: apps.rosa.iuosa-vcqyd-ek4.jryo.p3.openshiftapps.com
+ dynamic:
+   includes:
+     - dynamic-plugins.default.yaml
+     - /dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+upstream:
+ backstage:
+   extraEnvVars:
+     - name: NODE_ENV
+       value: development
+----
+. Click *Upgrade*
+
+. Add the following configuration for the Extensions UI package in your `redhat-developer-hub-dynamic-plugins` config map, to include the newly added mount point:
++
+[source,yaml,subs="+attributes"]
+----
+data:
+  dynamic-plugins.yaml: |
+    includes:
+    - dynamic-plugins.default.yaml
+    - /dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+    plugins: 
+    - package: ./dynamic-plugins/dist/backstage-community-plugin-rbac
+    - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace
+      disabled: false
+      pluginConfig:
+        dynamicPlugins:
+            frontend:
+            red-hat-developer-hub.backstage-plugin-marketplace:
+                appIcons:
+                - name: marketplace
+                    importName: MarketplaceIcon
+                dynamicRoutes:
+                - path: /extensions/catalog
+                    importName: DynamicMarketplacePluginRouter
+                mountPoints:
+                - mountPoint: application/provider
+                    importName: InstallationContextProvider
+                - mountPoint: internal.plugins/tab
+                    importName: DynamicMarketplacePluginContent
+                    config:
+                    path: marketplace
+                    title: Catalog
+----
+. Click *Save*
+
+
+.Validation
