@@ -1,0 +1,67 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-rhdh-observability.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-customize-adoption-insights_{context}"]
+= Customizing the Adoption Insights plugin in {product}
+
+You can customize the Adoption Insights plugin to suit your needs by disabling or re-enabling it, and adjusting other settings as needed.
+
+
+[IMPORTANT]
+====
+If you used the developer preview of the Adoption Insights plugin and configured the feature manually, you must remove those earlier configuration changes as they are no longer required.
+
+In your dynamic plugins ConfigMap, for example: `dynamic-plugins-rhdh.yaml`, update the `package-disabled` value of the plugin to `false` as shown in the following example:
+
+.`dynamic-plugins.yaml` fragment
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-analytics-provider-segment
+    disabled: false
+----
+====
+
+.Procedure
+
+* To customize `maxBufferSize`, `flushInterval`, `debug`, and `licensedUsers` in the Adoption Insights plugin, in your {product} `app-config.yaml` file, update the relevant settings as shown in the following code:
++
+.`app-config.yaml` fragment
+[source,terminal]
+----
+app:
+  analytics:
+    adoptionInsights: 
+      maxBufferSize: _<maximum_buffer_size>_ <1>
+      flushInterval: _<flush_interval>_ <2>
+      debug: _<debug_value>_ <3>
+      licensedUsers: _<licensed_users>_ <4>
+----
+<1> (Optional) Specifies the maximum buffer size for event batching. The default value is `20`. 
+<2> (Optional) Specifies the flush interval in milliseconds for event batching. The default value is `5000ms`.
+<3> (Optional) The default value is `false`.
+<4> (Optional) Specifies the maximum number of licensed users who can access the {product-very-short} instance. The default value is `100`.
+
+* To disable the Adoption Insights plugin, in your dynamic plugins ConfigMap, for example `dynamic-plugins-rhdh.yaml` file, update the `package.disabled` value of the plugin to `true` as shown in the following example:
++
+[source,yaml]
+----
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-adoption-insights
+    disabled: true
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-adoption-insights-backend-dynamic
+    disabled: true
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-analytics-module-adoption-insights-dynamic
+    disabled: true
+----
+
+* Optional: Configure the required RBAC permission for the users who are not administrators as shown in the following example:
++
+[source,yaml]
+----
+p, role:default/_<your_team>_, adoption-insights.events.read, read, allow
+g, user:default/_<your_user>_, role:default/_<your_team>_
+----
+See link:{authorization-book-url}#ref-rbac-permission-policies_title-authorization[Permission policies in {product}].
+
