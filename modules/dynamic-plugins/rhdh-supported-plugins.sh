@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # script to generate rhdh-supported-plugins.adoc from content in
-# https://github.com/redhat-developer/rhdh/tree/main/dynamic-plugins/wrappers/*/json
+# https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/marketplace/packages/
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
@@ -67,7 +67,10 @@ titlecase() {
         case $f in
             aap) echo -n "Ansible Automation Platform (AAP) ";;
             # UPPERCASE these exceptions
-            acr|cd|ocm|rbac) echo -n "${f^^} ";;
+            acr) echo -n "ACR ";;
+            cd) echo -n "CD ";;
+            ocm) echo -n "OCM ";;
+            rbac) echo -n "RBAC ";;
             # MixedCase exceptions
             argocd) echo -n "Argo CD ";;
             github) echo -n "GitHub ";;
@@ -79,7 +82,11 @@ titlecase() {
             sonarqube) echo -n "SonarQube ";;
             techdocs) echo -n "TechDocs ";;
             # Uppercase the first letter
-            *) echo -n "${f^} " ;;
+            *) 
+                first_char=$(echo "$f" | cut -c1 | tr '[:lower:]' '[:upper:]')
+                rest_chars=$(echo "$f" | cut -c2-)
+                echo -n "${first_char}${rest_chars} "
+                ;;
         esac;
     done; echo;
 }
@@ -97,35 +104,39 @@ cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out 
 
 rm -fr /tmp/warnings.txt
 
-# create arrays of adoc and csv content
-declare -A adoc1
-declare -A adoc2
-declare -A adoc3
-declare -A csv
+# create temporary files instead of associative arrays
+TEMP_DIR="/tmp/rhdh-processing"
+mkdir -p "$TEMP_DIR"
+rm -f "$TEMP_DIR"/*.tmp
 
-# process 1 folders of json files
-jsons=$(find /tmp/rhdh/dynamic-plugins/wrappers/ -maxdepth 2 -name package.json | sort -V)
+# process YAML files from catalog-entities/marketplace/packages/
+yamls=$(find /tmp/rhdh/catalog-entities/marketplace/packages/ -maxdepth 1 -name "*.yaml" | sort -V)
 c=0
 tot=0
-for j in $jsons; do
+for y in $yamls; do
+    [[ $(basename "$y") == "all.yaml" ]] && continue
     (( tot++ )) || true
 done
 
 # string listing the enabled-by-default plugins to add to con-preinstalled-dynamic-plugins.template.adoc
 ENABLED_PLUGINS="/tmp/ENABLED_PLUGINS.txt"; rm -f $ENABLED_PLUGINS; touch $ENABLED_PLUGINS
 
-for j in $jsons; do
+for y in $yamls; do
+    [[ $(basename "$y") == "all.yaml" ]] && continue
     (( c++ )) || true
-    echo -e "${green}[$c/$tot] Processing $j${norm}"
+    echo -e "${green}[$c/$tot] Processing $y${norm}"
     Required_Variables=""
     Required_Variables_=""
 
-    # extract content
-    Name=$(jq -r '.name' "$j")
-
-    # backstage-plugin-catalog-backend-module-bitbucket-cloud => @backstage/plugin-catalog-backend-module-bitbucket-cloud
-    Plugin="${Name}"
-    if [[ $Plugin != "@"* ]]; then # don't update janus-idp/backstage-plugins plugin names
+    # extract content from YAML
+    Name=$(yq -r '.metadata.name' "$y")
+    Plugin_Title=$(yq -r '.metadata.title' "$y")
+    
+    # Use the actual packageName from spec, fallback to name
+    Plugin=$(yq -r '.spec.packageName // .metadata.name' "$y")
+    
+    # If Plugin is still not a proper npm package name, try to construct it
+    if [[ $Plugin != "@"* ]] && [[ $Plugin == "$Name" ]]; then 
         Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
             -e 's|janus/idp-|janus-idp/|' \
             -e 's|red/hat-developer-hub-|red-hat-developer-hub/|' \
@@ -133,41 +144,54 @@ for j in $jsons; do
             -e 's|parfuemerie/douglas-|parfuemerie-douglas/|')"
     fi
 
-    # "dynamic-plugins/wrappers/backstage-plugin-catalog-backend-module-bitbucket-cloud" ==> ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-bitbucket-cloud-dynamic
-    Path=$(jq -r '.repository.directory' "$j")
-    if [[ $Path == *"/wrappers/"* ]]; then
-        Path="./${Path/wrappers/dist}-dynamic"
-    else
+    # Extract lifecycle and path from YAML spec
+    Lifecycle=$(yq -r '.spec.lifecycle // "unknown"' "$y")
+    
+    # Use the actual dynamicArtifact path from YAML
+    Path=$(yq -r '.spec.dynamicArtifact // ""' "$y")
+    
+    # Fallback to constructed path if not found
+    if [[ ! $Path || $Path == "null" ]]; then
         Path="$(echo "${Plugin/@/}" | tr "/" "-")"
         Path="./dynamic-plugins/dist/${Path}-dynamic"
+        # remove dupe suffixes
+        Path="${Path/-dynamic-dynamic/-dynamic}"
     fi
-    # remove dupe suffixes
-    Path="${Path/-dynamic-dynamic/-dynamic}"
+
+    # Filter 1: Only dynamic plugins (must contain "dynamic" in path)
+    [[ $Path != *"dynamic"* ]] && continue
+    
+    # Filter 2: Exclude oci:// paths
+    [[ $Path == "oci://"* ]] && continue
+    
+    # Filter 3: Exclude @redhat packages
+    [[ $Plugin == "@redhat"* ]] && continue
 
     # echo "Path = $Path"
     # shellcheck disable=SC2016
     found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' /tmp/rhdh/dynamic-plugins.default.yaml)
     # shellcheck disable=SC2016
     found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' /tmp/rhdh/dynamic-plugins.default.yaml)
-    # echo "[DEBUG] default configs:"
-    # echo "   $found_in_default_config2" | jq -r '.package'
-    # echo "   $found_in_default_config1" | jq -r '.package'
-    # echo "   /wrappers/ == $j"
-
+    
     Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
     if [[ $Path2 ]]; then
         Path=$Path2
-        # echo "[DEBUG] check path - $Name :: got $Path2"
     else
         Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
-        # echo "[DEBUG] check path - $Name :: got $Path"
     fi
-    if [[ ! $Path ]]; then
+    
+    # For marketplace YAML files, skip the default config check for inclusion
+    if [[ "$y" == *"catalog-entities/marketplace/packages/"* ]]; then
+        # Process marketplace packages regardless of default config
+        if [[ $QUIET -eq 0 ]]; then echo "Processing marketplace package: $Name"; fi
+    elif [[ ! $Path ]]; then
         continue
-    elif [[ $Path ]] || [[ "$j" == *"/wrappers/"* ]]; then
-        # RHIDP-3203 just use the .package value from /tmp/rhdh/dynamic-plugins.default.yaml as the Path
-        Role=$(jq -r '.backstage.role' "$j")
-        VersionJQ=$(jq -r '.version' "$j")
+    fi
+    
+    if [[ $Path ]] || [[ "$y" == *"catalog-entities/marketplace/packages/"* ]]; then
+        # Extract role and version from YAML - updated paths
+        Role=$(yq -r '.spec.backstage.role // "unknown"' "$y")
+        VersionJQ=$(yq -r '.spec.version // "0.0.0"' "$y")
         # check this version against other references to the plugin in
         # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
         # * packages/app/package.json#.dependencies
@@ -198,14 +222,16 @@ for j in $jsons; do
             # echo | tee -a /tmp/warnings.txt
         fi
 
-        # default to community unless it's a RH-authored plugin
+        # Extract support level from YAML metadata - updated to use actual YAML structure
         Support_Level="Community Support"
-        keywords=$(jq -r '.keywords' "$j")
-        author=$(jq -r '.author' "$j")
-        if [[ $author == "Red Hat" ]]; then
-            if [[ $keywords == *"support:production"* ]]; then
+        # Check for Red Hat authorship and support level
+        author=$(yq -r '.spec.author // "unknown"' "$y")
+        support=$(yq -r '.spec.support // "unknown"' "$y")
+        
+        if [[ $author == "Red Hat"* ]]; then
+            if [[ $support == "production"* ]]; then
                 Support_Level="Production"
-            elif [[ $keywords == *"support:tech-preview"* ]]; then
+            elif [[ $support == "tech-preview"* ]]; then
                 Support_Level="Red Hat Tech Preview"
             fi
         fi
@@ -235,38 +261,43 @@ for j in $jsons; do
             fi
         fi
 
-        # compute Required_Variables from dynamic-plugins.default.yaml - look for all caps params
-        # shellcheck disable=SC2016
-        Required_Variables="$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path)' /tmp/rhdh/dynamic-plugins.default.yaml | grep "\${" | sed -r -e 's/.+: "\$\{(.+)\}".*/\1/')"
-        if [[ ! $Required_Variables ]]; then Required_Variables="$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path)' /tmp/rhdh/dynamic-plugins.default.yaml | grep "\${" | sed -r -e 's/.+: "\$\{(.+)\}".*/\1/')"; fi
-        for RV in $Required_Variables; do
-            this_RV="$(echo "${RV}" | tr -d "\$\{\}\"")"
-            Required_Variables_="${Required_Variables_}\`$this_RV\`\n\n"
-        done
-        Required_Variables="${Required_Variables_}"
+        # compute Required_Variables from appConfigExamples in YAML
+        Required_Variables=""
+        appConfig=$(yq -r '.spec.appConfigExamples[0].content // empty' "$y" 2>/dev/null)
+        if [[ -n "$appConfig" && "$appConfig" != "null" ]]; then
+            # Extract ${VARIABLE_NAME} patterns
+            vars=$(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | sort -u)
+            for var in $vars; do
+                Required_Variables="${Required_Variables}\`$var\`\n\n"
+            done
+        fi
         Required_Variables_CSV=$(echo -e "$Required_Variables" | tr -s "\n" ";")
         # not currently used due to policy and support concern with upstream content linked from downstream doc
         # URL="https://www.npmjs.com/package/$Plugin"
 
-        # echo -n "Converting $Name"
-        Name="$(echo "${Name}" | sed -r \
-            -e "s@(pagerduty)-.+@\1@g" \
-            -e "s@.+(-plugin-scaffolder-backend-module|backstage-scaffolder-backend-module)-(.+)@\2@g" \
-            -e "s@.+(-plugin-catalog-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
-            -e "s@.+(-scaffolder-backend-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
-            -e "s@.+(-scaffolder-backend-module|-scaffolder-backend|backstage-plugin)-(.+)@\2@g" \
-            -e "s@(backstage-community-plugin-)@@g" \
-            -e "s@(backstage-plugin)-(.+)@\2@g" \
-            -e "s@(.+)(-backstage-plugin)@\1@g" \
-            -e "s@-backend@@g" \
-        )"
-        Name="$(echo "${Name}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
-        PrettyName="$(titlecase "${Name//-/ }")"
-        # echo " to $Name and $PrettyName"
+        # Use the title from YAML if available, otherwise derive from name
+        if [[ "$Plugin_Title" != "null" && -n "$Plugin_Title" ]]; then
+            PrettyName="$Plugin_Title"
+        else
+            # fallback to name processing
+            Name="$(echo "${Name}" | sed -r \
+                -e "s@(pagerduty)-.+@\1@g" \
+                -e "s@.+(-plugin-scaffolder-backend-module|backstage-scaffolder-backend-module)-(.+)@\2@g" \
+                -e "s@.+(-plugin-catalog-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
+                -e "s@.+(-scaffolder-backend-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
+                -e "s@.+(-scaffolder-backend-module|-scaffolder-backend|backstage-plugin)-(.+)@\2@g" \
+                -e "s@(backstage-community-plugin-)@@g" \
+                -e "s@(backstage-plugin)-(.+)@\2@g" \
+                -e "s@(.+)(-backstage-plugin)@\1@g" \
+                -e "s@-backend@@g" \
+            )"
+            Name="$(echo "${Name}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
+            PrettyName="$(titlecase "${Name//-/ }")"
+        fi
 
         # useful console output
         if [[ $QUIET -eq 0 ]]; then
-          for col in Name PrettyName Role Plugin Version Support_Level Path Required_Variables Default; do
+          for col in Name PrettyName Role Plugin Version Support_Level Lifecycle Path Required_Variables Default; do
               echo " * $col = ${!col}"
           done
         fi
@@ -277,17 +308,22 @@ for j in $jsons; do
 
         # TODO include missing data fields for Provider and Description - see https://issues.redhat.com/browse/RHIDP-3496 and https://issues.redhat.com/browse/RHIDP-3440
 
+        # Use temporary files instead of associative arrays
+        key="$Name-$RoleSort-$Role-$Plugin"
+        adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+        csv_content="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Lifecycle\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
+        
         # split into three tables based on support level
         if [[ ${Support_Level} == "Production" ]]; then
-            adoc1["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc1.tmp"
         elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
-            adoc2["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc2.tmp"
         else
-            adoc3["$Name-$RoleSort-$Role-$Plugin"]="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc3.tmp"
         fi
 
-        # NOTE: csv is not split into separate tables at this point
-        csv["$Name-$RoleSort-$Role-$Plugin"]="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
+        # NOTE: csv is not split into separate tables at this point - updated to include lifecycle
+        echo "$key|$csv_content" >> "$TEMP_DIR/csv.tmp"
     else
         (( tot-- )) || true
         echo -e "${blue}        Skip: not in rhdh/dynamic-plugins.default.yaml !${norm}"
@@ -301,52 +337,41 @@ if [[ $QUIET -eq 0 ]]; then
 fi
 
 # create .csv file with header
-echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
+echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Lifecycle\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
 
 num_plugins=()
-# append to .csv and .adocN files
-rm -f "${0/.sh/.adoc1}"
-sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc1[@]}" | sort -z)
-if [[ $sorted ]] ;then
-  for key in "${sorted[@]}"; do
-      (( c = c + 1 ))
-      if [[ $QUIET -eq 0 ]]; then echo " * [$c] $key [ supported-plugins ] = ${csv[$key]}"; fi
-      echo -e "${adoc1[$key]}" >> "${0/.sh/.ref-rh-supported-plugins}"
-      # RHIDP-4196 omit techdocs plugins from the .csv
-      if [[ $key != *"techdocs"* ]]; then
-        echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
-      else
-        if [[ $QUIET -eq 0 ]]; then echo -e "${blue}   [WARN] Omit plugin $key from .csv file${norm}"; fi
-      fi
-  done
-fi
-num_plugins+=(${#adoc1[@]})
+# Process temporary files instead of associative arrays
+for i in 1 2 3; do
+    temp_file="$TEMP_DIR/adoc${i}.tmp"
+    out_file="${0/.sh/.ref-rh-supported-plugins}"
+    if [[ $i -eq 2 ]]; then out_file="${0/.sh/.ref-rh-tech-preview-plugins}"; fi
+    if [[ $i -eq 3 ]]; then out_file="${0/.sh/.ref-community-plugins}"; fi
+    
+    rm -f "$out_file"
+    count=0
+    if [[ -f "$temp_file" ]]; then
+        # Sort and process
+        sort "$temp_file" | while IFS='|' read -r key content; do
+            (( count = count + 1 ))
+            if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+            echo -e "$content" >> "$out_file"
+        done
+        count=$(wc -l < "$temp_file")
+    fi
+    num_plugins+=($count)
+done
 
-rm -f "${0/.sh/.adoc2}"
-sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc2[@]}" | sort -z)
-# shellcheck disable=SC2128
-if [[ $sorted ]] ;then
-    for key in "${sorted[@]}"; do
-      (( c = c + 1 ))
-      if [[ $QUIET -eq 0 ]]; then echo " * [$c] $key [ tech-preview-plugins ] = ${csv[$key]}"; fi
-      echo -e "${adoc2[$key]}" >> "${0/.sh/.ref-rh-tech-preview-plugins}";
-      echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
+# Process CSV
+if [[ -f "$TEMP_DIR/csv.tmp" ]]; then
+    sort "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
+        # RHIDP-4196 omit techdocs plugins from the .csv
+        if [[ $key != *"techdocs"* ]]; then
+            echo -e "$content" >> "${0/.sh/.csv}"
+        else
+            if [[ $QUIET -eq 0 ]]; then echo -e "${blue}   [WARN] Omit plugin $key from .csv file${norm}"; fi
+        fi
     done
 fi
-num_plugins+=(${#adoc2[@]})
-
-rm -f "${0/.sh/.adoc3}"
-sorted=(); while IFS= read -rd '' key; do sorted+=( "$key" ); done < <(printf '%s\0' "${!adoc3[@]}" | sort -z)
-# shellcheck disable=SC2128
-if [[ $sorted ]] ;then
-    for key in "${sorted[@]}"; do
-      (( c = c + 1 ))
-      if [[ $QUIET -eq 0 ]]; then echo " * [$c] $key [ community-plugins ] = ${csv[$key]}"; fi
-      echo -e "${adoc3[$key]}" >> "${0/.sh/.ref-community-plugins}";
-      echo -e "${csv[$key]}" >>  "${0/.sh/.csv}"
-    done
-fi
-num_plugins+=(${#adoc3[@]})
 
 if [[ $QUIET -eq 0 ]]; then echo; fi
 
@@ -389,9 +414,10 @@ if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;cat "${ENABLED_PLUGINS}.error
 
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
+rm -rf "$TEMP_DIR"
 # rm -fr /tmp/rhdh
 
-warnings=$(grep -c "WARN" "/tmp/warnings.txt")
+warnings=$(grep -c "WARN" "/tmp/warnings.txt" 2>/dev/null || echo "0")
 if [[ $warnings -gt 0 ]]; then
     echo; echo -e "${blue}[WARN] $warnings warnings collected in /tmp/warnings.txt ! Consider upgrading upstream project to newer plugin versions !${norm}"
 fi
