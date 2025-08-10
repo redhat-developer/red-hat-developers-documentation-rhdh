@@ -56,7 +56,56 @@ oc get pods -n <your-namespace>
 
 oc cp ./dynamic-plugins.marketplace.yaml <your-namespace>/<pod-name>:/opt/app-root/src/dynamic-plugins-root/dynamic-plugins.marketplace.yaml
 ----
-. Upgrade the Helm release to use this file and update environment variable to development:
+
+. Update your {product-very-short} application to use this file:
+.. For operator-based installations:
+//... Click on the overflow menu...
+... Update your Backstage CR to update the `NODE_ENV` environment variable  to `development`, as follows:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+ name: developer-hub
+ namespace: rhdh
+spec:
+ application:
+   dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+   extraEnvs:
+     envs:
+       - name: NODE_ENV
+         value: "development"
+     secrets:
+       - name: secrets-rhdh
+   extraFiles:
+     mountPath: /opt/app-root/src
+   route:
+     enabled: true
+ database:
+   enableLocalDb: true
+----
+... Update your `dynamic-plugins-rhdh` config map to include your marketplace configuration file, as follows:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+ name: dynamic-plugins-rhdh
+ namespace: rhdh
+data:
+ dynamic-plugins.yaml: |
+   includes:
+     - dynamic-plugins.default.yaml
+     - /dynamic-plugins-root/dynamic-plugins.marketplace.yaml
+   plugins: []
+----
+
+
+.. For Helm chart installations:
+
+... Upgrade the Helm release to include your marketplace configuration file and update the `NODE_ENV` environment variable  to `development`:
 +
 [source,yaml]
 ----
@@ -75,4 +124,7 @@ upstream:
      - name: NODE_ENV
        value: development
 ----
-. Click *Upgrade*
+... Click *Upgrade*
+
+.Verification
+Enable a plugin by using the Extensions UI, restart your {product-very-short} application and refresh the UI to confirm that the plugin is enabled.
