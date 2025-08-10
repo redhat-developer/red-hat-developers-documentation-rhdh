@@ -15,7 +15,30 @@ You must create a persistent volume claim (PVC) to ensure that the cache persist
 +
 [source,yaml]
 ----
-plugins:
+includes:
+  - dynamic-plugins.default.yaml
+
+plugins: 
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+          frontend:
+            red-hat-developer-hub.backstage-plugin-marketplace:
+                appIcons:
+                - name: marketplace
+                    importName: MarketplaceIcon
+                dynamicRoutes:
+                - path: /extensions/catalog
+                    importName: DynamicMarketplacePluginRouter
+                mountPoints:
+                - mountPoint: application/provider
+                    importName: InstallationContextProvider
+                - mountPoint: internal.plugins/tab
+                    importName: DynamicMarketplacePluginContent
+                    config:
+                    path: marketplace
+                    title: Catalog
   - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace-backend-dynamic
     disabled: false
     pluginConfig:
@@ -53,40 +76,3 @@ upstream:
        value: development
 ----
 . Click *Upgrade*
-
-. Add the following configuration for the Extensions UI package in your `redhat-developer-hub-dynamic-plugins` config map, to include the newly added mount point:
-+
-[source,yaml,subs="+attributes"]
-----
-data:
-  dynamic-plugins.yaml: |
-    includes:
-    - dynamic-plugins.default.yaml
-    - /dynamic-plugins-root/dynamic-plugins.marketplace.yaml
-    plugins: 
-    - package: ./dynamic-plugins/dist/backstage-community-plugin-rbac
-    - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace
-      disabled: false
-      pluginConfig:
-        dynamicPlugins:
-            frontend:
-              red-hat-developer-hub.backstage-plugin-marketplace:
-                  appIcons:
-                  - name: marketplace
-                      importName: MarketplaceIcon
-                  dynamicRoutes:
-                  - path: /extensions/catalog
-                      importName: DynamicMarketplacePluginRouter
-                  mountPoints:
-                  - mountPoint: application/provider
-                      importName: InstallationContextProvider
-                  - mountPoint: internal.plugins/tab
-                      importName: DynamicMarketplacePluginContent
-                      config:
-                      path: marketplace
-                      title: Catalog
-----
-. Click *Save*
-
-
-// .Validation
