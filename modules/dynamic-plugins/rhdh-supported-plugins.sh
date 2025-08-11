@@ -67,10 +67,7 @@ titlecase() {
         case $f in
             aap) echo -n "Ansible Automation Platform (AAP) ";;
             # UPPERCASE these exceptions
-            acr) echo -n "ACR ";;
-            cd) echo -n "CD ";;
-            ocm) echo -n "OCM ";;
-            rbac) echo -n "RBAC ";;
+            acr|cd|ocm|rbac) echo -n "$(echo "$f" | tr '[:lower:]' '[:upper:]') ";;
             # MixedCase exceptions
             argocd) echo -n "Argo CD ";;
             github) echo -n "GitHub ";;
@@ -132,7 +129,7 @@ for y in $yamls; do
     Name=$(yq -r '.metadata.name' "$y")
     Plugin_Title=$(yq -r '.metadata.title' "$y")
     
-    # Use the actual packageName from spec, fallback to name
+    # Use .spec.packageName, or if not set use .metadata.name
     Plugin=$(yq -r '.spec.packageName // .metadata.name' "$y")
     
     # If Plugin is still not a proper npm package name, try to construct it
@@ -158,8 +155,12 @@ for y in $yamls; do
         Path="${Path/-dynamic-dynamic/-dynamic}"
     fi
 
-    # Filter 1: Only dynamic plugins (must contain "dynamic" in path)
-    [[ $Path != *"dynamic"* ]] && continue
+    # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend)
+    # Accept both patterns:
+    #  - Frontend: ./dynamic-plugins/dist/<name>
+    #  - Backend:  ./dynamic-plugins/dist/<name>-dynamic
+    #  this change was made since FE plugins were not being included in the .csv file
+    [[ $Path == ./dynamic-plugins/dist/* ]] || continue
     
     # Filter 2: Exclude oci:// paths
     [[ $Path == "oci://"* ]] && continue
@@ -167,7 +168,6 @@ for y in $yamls; do
     # Filter 3: Exclude @redhat packages
     [[ $Plugin == "@redhat"* ]] && continue
 
-    # echo "Path = $Path"
     # shellcheck disable=SC2016
     found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' /tmp/rhdh/dynamic-plugins.default.yaml)
     # shellcheck disable=SC2016
@@ -275,25 +275,20 @@ for y in $yamls; do
         # not currently used due to policy and support concern with upstream content linked from downstream doc
         # URL="https://www.npmjs.com/package/$Plugin"
 
-        # Use the title from YAML if available, otherwise derive from name
-        if [[ "$Plugin_Title" != "null" && -n "$Plugin_Title" ]]; then
-            PrettyName="$Plugin_Title"
-        else
-            # fallback to name processing
-            Name="$(echo "${Name}" | sed -r \
-                -e "s@(pagerduty)-.+@\1@g" \
-                -e "s@.+(-plugin-scaffolder-backend-module|backstage-scaffolder-backend-module)-(.+)@\2@g" \
-                -e "s@.+(-plugin-catalog-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
-                -e "s@.+(-scaffolder-backend-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
-                -e "s@.+(-scaffolder-backend-module|-scaffolder-backend|backstage-plugin)-(.+)@\2@g" \
-                -e "s@(backstage-community-plugin-)@@g" \
-                -e "s@(backstage-plugin)-(.+)@\2@g" \
-                -e "s@(.+)(-backstage-plugin)@\1@g" \
-                -e "s@-backend@@g" \
-            )"
-            Name="$(echo "${Name}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
-            PrettyName="$(titlecase "${Name//-/ }")"
-        fi
+        # get a human-readable name from yaml.name
+        ProcessedName="$(echo "${Name}" | sed -r \
+            -e "s@(pagerduty)-.+@\1@g" \
+            -e "s@.+(-plugin-scaffolder-backend-module|backstage-scaffolder-backend-module)-(.+)@\2@g" \
+            -e "s@.+(-plugin-catalog-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
+            -e "s@.+(-scaffolder-backend-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
+            -e "s@.+(-scaffolder-backend-module|-scaffolder-backend|backstage-plugin)-(.+)@\2@g" \
+            -e "s@(backstage-community-plugin-)@@g" \
+            -e "s@(backstage-plugin)-(.+)@\2@g" \
+            -e "s@(.+)(-backstage-plugin)@\1@g" \
+            -e "s@-backend@@g" \
+        )"
+        ProcessedName="$(echo "${ProcessedName}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
+        PrettyName="$(titlecase "${ProcessedName//-/ }")"
 
         # useful console output
         if [[ $QUIET -eq 0 ]]; then
@@ -308,18 +303,18 @@ for y in $yamls; do
 
         # TODO include missing data fields for Provider and Description - see https://issues.redhat.com/browse/RHIDP-3496 and https://issues.redhat.com/browse/RHIDP-3440
 
-        # Use temporary files instead of associative arrays
+        # Use temporary files to allow sorting later
         key="$Name-$RoleSort-$Role-$Plugin"
         adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
         csv_content="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Lifecycle\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
         
         # split into three tables based on support level
         if [[ ${Support_Level} == "Production" ]]; then
-            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc1.tmp"
+            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.production.tmp"
         elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
-            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc2.tmp"
+            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.tech-preview.tmp"
         else
-            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc3.tmp"
+            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.community.tmp"
         fi
 
         # NOTE: csv is not split into separate tables at this point - updated to include lifecycle
@@ -340,26 +335,51 @@ fi
 echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Lifecycle\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
 
 num_plugins=()
-# Process temporary files instead of associative arrays
-for i in 1 2 3; do
-    temp_file="$TEMP_DIR/adoc${i}.tmp"
-    out_file="${0/.sh/.ref-rh-supported-plugins}"
-    if [[ $i -eq 2 ]]; then out_file="${0/.sh/.ref-rh-tech-preview-plugins}"; fi
-    if [[ $i -eq 3 ]]; then out_file="${0/.sh/.ref-community-plugins}"; fi
-    
-    rm -f "$out_file"
-    count=0
-    if [[ -f "$temp_file" ]]; then
-        # Sort and process
-        sort "$temp_file" | while IFS='|' read -r key content; do
-            (( count = count + 1 ))
-            if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
-            echo -e "$content" >> "$out_file"
-        done
-        count=$(wc -l < "$temp_file")
-    fi
-    num_plugins+=($count)
-done
+# Process temporary files
+# 1) Production
+temp_file="$TEMP_DIR/adoc.production.tmp"
+out_file="${0/.sh/.ref-rh-supported-plugins}"
+rm -f "$out_file"
+count=0
+if [[ -f "$temp_file" ]]; then
+    sort "$temp_file" | while IFS='|' read -r key content; do
+        (( count = count + 1 ))
+        if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+        echo -e "$content" >> "$out_file"
+    done
+    count=$(wc -l < "$temp_file")
+fi
+num_plugins+=($count)
+
+# 2) Tech Preview
+temp_file="$TEMP_DIR/adoc.tech-preview.tmp"
+out_file="${0/.sh/.ref-rh-tech-preview-plugins}"
+rm -f "$out_file"
+count=0
+if [[ -f "$temp_file" ]]; then
+    sort "$temp_file" | while IFS='|' read -r key content; do
+        (( count = count + 1 ))
+        if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+        echo -e "$content" >> "$out_file"
+    done
+    count=$(wc -l < "$temp_file")
+fi
+num_plugins+=($count)
+
+# 3) Community
+temp_file="$TEMP_DIR/adoc.community.tmp"
+out_file="${0/.sh/.ref-community-plugins}"
+rm -f "$out_file"
+count=0
+if [[ -f "$temp_file" ]]; then
+    sort "$temp_file" | while IFS='|' read -r key content; do
+        (( count = count + 1 ))
+        if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+        echo -e "$content" >> "$out_file"
+    done
+    count=$(wc -l < "$temp_file")
+fi
+num_plugins+=($count)
 
 # Process CSV
 if [[ -f "$TEMP_DIR/csv.tmp" ]]; then
