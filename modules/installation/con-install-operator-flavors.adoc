@@ -1,0 +1,31 @@
+[id='con-install-operator-flavors_{context}']
+= Flavor framework architecture
+
+The flavor framework for the {product} ({product-very-short}) Operator is an extension of the existing Configuration Profiles mechanism. A flavor is a specialized profile that goes beyond simple configuration to encompass a complete, opinionated {product-very-short} installation. The architecture is designed to be flexible and modular, allowing for the creation of turnkey solutions.
+
+The core of the framework is its reliance on Kustomize, a tool used by the operator to manage and apply Kubernetes manifests. Flavors act as Kustomize overlays, which means they can modify and extend a base {product-very-short} deployment with specific configurations, resources, and dependencies.
+
+A complete flavor is defined by a standardized set of directories and files:
+
+Flavor Manifest:: A `kustomization.yaml` file that acts as the central definition for the flavor, orchestrating how all the other components are applied.
+
+Configuration Directory (`config/`):: Contains {product-very-short} application and plugin configuration files.
+
+Resources Directory (`resources/`):: Holds additional Kubernetes resources that need to be deployed, such as custom resource definitions (CRDs), catalog entities, and templates.
+
+Hooks Directory (`hooks/`):: Stores manifests for pre-installation and post-installation tasks, which are executed as Kubernetes jobs.
+
+= Flavor framework implementation
+The implementation of the flavor framework is handled by the {product-very-short} Operator itself, which is extended to recognize and process the `spec.flavor` field in the Backstage custom resource (CR).
+
+The implementation details include:
+
+Flavor selection:: The Backstage CR is extended to include a `spec.flavor` field, allowing users to select a predefined or custom flavor.
+
+Operator integration:: When a Backstage CR is applied, the operator checks for the specified flavor. It then uses Kustomize to process the flavor's manifest and apply its configurations, resources, and hooks to the cluster.
+
+Dependency management:: The Operator is responsible for automatically checking for and deploying any required infrastructure dependencies (for example, other operators or CRDs) that a flavor's plugins may need. It validates these requirements before applying the flavor's configuration.
+
+Hooks execution:: The Operator handles the lifecycle of pre-installation and post-installation hooks. It monitors the status of the Kubernetes jobs created by these hooks and adjusts the deployment process accordingly.
+
+Distribution:: Flavors can be shipped with the Operator or distributed externally as container images. When a user specifies an external flavor image, the Operator pulls the image, extracts the flavor's files, and applies them in the same way as a built-in flavor. This container-based approach provides a consistent and secure way to manage custom flavors.
