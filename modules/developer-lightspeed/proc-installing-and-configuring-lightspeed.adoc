@@ -1,0 +1,499 @@
+// ARCHIVED
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-installing-and-configuring-lightspeed_{context}"]
+= Installing and configuring {ls-brand-name}
+
+You must install and configure both the {ls-short} and the {rcs-short} sidecar container manually.
+
+.Prerequisites
+* You are logged into your {ocp-short} account.
+* You have an {product-very-short} instance installed either of the following ways:
+** link:{installing-on-ocp-book-url}#assembly-install-rhdh-ocp-operator[Using the Operator]
+** link:{installing-on-ocp-book-url}#assembly-install-rhdh-ocp-helm[Using the Helm chart]
+
+.Procedure
+
+. Create the {rcs-short} ConfigMap.
+.. In the {ocp-short} web console, go to your {product-very-short} instance and select the *ConfigMaps* tab.
+.. Click *Create ConfigMaps*.
+.. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via*, and edit the file as shown in the following example:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+ name: rcsconfig
+ namespace: _<namespace>_ # Enter your namespace (For example, `rhdh`)
+data:
+ rcsconfig.yaml: |
+   llm_providers:
+     - name: dummy
+ type: openai
+ url: https://dummy.com
+ models:
+   - name: dummymodel
+ ols_config:
+     conversation_cache:
+       type: memory
+       memory:
+         max_entries: 1000
+     authentication_config:
+       module: "noop"
+     default_provider: dummy
+     default_model: dummymodel
+     query_validation_method: llm
+     user_data_collection:
+       feedback_disabled: false
+       feedback_storage: "/app-root/tmp/data/feedback"
+dev_config:
+  enable_dev_ui: false
+  disable_auth: false
+  disable_tls: true
+  enable_system_prompt_override: true
+user_data_collector_config:
+  ingress_url: "https://example.ingress.com/upload"
+  user_agent: "example-agent"
+----
+.. Optional: Configure the number of workers that scale the REST API by specifying the following example to the `rcs_config.max_workers` parameter in the {rcs-short} ConfigMap.
++
+[source,yaml]
+----
+rcs_config:
+    max_workers: _<number_of_workers>_
+----
+.. Click *Create*.
+
+. Create the {ls-short} ConfigMap.
++
+[NOTE]
+====
+Create a dedicated {ls-short} ConfigMap instead of adding an additional section to your existing {product-very-short} custom application configuration file (for example, `custom-app-config.yaml`). Creating two files prevents the entire {product-very-short} ConfigMap from being loaded into {rcs-short}.
+====
+.. In the {ocp-short} web console, go to your {product-very-short} instance and select the *ConfigMaps* tab.
+.. Click *Create ConfigMap*.
+.. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via*, and add the following example:
++
+[source,yaml]
+----
+data:
+  app-config.yaml: |-
+    backend:
+  csp:
+   upgrade-insecure-requests: false
+   img-src:
+    - "'self'"
+    - "data:"
+    - https://img.freepik.com
+    - https://cdn.dribbble.com
+    - https://avatars.githubusercontent.com # This is to load GitHub avatars in the UI
+
+   script-src:
+     - "'self'"
+     - https://cdn.jsdelivr.net
+
+lightspeed:
+      # REQUIRED: Configure LLM servers with OpenAI API compatibility
+      servers:
+      - id: ${LLM_SERVER_ID}
+        url: ${LLM_SERVER_URL}
+        token: ${LLM_SERVER_TOKEN}
+
+# OPTIONAL: Custom users prompts displayed to users
+# If not provided, the plugin uses built-in default prompts
+prompts:
+- title: 'Getting Started with Red Hat Developer Hub'
+  message: Can you guide me through the first steps to start using Developer Hub as a developer, like exploring the Software Catalog and adding my service?
+
+# OPTIONAL: Port for lightspeed service (default: 8080).
+# If set, this value should be in sync with uvicorn_port_number in olsconfig.
+# servicePort: ${LIGHTSPEED_SERVICE_PORT}
+----
+. Create {ls-short} secret file.
+.. In the {ocp-short} web console, go to *Secrets*.
+.. Click *Create > Key/value secret*.
+..In the *Create key/value secret* page, select the *YAML view* option in *Configure via*, and add the following example:
++
+[source,yaml]
+----
+kind: Secret
+apiVersion: v1
+metadata:
+  name: lightspeed-secrets
+  namespace: _<namespace>_ # Enter your rhdh instance namespace
+stringData:
+  LLM_SERVER_ID: _<server_id>_ # Enter your server ID (for example, `ollama` or `granite`)
+  LLM_SERVER_TOKEN: _<token>_ # Enter your server token value
+  LLM_SERVER_URL: _<server_url>_ # Enter your server URL
+type: Opaque
+----
+.. Click *Create*.
+
+. To your existing dynamic plugins ConfigMap (for example, `dynamic-plugins-rhdh.yaml`), add the {ls-short} plugin image as shown in the following example:
++
+[source,yaml]
+----
+includes:
+  - dynamic-plugins.default.yaml
+ plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed
+    disabled: false
+    pluginConfig:
+      lightspeed:
+        # OPTIONAL: Custom users prompts displayed to users
+        # If not provided, the plugin uses built-in default prompts
+        prompts:
+          - title: 'Getting Started with Red Hat Developer Hub'
+            message: Can you guide me through the first steps to start using Developer Hub
+              as a developer, like exploring the Software Catalog and adding my
+              service?
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-lightspeed:
+            appIcons:
+              - name: LightspeedIcon
+                module: LightspeedPlugin
+                importName: LightspeedIcon
+            dynamicRoutes:
+              - path: /lightspeed
+                importName: LightspeedPage
+                module: LightspeedPlugin
+                menuItem:
+                  icon: LightspeedIcon
+                  text: Lightspeed
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed-backend
+    disabled: false
+    pluginConfig:
+      lightspeed:
+        # REQUIRED: Configure LLM servers with OpenAI API compatibility
+        servers:
+          - id: ${LLM_SERVER_ID}
+            url: ${LLM_SERVER_URL}
+            token: ${LLM_SERVER_TOKEN}
+
+        # OPTIONAL: Port for lightspeed service (default: 8080)
+        # servicePort: ${LIGHTSPEED_SERVICE_PORT}
+----
+
+. Update your deployment configuration based on your installation method:
+.. For an Operator-installed {product-very-short} instance, update your {product-custom-resource-type} custom resource (CR).
+... In the `spec.application.appConfig.configMaps` section, add the Developer Lightspeed custom app configuration as shown in the following example:
++ 
+[source,yaml]
+----
+       - name: lightspeed-app-config
+         mountPath: /opt/app-root/src
+----
+... Update the `extraVolumes` specification to include the {rcs-short} ConfigMap as shown in the following example:
++ 
+[source,yaml]
+----
+            volumes:
+              - configMap:
+                  name: rcsconfig
+                name: rcsconfig
+----
+... Update the `volumeMounts` specification to mount the RCS ConfigMap as shown in the following example:
++
+[source,yaml]
+----
+        volumeMounts:
+          - mountPath: /app-root/config/rcsconfig.yaml
+            name: rcsconfig
+            subPath: rcsconfig.yaml
+----
+... Add the {ls-short} Secret file as shown in the following example:
++
+[source,yaml]
+----
+        envFrom:
+          - secretRef:
+              name: lightspeed-secrets
+----
+... In your `deployment.patch.spec.template.spec.containers.env` section, add the {rcs-short} image as shown in the following example:
++
+[source,yaml]
+----
+          - name: RCS_CONFIG_FILE
+            value: /app-root/config/rcsconfig.yaml
+----
++
+[NOTE]
+====
+Your {product-very-short} container is typically already present in your CR. You are adding the second container definition `road-core-sidecar` as the {rcs-short} sidecar.
+====
+... Click *Save*. The Pods are automatically updated with the new changes.
++
+.Example of a Helm chart with the RCS container
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:  
+  name: backstage
+  namespace: rhdh-operator
+spec:
+  application:
+    appConfig:
+     configMaps:
+# Adding the Developer Lightspeed custom app config file
+       - name: lightspeed-app-config
+     mountPath: /opt/app-root/src
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+# Adding the Developer Lightspeed secrets file
+      secrets:
+        - name: lightspeed-secrets
+    replicas: 1
+    extraFiles:
+      mounthPath: /opt/app-root/src
+    replicas: 1
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - env:
+                  - name: PROJECT
+                    value: rhdh
+# Mounting the RCS sidecar to your RHDH instance
+                  - name: RCS_CONFIG_FILE
+                    value: /app-root/config/rcsconfig.yaml
+# Your existing RHDH ConfigMap
+                  - name: RHDH_CONFIG_FILE
+                    value: /app-root/config/app-config-rhdh.yaml
+                envFrom:
+                  - secretRef:
+                      name: lightspeed-secrets
+                image: 'quay.io/redhat-ai-dev/road-core-service:rcs-06302025-rhdh-1.6'
+                name: road-core-sidecar
+                ports:
+                  - containerPort: 8080
+                    name: rcs-backend
+                    protocol: TCP
+                volumeMounts:
+# Mounting the RCS sidecar to your RHDH instance
+                  - mountPath: /app-root/config/rcsconfig.yaml
+                    name: rcsconfig
+                    subPath: rcsconfig.yaml
+# Mounting the Lightspeed app config file to your RCS container
+                  - mountPath: /app-root/config/app-config-rhdh.yaml
+                    name: lightspeed-app-config
+                    subPath: app-config.yaml
+            volumes:
+              - configMap:
+                  name: rcsconfig
+                name: rcsconfig
+
+----
+.. For a Helm-installed {product-very-short} instance, update your Helm chart.
+... Add your dynamic plugins configuration in the`global.dynamic` property as shown in the following example:
++
+[source,yaml]
+----
+global: 
+dynamic:
+  includes:
+  - dynamic-plugins.default.yaml
+  plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed
+    disabled: false
+    pluginConfig:
+      lightspeed:
+        # OPTIONAL: Custom users prompts displayed to users
+        # If not provided, the plugin uses built-in default prompts
+        prompts:
+          - title: 'Getting Started with Red Hat Developer Hub'
+            message: Can you guide me through the first steps to start using Developer Hub
+              as a developer, like exploring the Software Catalog and adding my
+              service?
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-lightspeed:
+            appIcons:
+              - name: LightspeedIcon
+                module: LightspeedPlugin
+                importName: LightspeedIcon
+            dynamicRoutes:
+              - path: /lightspeed
+                importName: LightspeedPage
+                module: LightspeedPlugin
+                menuItem:
+                  icon: LightspeedIcon
+                  text: Lightspeed
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed-backend
+    disabled: false
+    pluginConfig:
+      lightspeed:
+        # REQUIRED: Configure LLM servers with OpenAI API compatibility
+        servers:
+          - id: ${LLM_SERVER_ID}
+            url: ${LLM_SERVER_URL}
+            token: ${LLM_SERVER_TOKEN}
+
+        # OPTIONAL: Port for lightspeed service (default: 8080)
+        # servicePort: ${LIGHTSPEED_SERVICE_PORT}
+----
+... Add your {ls-short} custom app config file as shown in the following example:
++
+[source,yaml]
+----
+ extraAppConfig:
+      - configMapRef: lightspeed-app-config
+        filename: app-config.yaml
+----
+... Update the `extraVolumes` section to include the {rcs-short} ConfigMap as shown in the following example:
++
+[source,yaml]
+----
+extraVolumes:
+      - configMap:
+          name: olsconfig
+        name: olsconfig
+----
+... Update the `extraVolumeMounts` section to mount the {rcs-short} ConfigMap as shown in the following example:
++
+[source,yaml]
+----
+ extraVolumeMounts:
+      - mountPath: /app-root/config/rcsconfig.yaml
+        name: olsconfig
+----
+... Add the {ls-short} Secret file as shown in the following example:
++
+[source,yaml]
+----
+ extraEnvVarsSecrets:
+      - lightspeed-secrets
+----
+... Add the {rcs-short} image as shown in the following example:
++
+[source,yaml]
+----
+   extraContainers:
+      - env:
+          - name: PROJECT
+            value: rhdh
+          - name: RCS_CONFIG_FILE
+            value: /app-root/config/rcsconfig.yaml
+          - name: RHDH_CONFIG_FILE
+            value: /app-root/config/lightspeed-app-config.yaml
+        envFrom:
+          - secretRef:
+              name: lightspeed-secrets
+        image: 'quay.io/redhat-ai-dev/road-core-service:latest'
+        name: road-core-sidecar
+        ports:
+          - containerPort: 8080
+            name: rcs-backend
+            protocol: TCP
+        volumeMounts:
+          - mountPath: /app-root/config/rcsconfig.yaml
+            name: olsconfig
+            subPath: rcsconfig.yaml
+          - mountPath: /app-root/config/lightspeed-app-config.yaml
+            name: lightspeed-app-config
+            subPath: app-config.yaml
+----
++
+[NOTE]
+====
+Your {product-very-short} container is typically already present in your Helm chart. You are adding the second container definition `road-core-sidecar` as the {rcs-short} sidecar.
+====
+... Click *Save*.
+... Click *Helm upgrade*.
++
+.Example of a Helm chart with the RCS container
+[source,yaml]
+----
+global:
+ ...
+upstream:
+ backstage:
+   appConfig:
+     ...
+   args:
+     ...
+   extraAppConfig:
+     - configMapRef: lightspeed-config
+       filename: lightspeed-app-config.yaml
+   extraContainers:
+     - env:
+         - name: PROJECT
+           value: rhdh
+         - name: RCS_CONFIG_FILE
+           value: /app-root/config/rcsconfig.yaml
+         - name: RHDH_CONFIG_FILE
+           value: /app-root/config/lightspeed-app-config.yaml
+       envFrom:
+         - secretRef:
+             name: lightspeed-secrets
+       image: 'quay.io/redhat-ai-dev/road-core-service:latest'
+       name: road-core-sidecar
+       ports:
+         - containerPort: 8080
+           name: rcs-backend
+           protocol: TCP
+       volumeMounts:
+         - mountPath: /app-root/config/rcsconfig.yaml
+           name: olsconfig
+           subPath: rcsconfig.yaml
+         - mountPath: /app-root/config/lightspeed-app-config.yaml
+           name: lightspeed-config
+           subPath: lightspeed-app-config.yaml
+   extraEnvVars:
+     ...
+   extraEnvVarsSecrets:
+     - lightspeed-secrets
+   extraVolumeMounts:
+     - mountPath: /app-root/config/rcsconfig.yaml
+       name: olsconfig
+   extraVolumes:
+     - configMap:
+         name: olsconfig
+       name: olsconfig
+     ...
+   image:
+     ...
+   initContainers:
+     ...
+----
+
+. Define permissions and roles for your users who are not administrators by completing the following steps:
+.. Configure the required RBAC permission by defining an `rbac-policies.csv` file as shown in the following example:
++
+[source,yaml]
+----
+p, role:default/_<your_team>_, lightspeed.chat.read, read, allow
+p, role:default/_<your_team>_, lightspeed.chat.create, create, allow
+p, role:default/_<your_team>_, lightspeed.chat.delete, delete, allow
+
+g, user:default/_<your_user>_, role:default/_<your_team>_
+----
+.. Upload your `rbac-policies.csv` and `rbac-conditional-policies.yaml` files to an `rbac-policies` config map in your {ocp-short} project containing {product-very-short}.
+.. Update your {product-custom-resource-type} custom resource to mount in the {product-very-short} filesystem your files from the `rbac-policies` ConfigMap:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+spec:
+  application:
+    extraFiles:
+      mountPath: /opt/app-root/src
+      configMaps:
+        - name: rbac-policies
+----
+For detailed information, see link:{authorization-book-url}managing-authorizations-by-using-external-files[Managing authorizations by using external files].
+
+.Verification
+
+. Log in to your {product-very-short} instance.
+. In your {product} navigation menu, you are able to see and access the *Lightspeed* menu item. Clicking this menu takes you to the {ls-short} screen.
+image::rhdh-plugins-reference/developer-lightspeed.png[]
