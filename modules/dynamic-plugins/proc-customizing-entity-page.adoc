@@ -1,5 +1,4 @@
-[id="proc-customizing-entity-page"]
-
+[id="proc-customizing-entity-page.adoc_{context}"]
 = Customizing entity page
 
 You can extend catalog components and additional views.
@@ -119,27 +118,22 @@ plugins:
     pluginConfig:
       dynamicPlugins:
         frontend:
-          my-plugin: # <1>
-            mountPoints: # <2>
+          my-plugin: # The plugin package name
+            mountPoints: # (Optional): Uses existing mount points
               - mountPoint: <mountPointName>/[cards|context]
                 module: CustomModule
                 importName: FooPluginPage
-                config: # <3>
-                  layout: {} # <4>
-                  if: # <5>
+                config: # (Optional): Allows you to pass additional configuration to the component
+                  layout: {} # Used only in `/cards` type which renders visible content
+                  # Use only in `/cards` type which renders visible content. `if` is passed to `<EntitySwitch.Case if={<here>}`.
+                  if:
                     allOf|anyOf|oneOf:
                       - isMyPluginAvailable
                       - isKind: component
                       - isType: service
                       - hasAnnotation: annotationKey
-                  props: {} # <6>
+                  props: {} # Useful when you are passing additional data to the component
 ----
-<1> Specify the plugin package name.
-<2> (Optional): Uses existing mount points
-<3> (Optional): Allows you to pass additional configuration to the component.
-<4> Used only in `/cards` type which renders visible content. You can pass MUI sx properties to the component, which is useful when controlling the layout of the component. `entity.page.*` mount points are rendered as CSS grid, hence with the SX property you can control the grid layout and exact positioning of the rendered component.
-<5> Used only in `/cards` type which renders visible content. `if` is passed to `<EntitySwitch.Case if={<here>}`.
-<6> Useful when you are passing additional data to the component.
 
 The available conditions include:
 
@@ -147,14 +141,14 @@ The available conditions include:
 * `anyOf`: At least one condition must be met
 * `oneOf`: Only one condition must be met
 
-Conditions can be:
+Conditions are:
 
 * `isKind`: Accepts a string or a list of string with entity kinds. For example `isKind: component` renders the component only for entity of `kind: Component`.
 * `isType`: Accepts a string or a list of string with entity types. For example `isType: service` renders the component only for entities of `spec.type: 'service'`.
 * `hasAnnotation`: Accepts a string or a list of string with annotation keys. For example `hasAnnotation: my-annotation` renders the component only for entities that have defined `metadata.annotations['my-annotation']`.
 * Condition imported from the plugin's `module`: Must be function name exported from the same `module` within the plugin. For example `isMyPluginAvailable` renders the component only if `isMyPluginAvailable` function returns `true`. The function must have the following signature: `(e: Entity) => boolean`
 
-The entity page also supports adding more items to the context menu at the top right of the page. The exported component should be a form of dialog wrapper component that accepts an `open` boolean property and an `onClose` event handler property as shown in the following example:
+The entity page supports adding more items to the context menu at the top right of the page. The exported component is a form of dialog wrapper component that accepts an `open` boolean property and an `onClose` event handler property as shown in the following example:
 
 [source,yaml]
 ----
