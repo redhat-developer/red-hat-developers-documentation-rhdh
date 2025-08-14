@@ -28,33 +28,33 @@ metadata:
  namespace: _<namespace>_ # Enter your namespace (For example, `rhdh`)
 data:
  rcsconfig.yaml: |
-   llm_providers:
-     - name: dummy
- type: openai
- url: https://dummy.com
- models:
-   - name: dummymodel
- ols_config:
-     conversation_cache:
-       type: memory
-       memory:
-         max_entries: 1000
-     authentication_config:
-       module: "noop"
-     default_provider: dummy
-     default_model: dummymodel
-     query_validation_method: llm
-     user_data_collection:
-       feedback_disabled: false
-       feedback_storage: "/app-root/tmp/data/feedback"
-dev_config:
-  enable_dev_ui: false
-  disable_auth: false
-  disable_tls: true
-  enable_system_prompt_override: true
-user_data_collector_config:
-  ingress_url: "https://example.ingress.com/upload"
-  user_agent: "example-agent"
+  llm_providers:
+    - name: dummy
+      type: openai
+      url: 'https://dummy.com'
+      models:
+        - name: dummymodel
+  ols_config:
+    conversation_cache:
+      type: memory
+      memory:
+        max_entries: 1000
+      authentication_config:
+        module: noop
+      default_provider: dummy
+      default_model: dummymodel
+      query_validation_method: llm
+    user_data_collection:
+      feedback_disabled: false
+      feedback_storage: /app-root/tmp/data/feedback
+  dev_config:
+    enable_dev_ui: false
+    disable_auth: false
+    disable_tls: true
+    enable_system_prompt_override: true
+  user_data_collector_config:
+    ingress_url: 'https://example.ingress.com/upload'
+    user_agent: example-agent
 ----
 .. Optional: Configure the number of workers that scale the REST API by specifying the following example to the `rcs_config.max_workers` parameter in the {rcs-short} ConfigMap.
 +
@@ -80,35 +80,40 @@ Create a dedicated {ls-short} ConfigMap instead of adding an additional section 
 data:
   app-config.yaml: |-
     backend:
-  csp:
-   upgrade-insecure-requests: false
-   img-src:
-    - "'self'"
-    - "data:"
-    - https://img.freepik.com
-    - https://cdn.dribbble.com
-    - https://avatars.githubusercontent.com # This is to load GitHub avatars in the UI
-
-   script-src:
-     - "'self'"
-     - https://cdn.jsdelivr.net
-
-lightspeed:
+      csp:
+         upgrade-insecure-requests: false
+       img-src:
+          - "'self'"
+          - "data:"
+          - https://img.freepik.com
+          - https://cdn.dribbble.com
+          - https://avatars.githubusercontent.com # This is to load GitHub avatars in the UI
+       script-src:
+           - "'self'"
+           - https://cdn.jsdelivr.net
+    
+    lightspeed:
       # REQUIRED: Configure LLM servers with OpenAI API compatibility
       servers:
-      - id: ${LLM_SERVER_ID}
-        url: ${LLM_SERVER_URL}
-        token: ${LLM_SERVER_TOKEN}
-
-# OPTIONAL: Custom users prompts displayed to users
-# If not provided, the plugin uses built-in default prompts
-prompts:
-- title: 'Getting Started with Red Hat Developer Hub'
-  message: Can you guide me through the first steps to start using Developer Hub as a developer, like exploring the Software Catalog and adding my service?
-
-# OPTIONAL: Port for lightspeed service (default: 8080).
-# If set, this value should be in sync with uvicorn_port_number in olsconfig.
-# servicePort: ${LIGHTSPEED_SERVICE_PORT}
+        - id: ${LIGHTSPEED_SERVER_ID}
+          url: ${LIGHTSPEED_SERVER_URL}
+          token: ${LIGHTSPEED_SERVER_TOKEN}
+    
+      # OPTIONAL: Enable/disable question validation (default: true)
+      # When enabled, restricts questions to RHDH-related topics for better security
+      questionValidation: true 
+    
+      # OPTIONAL: Custom users prompts displayed to users
+      # If not provided, the plugin uses built-in default prompts
+      prompts:
+        - title: 'Getting Started with Red Hat Developer Hub'
+          message: Can you guide me through the first steps to start using Developer Hub as a developer, like exploring the Software Catalog and adding my service?
+    
+      # OPTIONAL: Port for lightspeed service (default: 8080)
+      # servicePort: ${LIGHTSPEED_SERVICE_PORT}
+    
+      # OPTIONAL: Override default RHDH system prompt
+      # systemPrompt: "You are a helpful assistant focused on Red Hat Developer Hub development."
 ----
 . Create {ls-short} secret file.
 .. In the {ocp-short} web console, go to *Secrets*.
