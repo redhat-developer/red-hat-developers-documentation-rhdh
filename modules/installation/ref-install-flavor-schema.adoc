@@ -1,0 +1,34 @@
+[id='ref-install-flavor-schema_{context}']
+= Flavor manifest schema
+The flavor manifest is a `kustomization.yaml` file that serves as the central definition for a flavor. This file is used by the {product-very-short} Operator to orchestrate the deployment of all other components. The manifest schema leverages standard Kustomize fields and is typically structured as follows:
+
+[source,yaml,subs="+attributes"]
+----
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - config/
+  - resources/
+  - hooks/
+----
+
+_apiVersion_ and _kind_:: These are standard Kustomize fields that define the schema version and type.
+
+_resources_:: This field is a list that points to the directories containing the flavor's configuration files, Kubernetes resources, and hooks. The Operator uses this list to process and apply all the components within the flavor.
+
+== Configuration options
+A flavor's configuration is managed through the directories and files referenced in its manifest. The primary configuration options are:
+
+{product-very-short} application configuration:: The _config/app-config.yaml_ file contains the core configuration for the {product-very-short} instance. This can include settings for the backend, authentication providers, and other core functionalities.
+
+Dynamic plugins configuration:: Files located in the _config/plugins/_ directory define the settings for specific dynamic plugins. This includes enabling or disabling plugins and configuring their unique properties.
+
+Kubernetes resources:: The _resources/_ directory contains standard Kubernetes manifests. This can include:
++
+* Dependency manifests that define Custom Resource Definitions (CRDs) for external services.
+
+* Catalog entities which are YAML files for initial catalog entries, such as templates, components, and APIs.
+
+Hooks:: The _hooks/_ directory contains manifests for Kubernetes jobs. These jobs can be used to perform pre-installation or post-installation tasks, such as creating secrets or running data migrations.
+
+Platform-Specific Overrides:: Flavors can include platform-specific patches. Files with a _.k8s_ or _.ocp_ extension for example, _app-config.yaml.ocp_ provide overrides for vanilla Kubernetes and OpenShift environments, respectively. The operator automatically applies the correct patch based on the cluster's platform.
