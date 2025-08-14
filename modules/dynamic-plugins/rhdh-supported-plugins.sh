@@ -222,7 +222,7 @@ for y in $yamls; do
             # echo | tee -a /tmp/warnings.txt
         fi
 
-        # Extract support level from YAML metadata - updated to use actual YAML structure
+        # Extract support level from YAML metadata
         Support_Level="Community Support"
         # Check for Red Hat authorship and support level
         author=$(yq -r '.spec.author // "unknown"' "$y")
