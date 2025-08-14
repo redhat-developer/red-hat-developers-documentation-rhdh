@@ -1,0 +1,118 @@
+// Module included in the following assemblies
+// assembly-orchestrator-helm-modules.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-install-orchestrator-helm-cli_{context}"]
+= Install the Orchestrator flavor using the Helm CLI
+
+You can install the Orchestrator flavor of {product} ({product-very-short}) on OpenShift using the Helm CLI. This method provides flexibility for custom configurations and automation. The Orchestrator flavor enables serverless workflows and orchestration capabilities.
+
+
+[IMPORTANT]
+====
+You must be a cluster administrator to install the Orchestrator Helm chart because it deploys cluster-scoped resources. The {product} Helm chart may be installed by a user with namespace-level access.
+====
+
+.Prerequisites
+
+* You are logged in to the OpenShift cluster using the `oc` CLI.
+* You have installed Helm and configured locally.
+* You have access to the official Red Hat container registry (`registry.redhat.io`).
+* You have created a `values.yaml` file for the deployment.
+* You have access to the {product} Helm chart repository.
+
+.Procedure
+
+. Add the official OpenShift Helm charts repository:
++
+[source,bash]
+----
+helm repo add openshift-helm-charts https://charts.openshift.io/
+helm repo update
+----
+
+. Install the orchestrator infrastructure Helm chart:
++
+[source,bash]
+----
+helm install <release_name> openshift-helm-charts/redhat-developer-hub-orchestrator-infra
+----
+
+. Manually approve the install plans for OpenShift Serverless and Serverless Logic Operators. Wait until they are successfully deployed.
+
+. Install the Backstage chart with the orchestrator enabled:
++
+[source,bash]
+----
+helm install <release_name> openshift-helm-charts/redhat-developer-hub --version 1.7.0 \
+  --set orchestrator.enabled=true
+----
+
+. (Optional) Disable the installation of the Serverless Logic and Serverless Operators if they are managed externally:
++
+[source,bash]
+----
+helm install <release_name> redhat-developer/backstage \
+  --set orchestrator.serverlessOperator=false \
+  --set orchestrator.serverlessLogicOperator=false
+----
+
+. (Optional) Enable *Notifications* and *Signals* plugins by adding them under `global.dynamic.plugins` in your `values.yaml` file:
++
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-notifications"
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-signals"
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-notifications-backend-dynamic"
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-signals-backend-dynamic"
+----
+
+. (Optional) If using an external database, add the following configuration under `orchestrator.sonataflowPlatform` in your `values.yaml` file:
++
+[source,yaml]
+----
+orchestrator:
+  sonataflowPlatform:
+    externalDBsecretRef: "<cred-secret>"
+    externalDBName: "<database_name>"
+    externalDBHost: "<database_host>"
+    externalDBPort: "<database_port>"
+----
+
+[NOTE]
+====
+This only configures the Orchestrator's use of an external database. To configure {product} to use an external PostgreSQL instance, follow the steps in:
+link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.6/html/configuring_red_hat_developer_hub/configuring-external-postgresql-databases#proc-configuring-postgresql-instance-using-helm_configuring-external-postgresql-databases[Configuring a PostgreSQL instance using Helm].
+====
+
+.Verification
+
+. Verify that the orchestrator plugin is visible in the {product} UI.
+
+. Create and run sample workflows to confirm orchestration is functioning correctly.
+
+. Check the logs of the Orchestrator pod to verify workflow execution and plugin readiness.
+Use the following commands to check the Orchestrator pod logs:
++
+[source,bash]
+----
+# List pods in the namespace
+oc get pods -n <namespace>
+
+# Replace <orchestrator-pod-name> with the actual pod name
+oc logs -n <namespace> <orchestrator-pod-name>
+----
+
+. (Optional) Stream logs in real-time:
++
+[source,bash]
+----
+oc logs -n <namespace> -f <orchestrator-pod-name>
+----
