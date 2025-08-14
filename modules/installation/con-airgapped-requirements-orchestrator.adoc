@@ -1,0 +1,60 @@
+// Module included in the following assemblies
+// assembly-install-rhdh-orchestrator-helm.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="con-airgapped-requirements-orchestrator_{context}"]
+= Resource requirements for air-gapped environments
+
+You can deploy the Orchestrator flavor of {product} in air-gapped environments by ensuring that all container images, and Helm charts required by {product} and SonataFlow are available internally.
+
+For workflow orchestration in air-gapped environments, the following resources are recommended:
+
+[cols="2,2", options="header"]
+|===
+| Resource component
+| Recommended resources
+
+| RHDH Orchestrator plugin
+| 2 vCPUs, 2–4 GiB memory
+
+| SonataFlow runtime
+| 1 vCPU, 1–2 GiB memory
+
+| Knative Serving and Eventing
+| 1–2 vCPUs, 1.5 GiB memory
+
+| PostgreSQL or External DB
+| 1 vCPU, 1 GiB memory
+
+| Persistent storage
+| 5 GiB (minimum), adjust based on workflow logs and artifacts
+|===
+
+To prepare for an air-gapped deployment, complete the following steps:
+
+. **Mirror container images**
+
+   Mirror all required {product-very-short}, SonataFlow, Knative, and orchestrator plugin images to an internal container registry. Ensure that the image versions match the Helm chart values.
+
+. **Mirror Helm charts**
+
+   Pre-download the Helm charts for `redhat-developer-hub`, `orchestrator-infra`, and any dependent charts (for example, `bitnami` and `backstage`). Host them in an internal chart repository or file server.
+
+. **CRD and operator installation**
+
+   Download the required CRDs and YAML manifests for SonataFlow and Knative operators and apply them manually.
+
+. **Configure network policies**
+
+   Validate inter-pod communication and ensure internal DNS resolution to the mirrored image registry.
+
+. **Use `imagePullSecrets`**
+
+   Update your `values.yaml` file with credentials for the internal registry if it is private:
+
+[source,yaml]
+----
+   global:
+     imagePullSecrets:
+       - name: internal-registry-secret
+----
