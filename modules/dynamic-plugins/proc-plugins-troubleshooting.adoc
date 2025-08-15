@@ -1,0 +1,46 @@
+[id="proc-troubleshooting-plugins_{context}"]
+= Troubleshooting plugins
+
+== {product-very-short} pod fails to start after enabling a plugin
+. Inspect your {product-very-short} pod logs to identify if the plugin requires specific environment variables or additional configuration, for example:
++
+[source,terminal]
+----
+Plugin '<PLUGIN_NAME>' threw an error during startup, waiting for X other plugins to finish before shutting down the process. Plugin '<PLUGIN_NAME>' startup failed; caused by Error: Missing required config value at '<concretePluginRequiredVariable.name>' in 'app-config.local.yaml' type="initialization"
+----
+. Verify the required configuration by inspecting `dynamic-plugins.default.yaml` file that lists the required environment variables for each plugin.
+The variables for each plugin are in the format of `${PLUGIN_VARIABLE_NAME}`
+. If any required environment variables are missing, set the environment variables by using a *secret*, for example:
++
+[source,yaml]
+----
+kind: Secret
+apiVersion: v1
+metadata:
+  name: rhdh-secrets
+  labels:
+    backstage.io/kubernetes-id: developer-hub
+data:
+  PLUGIN_VARIABLE_NAME: 'dummy-value'
+type: Opaque
+----
+. Mount the secret:
+.. If {product-very-short} is deployed by using the Operator, update your Backstage CR, as follows: 
++
+[source,yaml]
+----
+spec:
+  application:
+    extraEnvs:
+      secrets:
+        - name: rhdh-secrets
+----
+.. If {product-very-short} is deployed by using the Helm chart, under *Root Schema → Backstage Chart Schema → Backstage Parameters → Backstage container environment variables from existing Secrets*:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraEnvVarsSecrets:
+	    - rhdh-secrets
+----
