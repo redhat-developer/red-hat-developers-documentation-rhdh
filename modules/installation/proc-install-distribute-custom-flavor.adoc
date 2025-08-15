@@ -1,0 +1,37 @@
+[id='proc-install-distribute-custom-flavor_{context}']
+= Distributing a custom flavor
+Custom flavors can be distributed as container images, offering a secure and versioned approach.
+
+.Procedure
+
+. Create a container image that contains your flavor's directory structure at a specific location, typically `/flavor/`. The image should be lightweight and contain only the necessary manifests and files.
++
+[source,terminal,subs="+quotes"]
+----
+/flavor/
+├── flavor.yaml             # Flavor manifest
+├── config/
+├── resources/
+└── hooks/
+----
+
+. When the image is built, push it to a container registry which makes the flavor accessible to others, for example:
++
+[source,terminal,subs="+quotes"]
+----
+podman push quay.io/myorg/my-custom-flavor:1.0.0
+----
+
+. Users can deploy your custom flavor by referencing the container image directly in their Backstage custom resource. The operator pulls the image, extracts the contents, and applies the configuration automatically. For example:
++
+[source,yaml,subs="+attributes"]
+----
+apiVersion: backstage.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: custom-hub
+spec:
+  flavor:
+    name: my-custom-flavor
+    image: quay.io/myorg/my-custom-flavor:1.0.0
+----
