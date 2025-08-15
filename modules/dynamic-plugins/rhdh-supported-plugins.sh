@@ -82,7 +82,6 @@ titlecase() {
             *) 
                 first_char=$(echo "$f" | cut -c1 | tr '[:lower:]' '[:upper:]')
                 rest_chars=$(echo "$f" | cut -c2-)
-                echo -n "${first_char}${rest_chars} "
                 ;;
         esac;
     done; echo;
