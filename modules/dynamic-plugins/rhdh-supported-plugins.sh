@@ -80,7 +80,6 @@ titlecase() {
             techdocs) echo -n "TechDocs ";;
             # Uppercase the first letter
             *) echo -n "${f^} " ;;
-                rest_chars=$(echo "$f" | cut -c2-)
                 ;;
         esac;
     done; echo;
