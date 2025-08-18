@@ -1,0 +1,79 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-install-orchestrator-plugin.adoc_{context}"]
+= Installing the Orchestrator plugin
+
+The Orchestrator plugin has the following dynamic plugins:
+
+* Orchestrator-backend
+* Orchestrator-frontend
+* Orchestrator-scaffolder-backend-module
+* Orchestrator-form-widgets
+
+These plugins are included in the default `dynamic-plugins.yaml` file of the `install-dynamic-plugins` container and are disabled by default. You can enable the Orchestrator plugin by referring the `dynamic-plugins-rhdh` ConfigMap file with the following data:
+
+[source,bash]
+----
+    includes:
+       - dynamic-plugins.default.yaml
+    plugins:
+       - package: "@redhat/backstage-plugin-orchestrator@1.6.0"
+         disabled: false
+       - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.6.0"
+         disabled: false
+         dependencies:
+            - ref: sonataflow
+       - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.6.0"
+         disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.6.0"
+         disabled: false
+----
+
+The following is an example of the complete configuration of the Orchestrator plugin:
+
+[source,bash]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-plugin
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@1.6.0"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.6.0"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.6.0"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.6.0"
+        disabled: false
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |-
+    auth:
+      environment: development
+      providers:
+        guest:
+          # using the guest user to query the '/api/dynamic-plugins-info/loaded-plugins' endpoint.
+          dangerouslyAllowOutsideDevelopment: true
+
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: orchestrator
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: app-config-rhdh
+    dynamicPluginsConfigMapName: orchestrator-plugin
+----
