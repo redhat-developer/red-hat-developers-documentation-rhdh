@@ -56,11 +56,11 @@ data:
     ingress_url: 'https://example.ingress.com/upload'
     user_agent: example-agent
 ----
-.. Optional: Configure the number of workers that scale the REST API by specifying the following example to the `rcs_config.max_workers` parameter in the {rcs-short} ConfigMap.
+.. Optional: Configure the number of workers that scale the REST API by specifying the following example to the `ols_config.max_workers` parameter in the {rcs-short} ConfigMap.
 +
 [source,yaml]
 ----
-rcs_config:
+ols_config:
     max_workers: _<number_of_workers>_
 ----
 .. Click *Create*.
@@ -69,14 +69,19 @@ rcs_config:
 +
 [NOTE]
 ====
-Create a dedicated {ls-short} ConfigMap instead of adding an additional section to your existing {product-very-short} custom application configuration file (for example, `custom-app-config.yaml`). Creating two files prevents the entire {product-very-short} ConfigMap from being loaded into {rcs-short}.
+Create a dedicated {ls-short} ConfigMap instead of adding an additional section to your existing {product-very-short} custom application configuration file (for example, `lightspeed-app-config.yaml`). Creating two files prevents the entire {product-very-short} ConfigMap from being loaded into {rcs-short}.
 ====
 .. In the {ocp-short} web console, go to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMap*.
 .. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via*, and add the following example:
 +
-[source,yaml]
+[source,yaml,subs=+attributes]
 ----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: lightspeed-app-config
+  namespace: <__namespace__> # Enter your {product-very-short} instance namespace
 data:
   app-config.yaml: |-
     backend:
@@ -187,8 +192,10 @@ includes:
 + 
 [source,yaml]
 ----
-       - name: lightspeed-app-config
-         mountPath: /opt/app-root/src
+      appConfig:
+        configMaps:
+          - name: lightspeed-app-config
+        mountPath: /opt/app-root/src
 ----
 ... Update the `extraVolumes` specification to include the {rcs-short} ConfigMap as shown in the following example:
 + 
@@ -207,6 +214,9 @@ includes:
           - mountPath: /app-root/config/rcsconfig.yaml
             name: rcsconfig
             subPath: rcsconfig.yaml
+          - mountPath: /app-root/config/app-config-rhdh.yaml
+            name: lightspeed-app-config
+            subPath: app-config.yaml
 ----
 ... Add the {ls-short} Secret file as shown in the following example:
 +
@@ -216,12 +226,16 @@ includes:
           - secretRef:
               name: lightspeed-secrets
 ----
-... In your `deployment.patch.spec.template.spec.containers.env` section, add the {rcs-short} image as shown in the following example:
+... In your `deployment.patch.spec.template.spec.containers.env` section, set the {rcs-short} environment variables as shown in the following example:
 +
 [source,yaml]
 ----
-          - name: RCS_CONFIG_FILE
-            value: /app-root/config/rcsconfig.yaml
+    - name: PROJECT
+      value: rhdh
+    - name: RCS_CONFIG_FILE
+      value: /app-root/config/rcsconfig.yaml
+    - name: RHDH_CONFIG_FILE
+      value: /app-root/config/app-config-rhdh.yaml
 ----
 +
 [NOTE]
@@ -230,14 +244,14 @@ Your {product-very-short} container is typically already present in your CR. You
 ====
 ... Click *Save*. The Pods are automatically restarted.
 +
-.Example of a Helm chart with the {rcs-short} container
-[source,yaml]
+.Example of a Backstage CR with the {rcs-short} container
+[source,yaml,subs=+attributes]
 ----
 apiVersion: rhdh.redhat.com/v1alpha3
 kind: Backstage
 metadata:  
   name: backstage
-  namespace: rhdh-operator
+  namespace: _<namespace>_ # your {product-very-short} instance namespace
 spec:
   application:
     appConfig:
@@ -358,8 +372,8 @@ dynamic:
 ----
 extraVolumes:
       - configMap:
-          name: olsconfig
-        name: olsconfig
+          name: rcsconfig
+        name: rcsconfig
 ----
 ... Update the `extraVolumeMounts` section to mount the {rcs-short} ConfigMap as shown in the following example:
 +
@@ -367,7 +381,7 @@ extraVolumes:
 ----
  extraVolumeMounts:
       - mountPath: /app-root/config/rcsconfig.yaml
-        name: olsconfig
+        name: rcsconfig
 ----
 ... Add the {ls-short} Secret file as shown in the following example:
 +
@@ -399,7 +413,7 @@ extraVolumes:
             protocol: TCP
         volumeMounts:
           - mountPath: /app-root/config/rcsconfig.yaml
-            name: olsconfig
+            name: rcsconfig
             subPath: rcsconfig.yaml
           - mountPath: /app-root/config/lightspeed-app-config.yaml
             name: lightspeed-app-config
@@ -425,8 +439,8 @@ upstream:
    args:
      ...
    extraAppConfig:
-     - configMapRef: lightspeed-config
-       filename: lightspeed-app-config.yaml
+     - configMapRef: lightspeed-app-config
+       filename: app-config.yaml
    extraContainers:
      - env:
          - name: PROJECT
@@ -446,10 +460,10 @@ upstream:
            protocol: TCP
        volumeMounts:
          - mountPath: /app-root/config/rcsconfig.yaml
-           name: olsconfig
+           name: rcsconfig
            subPath: rcsconfig.yaml
          - mountPath: /app-root/config/lightspeed-app-config.yaml
-           name: lightspeed-config
+           name: lightspeed-app-config
            subPath: lightspeed-app-config.yaml
    extraEnvVars:
      ...
@@ -457,11 +471,11 @@ upstream:
      - lightspeed-secrets
    extraVolumeMounts:
      - mountPath: /app-root/config/rcsconfig.yaml
-       name: olsconfig
+       name: rcsconfig
    extraVolumes:
      - configMap:
-         name: olsconfig
-       name: olsconfig
+         name: rcsconfig
+       name: rcsconfig
      ...
    image:
      ...
