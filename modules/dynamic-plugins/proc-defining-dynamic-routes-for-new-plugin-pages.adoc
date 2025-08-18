@@ -1,0 +1,71 @@
+[id="proc-defining-dynamic-routes-for-new-plugin-pages.adoc_{context}"]
+
+= Defining dynamic routes for new plugin pages
+
+.Procedure
+. Define each route by specifying a unique `path` and, if needed, an `importName` if it is different from the `default` export.
+. Expose additional routes in a dynamic plugin by configuring `dynamicRoutes` as shown in the following example:
++
+[source,yaml]
++
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          my-plugin: # The plugin package name
+            dynamicRoutes:
+                # The unique path in the application. The path cannot override existing routes except the `/` home route.
+              - path: /my-plugin
+                # (Optional): The set of assets to access within the plugin. If not specified, the system uses the `PluginRoot` module.
+                module: CustomModule
+                # (Optional): The component name as a standalone page. If not specified, the system uses the `default` export.
+                importName: FooPluginPage
+                # Allows you to extend the main sidebar navigation and point to a new route.
+                menuItem:
+                  icon: fooIcon
+                  text: Foo Plugin Page
+                  enabled: false
+                config: # (Optional): Passes `props` to a custom sidebar item
+                  props: ...
+----
++
+The `menuItem` accepts the following properties:
+
+* `text`: The label shown to the user.
+* `icon`: The Backstage system icon name.
+* `enabled`: Optional: Allows the user to remove a menuItem from the sidebar when it is set to false.
+* `importName`: Specifies the optional name of an exported `SidebarItem` component.
++
+To configure a custom `SidebarItem` to enhance experiences such as notification badges, ensure the component accepts the following properties:
+
+[source,yaml]
+----
+export type MySidebarItemProps = {
+  to: string; // supplied by the sidebar during rendering, this will be the path configured for the dynamicRoute
+};
+----
+
+.Example specifying a custom `SidebarItem` component:
+[source,yaml]
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          my-dynamic-plugin-package-name:
+            dynamicRoutes:
+              - importName: CustomPage
+                menuItem:
+                  config:
+                    props:
+                      text: Click Me!
+                  importName: SimpleSidebarItem
+                path: /custom_page
+----
