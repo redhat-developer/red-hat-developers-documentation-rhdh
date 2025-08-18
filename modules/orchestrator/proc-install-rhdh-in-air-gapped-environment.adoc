@@ -13,38 +13,11 @@ You can install {product} with the Orchestrator in an air-gapped environment by 
 
 .Procedure
 
-. From a connected network, log in to the external registries:
-+
-[source,bash]
-----
-podman login registry.redhat.io
-podman login registry.access.redhat.com
-podman login npm.registry.redhat.com
-----
+. From a connected network, log in to the external registries.
 
-. Identify and mirror all required container images to your internal registry:
-+
-[source,bash]
-----
-oc image mirror \
-  registry.redhat.io/openshift-serverless/*=internal-registry.example.com/openshift-serverless/* \
-  registry.redhat.io/openshift-knative/*=internal-registry.example.com/openshift-knative/* \
-  registry.redhat.io/sonataflow/*=internal-registry.example.com/sonataflow/* \
-  registry.redhat.io/rhdh/*=internal-registry.example.com/rhdh/* \
-  registry.redhat.io/postgresql/*=internal-registry.example.com/postgresql/*
-----
+. Identify and mirror all required container images to your internal registry.
 
 . Mirror the Orchestrator plugin NPM packages to your internal NPM registry:
-+
-[source,bash]
-----
-npm pack @redhat/backstage-plugin-orchestrator@<version>
-npm pack @redhat/backstage-plugin-orchestrator-backend-dynamic@<version>
-npm pack @redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@<version>
-npm pack @redhat/backstage-plugin-orchestrator-form-widgets@<version>
-
-npm publish <package>.tgz --registry https://internal-npm.example.com
-----
 
 . Update the `dynamic-plugins` configuration to reference the internal NPM registry:
 +
@@ -53,18 +26,12 @@ npm publish <package>.tgz --registry https://internal-npm.example.com
 plugins:
   - package: "@redhat/backstage-plugin-orchestrator@<version>"
     disabled: false
-    registry: https://internal-npm.example.com
+    registry: {INTERNAL_REGISTRY_EXAMPLE} # Specify the URL for the internal NPM registry.
 ----
 
-. If using Helm charts, download them from a connected environment and push them to your internal chart repository:
-+
-[source,bash]
-----
-helm pull <chart> --version <version>
-helm push <chart>.tgz oci://internal-chart-repo.example.com/rhdh
-----
+. (Optional) If you use Helm charts, download them from a connected environment and push them to your internal chart repository.
 
-. Ensure _NetworkPolicies_, Role, and _RoleBinding_ resources for the _SonataFlow_ platform are included in your deployment configuration. The {product-short} Operator applies these automatically when the _SonataFlowPlatform_ CR is created.
+. Make sure _NetworkPolicies_, Role, and _RoleBinding_ resources for the _SonataFlow_ platform are included in your deployment configuration. The {product-short} Operator applies these automatically when the `SonataFlowPlatform` custom resource is created.
 
 [NOTE]
 ====
@@ -72,4 +39,4 @@ For the connected environment resource requirements, see link:{installing-orch-o
 ====
 
 .Verification
-* Ensure all pods for OpenShift Serverless, Knative Serving/Eventing, SonataFlow, and PostgreSQL start successfully.
+* Make sure all pods for OpenShift Serverless, Knative Serving/Eventing, SonataFlow, and PostgreSQL start successfully.
