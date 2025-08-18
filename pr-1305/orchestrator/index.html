@@ -1,0 +1,221 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Installing Red Hat Developer Hub with the Orchestrator plugin on OpenShift Container Platform</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a cluster administrator, you can install Red Hat Developer Hub (RHDH) on OpenShift Container Platform with the Orchestrator plugin enabled, along with the required dynamic plugins and integrated workflow infrastructure such as SonataFlow, Knative, OpenShift Serverless Operator, and OpenShift Serverless Logic Operator."/><link rel="next" href="#con-infrastructure-components.adoc_title-orchestrator" title="1. Infrastructure components"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45255100033152"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.7</span></div><div><h1 class="title">Installing Red Hat Developer Hub with the Orchestrator plugin on OpenShift Container Platform</h1></div><div><h3 class="subtitle"><em>Installing Red Hat Developer Hub with the Orchestrator plugin on OpenShift Container Platform using the Red Hat Developer Hub Operator</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45255090226000">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				As a cluster administrator, you can install Red Hat Developer Hub (RHDH) on OpenShift Container Platform with the Orchestrator plugin enabled, along with the required dynamic plugins and integrated workflow infrastructure such as SonataFlow, Knative, OpenShift Serverless Operator, and OpenShift Serverless Logic Operator.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#con-infrastructure-components.adoc_title-orchestrator">1. Infrastructure components</a></span></li><li><span class="section"><a href="#con-orchestrator-plugin-components.adoc_title-orchestrator">2. Orchestrator plugin components</a></span></li><li><span class="section"><a href="#con-plugin-dependencies.adoc_title-orchestrator">3. Plugin dependencies</a></span></li><li><span class="section"><a href="#proc-install-components-for-orchestrator-plugin.adoc_title-orchestrator">4. Installing the components for the Orchestrator plugin on OpenShift Container Platform</a></span></li><li><span class="section"><a href="#proc-install-orchestrator-plugin.adoc_title-orchestrator">5. Installing the Orchestrator plugin</a></span></li><li><span class="section"><a href="#proc-install-in-air-gapped-environment.adoc_title-orchestrator">6. Installing Red Hat Developer Hub with the Orchestrator in an air-gapped environment</a></span></li></ul></div><section class="section" id="con-infrastructure-components.adoc_title-orchestrator"><div class="titlepage"><div><div><h2 class="title">1. Infrastructure components</h2></div></div></div><p>
+			To install Red Hat Developer Hub with the Orchestrator plugin on OpenShift Container Platform, you need the following components to support the plugin and its runtime infrastructure:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					OpenShift Serverless Operator
+				</li><li class="listitem">
+					Knative Serving
+				</li><li class="listitem">
+					Knative Eventing
+				</li><li class="listitem">
+					OpenShift Serverless Logic Operator
+				</li></ul></div><p>
+			The Red Hat Developer Hub Operator provisions these automatically or you can install them manually using another Operator.
+		</p></section><section class="section" id="con-orchestrator-plugin-components.adoc_title-orchestrator"><div class="titlepage"><div><div><h2 class="title">2. Orchestrator plugin components</h2></div></div></div><p>
+			The following Orchestrator plugin components are included by default in <code class="literal">dynamic-plugins.default.yaml</code>:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					<code class="literal">@redhat/backstage-plugin-orchestrator</code>
+				</li><li class="listitem">
+					<code class="literal">@redhat/backstage-plugin-orchestrator-backend-dynamic</code>
+				</li><li class="listitem">
+					<code class="literal">@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic</code>
+				</li><li class="listitem">
+					<code class="literal">@redhat/backstage-plugin-orchestrator-form-widgets</code>
+				</li></ul></div></section><section class="section" id="con-plugin-dependencies.adoc_title-orchestrator"><div class="titlepage"><div><div><h2 class="title">3. Plugin dependencies</h2></div></div></div><p>
+			To run the Orchestrator plugin instance, you need to install the following dependencies:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					A SonataflowPlatform custom resource created in the namespace of the Backstage CR.
+				</li><li class="listitem">
+					A set of NetworkPolicies to allow traffic between infra resources, such as knative and serverless logic Operator, created in the namespace of Backstage CR, traffic for monitoring, and intra-namespace traffic.
+				</li></ul></div><p>
+			The orchestrator-backend plugin uses the service <code class="literal">sonataflow-platform-data-index-service</code>, which is created by the <span class="emphasis"><em>SonataFlowPlatform</em></span> CR. The service communicates with the SonataFlow platform.
+		</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+				The <span class="emphasis"><em>sonataflowplatform</em></span> CR contains dataIndex service that requires PostgreSQL database as shown in the following example:
+			</p><pre class="programlisting language-bash">      persistence:
+        postgresql:
+          secretRef:
+            name: backstage-psql-secret-{{backstage-name}}
+            userKey: POSTGRES_USER
+            passwordKey: POSTGRES_PASSWORD
+          serviceRef:
+            name: backstage-psql-{{backstage-name}} # Name of the Backstage Custom Resource (CR)
+            namespace: {{backstage-ns}} # Namespace where the Backstage CR is created
+            databaseName: backstage_plugin_orchestrator</pre></div></div><p>
+			The default implementation of the Orchestrator plugin dependencies uses the following:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					The PostgreSQL database named <span class="emphasis"><em>backstage_plugin_orchestrator</em></span> created by Backstage for Orchestrator plugin.
+				</li><li class="listitem">
+					The Secret created by Backstage Operator for the PostgreSQL with <span class="strong strong"><strong>POSTGRES_USER</strong></span> and <span class="strong strong"><strong>POSTGRES_PASSWORD</strong></span> keys as the database credentials in the Backstage CR namespace.
+				</li><li class="listitem">
+					The Service created by Backstage Operator for the PostgreSQL database with the name <code class="literal">backstage-psql-{{backstage-name}}</code> in the Backstage CR namespace.
+				</li></ul></div><p>
+			For more information about automatically creating 'plugin dependencies' resources when the Backstage CR is applied to the cluster, see <a class="link" href="https://github.com/redhat-developer/rhdh-operator/blob/release-1.7/docs/dynamic-plugins.md#dynamic-plugins-dependency-management">Dynamic plugins dependency management</a>.
+		</p><p>
+			To enable the Backstage Operator to work with the SonataFlow platform, you must grant the appropriate permissions to its ServiceAccount. The Backstage Operator automatically creates the required Role and RoleBinding resource in the <code class="literal">profile/rhdh/plugin-rbac directory</code> directory when creating the SonataFlowPlatform CR in the Backstage CR namespace.
+		</p></section><section class="section" id="proc-install-components-for-orchestrator-plugin.adoc_title-orchestrator"><div class="titlepage"><div><div><h2 class="title">4. Installing the components for the Orchestrator plugin on OpenShift Container Platform</h2></div></div></div><p>
+			You can install the required components for the Orchestrator plugin on OpenShift Container Platform using the following methods:
+		</p><div class="formalpara"><p class="title"><strong>Manual installation</strong></p><p>
+				The manual installation is suitable for production environments particularly when you have installed the versions of required components such as when OpenShift Serverless is already in use by other applications.
+			</p></div><p>
+			For more information on preparing the required infrastructure, see <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_openshift_serverless/1.36">Red Hat OpenShift Serverless</a> and carry out the following steps to:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					Prepare for OpenShift Serverless installation.
+				</li><li class="listitem">
+					Install the OpenShift Serverless Operator.
+				</li><li class="listitem">
+					Install Knative Serving.
+				</li><li class="listitem">
+					Install Knative Eventing.
+				</li><li class="listitem">
+					Install the OpenShift Serverless Logic Operator.
+				</li></ul></div><div class="formalpara"><p class="title"><strong>RHDH helper script</strong></p><p>
+				You can install the OpenShift Serverless infrastructure for the Orchestrator plugin using the RHDH helper script. You can use the script in empty clusters, however, use with caution in production clusters.
+			</p></div><p>
+			For more information on controlling the installation of the Operators, see <a class="link" href="https://olm.operatorframework.io/docs/tasks/install-operator-with-olm/">Install your Operator with OLM</a>.
+		</p><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+					Download the <code class="literal">plugin-infra.sh</code> script as shown in the following example:
+				</p><pre class="programlisting language-bash">curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-1.7/config/profile/rhdh/plugin-infra/plugin-infra.sh # Specify the {product} version in the URL or use main</pre></li><li class="listitem"><p class="simpara">
+					Run the script as shown in the following example:
+				</p><pre class="programlisting language-bash">bash plugin-infra.sh</pre></li></ol></div><div class="formalpara"><p class="title"><strong>RHDH Orchestrator Infra Helm Chart</strong></p><p>
+				RHDH Orchestrator Infra Helm Chart has the same usage and cautions as the RHDH helper script.
+			</p></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+					Install the required components using the Orchestrator infrastructure helm chart.
+				</li></ol></div></section><section class="section" id="proc-install-orchestrator-plugin.adoc_title-orchestrator"><div class="titlepage"><div><div><h2 class="title">5. Installing the Orchestrator plugin</h2></div></div></div><p>
+			The Orchestrator plugin has the following dynamic plugins:
+		</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					Orchestrator-backend
+				</li><li class="listitem">
+					Orchestrator-frontend
+				</li><li class="listitem">
+					Orchestrator-scaffolder-backend-module
+				</li><li class="listitem">
+					Orchestrator-form-widgets
+				</li></ul></div><p>
+			These plugins are included in the default <code class="literal">dynamic-plugins.yaml</code> file of the <code class="literal">install-dynamic-plugins</code> container and are disabled by default. You can enable the Orchestrator plugin by referring the <code class="literal">dynamic-plugins-rhdh</code> ConfigMap file with the following data:
+		</p><pre class="programlisting language-bash">    includes:
+       - dynamic-plugins.default.yaml
+    plugins:
+       - package: "@redhat/backstage-plugin-orchestrator@1.6.0"
+         disabled: false
+       - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.6.0"
+         disabled: false
+         dependencies:
+            - ref: sonataflow
+       - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.6.0"
+         disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.6.0"
+         disabled: false</pre><p>
+			The following is an example of the complete configuration of the Orchestrator plugin:
+		</p><pre class="programlisting language-bash">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-plugin
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@1.6.0"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.6.0"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.6.0"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.6.0"
+        disabled: false
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |-
+    auth:
+      environment: development
+      providers:
+        guest:
+          # using the guest user to query the '/api/dynamic-plugins-info/loaded-plugins' endpoint.
+          dangerouslyAllowOutsideDevelopment: true
+
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: orchestrator
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: app-config-rhdh
+    dynamicPluginsConfigMapName: orchestrator-plugin</pre></section><section class="section" id="proc-install-in-air-gapped-environment.adoc_title-orchestrator"><div class="titlepage"><div><div><h2 class="title">6. Installing Red Hat Developer Hub with the Orchestrator in an air-gapped environment</h2></div></div></div><p>
+			You can install Red Hat Developer Hub with the Orchestrator in an air-gapped environment by mirroring required container images, Helm charts, and NPM packages to internal registries.
+		</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+					You have administrative access to the OpenShift Container Platform cluster and mirroring tools such as <code class="literal">oc</code>, <code class="literal">podman</code>, or <code class="literal">skopeo</code>.
+				</li><li class="listitem">
+					You have access to <code class="literal">npm.registry.redhat.com</code> from a connected network to pull and mirror Orchestrator plugin tarballs.
+				</li><li class="listitem">
+					You have mirroring permissions and credentials for all required sources.
+				</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+					From a connected network, log in to the external registries:
+				</p><pre class="programlisting language-bash">podman login registry.redhat.io
+podman login registry.access.redhat.com
+podman login npm.registry.redhat.com</pre></li><li class="listitem"><p class="simpara">
+					Identify and mirror all required container images to your internal registry:
+				</p><pre class="programlisting language-bash">oc image mirror \
+  registry.redhat.io/openshift-serverless/*=internal-registry.example.com/openshift-serverless/* \
+  registry.redhat.io/openshift-knative/*=internal-registry.example.com/openshift-knative/* \
+  registry.redhat.io/sonataflow/*=internal-registry.example.com/sonataflow/* \
+  registry.redhat.io/rhdh/*=internal-registry.example.com/rhdh/* \
+  registry.redhat.io/postgresql/*=internal-registry.example.com/postgresql/*</pre></li><li class="listitem"><p class="simpara">
+					Mirror the Orchestrator plugin NPM packages to your internal NPM registry:
+				</p><pre class="programlisting language-bash">npm pack @redhat/backstage-plugin-orchestrator@&lt;version&gt;
+npm pack @redhat/backstage-plugin-orchestrator-backend-dynamic@&lt;version&gt;
+npm pack @redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@&lt;version&gt;
+npm pack @redhat/backstage-plugin-orchestrator-form-widgets@&lt;version&gt;
+
+npm publish &lt;package&gt;.tgz --registry https://internal-npm.example.com</pre></li><li class="listitem"><p class="simpara">
+					Update the <code class="literal">dynamic-plugins</code> configuration to reference the internal NPM registry:
+				</p><pre class="programlisting language-yaml">plugins:
+  - package: "@redhat/backstage-plugin-orchestrator@&lt;version&gt;"
+    disabled: false
+    registry: https://internal-npm.example.com</pre></li><li class="listitem"><p class="simpara">
+					If using Helm charts, download them from a connected environment and push them to your internal chart repository:
+				</p><pre class="programlisting language-bash">helm pull &lt;chart&gt; --version &lt;version&gt;
+helm push &lt;chart&gt;.tgz oci://internal-chart-repo.example.com/rhdh</pre></li><li class="listitem">
+					Ensure NetworkPolicies, Role, and RoleBinding resources for the SonataFlow platform are included in your deployment configuration. The Developer Hub Operator applies these automatically when the <code class="literal">SonataFlowPlatform</code> CR is created.
+				</li></ol></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+				For the connected environment resource requirements, see <a class="link" href="{installing-orch-on-ocp-book-url}">Resource requirements for the Operator-based Orchestrator</a>.
+			</p></div></div><div class="itemizedlist"><p class="title"><strong>Verification</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+					Ensure all pods for OpenShift Serverless, Knative Serving/Eventing, SonataFlow, and PostgreSQL start successfully.
+				</li></ul></div></section><div><div xml:lang="en-US" class="legalnotice" id="idm45255090226000"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
