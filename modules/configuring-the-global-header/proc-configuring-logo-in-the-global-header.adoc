@@ -1,0 +1,89 @@
+[id="configuring-logo-in-the-global-header.adoc_{context}"]
+= Configuring the logo in the global header
+
+You can configure a company logo in the global header of the {product} ({product-very-short}) to reflect your company's branding. `CompanyLogo` is part of the global header by default and offers full control over the theming, navigation behavior, sizing, and fallback options.
+
+This component supports the following props, which are provided through configuration:
+
+* `logo`: The base64 encoded logo image.
+* `to`: The redirect path for when users click the logo is '/catalog'.
+* `width`: The logo width is optional and defaults to 150 px.
+* `height`: The logo height is optional and defaults to 40px.
+
+.Procedure
+
+. To display a custom company logo in the global header, update the configuration with a mount point for `CompanyLogo`:
++
+.Example: Configuring company logo
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+# ...rest of the global header configuration
+red-hat-developer-hub.backstage-plugin-global-header:
+  mountPoints:
+    - mountPoint: application/header
+      importName: GlobalHeader
+      config:
+        # Supported values: `above-main-content` | `above-sidebar`
+        position: above-main-content
+
+    - mountPoint: global.header/component
+      importName: CompanyLogo
+      config:
+        priority: 200
+        props:
+          # Path to navigate when users click the logo:
+          to: '/catalog'
+          width: 300
+          height: 200
+          logo: <string> or <object> # Logo can be a base64 string or theme-specific object
+            # Example 1: Single logo for all themes
+            # logo: "<base64_encoded_images>"
+
+            # Example 2: Theme-specific logos
+            # logo:
+                dark: 'data:image/png;base64,...' # Used in dark theme
+                light: 'data:image/png;base64,...' # Used in light theme
+----
+
+. (Optional) If you do not provide `logo` props to the `CompanyLogo` component, the component instead uses values defined under `app.branding` in your `{my-app-config-file}` file. You can configure the `CompanyLogo` as shown in the following configuration:
++
+.Example: Fallback configuration
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+app:
+  branding:
+    fullLogoWidth: 220  # Fallback width
+    fullLogo: <string> or <object> #fullLogo can be a base64 string or theme-specific object
+
+    # Example 1: Single logo for all themes
+    #fullLogo: "<base64_encoded_image>
+    # Example 2: Theme-specific logos
+    #fullLogo:
+        dark: 'data:image/png;base64,...' # Used in dark theme
+        light: 'data:image/png;base64,...' # Used in light theme
+----
++
+`CompanyLogo` uses the following configuration elements to control fallback and sizing behavior:
+
+* *Logo source priority*
+** The component selects the logo source in the following order:
++
+First, `CompanyLogo` props (logo, logo.light, logo.dark), then, `app.branding.fullLogo`. If you do not provide a logo through either, the component displays the default {product-short} theme-specific logo.
+
+* *Logo width priority*
+** The component applies the first available value from `props.width`, then `app.branding.fullLogoWidth` from `{my-app-config-file}`. If you do not specify the `width` using either, the component applies a default width (150 px).
+
+[NOTE]
+====
+`CompanyLogo` preserves the images aspect ratio and never crops or distorts it. If the configured width results in a height greater than the maximum allowed (default: 40px), the image is automatically scaled down. As a result, adjusting only the width may not visibly change the logo unless the height is also configured.
+
+Increasing the logo `height` increases the height of the global header. The component first applies the value from `props.height`. If you do not specify the `height`, the component applies a default height (40px).
+====
+
+.Verification
+. The logo appears correctly in the global header.
+. Click the logo to confirm it redirects to the path you defined in `props.to`.
+. Toggle between `light` and `dark` themes to ensure the correct logo loads in each.
+. (Optional) Temporarily remove the `CompanyLogo` props to test the fallback to `app.branding.fullLogo`.
