@@ -1,0 +1,44 @@
+// Module included in the following assemblies:
+//
+// * assemblies/assembly-configuring-templates.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="proc-versioning-software-templates_{context}"]
+= Versioning a Software Template in {product}
+
+As a platform administrator, you can version Software Templates by using the existing custom actions `catalog:scaffolded-from` and `catalog:template:version` within the scaffolder backend module. By using these custom actions, you can track the scaffolder template version and the corresponding version of the entities created from it, which improves lifecycle management.
+
+.Prerequisites
+
+* You have administrator rights to {product}.
+
+.Procedure
+
+To add versioning to a Software Template yaml file, complete the following steps:
+
+. Modify the Software Template that you want to update.
+. Complete one or both of the following tasks:
+* Include the `backstage.io/template-version` annotation in your template. When this annotation is present in your template, it is automatically used to annotate your catalog entity and a default version value is displayed.
+* Pass the `backstage.io/template-version` annotation as input to the action. This method takes precedence over the annotation in the template itself. It allows the user running the template to specify the version they wish to generate.
+
++
+[source,yaml]
+----
+# ...
+- id: version-templateRef
+  name: Append the version of this template to the entityRef
+  action: catalog:template:version
+  input:
+    annotations:
+      backstage.io/template-version: ${{ parameters.version }}
+# ...
+----
+
+.Verification
+. link:{configuring-book-url}#ref-creating-templates_configuring-templates[Create a catalog component using the updated Software Template]. This step creates a new component in {product-custom-resource-type} and optionally, pushes files to an external repository (For example, GitHub, GitLab).
+. Check the component in the Catalog UI.
+.. On the *Catalog* page, locate the newly created catalog component.
+.. Verify that the `backstage.io/template-version` annotation is present in the entity. You can use *INSPECT ENTITY* and select *YAML Raw* or *JSON Raw* view to find the annotation in the component definition.
+. Only if you have published the catalog component: Check the component file in the repository.
+.. If *VIEW SOURCE* is present in your UI: Click *VIEW SOURCE* to open the stored component file in the repository.
+.. Locate the file manually and verify that the `backstage.io/template-version` annotation is present.
