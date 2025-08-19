@@ -1,0 +1,47 @@
+[id='con-understanding-orchestrator-plugin-dependencies.adoc_{context}']
+= Understanding Orchestrator plugin dependencies
+
+The Orchestrator plugin in {product-very-short} requires components such as SonataFlow and supporting network policies to run. When you enable the plugin in your {product-custom-resource-type} custom resource (CR), the Operator automatically provisions these dependencies for you:
+
+* A `SonataflowPlatform` CR
+* `NetworkPolicies` that allow traffic between infrastructure resources (Knative, Serverless Logic Operator), monitoring traffic, and intra-namespace traffic
+
+The `orchestrator-backend` plugin uses the `sonataflow-platform-data-index-service`, which the `SonataFlowPlatform` CR creates to communicate with the SonataFlow platform.
+
+The Operator resolves the dependency reference SonataFlow against the `sonataflow.yaml` manifest included in its profile configuration (`config/profile/rhdh/plugin-deps/sonataflow.yaml`) and applies it to create the required resources.
+
+The Operator automatically applies the `sonataflow.yaml` manifest, creating the `SonataFlowPlatform` CR and required `NetworkPolicy` resources in the {product-custom-resource-type} (CR) namespace.
+
+[IMPORTANT]
+====
+The `SonataFlowPlatform` CR contains dataIndex service that requires PostgreSQL database as shown in the following example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+      persistence:
+        postgresql:
+          secretRef:
+            name: backstage-psql-secret-{{backstage-name}}
+            userKey: POSTGRES_USER
+            passwordKey: POSTGRES_PASSWORD
+          serviceRef:
+            name: backstage-psql-{{backstage-name}} # Name of the {product-custom-resource-type} (CR)
+            namespace: {{backstage-ns}} # Namespace where the {product-custom-resource-type} (CR) is created
+            databaseName: backstage_plugin_orchestrator
+----
+====
+
+By default, the Orchestrator plugin dependencies use the following:
+
+* The PostgreSQL database named `backstage_plugin_orchestrator` created by {product-custom-resource-type}
+* A Secret created by {product-custom-resource-type} Operator for the PostgreSQL with `POSTGRES_USER` and `POSTGRES_PASSWORD` keys as the database credentials in the {product-custom-resource-type} (CR) namespace.
+* A Service created by {product-custom-resource-type} Operator for the PostgreSQL database with the name `backstage-psql-{{backstage-name}}` in the {product-custom-resource-type} (CR) namespace.
+
+For more information about automatic plugin dependency creation when the {product-custom-resource-type} (CR) is applied to the cluster, see link:https://github.com/redhat-developer/rhdh-operator/blob/release-1.7/docs/dynamic-plugins.md#dynamic-plugins-dependency-management[Dynamic plugins dependency management].
+
+[NOTE]
+====
+To enable the {product-custom-resource-type} Operator to work with the SonataFlow platform, its `ServiceAccount` must have the appropriate permissions.
+
+The Operator automatically creates the required Role and _RoleBinding_ resource in `profile/rhdh/plugin-rbac` directory.
+====
