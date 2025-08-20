@@ -1,0 +1,86 @@
+:_mod-docs-content-type: PROCEDURE
+[id="proc-install-rhdh-with-orchestrator-helm-cli_{context}"]
+= Installing {product} ({product-very-short}) on {ocp-short} with the Orchestrator using the Helm CLI
+
+You can install {product} ({product-very-short}) on {ocp-short} with the Orchestrator by using the Helm CLI. The installation automatically enables the required dynamic plugins and integrates workflow infrastructure.
+
+.Prerequisites
+
+* You are logged in as an administrator and have access to the {product} Helm chart repository.
+* You can install the necessary infrastructures resources, such as sonataflow, alongside {product-very-short} in the same namespace.
++
+This is a one-off requirement and must be completed before enabling the Orchestrator plugin.
+
+.Procedure
+
+. As an administrator, install relevant cluster-wide resources.
++
+[source,yaml]
+----
+helm repo add openshift-helm-charts https://charts.openshift.io/
+helm install <release_name> openshift-helm-charts/redhat-developer-hub-orchestrator-infra
+----
++
+[IMPORTANT]
+====
+You must be a cluster administrator to install the `redhat-developer-hub-orchestrator-infra` Helm chart because it deploys additional cluster-scoped OpenShift Serverless and OpenShift Serverless Logic Operators. As an administrator, you need to manually approve the install plans for OpenShift Serverless and Serverless Logic Operators.
+====
+
+. Install the Backstage chart with the orchestrator enabled as shown in the following example:
++
+[source,terminal,subs="attributes+"]
+----
+helm install <release_name> openshift-helm-charts/redhat-developer-hub --version {product-chart-version} \
+  --set orchestrator.enabled=true
+----
+
+. (Optional) Enable *Notifications* and *Signals* plugins by adding them to the `global.dynamic.plugins` list in your `values.yaml` file as shown in the following example:
++
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-notifications"
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-signals"
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-notifications-backend-dynamic"
+      - disabled: false
+        package: "./dynamic-plugins/dist/backstage-plugin-signals-backend-dynamic"
+----
+
+. (Optional) You can disable the Serverless Logic and Serverless Operators individually or together by setting their values to `false`, as shown in the following example:
++
+[source,terminal,subs="attributes+"]
+----
+helm install <release_name> openshift-helm-charts/redhat-developer-hub \
+  --version {product-chart-version} \
+  --set orchestrator.enabled=true \
+  --set orchestrator.serverlessOperator=false \
+  --set orchestrator.serverlessLogicOperator=false
+----
+
+. (Optional) If you are using an external database, add the following configuration under `orchestrator.sonataflowPlatform` in your `values.yaml` file:
++
+[source,yaml]
+----
+orchestrator:
+  sonataflowPlatform:
+    externalDBsecretRef: "<cred-secret>"
+    externalDBName: "<database_name>" # The name of the user-configured existing database (Not the database that the orchestrator and sonataflow resources use).
+    externalDBHost: "<database_host>"
+    externalDBPort: "<database_port>"
+----
++
+[NOTE]
+====
+This step only configures the Orchestrators use of an external database. To configure {product} to use an external PostgreSQL instance, follow the steps in link:{configuring-book-url}#proc-configuring-postgresql-instance-using-helm_configuring-external-postgresql-databases[Configuring a PostgreSQL instance using Helm].
+====
+
+.Verification
+
+. Verify that the Orchestrator plugin is visible in the {product} UI.
+
+. Create and run sample workflows to confirm the orchestration is functioning correctly.
