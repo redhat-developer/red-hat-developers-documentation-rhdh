@@ -79,7 +79,11 @@ titlecase() {
             sonarqube) echo -n "SonarQube ";;
             techdocs) echo -n "TechDocs ";;
             # Uppercase the first letter
-            *) echo -n "${f^} " ;;
+            *) 
+                first_char=$(echo "$f" | cut -c1 | tr '[:lower:]' '[:upper:]')
+                rest_chars=$(echo "$f" | cut -c2-)
+                echo -n "${first_char}${rest_chars} "
+                ;;
         esac;
     done; echo;
 }
@@ -271,20 +275,28 @@ for y in $yamls; do
         # not currently used due to policy and support concern with upstream content linked from downstream doc
         # URL="https://www.npmjs.com/package/$Plugin"
 
-        # get a human-readable name from yaml.name
-        ProcessedName="$(echo "${Name}" | sed -r \
-            -e "s@(pagerduty)-.+@\1@g" \
-            -e "s@.+(-plugin-scaffolder-backend-module|backstage-scaffolder-backend-module)-(.+)@\2@g" \
-            -e "s@.+(-plugin-catalog-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
-            -e "s@.+(-scaffolder-backend-module|-plugin-catalog-backend-module)-(.+)@\2@g" \
-            -e "s@.+(-scaffolder-backend-module|-scaffolder-backend|backstage-plugin)-(.+)@\2@g" \
-            -e "s@(backstage-community-plugin-)@@g" \
-            -e "s@(backstage-plugin)-(.+)@\2@g" \
-            -e "s@(.+)(-backstage-plugin)@\1@g" \
-            -e "s@-backend@@g" \
-        )"
-        ProcessedName="$(echo "${ProcessedName}" | sed -r -e "s/redhat-(.+)/\1-\(Red-Hat\)/")"
+        # Build a human-readable name from the package
+        # Start with package name without scope (e.g., "backstage-plugin-quickstart")
+        pkg_no_scope="${Plugin#@}"
+        pkg_no_scope="${pkg_no_scope#*/}"
+        # Strip common vendor/prefix tokens and backend suffix
+        ProcessedName=$(echo "$pkg_no_scope" | sed -r \
+            -e 's@^backstage-community-@@' \
+            -e 's@^red-hat-developer-hub-@@' \
+            -e 's@^redhat-@@' \
+            -e 's@^roadiehq-@@' \
+            -e 's@^immobiliarelabs-@@' \
+            -e 's@^parfuemerie-douglas-@@' \
+            -e 's@^backstage-plugin-@@' \
+            -e 's@^plugin-@@' \
+            -e 's@^catalog-backend-module-@@' \
+            -e 's@^plugin-catalog-backend-module-@@' \
+            -e 's@^scaffolder-backend-module-@@' \
+            -e 's@-backend$@@' \
+        )
         PrettyName="$(titlecase "${ProcessedName//-/ }")"
+        # Trim trailing whitespace from PrettyName
+        PrettyName="$(echo -e "$PrettyName" | sed -E 's/[[:space:]]+$//')"
 
         # useful console output
         if [[ $QUIET -eq 0 ]]; then
@@ -313,8 +325,15 @@ for y in $yamls; do
             echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.community.tmp"
         fi
 
-        # NOTE: csv is not split into separate tables at this point - updated to include lifecycle
-        echo "$key|$csv_content" >> "$TEMP_DIR/csv.tmp"
+        # Group CSV by support level
+        SupportSort=3
+        if [[ ${Support_Level} == "Production" ]]; then
+            SupportSort=1
+        elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
+            SupportSort=2
+        fi
+        csv_key="$SupportSort-$PrettyName-$RoleSort-$Role-$Plugin"
+        echo "$csv_key|$csv_content" >> "$TEMP_DIR/csv.tmp"
     else
         (( tot-- )) || true
         echo -e "${blue}        Skip: not in rhdh/dynamic-plugins.default.yaml !${norm}"
@@ -377,9 +396,9 @@ if [[ -f "$temp_file" ]]; then
 fi
 num_plugins+=($count)
 
-# Process CSV
+# Process CSV: sort by SupportSort (1,2,3) then PrettyName, and omit techdocs
 if [[ -f "$TEMP_DIR/csv.tmp" ]]; then
-    sort "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
+    sort -t '|' -k1,1 -k2,2 "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
         # RHIDP-4196 omit techdocs plugins from the .csv
         if [[ $key != *"techdocs"* ]]; then
             echo -e "$content" >> "${0/.sh/.csv}"
