@@ -279,22 +279,32 @@ for y in $yamls; do
         # Start with package name without scope (e.g., "backstage-plugin-quickstart")
         pkg_no_scope="${Plugin#@}"
         pkg_no_scope="${pkg_no_scope#*/}"
-        # Strip common vendor/prefix tokens and backend suffix
-        ProcessedName=$(echo "$pkg_no_scope" | sed -r \
-            -e 's@^backstage-community-@@' \
-            -e 's@^red-hat-developer-hub-@@' \
-            -e 's@^redhat-@@' \
-            -e 's@^roadiehq-@@' \
-            -e 's@^immobiliarelabs-@@' \
-            -e 's@^parfuemerie-douglas-@@' \
-            -e 's@^backstage-plugin-@@' \
-            -e 's@^plugin-@@' \
-            -e 's@^catalog-backend-module-@@' \
-            -e 's@^plugin-catalog-backend-module-@@' \
-            -e 's@^scaffolder-backend-module-@@' \
-            -e 's@-backend$@@' \
-        )
-        PrettyName="$(titlecase "${ProcessedName//-/ }")"
+        
+        # Special cases for specific plugins
+        case "$Plugin" in
+            *pagerduty*) PrettyName="PagerDuty" ;;
+            *redhat-argocd*) PrettyName="Argo CD (Red Hat)" ;;
+            *scaffolder-backend-argocd*) PrettyName="Argo CD" ;;
+            *notifications-backend-module-email*) PrettyName="Notifications" ;;
+            *)
+                # Strip common vendor/prefix tokens and backend suffix
+                ProcessedName=$(echo "$pkg_no_scope" | sed -r \
+                    -e 's@^backstage-community-@@' \
+                    -e 's@^red-hat-developer-hub-@@' \
+                    -e 's@^redhat-@@' \
+                    -e 's@^roadiehq-@@' \
+                    -e 's@^immobiliarelabs-@@' \
+                    -e 's@^parfuemerie-douglas-@@' \
+                    -e 's@^backstage-plugin-@@' \
+                    -e 's@^plugin-@@' \
+                    -e 's@^catalog-backend-module-@@' \
+                    -e 's@^plugin-catalog-backend-module-@@' \
+                    -e 's@^scaffolder-backend-module-@@' \
+                    -e 's@-backend$@@' \
+                )
+                PrettyName="$(titlecase "${ProcessedName//-/ }")"
+                ;;
+        esac
         # Trim trailing whitespace from PrettyName
         PrettyName="$(echo -e "$PrettyName" | sed -E 's/[[:space:]]+$//')"
 
