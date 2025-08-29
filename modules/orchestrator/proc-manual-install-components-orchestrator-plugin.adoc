@@ -1,0 +1,65 @@
+:mod-docs-content-type: PROCEDURE
+[id="proc-manual-install-orchestrator-plugin_{context}"]
+= Manually installing the Orchestrator plugin components on {ocp-short}
+
+Use manual installation when you want full control of the setup process and component versions.
+
+.Procedure
+
+. Deploy the PostgreSQL reference implementation for persistence support in SonataFlow.
+
+. Create a namespace for the Orchestrator solution as shown in the following example:
++
+[subs="quotes+"]
+----
+oc new-project ${orchestrator}
+----
+
+. Run the setup script.
+Follow the steps in the _Installing the Orchestrator plugin components using the {product-very-short} helper script_ section to download and execute the `setup.sh` script, which initializes the {product-very-short} environment.
+
+. Install the Orchestrator Operator in the {ocp-short} cluster by applying the following manifest:
++
+[source,yaml]
+----
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: orchestrator-operator
+  namespace: openshift-operators
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: orchestrator-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+----
+
+. Verify installation by running the following command:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+wget https://raw.githubusercontent.com/rhdhorchestrator/orchestrator-go-operator/release-${PRODUCT_VERSION}/hack/wait_for_operator_installed.sh -O /tmp/wait_for_operator_installed.sh \ && chmod u+x /tmp/wait_for_operator_installed.sh \ && /tmp/wait_for_operator_installed.sh # Specify the {product} version in the URL
+----
+
+During installation, the Orchestrator Operator creates the following sub-components:
+
+* {product-very-short} Operator
+* OpenShift Serverless Operator
+* OpenShift Serverless Logic Operator
+
+It also creates the necessary custom resources (CRs) for Orchestrator to function properly.
+
+. Apply the Orchestrator custom resource (CR) to the cluster to create an instance of {product-very-short} and resources for OpenShift Serverless and OpenShift Serverless Logic:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+oc apply -n orchestrator -f https://raw.githubusercontent.com/rhdhorchestrator/orchestrator-go-operator/refs/heads/release-${PRODUCT_VERSION}/config/samples/_v1alpha3_orchestrator.yaml # Specify the {product} version in the URL
+----
+
+[NOTE]
+====
+After the first reconciliation of the Orchestrator CR, changes to some fields might not propagate to the intended resources. For example, updating the `platform.resources.requests` field in the Orchestrator CR has no effect on the running SonataFlowPlatform (SFP) resource.
+====
+
+For more information on preparing the required infrastructure, see link:https://docs.redhat.com/en/documentation/red_hat_openshift_serverless/1.36[Red Hat OpenShift Serverless].
