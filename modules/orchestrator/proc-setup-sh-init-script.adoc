@@ -1,0 +1,69 @@
+:mod-docs-content-type: PROCEDURE
+[id="proc-setup-sh-init-script_{context}"]
+= Installing the Orchestrator plugin components using the `setup.sh` script
+
+The `setup.sh` script simplifies the initialization of the {product-very-short} environment by:
+
+* Creating the required authentication secret.
+* Labeling GitOps namespaces based on the cluster configuration.
+
+.Procedure
+
+. Create a namespace for the {product-very-short} instance. This namespace is predefined as the default in both the `setup.sh` script and the Orchestrator CR, but you can override it as shown in the following example:
++
+[subs="quotes+"]
+----
+oc new-project ${product-very-short}
+----
+
+. Download the setup script from the GitHub repository:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+wget https://raw.githubusercontent.com/rhdhorchestrator/orchestrator-go-operator/release-${PRODUCT_VERSION}/hack/setup.sh -O /tmp/setup.sh \ && chmod u+x /tmp/setup.sh # Specify the {product} version in the URL
+----
+
+. Run the setup script:
++
+[source,terminal]
+----
+/tmp/setup.sh --use-default
+----
++
+[NOTE]
+====
+To specify custom values, omit the `--use-default` option. The script will then prompt you for input.
+====
+
+The contents of the secret vary depending on cluster configuration and can include the following keys:
+
+* `BACKEND_SECRET`: Randomly generated. This is mandatory for the {product-very-short} Operator to start.
+* `K8S_CLUSTER_URL`: Dynamically obtained with `oc whoami --show-server`.
+* `K8S_CLUSTER_TOKEN`: Dynamically obtained from the service account and namespace.
+* `GITHUB_TOKEN`: Prompted from the user.
+* `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`: Used to authenticate against GitHub.
+* `GITLAB_HOST` and `GITLAB_TOKEN`: Used to authenticate against GitLab.
+* `ARGOCD_URL`: Obtained from the first ArgoCD instance available.
+* `ARGOCD_USERNAME`: Defaults to `admin`.
+* `ARGOCD_PASSWORD`: Obtained dynamically from the ArgoCD instance.
+
+Keys without values are omitted. For example, if no GitOps operator is installed, the ArgoCD-related keys are excluded.
+
+.Sample secret in a GitOps environment:
+[source,yaml]
+----
+apiVersion: v1
+data:
+  ARGOCD_PASSWORD: ...
+  ARGOCD_URL: ...
+  ARGOCD_USERNAME: ...
+  BACKEND_SECRET: ...
+  GITHUB_TOKEN: ...
+  K8S_CLUSTER_TOKEN: ...
+  K8S_CLUSTER_URL: ...
+kind: Secret
+metadata:
+  name: backstage-backend-auth-secret
+  namespace: rhdh
+type: Opaque
+----
