@@ -4,4 +4,60 @@
 
 This section lists breaking changes in {product} {product-version}.
 
-None
+
+[id="removed-functionality-rhdhbugs-2000"]
+== Using an optional Secret named `dynamic-plugins-npmrc` to configure a custom npm repository in the Operator is removed
+
+Previously, an optional Secret named `dynamic-plugins-npmrc` could be configured in the Operator as a custom npm repository.
+
+With this update, you can do any of the following workarounds:
+
+* Modify the `default-config` or `secret-files.yaml` file of the Operator to include custom `.npmrc` content.
+* In your {product-custom-resource-type} custom resource (CR), complete the following steps:
+.. Create a new Secret containing the custom `.npmrc` content.
+.. Mount the Secret to the `install-dynamic-plugins` initContainer.
+.. Set the `NPM_CONFIG_USERCONFIG` environment variable to reference to the mounted `.npmrc` file in the `spec.deployment.path` section.
+
+.Example of a Secret containing the .npmrc file
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dynamic-plugins-npmrc
+type: Opaque
+stringData:
+  .npmrc: |
+    @my-company:registry=https://my-company.example.com
+    //<registry-url>:_authToken=<auth-token>
+---
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: my-rhdh
+spec:
+  application:
+    dynamicPluginsConfigMapName: my-dynamic-plugins-rhdh
+  # --- BEGIN WORKAROUND: Ensure you have the volumes, volume mounts and NPM_CONFIG_USERCONFIG env var listed below
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: install-dynamic-plugins
+                volumeMounts:
+                  - mountPath: /opt/app-root/src/.my-dynamic-plugins-npmrc.dynamic-plugins
+                    name: my-dynamic-plugins-npmrc
+                env:
+                  - name:
+                  - name: NPM_CONFIG_USERCONFIG
+                    # path before .npmrc should be the same as in the mountPath above
+                    # file name .npmrc should be the same as key in the dynamic-plugins-npmrc secret above
+                    value: /opt/app-root/src/.my-dynamic-plugins-npmrc.dynamic-plugins/.npmrc
+            volumes:
+              - name: my-dynamic-plugins-npmrc
+                secret:
+                  secretName: dynamic-plugins-npmrc
+  # --- END WORKAROUND
+----
