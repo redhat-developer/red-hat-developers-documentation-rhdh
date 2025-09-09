@@ -9,8 +9,8 @@ You must install and configure both the {ls-short} and the {rcs-short} sidecar c
 .Prerequisites
 * You are logged into your {ocp-short} account.
 * You have an {product-very-short} instance installed either of the following ways:
-** link:{installing-on-ocp-book-url}#assembly-install-rhdh-ocp-operator[Using the Operator]
-** link:{installing-on-ocp-book-url}#assembly-install-rhdh-ocp-helm[Using the Helm chart]
+** {installing-on-ocp-book-link}#assembly-install-rhdh-ocp-operator[Using the Operator]
+** {installing-on-ocp-book-link}#assembly-install-rhdh-ocp-helm[Using the Helm chart]
 
 .Procedure
 
@@ -79,7 +79,7 @@ Create a dedicated {ls-short} ConfigMap instead of adding an additional section 
 .. Click *Create ConfigMap*.
 .. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via*, and add the following example:
 +
-[source,yaml,subs=+attributes]
+[source,yaml,subs="+attributes"]
 ----
 kind: ConfigMap
 apiVersion: v1
@@ -100,29 +100,29 @@ data:
        script-src:
            - "'self'"
            - https://cdn.jsdelivr.net
-    
+
     lightspeed:
       # REQUIRED: Configure LLM servers with OpenAI API compatibility
       servers:
         - id: ${LIGHTSPEED_SERVER_ID}
           url: ${LIGHTSPEED_SERVER_URL}
           token: ${LIGHTSPEED_SERVER_TOKEN}
-    
+
       # OPTIONAL: Enable/disable question validation (default: true)
       # When enabled, restricts questions to RHDH-related topics for better security
-      questionValidation: true 
-    
+      questionValidation: true
+
       # OPTIONAL: Custom users prompts displayed to users
       # If not provided, the plugin uses built-in default prompts
       prompts:
-        - title: 'Getting Started with Red Hat Developer Hub'
-          message: Can you guide me through the first steps to start using Developer Hub as a developer, like exploring the Software Catalog and adding my service?
-    
+        - title: 'Getting Started with {product}'
+          message: Can you guide me through the first steps to start using {product-short} as a developer, like exploring the Software Catalog and adding my service?
+
       # OPTIONAL: Port for lightspeed service (default: 8080)
       # servicePort: ${LIGHTSPEED_SERVICE_PORT}
-    
+
       # OPTIONAL: Override default RHDH system prompt
-      # systemPrompt: "You are a helpful assistant focused on Red Hat Developer Hub development."
+      # systemPrompt: "You are a helpful assistant focused on {product} development."
 ----
 . Create {ls-short} secret file.
 .. In the {ocp-short} web console, go to *Secrets*.
@@ -146,7 +146,7 @@ type: Opaque
 
 . To your existing dynamic plugins ConfigMap (for example, `dynamic-plugins-rhdh.yaml`), add the {ls-short} plugin image as shown in the following example:
 +
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
 includes:
   - dynamic-plugins.default.yaml
@@ -158,8 +158,8 @@ includes:
         # OPTIONAL: Custom users prompts displayed to users
         # If not provided, the plugin uses built-in default prompts
         prompts:
-          - title: 'Getting Started with Red Hat Developer Hub'
-            message: Can you guide me through the first steps to start using Developer Hub
+          - title: 'Getting Started with {product}'
+            message: Can you guide me through the first steps to start using {product-short}
               as a developer, like exploring the Software Catalog and adding my
               service?
       dynamicPlugins:
@@ -193,7 +193,7 @@ includes:
 . Update your deployment configuration based on your installation method:
 .. For an Operator-installed {product-very-short} instance, update your {product-custom-resource-type} custom resource (CR).
 ... In the `spec.application.appConfig.configMaps` section, add the {ls-short} custom app configuration as shown in the following example:
-+ 
++
 [source,yaml]
 ----
       appConfig:
@@ -202,7 +202,7 @@ includes:
         mountPath: /opt/app-root/src
 ----
 ... Update the `extraVolumes` specification to include the {rcs-short} ConfigMap as shown in the following example:
-+ 
++
 [source,yaml]
 ----
             volumes:
@@ -253,7 +253,7 @@ Your {product-very-short} container is typically already present in your CR. You
 ----
 apiVersion: rhdh.redhat.com/v1alpha3
 kind: Backstage
-metadata:  
+metadata:
   name: backstage
   namespace: _<namespace>_ # your {product-very-short} instance namespace
 spec:
@@ -285,10 +285,10 @@ spec:
               - env:
                   - name: PROJECT
                     value: rhdh
-# Mounting the RCS sidecar to your RHDH instance
+# Mounting the RCS sidecar to your {product-very-short} instance
                   - name: RCS_CONFIG_FILE
                     value: /app-root/config/rcsconfig.yaml
-# Your existing RHDH ConfigMap
+# Your existing {product-very-short} ConfigMap
                   - name: RHDH_CONFIG_FILE
                     value: /app-root/config/app-config-rhdh.yaml
                 envFrom:
@@ -301,7 +301,7 @@ spec:
                     name: rcs-backend
                     protocol: TCP
                 volumeMounts:
-# Mounting the RCS sidecar to your RHDH instance
+# Mounting the RCS sidecar to your {product-very-short} instance
                   - mountPath: /app-root/config/rcsconfig.yaml
                     name: rcsconfig
                     subPath: rcsconfig.yaml
@@ -318,9 +318,9 @@ spec:
 .. For a Helm-installed {product-very-short} instance, update your Helm chart.
 ... Add your dynamic plugins configuration in the`global.dynamic` property as shown in the following example:
 +
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
-global: 
+global:
 dynamic:
   includes:
   - dynamic-plugins.default.yaml
@@ -332,8 +332,8 @@ dynamic:
         # OPTIONAL: Custom users prompts displayed to users
         # If not provided, the plugin uses built-in default prompts
         prompts:
-          - title: 'Getting Started with Red Hat Developer Hub'
-            message: Can you guide me through the first steps to start using Developer Hub
+          - title: 'Getting Started with {product}'
+            message: Can you guide me through the first steps to start using {product-short}
               as a developer, like exploring the Software Catalog and adding my
               service?
       dynamicPlugins:
@@ -396,7 +396,7 @@ extraVolumes:
 ----
 ... Add the {rcs-short} image as shown in the following example:
 +
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
    extraContainers:
       - env:
@@ -432,7 +432,7 @@ Your {product-very-short} container is typically already present in your Helm ch
 ... Click *Helm upgrade*.
 +
 .Example of a Helm chart with the RCS container
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
 global:
  ...
@@ -512,7 +512,7 @@ spec:
       configMaps:
         - name: rbac-policies
 ----
-For detailed information, see link:{authorization-book-url}managing-authorizations-by-using-external-files[Managing authorizations by using external files].
+For detailed information, see {authorization-book-link}managing-authorizations-by-using-external-files[Managing authorizations by using external files].
 
 .Verification
 
