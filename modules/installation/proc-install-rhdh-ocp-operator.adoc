@@ -1,5 +1,4 @@
-// Module included in the following assemblies:
-// assembly-install-rhdh-ocp-operator.adoc
+:_mod-docs-content-type: PROCEDURE
 
 [id="proc-install-rhdh-ocp-operator_{context}"]
 = Deploying {product} on {ocp-short} with the Operator
@@ -7,21 +6,72 @@
 As a developer, you can deploy a {product} instance on {ocp-short} by using the *Developer Catalog* in the {ocp-brand-name} web console. This deployment method uses the {product} Operator.
 
 .Prerequisites
-
+* You have set the `baseUrl` in your `{my-app-config-file}` to match the external URL of your {product-short} instance. Without it, frontend and backend services cannot communicate, and features might not work as expected.
 * xref:proc-install-operator_{context}[An {ocp-short} administrator has installed the {product} Operator].
-* xref:{configuring-book-url}#provisioning-your-custom-configuration[You have provisioned your custom config maps and secrets in your `_<{my-product-namespace}>_` project].
-* xref:{configuring-book-url}#using-the-operator-to-run-rhdh-with-your-custom-configuration[You have authored your {product-custom-resource-type} custom resource].
+* {configuring-book-link}#provisioning-your-custom-configuration[You have provisioned your custom config maps and secrets in your `_<{my-product-namespace}>_` project].
+* {configuring-book-link}#using-the-operator-to-run-rhdh-with-your-custom-configuration[You have authored your {product-custom-resource-type} custom resource].
 
 .Procedure
 
-. In the {ocp-short} web console, select your `_<{my-product-namespace}>_` project.
-
-. From the *Developer* perspective on the {ocp-short} web console, click *+Add*.
+. In the {ocp-short} web console, select your `_<{my_product_namespace}>_` project, then click *Add*.
 . From the *Developer Catalog* panel, click *Operator Backed*.
 . In the *Filter by keyword* box, enter _{product-short}_ and click the *{product}* card.
+. Provision your custom configuration using the following template:
++
+[source,yaml,subs="attributes+"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  "app-config-rhdh.yaml": |
+    app:
+      title: {product}
+      baseUrl: {my-product-url}
+    backend:
+      auth:
+        externalAccess:
+            - type: legacy
+              options:
+                subject: legacy-default-config
+                secret: "${BACKEND_SECRET}"
+      baseUrl: {my-product-url}
+      cors:
+        origin: {my-product-url}
+----
++
+Use a config map named `app-config-rhdh` to provide your `app-config.yaml` file, and a Secret for service-to-service authentication (such as `BACKEND_SECRET`).
++
+To create and apply these configuration resources, follow the steps in {configuring-book-link}#provisioning-and-using-your-custom-configuration[Provisioning your custom {product} configuration] for the full procedure.
++
+[NOTE]
+====
+The `app-config-rhdh` config map must include your customized `app-config.yaml` file. This config map is mounted into the {product-short} container at runtime.
+====
+
+. Create a secret named `{my-product-secrets}` and add a key named `BACKEND_SECRET` with a `Base64-encoded` string as value, as shown in the following example:
++
+--
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {my-product-secrets}
+stringData:
+  # TODO: Add the necessary auth secrets for service-to-service auth setup
+  BACKEND_SECRET: "xxx" # Replace with your `Base64-encoded` secret
+----
+--
++
+[NOTE]
+====
+Ensure that your secret includes `BACKEND_SECRET`, used for service-to-service authentication. For structure and provisioning steps, see {configuring-book-link}#provisioning-and-using-your-custom-configuration[Provisioning your custom {product} configuration].
+====
 . Click *Create*.
-. xref:{configuring-book-url}#using-the-operator-to-run-rhdh-with-your-custom-configuration[Add your {product-custom-resource-type} custom resource content].
-. On the *Create Backstage* page, click *Create*
+. {configuring-book-link}#using-the-operator-to-run-rhdh-with-your-custom-configuration[Add your {product-custom-resource-type} custom resource content].
+. On the *Create Backstage* page, click *Create*.
 
 .Verification
 
@@ -36,4 +86,4 @@ image::rhdh/operator-install-1.png[]
 [role="_additional-resources"]
 [id="additional-resources_proc-install-rhdh-ocp-operator"]
 .Additional resources
-* link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/building_applications/index#building-applications-overview[{ocp-short} - Building applications overview]
+* {ocp-docs-link}/html-single/building_applications/index#building-applications-overview[{ocp-short} - Building applications overview]

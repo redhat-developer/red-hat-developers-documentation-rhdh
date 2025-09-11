@@ -1,0 +1,61 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-extensions-enabling-plugins-installation-rhdh-local_{context}"]
+= Configuring {product-very-short} Local to install plugins by using Extensions
+
+You can use {product-very-short} Local to test installing plugins by using Extensions.
+
+.Prerequisites
+* You have installed {product-very-short} Local. For more information about setting up {product-very-short} Local, see link:https://github.com/redhat-developer/rhdh-local/tree/main?tab=readme-ov-file#what-youll-need-before-you-get-started[Test locally with {product}].
+
+.Procedure
+. Update your `dynamic-plugins.override.yaml` file:
++
+[source,yaml]
+----
+includes:
+  - dynamic-plugins.default.yaml
+
+plugins:
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-marketplace:
+            appIcons:
+              - name: marketplace
+                importName: MarketplaceIcon
+            dynamicRoutes:
+              - path: /extensions/catalog
+                importName: DynamicMarketplacePluginRouter
+            mountPoints:
+               - mountPoint: application/provider
+                 importName: InstallationContextProvider
+              - mountPoint: internal.plugins/tab
+                importName: DynamicMarketplacePluginContent
+                config:
+                  path: marketplace
+                  title: Catalog
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace-backend-dynamic
+    disabled: false
+    pluginConfig:
+      extensions:
+        installation:
+          enabled: true
+          saveToSingleFile:
+            file: /opt/app-root/src/configs/dynamic-plugins/dynamic-plugins.override.yaml
+----
+. Update your `compose.yaml` file:
++
+[source,yaml]
+----
+rhdh:
+  container_name: rhdh
+  environment:
+    NODE_OPTIONS: "--inspect=0.0.0.0:9229"
+    NODE_ENV: "development"
+----
+
+.Verification
+Enable a plugin by using the Extensions UI, restart your {product-very-short} application and refresh the UI to confirm that the plugin is enabled.
