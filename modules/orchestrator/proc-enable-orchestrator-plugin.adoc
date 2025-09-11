@@ -1,0 +1,58 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-enable-orchestrator-plugin_{context}"]
+= Enabling the Orchestrator plugin using Operator
+
+You can enable the Orchestrator plugin in {product-very-short} by configuring dynamic plugins in your {product-custom-resource-type} custom resource (CR).
+
+.Prerequisites
+* You have installed {product-very-short} on {ocp-short}.
+* You have access to edit or create ConfigMaps in the namespace where the {product-custom-resource-type} CR is deployed.
+
+.Procedure
+
+. To enable the Orchestrator plugin with default settings, set `disabled: false` for the package. For example, `package: "@redhat/backstage-plugin-orchestrator@<plugin_version>` is set to `disabled: false`:
++
+[source,yaml]
+----
+- package: "@redhat/backstage-plugin-orchestrator@<plugin_version>"
+  disabled: false
+----
+
+.Example: Complete configuration of the Orchestrator plugin
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-plugin
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@1.6.0"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.6.0"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.6.0"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.6.0"
+        disabled: false
+---
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: orchestrator
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: app-config-rhdh
+    dynamicPluginsConfigMapName: orchestrator-plugin
+----
+
+.Verification
+* In the {product-very-short} console, confirm that the Orchestrator frontend and backend features are available.

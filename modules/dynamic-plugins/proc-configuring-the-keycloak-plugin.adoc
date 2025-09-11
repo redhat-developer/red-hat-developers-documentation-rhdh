@@ -1,0 +1,110 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-the-keycloak-plugin"]
+= Configuring the Keycloak plugin
+
+.Procedure
+. To configure the Keycloak plugin, add the following in your `{my-app-config-file}` file:
+`schedule`::
+Configure the schedule frequency, timeout, and initial delay.
+The fields support cron, ISO duration, "human duration" as used in code.
++
+[source,yaml]
+----
+     catalog:
+       providers:
+         keycloakOrg:
+           default:
+             schedule:
+               frequency: { minutes: 1 }
+               timeout: { minutes: 1 }
+               initialDelay: { seconds: 15 }
+----
+
+`userQuerySize` and `groupQuerySize`::
+Optionally, configure the Keycloak query parameters to define the number of users and groups to query at a time.
+Default values are 100 for both fields.
++
+[source,yaml]
+----
+   catalog:
+     providers:
+       keycloakOrg:
+         default:
+           userQuerySize: 100
+           groupQuerySize: 100
+----
+
+Authentication::
+Communication between {product-short} and Keycloak is enabled by using the Keycloak API. Username and password, or client credentials are supported authentication methods.
++
+The following table describes the parameters that you can configure to enable the plugin under `catalog.providers.keycloakOrg.<ENVIRONMENT_NAME>` object in the `{my-app-config-file}` file:
++
+|===
+| Name | Description | Default Value | Required
+
+| `baseUrl`
+| Location of the Keycloak server, such as `pass:c[https://localhost:8443/auth]`.
+| ""
+| Yes
+
+| `realm`
+| Realm to synchronize
+| `master`
+| No
+
+| `loginRealm`
+| Realm used to authenticate
+| `master`
+| No
+
+| `username`
+| Username to authenticate
+| ""
+| Yes if using password based authentication
+
+| `password`
+| Password to authenticate
+| ""
+| Yes if using password based authentication
+
+| `clientId`
+| Client ID to authenticate
+| ""
+| Yes if using client credentials based authentication
+
+| `clientSecret`
+| Client Secret to authenticate
+| ""
+| Yes if using client credentials based authentication
+
+| `userQuerySize`
+| Number of users to query at a time
+| `100`
+| No
+
+| `groupQuerySize`
+| Number of groups to query at a time
+| `100`
+| No
+|===
+
+. When using client credentials
+.. Set the access type to `confidential`.
+.. Enable service accounts.
+.. Add the following roles from the `realm-management` client role:
++
+* `query-groups`
+* `query-users`
+* `view-users`
+
+. Optionally, if you have self-signed or corporate certificate issues, you can set the following environment variable before starting {product-short}:
++
+----
+NODE_TLS_REJECT_UNAUTHORIZED=0
+----
++
+[WARNING]
+====
+Setting the environment variable is not recommended.
+====

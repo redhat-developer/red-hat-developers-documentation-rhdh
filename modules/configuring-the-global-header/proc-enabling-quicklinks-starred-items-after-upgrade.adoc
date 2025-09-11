@@ -1,0 +1,74 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enabling-quicklinks-starred-items-upgrade_{context}"]
+= Enabling Quicklinks and Starred Items after an upgrade
+
+If you upgrade from {product} `1.6` or earlier, {product} does not automatically enable the *Quicklinks* and *Starred Items* features. You must manually configure these features to display them in the global header.
+
+.Prerequisites
+
+. You have access to your {product} configuration files.
+. You have administrative permissions to modify ConfigMaps (if using the Operator).
+
+.Procedure
+
+. Locate your `dynamic-plugin` configuration.
+
+* Operator deployment: The configuration is stored in a ConfigMap referenced by your Backstage custom resource (CR).
+* Helm deployment: The configuration is in your `values.yaml` file or separate configuration files.
+
+. Enable the global header plugin. Ensure that the `red-hat-developer-hub-backstage-plugin-global-header` entry exists under the `plugins: list` and that `disabled` is set to `false`.
+
+. Verify that you enabled the global header plugin.
+Confirm that you listed the `red-hat-developer-hub-backstage-plugin-global-header` plugin under `plugins:` with `disabled: false` (or without a `disabled` property):
++
+[source,yaml]
+----
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-global-header
+    disabled: false
+----
+
+. Add the required components. Under the `mountPoints` section of the plugin, add the components as shown in the following example:
++
+[source,yaml,subs="+attributes"]
+----
+  mountPoints:
+    - mountPoint: application/header
+      importName: GlobalHeader
+      config:
+        position: above-sidebar
+    - mountPoint: global.header/component
+      importName: StarredDropdown
+      config:
+        priority: 85
+    - mountPoint: global.header/component
+      importName: ApplicationLauncherDropdown
+      config:
+        priority: 82
+    - mountPoint: global.header/component
+      importName: MenuItemLink
+      config:
+        section: Documentation
+      priority: 150
+      props:
+          title: {product-short}
+          icon: developerHub
+          link: https://docs.redhat.com/en/documentation/red_hat_developer_hub
+    - mountPoint: global.header/application-launcher
+    importName: MenuItemLink
+    config:
+      section: Developer Tools
+      priority: 100
+      props:
+          title: RHDH Local
+          icon: developerHub
+          link: https://github.com/redhat-developer/rhdh-local
+----
+
+. Apply the configuration.
+
+* Operator deployment: Update the ConfigMap and allow the Operator to reconcile the changes.
+* Helm deployment: Apply your updated configuration using `helm upgrade`.
+
+. Verify the features are enabled.
+After the {product} instance restarts, confirm that the star icon and *Quicklinks* matrix appear in the global header.

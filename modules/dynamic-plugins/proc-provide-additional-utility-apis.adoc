@@ -1,0 +1,59 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-provide-additional-utility-apis.adoc_{context}"]
+= Providing additional utility APIs
+
+If a dynamic plugin exports the plugin object returned by `createPlugin`, it is supplied to the `createApp` API. All API factories exported by the plugin are automatically registered and available in the front-end application.
+
+You can add an entry to the `dynamicPlugins.frontend` configuration when a dynamic plugin contains only API factories as shown in the following example:
+
+[source,yaml]
+----
+# app-config.yaml
+dynamicPlugins:
+  frontend:
+    my-dynamic-plugin-package-with-api-factories: {}
+----
+
+However, when the dynamic plugin is not exporting the plugin object, explicitly configure each API factory that must be registered with the `createApp` API using the `apiFactories` configuration as shown in the following example:
+
+[source,yaml]
+----
+# app-config.yaml
+dynamicPlugins:
+  frontend:
+    my-plugin: # The plugin package name
+      apiFactories:
+        # (Optional): Specify the import name that references a `AnyApiFactory<{}>` implementation. (Defaults to `default` export)
+        - importName: BarApi
+          # (Optional): An argument which specifies the assets you want to access within the plugin. If not provided, the default module named `PluginRoot` is used
+          module: CustomModule
+----
+
+The API factories initialized by the {product-short} application shell are overridden by an API factory provided by a dynamic plugin by specifying the same API ref ID. A dynamic plugin can export `AnyApiFactory<{}>` to cater for some specific use case as shown in the following example:
+
+[source,yaml]
+----
+export const customScmAuthApiFactory = createApiFactory({
+  api: scmAuthApiRef,
+  deps: { githubAuthApi: githubAuthApiRef },
+  factory: ({ githubAuthApi }) =>
+    ScmAuth.merge(
+      ScmAuth.forGithub(githubAuthApi, { host: "github.someinstance.com" }),
+      ScmAuth.forGithub(githubAuthApi, {
+        host: "github.someotherinstance.com",
+      }),
+    ),
+});
+----
+
+The corresponding configuration which overrides the default `ScmAuth` API factory that {product-short} defaults to is as shown in the following example:
+
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    my-plugin:  # The plugin package name
+      apiFactories:
+        - importName: customScmAuthApiFactory
+----
