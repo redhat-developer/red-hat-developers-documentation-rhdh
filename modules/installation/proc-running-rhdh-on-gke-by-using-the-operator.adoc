@@ -1,17 +1,9 @@
 :_mod-docs-content-type: PROCEDURE
-
-[id="proc-deploy-rhdh-instance-gke.adoc_{context}"]
-= Deploying the {product-short} instance on {gke-short} with the Operator
-
-You can deploy your {product-short} instance in {gke-short} using the Operator.
-
-.Prerequisites
-* A cluster administrator has installed the {product} Operator.
-* You have subscribed to `registry.redhat.io`.
-For more information, see link:https://access.redhat.com/articles/RegistryAuthentication[{company-name} Container Registry Authentication].
-* You have installed `kubectl`.
-For more information, see https://kubernetes.io/docs/tasks/tools/#kubectl[Install kubetl].
-
+:platform-long: {gke-brand-name} ({gke-short})
+:platform: {gke-short}
+:platform-id: gke
+:installing-the-operator-by-using-olm-xref: xref:proc-installing-the-operator-on-{platform-id}-by-using-olm_{context}
+include::snip-running-rhdh-by-using-the-operator-common-prerequisites.adoc[]
 * You have configured a domain name for your {product-short} instance.
 * You have reserved a static external Premium IPv4 Global IP address that is not attached to any virtual machine (VM).
 For more information see link:https://cloud.google.com/vpc/docs/reserve-static-external-ip-address#reserve_new_static[Reserve a new static external IP address]
@@ -24,102 +16,6 @@ This process can take up to one hour to propagate.
 ====
 
 .Procedure
-. Create a `{my-app-config-file}` config map containing the `{my-app-config-file}` {product-short} configuration file by using the following template:
-+
---
-.`{my-app-config-file}` fragment
-[source,yaml,subs="+attributes,+quotes"]
-----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {my-app-config-config-map}
-data:
-  "{my-app-config-file}": |
-    app:
-      title: {product}
-      baseUrl: {my-product-url}
-    backend:
-      auth:
-        externalAccess:
-            - type: legacy
-              options:
-                subject: legacy-default-config
-                secret: "${BACKEND_SECRET}"
-      baseUrl: {my-product-url}
-      cors:
-        origin: {my-product-url}
-----
---
-
-. Create a `_<my_product_secrets>_` secret and add a key named `BACKEND_SECRET` with a `Base64-encoded` string value as shown in the following example:
-+
---
-[source,yaml,subs="+quotes,+attributes"]
-----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: `_<my_product_secrets>_` <1>
-stringData:
-  # TODO: See https://backstage.io/docs/auth/service-to-service-auth/#setup
-  BACKEND_SECRET: "xxx"
-----
-
-<1> `_<my_product_secrets>_` is your preferred {product-short} secret name, where `_<my_product_secrets>_` specifies the identifier for your secret configuration within {product-short}.
-
-[IMPORTANT]
-====
-Ensure that you use a unique value of `BACKEND_SECRET` for each {product-short} instance.
-====
-
-You can use the following command to generate a key:
-
-[source,terminal]
-----
-node-p'require("crypto").randomBytes(24).toString("base64")'
-----
---
-
-. To enable pulling the PostgreSQL image from the {company-name} Ecosystem Catalog, add the image pull secret in the default service account within the namespace where the {product-short} instance is being deployed:
-+
---
-[source,terminal]
-----
-kubectl patch serviceaccount default \
-    -p '{"imagePullSecrets": [{"name": "rhdh-pull-secret"}]}' \
-    -n <your_namespace>
-----
---
-
-. Create your `{product-custom-resource-type}` custom resource (CR) file using the following template:
-+
---
-.Custom resource fragment
-[source,yaml,subs="+quotes,+attributes"]
-----
-apiVersion: rhdh.redhat.com/v1alpha3
-kind: Backstage
-metadata:
-  # This is the name of your {product-short} instance
-  name: my-rhdh
-spec:
-  application:
-    imagePullSecrets:
-    - "rhdh-pull-secret"
-    route:
-      enabled: false
-    appConfig:
-      configMaps:
-        - name: {my-app-config-config-map}
-    extraEnvs:
-      secrets:
-        - name: `_<my_product_secrets>_` <1>
-----
-
-<1> `_<my_product_secrets>_` is your preferred {product-short} secret name, where `_<my_product_secrets>_` specifies the identifier for your secret configuration within {product-short}.
---
-
 . Set up a Google-managed certificate by creating a `ManagedCertificate` object which you must attach to the Ingress as shown in the following example:
 +
 --

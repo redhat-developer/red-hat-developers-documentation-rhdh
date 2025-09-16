@@ -1,0 +1,50 @@
+:_mod-docs-content-type: PROCEDURE
+:platform-long: {aks-brand-name} ({aks-short})
+:platform: {aks-short}
+:platform-id: aks
+:installing-the-operator-by-using-olm-xref: xref:proc-installing-the-operator-on-{platform-id}-by-using-olm_{context}
+include::snip-running-rhdh-by-using-the-operator-common-prerequisites.adoc[]
+
+.Procedure
+include::snip-running-rhdh-by-using-the-operator-common-steps.adoc[]
+. Create an Ingress manifest file, named `rhdh-ingress.yaml`, specifying your {product-short} service name as follows:
++
+--
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rhdh-ingress
+  namespace: {my-product-namespace}
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backstage-<your-CR-name>
+                port:
+                  name: http-backend
+----
+--
+
+. To deploy the created Ingress, run the following command:
++
+--
+[source,terminal]
+----
+kubectl -n <your_namespace> apply -f rhdh-ingress.yaml
+----
+--
+
+. Access the deployed {product-short} using the URL: `pass:c,a,q[https://<app_address>]`, where _<app_address>_ is the Ingress address obtained earlier (for example, `pass:[https://108.141.70.228]`).
+. Optional: To delete the CR, run the following command:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+kubectl -n {my-product-namespace} delete -f rhdh.yaml
+----
