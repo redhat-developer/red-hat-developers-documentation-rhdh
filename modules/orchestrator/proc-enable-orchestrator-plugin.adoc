@@ -53,9 +53,60 @@ spec:
     dynamicPluginsConfigMapName: orchestrator-plugin
 ----
 
-. Create a secret containing the `BACKEND_SECRET` value.
+. Create a secret containing the `BACKEND_SECRET` value as shown in the following example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |-
+    auth:
+      environment: development
+      providers:
+        guest:
+          # using the guest user to query the '/api/dynamic-plugins-info/loaded-plugins' endpoint.
+          dangerouslyAllowOutsideDevelopment: true
+    backend:
+      auth:
+        externalAccess:
+          - type: static
+            options:
+              token: ${BACKEND_SECRET}
+              subject: orchestrator
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-auth-secret
+stringData:
+  # generated with the command below (from https://backstage.io/docs/auth/service-to-service-auth/#setup):
+  # node -p 'require("crypto").randomBytes(24).toString("base64")'
+  # notsecret
+  BACKEND_SECRET: "R2FxRVNrcmwzYzhhN3l0V1VRcnQ3L1pLT09WaVhDNUEK"
+----
 
-. Configure your {product-custom-resource-type} CR to update the secret name in the `extraEnvs` field.
+. Configure your {product-custom-resource-type} CR to update the secret name in the `extraEnvs` field as shown in the following example:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha4
+kind: Backstage
+metadata:
+  name: orchestrator
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: app-config-rhdh
+    dynamicPluginsConfigMapName: orchestrator-plugin
+    extraEnvs:
+      secrets:
+          # secret that contains the BACKEND_SECRET key
+        - name: backend-auth-secret
+----
 
 .Verification
 * In the {product-very-short} console, confirm that the Orchestrator frontend and backend features are available.
