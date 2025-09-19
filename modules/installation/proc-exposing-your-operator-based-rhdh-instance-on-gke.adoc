@@ -1,0 +1,105 @@
+:_mod-docs-content-type: PROCEDURE
+:platform-long: {gke-brand-name} ({gke-short})
+:platform: {gke-short}
+:platform-id: gke
+:installing-the-operator-by-using-olm-xref: xref:proc-installing-the-operator-on-{platform-id}-by-using-olm_{context}
+include::snip-exposing-your-operator-based-rhdh-instance-common-prerequisites.adoc[]
+* You have configured a domain name for your {product-short} instance.
+* You have reserved a static external Premium IPv4 Global IP address that is not attached to any virtual machine (VM).
+For more information see link:https://cloud.google.com/vpc/docs/reserve-static-external-ip-address#reserve_new_static[Reserve a new static external IP address]
+* You have configured the DNS records for your domain name to point to the IP address that has been reserved.
++
+[NOTE]
+====
+You need to create an `A` record with the value equal to the IP address.
+This process can take up to one hour to propagate.
+====
+
+.Procedure
+. Create a Google-managed certificate manifest file, named `managed-certificate.yaml`:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: my-rhdh-certificate-name
+spec:
+  domains:
+    - {my-product-domain}
+----
++
+For more information about setting up a Google-managed certificate, see https://cloud.google.com/kubernetes-engine/docs/how-to/managed-certs?hl=en#setting_up_a_google-managed_certificate[Setting up a Google-managed certificate].
+
+. Deploy the managed certificate:
++
+[source,terminal,subs="+attributes"]
+----
+$ kubectl -n {my-product-namespace} apply -f managed-certificate.yaml
+----
+
+. Create a frontend config manifest file, named  `frontend-config.yaml`, to set a policy for redirecting to HTTPS.
++
+[source,yaml,subs="attributes+"]
+----
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: my-ingress_security_config
+spec:
+  sslPolicy: gke-ingress-ssl-policy-https
+  redirectToHttps:
+    enabled: true
+----
++
+For more information about setting a policy to redirect to HTTPS, see link:https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-configuration?hl=en#https_redirect[HTTP to HTTPS redirects].
+
+. Deploy the frontend config:
++
+[source,terminal,subs="+attributes"]
+----
+$ kubectl -n {my-product-namespace} apply -f frontend-config.yaml
+----
+
+. Create an ingress manifest file, named `rhdh-ingress.yaml`, specifying your {product-short} service name, and using your managed certificate and your frontend config:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-rhdh-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
+    networking.gke.io/managed-certificates: my-rhdh-certificate-name
+    networking.gke.io/v1beta1.FrontendConfig: my-ingress_security_config
+spec:
+  ingressClassName: gce
+  rules:
+    - host: {my-product-domain}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: {my-product-cr-name}
+              port:
+                name: http-backend
+----
+
+. Deploy the ingress:
++
+[source,terminal,subs="+attributes"]
+----
+$ kubectl -n {my-product-namespace} apply -f rhdh-ingress.yaml
+----
+
+.Verification
+* Wait for the `ManagedCertificate` to be provisioned.
+This process can take a couple of hours.
+* Access {product-very-short} with `pass:a,q[{my-product-url}]`.
+
+.Additional information
+For more information on setting up {gke-short} using Ingress with TLS, see https://github.com/GoogleCloudPlatform/gke-networking-recipes/tree/main/ingress/single-cluster/ingress-https[Secure GKE Ingress].

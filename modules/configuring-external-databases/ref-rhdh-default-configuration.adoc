@@ -1,0 +1,97 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="rhdh-default-configuration"]
+= {product} default configuration guide
+
+The {product} ({product-very-short}) Operator creates a set of Kubernetes resources to deploy and manage a {backstage} instance. The default configuration for these default resources is defined at the Operator level and can be customized for a specific instance using the {backstage} Custom Resource (CR). This approach provides a clear starting point while offering flexibility to tailor each deployment.
+
+The default configuration is stored in a ConfigMap named `rhdh-default-config` located in the `rhdh-operator` namespace on OpenShift. This ConfigMap contains the YAML manifests that define the foundational structure of the {product-very-short} instance.
+
+You can create a basic {product-very-short} instance by applying an empty {product-custom-resource-type} Custom Resource as follows:
+
+.Example creating a {product-very-short} instance
+[source,yaml]
+----
+apiVersion: backstage.redhat.com/v1alpha4
+kind: Backstage
+metadata:
+name: my-rhdh-instance
+namespace: rhdh
+----
+
+The Operator automatically creates the following resources in the specified {product-very-short} namespace by default based on the default configuration:
+
+.Floating action button parameters
+|===
+| File Name | Resource GVK | Resource Name | Description
+
+| `deployment.yaml`
+| `apps/v1/Deployment`
+| `backstage-{cr-name}`
+| (Mandatory) The main Backstage application deployment.
+
+| `service.yaml`
+| `v1/Service`
+| `backstage-{cr-name}`
+| (Mandatory) The Backstage application service.
+
+| `db-statefulset.yaml`
+| `apps/v1/StatefulSet`
+| `backstage-psql-{cr-name}`
+| The PostgreSQL database stateful set. Needed if `spec.enabledDb=true`.
+
+| `db-service.yaml`
+| `v1/Service`
+| `backstage-psql-{cr-name}`
+| The PostgreSQL database service. Needed if `spec.enabledDb=true`.
+
+| `db-secret.yaml`
+| `v1/Secret`
+| `backstage-psql-{cr-name}`
+| The PostgreSQL database credentials secret. Needed if `spec.enabledDb=true`.
+
+| `route.yaml`
+| `route.openshift.io/v1`
+| `backstage-{cr-name}`
+| The OpenShift Route to expose Backstage externally. (Optional) Applied to Openshift only.
+
+| `{my-app-config-file}`
+| `v1/ConfigMap`
+| `backstage-config-{cr-name}`
+| (Optional) Specifies one or more {product-custom-resource-type} `{my-app-config-file}` files.
+
+| `configmap-files.yaml`
+| `v1/ConfigMap`
+| `backstage-files-{cr-name}`
+| (Optional) Specifies additional ConfigMaps to be mounted as files into {product-custom-resource-type} Pod.
+
+| `configmap-envs.yaml`
+| `v1/ConfigMap`
+| `backstage-envs-{cr-name}`
+| (Optional) Specifies additional ConfigMaps to be exposed as environment variables into {product-custom-resource-type} Pod.
+
+| `secret-files.yaml`
+| `v1/Secret` or list of `v1/Secret`
+| `backstage-files-{cr-name}-{secret-name}`
+| (Optional) Specifies additional Secrets to be mounted as files into {product-custom-resource-type} Pod.
+
+| `secret-envs.yaml`
+| `v1/Secret` or list of `v1/Secret`
+| `backstage-envs-{cr-name}`
+| (Optional) Specifies additional Secrets to be exposed as environment variables into {product-custom-resource-type} Pod.
+
+| `dynamic-plugins.yaml`
+| `v1/ConfigMap`
+| `backstage-dynamic-plugins-{cr-name}`
+| (Optional) Specifies dynamic plugins to be installed into {product-custom-resource-type} instance.
+
+| `pvcs.yaml`
+| list of `v1/PersistentVolumeClaim`
+| `backstage-{cr-name}-{pvc-name}`
+| (Optional) The Persistent Volume Claim for PostgreSQL database.
+|===
+
+[NOTE]
+====
+`{cr-name}` is the name of the {product-custom-resource-type} Custom Resource, for example 'my-rhdh-instance' in the above example.
+====
