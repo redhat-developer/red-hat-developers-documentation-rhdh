@@ -1,0 +1,71 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="con-generated-workflow-manifests.adoc_{context}"]
+= Generated workflow manifests
+
+The following example is an illustration of what is generated under the `01_basic/manifests`:
++
+[source,yaml]
+----
+01_basic/manifests
+├── 00-secret_basic-secrets.yaml
+├── 01-configmap_basic-props.yaml
+├── 02-configmap_01-basic-resources-schemas.yaml
+└── 03-sonataflow_basic.yaml
+----
+
+Here is a quick overview of each of these manifests:
+
+`00-secret_basic-secrets.yaml`::
+Contains secrets from `01_basic/src/main/resources/secret.properties`.
+Values are not required at this stage as you can set them later (after applying CRs or when using GitOps).
+
+[Important]
+====
+In OpenShift Serverless Logic `v1.35`, after updating a secret, you must manually restart the workflow Pod for changes to apply.
+====
+
+`01-configmap_basic-props.yaml`::
+Holds application properties from application.properties.
+Any change to this ConfigMap triggers an automatic Pod restart.
+
+`02-configmap_01-basic-resources-schemas.yaml`::
+Contains JSON schemas from src/main/resources/schemas.
+Note: When using the GitOps profile, this ConfigMap (and similar ones like specs) does not need to be deployed.
+
+`03-sonataflow_basic.yaml`::
+The SonataFlow custom resource (CR) that defines the workflow.
+A few important parts:
+
+.The image and secrets mounting example:
+[source,yaml]
+----
+podTemplate:
+  container:
+    image: quay.io/orchestrator/demo-basic
+    resources: {}
+    envFrom:
+      - secretRef:
+          name: basic-secrets
+----
+
+.The persistence configuration example:
+[source,yaml]
+----
+persistence:
+  postgresql:
+    secretRef:
+      name: sonataflow-psql-postgresql
+      userKey: postgres-username
+      passwordKey: postgres-password
+    serviceRef:
+      name: sonataflow-psql-postgresql
+      port: 5432
+      databaseName: sonataflow
+      databaseSchema: basic
+----
+
+If you need to connect to an external database, you must replace `serviceRef` with a `jdbcUrl`. See link:https://sonataflow.org/serverlessworkflow/latest/cloud/operator/enabling-jobs-service.html#_using_the_persistence_field_defined_in_the_sonataflowplatform_cr[SonataFlow Guides] for more information.
+here.
+
+By default, all the manifests are generated without a namespace. You can specify a namespace to the script by the `--namespace` flag if you know the target namespace in advance. Otherwise, the namespace needs to be provided when applying the manifests to the cluster. See link:https://sonataflow.org/serverlessworkflow/latest/cloud/operator/configuring-workflows.html[Configuring Workflow Services].
