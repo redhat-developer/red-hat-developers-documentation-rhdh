@@ -1,0 +1,151 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-enable-orchestrator-plugin_{context}"]
+= Enabling the Orchestrator plugin using Operator
+
+You can enable the Orchestrator plugin in {product-very-short} by configuring dynamic plugins in your {product-custom-resource-type} custom resource (CR).
+
+.Prerequisites
+* You have installed {product-very-short} on {ocp-short}.
+* You have access to edit or create ConfigMaps in the namespace where the {product-custom-resource-type} CR is deployed.
+
+.Procedure
+
+. To enable the Orchestrator plugin with default settings, set `disabled: false` for the package. For example, `package: "@redhat/backstage-plugin-orchestrator@<plugin_version>` is set to `disabled: false`:
++
+[source,yaml]
+----
+- package: "@redhat/backstage-plugin-orchestrator@<plugin_version>"
+  disabled: false
+----
++
+.Example: Complete configuration of the Orchestrator plugin
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-plugin
+data:
+    dynamic-plugins.yaml: |
+      includes:
+        - dynamic-plugins.default.yaml
+      plugins:
+        - package: "@redhat/backstage-plugin-orchestrator@1.7.1"
+          disabled: false
+          pluginConfig:
+            dynamicPlugins:
+                frontend:
+                  red-hat-developer-hub.backstage-plugin-orchestrator:
+                    appIcons:
+                      - importName: OrchestratorIcon
+                        name: orchestratorIcon
+                    dynamicRoutes:
+                      - importName: OrchestratorPage
+                        menuItem:
+                          icon: orchestratorIcon
+                          text: Orchestrator
+                        path: /orchestrator
+                    entityTabs:
+                      - path: /workflows
+                        title: Workflows
+                        mountPoint: entity.page.workflows
+                    mountPoints:
+                      - mountPoint: entity.page.workflows/cards
+                      importName: OrchestratorCatalogTab
+                      config:
+                        layout:
+                          gridColumn: '1 / -1'
+                          if:
+                            anyOf:
+                              - IsOrchestratorCatalogTabAvailable
+        - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.7.1"
+          disabled: false
+          pluginConfig:
+            orchestrator:
+              dataIndexService:
+                url: http://sonataflow-platform-data-index-service
+          dependencies:
+            - ref: sonataflow
+        - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.7.1"
+          disabled: false
+          pluginConfig:
+            orchestrator:
+              dataIndexService:
+                url: http://sonataflow-platform-data-index-service
+        - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.7.1"
+          disabled: false
+          pluginConfig:
+            dynamicPlugins:
+              frontend:
+                red-hat-developer-hub.backstage-plugin-orchestrator-form-widgets: { }
+---
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: orchestrator
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: app-config-rhdh
+    dynamicPluginsConfigMapName: orchestrator-plugin
+----
+
+. Create a secret containing the `BACKEND_SECRET` value as shown in the following example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+data:
+  app-config-rhdh.yaml: |-
+    auth:
+      environment: development
+      providers:
+        guest:
+          # using the guest user to query the '/api/dynamic-plugins-info/loaded-plugins' endpoint.
+          dangerouslyAllowOutsideDevelopment: true
+    backend:
+      auth:
+        externalAccess:
+          - type: static
+            options:
+              token: ${BACKEND_SECRET}
+              subject: orchestrator
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-auth-secret
+stringData:
+  # generated with the command below (from https://backstage.io/docs/auth/service-to-service-auth/#setup):
+  # node -p 'require("crypto").randomBytes(24).toString("base64")'
+  # notsecret
+  BACKEND_SECRET: "R2FxRVNrcmwzYzhhN3l0V1VRcnQ3L1pLT09WaVhDNUEK"
+----
+
+. Configure your {product-custom-resource-type} CR to update the secret name in the `extraEnvs` field as shown in the following example:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha4
+kind: Backstage
+metadata:
+  name: orchestrator
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: app-config-rhdh
+    dynamicPluginsConfigMapName: orchestrator-plugin
+    extraEnvs:
+      secrets:
+          # secret that contains the BACKEND_SECRET key
+        - name: backend-auth-secret
+----
+
+.Verification
+* In the {product-very-short} console, confirm that the Orchestrator frontend and backend features are available.

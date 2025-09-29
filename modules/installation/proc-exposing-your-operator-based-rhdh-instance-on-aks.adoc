@@ -1,0 +1,41 @@
+:_mod-docs-content-type: PROCEDURE
+:platform-long: {aks-brand-name} ({aks-short})
+:platform: {aks-short}
+:platform-id: aks
+:installing-the-operator-by-using-olm-xref: xref:proc-installing-the-operator-on-{platform-id}-by-using-olm_{context}
+include::snip-exposing-your-operator-based-rhdh-instance-common-prerequisites.adoc[]
+
+.Procedure
+. Create an Ingress manifest file, named `rhdh-ingress.yaml`, specifying your {product-short} service name as follows:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-rhdh-ingress
+  namespace: {my-product-namespace}
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {my-product-cr-name}
+                port:
+                  name: http-backend
+----
+
+. To deploy the created Ingress, run the following command:
++
+[source,terminal,subs="+attributes"]
+----
+$ kubectl -n {my-product-namespace} apply -f rhdh-ingress.yaml
+----
+
+.Verification
+. Access the deployed {product-short} using the URL: `pass:c,a,q[https://<app_address>]`, where _<app_address>_ is the Ingress address obtained earlier (for example, `pass:[https://108.141.70.228]`).
+

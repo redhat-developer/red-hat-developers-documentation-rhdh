@@ -1,0 +1,68 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-techdocs-configure-amazon-s3-storage_{context}"]
+= Configuring Amazon S3 for file storage
+
+ You can create a dedicated Amazon S3 bucket to store TechDocs sites. {product} uploads TechDocs to this bucket and serves them from the same location.
+
+.Prerequisites
+
+* You are logged in to your AWS account as an administrator.
+
+.Procedure
+. On the AWS console, create an AWS S3 bucket.
+.. On the *Create bucket* page, enter a *Bucket name* and use the default selections for all other settings.
+.. Create an IAM policy to give authorized users permissions to generate and publish TechDocs for your organization.
+.. On the *Create policy > Specify permissions* page, in the *Policy editor*, enter the following JSON content:
++
+[source,JSON,subs="+quotes,+attributes"]
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "TechDocsList",
+            "Effect": "Allow",
+            "Action": "s3:ListBucket",
+            "Resource": "arn:aws:s3:::_<bucket_name>_"
+        },
+        {
+            "Sid": "TechDocsObjects",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+            ],
+            "Resource": "arn:aws:s3:::_<bucket_name>_/*"
+        }
+    ]
+}
+----
++
+where
+
+_<bucket_name>_ :: Specifies the name of your Amazon S3 bucket.
++
+.. On the *Create policy > Specify permissions* page, enter a *Policy name*.
+. Assign the IAM policy to a new or existing user.
+. Generate a new access key and a new secret access key.
++
+[NOTE]
+====
+You can use the newly created access keys to generate a TechDocs pipeline with GitHub Actions.
+====
+. From the {ocp-short} web console, click *Topology* > *Actions* > *Restart rollout* to restart the pod.
++
+[NOTE]
+====
+You must restart the pod to apply the configuration changes.
+====
+
+.Verification
+. Go to your Amazon S3 bucket to see a set of static site files in your *Objects* list.
+////
+.Next steps
+* xref:proc-techdocs-pipeline-github-actions_{context}[Generating a TechDocs pipeline with GitHub Actions]
+////
