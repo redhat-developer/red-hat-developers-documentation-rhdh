@@ -3,7 +3,8 @@
 [id="creating-a-custom-transformer-to-provision-users-from-rhbk-to-the-software-catalog"]
 = Creating a custom transformer to provision users from {rhbk-brand-name} ({rhbk}) to the software catalog
 
-To customize how {rhbk} users and groups are mapped to {product} entities, you can create a backend module that uses the `keycloakTransformerExtensionPoint` to provide custom user and group transformers for the Keycloak backend.
+Customize how {product} provisions users and groups to {product} software catalog entities,
+by creating a backend module that uses the `keycloakTransformerExtensionPoint` to offer custom user and group transformers for the Keycloak backend.
 
 .Prerequisites
 * You have xref:enabling-user-authentication-with-rhbk[enabled provisioning users from {rhbk-brand-name} ({rhbk}) to the software catalog].
@@ -14,9 +15,8 @@ To customize how {rhbk} users and groups are mapped to {product} entities, you c
 . Add your custom user and group transformers to the `keycloakTransformerExtensionPoint`.
 
 +
-The following is an example of how the backend module can be defined:
+The following is an example `plugins/__<module_name>__/src/module.ts` file defining the backend module:
 +
-.`plugins/__<module-name>__/src/module.ts`
 [source,javascript]
 ----
 import {
@@ -63,7 +63,7 @@ export const keycloakBackendModuleTransformer = createBackendModule({
 +
 [IMPORTANT]
 ====
-The module's `pluginId` must be set to `catalog` to match the `pluginId` of the `keycloak-backend`; otherwise, the module fails to initialize.
+Set the module's `pluginId` to `catalog` to match the `pluginId` of the `keycloak-backend`; otherwise, the module fails to initialize.
 ====
 
 . Install this new backend module into your {product-short} backend.
@@ -76,16 +76,17 @@ backend.add(import(backstage-plugin-catalog-backend-module-keycloak-transformer)
 .Verification
 
 * {product-short} imports the users and groups each time when started.
-Check the console logs to verify that the synchronization is completed.
+Check the console logs to verify the synchronization result.
 +
-.Successful synchronization example:
+Successful synchronization example:
++
 [source,json]
 ----
 {"class":"KeycloakOrgEntityProvider","level":"info","message":"Read 3 Keycloak users and 2 Keycloak groups in 1.5 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
 {"class":"KeycloakOrgEntityProvider","level":"info","message":"Committed 3 Keycloak users and 2 Keycloak groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
 ----
 
-* After the first import is complete, navigate to the *Catalog* page and select **User** to view the list of users.
+* After the first import is complete, go to the *Catalog* page and select **User** to view the list of users.
 
 * When you select a user, you see the information imported from {rhbk}.
 
