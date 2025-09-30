@@ -1,10 +1,404 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Setting up and configuring your first Red Hat Developer Hub instance</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="Prepare your IT infrastructure including Red Hat OpenShift Container Platform and required external components, and run your first Red Hat Developer Hub (RHDH) instance in production."/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45152231145328"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.7</span></div><div><h1 class="title">Setting up and configuring your first Red Hat Developer Hub instance</h1></div><div><h3 class="subtitle"><em>Prepare your IT infrastructure including Red Hat OpenShift Container Platform and required external components, and run your first Red Hat Developer Hub (RHDH) instance in production.</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45152216952512">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Setting up and configuring your first Red Hat Developer Hub instance</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="Prepare your IT infrastructure including Red Hat OpenShift Container Platform and required external components, and run your first Red Hat Developer Hub (RHDH) instance in production."/><link rel="next" href="#enabling-authentication-with-mandatory-steps-only" title="1. Enabling authentication in Red Hat Developer Hub (with mandatory steps only)"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm46413325527088"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.7</span></div><div><h1 class="title">Setting up and configuring your first Red Hat Developer Hub instance</h1></div><div><h3 class="subtitle"><em>Prepare your IT infrastructure including Red Hat OpenShift Container Platform and required external components, and run your first Red Hat Developer Hub (RHDH) instance in production.</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm46413309275776">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
 				Prepare your IT infrastructure including Red Hat OpenShift Container Platform and required external components, and run your first Red Hat Developer Hub (RHDH) instance in production.
-			</div></div></div></div><hr/></div><p>
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#enabling-authentication-with-mandatory-steps-only">1. Enabling authentication in Red Hat Developer Hub (with mandatory steps only)</a></span><ul><li><span class="section"><a href="#understanding-authentication-and-user-provisioning">1.1. Understanding authentication and user provisioning</a></span></li><li><span class="section"><a href="#authenticating-with-the-guest-user_setting-up-and-configuring-your-first-rhdh-instance">1.2. Authenticating with the Guest user</a></span></li><li><span class="section"><a href="#enabling-user-authentication-with-rhbk">1.3. Enabling user authentication with Red Hat Build of Keycloak (RHBK)</a></span></li><li><span class="section"><a href="#enabling-user-authentication-with-github">1.4. Enabling user authentication with GitHub</a></span></li><li><span class="section"><a href="#enabling-user-authentication-with-microsoft-azure">1.5. Enabling user authentication with Microsoft Azure</a></span></li></ul></li></ul></div><p>
 		Prepare your IT infrastructure including Red Hat OpenShift Container Platform and required external components, and run your first Red Hat Developer Hub (RHDH) instance in production.
-	</p><div><div xml:lang="en-US" class="legalnotice" id="idm45152216952512"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+	</p><section class="section" id="enabling-authentication-with-mandatory-steps-only"><div class="titlepage"><div><div><h2 class="title">1. Enabling authentication in Red Hat Developer Hub (with mandatory steps only)</h2></div></div></div><section class="section" id="understanding-authentication-and-user-provisioning"><div class="titlepage"><div><div><h3 class="title">1.1. Understanding authentication and user provisioning</h3></div></div></div><p>
+				Learn about the authentication process from creating user and group entities in the software catalog to user sign-in, and how authentication and catalog plugins enable each step. Understanding this process is essential for successfully configuring your Developer Hub instance, securing access through authorization, and enabling features that rely on synchronized user and group data.
+			</p><p>
+				To fully enable catalog features, provision user and group data from the Identity Provider to the Developer Hub software catalog. Catalog provider plugins handle this task asynchronously. These plugins query the Identity Provider (IdP) for relevant user and group information, and create or update corresponding entities in the Developer Hub catalog. Scheduled provisioning ensures that the catalog accurately reflects the users and groups in your organization.
+			</p><p>
+				When a user attempts to access Developer Hub, Developer Hub redirects them to a configured authentication provider, such as Red Hat Build of Keycloak (RHBK), GitHub, or Microsoft Azure. This external IdP is responsible for authenticating the user.
+			</p><p>
+				On successful authentication, the Developer Hub authentication plugin, configured in your <code class="literal">app-config.yaml</code> file, processes the response from the IdP, resolves the identity in the Developer Hub software catalog, and establishes a user session within Developer Hub.
+			</p><p>
+				Configuring authentication and user provisioning is critical for several reasons.
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						Securing your Developer Hub instance by ensuring only authenticated users can gain access.
+					</li><li class="listitem">
+						Enabling authorization by allowing you to define access controls based on user and group memberships synchronized from your IdP.
+					</li><li class="listitem"><p class="simpara">
+						Provisioning user and group data to the catalog is necessary for various catalog features that rely on understanding entity ownership and relationships between users, groups, and software components.
+					</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+							Without this provisioning step, features such as displaying who owns a catalog entity might not function correctly.
+						</p></div></div></li></ul></div><div class="admonition tip"><div class="admonition_header">Tip</div><div><p>
+				To explore Developer Hub features in a non-production environment, you can:
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						To use Developer Hub without external IdP, enable the guest user to skip configuring authentication and authorization, log in as the guest user, and access all Developer Hub features.
+					</li><li class="listitem">
+						To use Developer Hub without authorization policies and features relying on the software catalog, you can enable the <code class="literal">dangerouslyAllowSignInWithoutUserInCatalog</code> resolver option. This setting bypasses the check requiring a user to be in the catalog but still enforces authentication.
+					</li></ul></div></div></div><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+					Developer Hub uses a one-way synchronization model, where user and group data flow from your Identity Provider to the Developer Hub software catalog. As a result, deleting users or groups manually through the Developer Hub Web UI or REST API might be ineffective or cause inconsistencies, since Developer Hub will create those entities again during the next import.
+				</p></div></div></section><section class="section" id="authenticating-with-the-guest-user_setting-up-and-configuring-your-first-rhdh-instance"><div class="titlepage"><div><div><h3 class="title">1.2. Authenticating with the Guest user</h3></div></div></div><p>
+				For trial or non-production environments, you can enable guest access to skip configuring authentication and authorization and explore Developer Hub features.
+			</p><section class="section" id="authenticating-with-the-guest-user-on-an-operator-based-installation_setting-up-and-configuring-your-first-rhdh-instance"><div class="titlepage"><div><div><h4 class="title">1.2.1. Authenticating with the Guest user on an Operator-based installation</h4></div></div></div><p>
+					For trial or non-production environments installed by using the Red Hat Developer Hub Operator, you can enable guest access to skip configuring authentication and authorization and explore Developer Hub features.
+				</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+							You <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">added a custom Developer Hub application configuration</a>, and have enough permissions to change it.
+						</li><li class="listitem">
+							You <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index#using-the-operator-to-run-rhdh-with-your-custom-configurationn">use the Red Hat Developer Hub Operator to run Developer Hub</a>.
+						</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+							Add the following content to the <code class="literal">app-config.yaml</code> file:
+						</p><pre class="programlisting language-yaml">auth:
+  environment: development
+  providers:
+    guest:
+      dangerouslyAllowOutsideDevelopment: true</pre></li></ul></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+							Go to the Developer Hub login page.
+						</li><li class="listitem">
+							To log in with the Guest user account, click <span class="strong strong"><strong>Enter</strong></span> in the <span class="strong strong"><strong>Guest</strong></span> tile.
+						</li><li class="listitem">
+							In the Developer Hub <span class="strong strong"><strong>Settings</strong></span> page, your profile name is <span class="strong strong"><strong>Guest</strong></span>.
+						</li><li class="listitem">
+							You can use Developer Hub features.
+						</li></ol></div></section><section class="section" id="authenticating-with-the-guest-user-on-a-helm-based-installation_setting-up-and-configuring-your-first-rhdh-instance"><div class="titlepage"><div><div><h4 class="title">1.2.2. Authenticating with the Guest user on a Helm-based installation</h4></div></div></div><p>
+					For trial or non-production environments installed by using the Red Hat Developer Hub Helm chart, you can enable guest access to skip configuring authentication and authorization and explore Developer Hub features.
+				</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+							You <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">added a custom Developer Hub application configuration</a>, and have enough permissions to change it.
+						</li><li class="listitem">
+							You <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index#using-the-helm-chart-to-run-rhdh-with-your-custom-configuration">use the Red Hat Developer Hub Helm chart to run Developer Hub</a>.
+						</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+							Add following content to your Red Hat Developer Hub Helm Chart:
+						</p><pre class="programlisting language-yaml">upstream:
+  backstage:
+    appConfig:
+      app:
+        baseUrl: 'https://{{- include "janus-idp.hostname" . }}'
+      auth:
+        environment: development
+        providers:
+          guest:
+            dangerouslyAllowOutsideDevelopment: true</pre></li></ul></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+							Go to the Developer Hub login page.
+						</li><li class="listitem">
+							To log in with the Guest user account, click <span class="strong strong"><strong>Enter</strong></span> in the <span class="strong strong"><strong>Guest</strong></span> tile.
+						</li><li class="listitem">
+							In the Developer Hub <span class="strong strong"><strong>Settings</strong></span> page, your profile name is <span class="strong strong"><strong>Guest</strong></span>.
+						</li><li class="listitem">
+							You can use Developer Hub features.
+						</li></ol></div></section></section><section class="section" id="enabling-user-authentication-with-rhbk"><div class="titlepage"><div><div><h3 class="title">1.3. Enabling user authentication with Red Hat Build of Keycloak (RHBK)</h3></div></div></div><p>
+				Authenticate users with Red Hat Build of Keycloak (RHBK), by provisioning the users and groups from RHBK to the Developer Hub software catalog, and configuring the OpenID Connect (OIDC) authentication provider in Red Hat Developer Hub.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">added a custom Developer Hub application configuration</a>, and have enough permissions to change it.
+					</li><li class="listitem">
+						You have enough permissions in RHSSO to create and manage a realm and a client. Alternatively, your RHBK administrator can prepare in RHBK the required realm and client for you.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						To allow Developer Hub to authenticate with RHBK, complete the steps in RHBK, to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-create-a-realm">create a realm and a user</a> and <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-secure-the-first-application">secure the first application</a>:
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+								Use an existing realm, or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html/getting_started_guide/getting-started-zip-#getting-started-zip-create-a-realm">create a realm</a>, with a distinctive <span class="strong strong"><strong>Name</strong></span> such as <span class="emphasis"><em>&lt;my_realm&gt;</em></span>. Save the value for the next step:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<span class="strong strong"><strong>RHBK realm base URL</strong></span>, such as: <span class="emphasis"><em>&lt;your_rhbk_URL&gt;</em></span>/realms/<span class="emphasis"><em>&lt;your_realm&gt;</em></span>.
+									</li></ul></div></li><li class="listitem"><p class="simpara">
+								To register your Developer Hub in RHBK, in the created realm, <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html-single/getting_started_guide/index#getting-started-zip-secure-the-first-application">secure the first application</a>, with:
+							</p><div class="orderedlist"><ol class="orderedlist" type="i"><li class="listitem">
+										<span class="strong strong"><strong>Client ID</strong></span>: A distinctive client ID, such as <span class="emphasis"><em>&lt;RHDH&gt;</em></span>.
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Valid redirect URIs</strong></span>: Set to the OIDC handler URL: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_domain&gt;</em></span>/api/auth/oidc/handler/frame</code>.
+									</li><li class="listitem">
+										Go to the <span class="strong strong"><strong>Credentials</strong></span> tab and copy the <span class="strong strong"><strong>Client secret</strong></span>.
+									</li><li class="listitem"><p class="simpara">
+										Save the values for the next step:
+									</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+												<span class="strong strong"><strong>Client ID</strong></span>
+											</li><li class="listitem">
+												<span class="strong strong"><strong>Client Secret</strong></span>
+											</li></ul></div></li></ol></div></li><li class="listitem">
+								To prepare for the verification steps, in the same realm, get the credential information for an existing user or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_build_of_keycloak/26.0/html-single/getting_started_guide/index#getting-started-zip-create-a-user">create a user</a>. Save the user credential information for the verification steps.
+							</li></ol></div></li><li class="listitem"><p class="simpara">
+						To add your RHSSO credentials to Developer Hub, add the following key/value pairs to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_dynamic_plugins/index#provisioning-your-custom-configuration">your Developer Hub secrets</a>. You can use these secrets in the Developer Hub configuration files by using their environment variable name.
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">KEYCLOAK_CLIENT_ID</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">KEYCLOAK_CLIENT_SECRET</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client Secret</strong></span>.
+								</dd><dt><span class="term"><code class="literal">KEYCLOAK_BASE_URL</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>RHBK realm base URL</strong></span>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						Enable the Keycloak organization plugin (<code class="literal">backstage-plugin-catalog-backend-module-keycloak-dynamic</code>) in your <code class="literal">dynamic-plugins.yaml</code> file. The plugin is named after RHBK upstream project. This plugin imports RHBK users and groups to the Developer Hub software catalog.
+					</p><pre class="programlisting language-yaml">plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-keycloak-dynamic'
+    disabled: false</pre></li><li class="listitem"><p class="simpara">
+						To provision RHBK users and groups to the Developer Hub software catalog, add the <code class="literal">catalog.providers.keycloakOrg</code> section to your custom Developer Hub <code class="literal">app-config.yaml</code> configuration file:
+					</p><pre class="programlisting language-yaml" id="keycloakOrgProviderId">catalog:
+  providers:
+    keycloakOrg:
+      default:
+        baseUrl: ${KEYCLOAK_BASE_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        realm: master
+        loginRealm: master</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">baseUrl</code></span></dt><dd>
+									Enter your RHBK server URL, defined earlier.
+								</dd><dt><span class="term"><code class="literal">clientId</code></span></dt><dd>
+									Enter your Developer Hub application client ID in RHBK, defined earlier.
+								</dd><dt><span class="term"><code class="literal">clientSecret</code></span></dt><dd>
+									Enter your Developer Hub application client secret in RHBK, defined earlier.
+								</dd><dt><span class="term"><code class="literal">realm</code></span></dt><dd>
+									Enter the realm name to provision users, such as <code class="literal">master</code>.
+								</dd><dt><span class="term"><code class="literal">loginRealm</code></span></dt><dd><p class="simpara">
+									Enter the realm name to authenticate users, such as <code class="literal">master</code>.
+								</p><p class="simpara">
+									Optional: Add optional fields. See <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">Configuring Red Hat Developer Hub</a>.
+								</p></dd></dl></div></li><li class="listitem"><p class="simpara">
+						To set up the RHBK authentication provider in your Developer Hub custom configuration, edit your custom Developer Hub ConfigMap such as <code class="literal">app-config-rhdh</code>, and add the following lines to the <code class="literal">app-config.yaml</code> content:
+					</p><pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${KEYCLOAK_BASE_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        prompt: auto
+signInPage: oidc</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">environment: production</code></span></dt><dd>
+									Mark the environment as <code class="literal">production</code> to hide the Guest login in the Developer Hub home page.
+								</dd><dt><span class="term"><code class="literal">metadataUrl</code>, <code class="literal">clientId</code>, <code class="literal">clientSecret</code></span></dt><dd>
+									To configure the OIDC provider with your secrets.
+								</dd><dt><span class="term"><code class="literal">sigInPage: oidc</code></span></dt><dd>
+									To enable the OIDC provider as default sign-in provider.
+								</dd><dt><span class="term"><code class="literal">prompt: auto</code></span></dt><dd><p class="simpara">
+									To allow the identity provider to automatically determine whether to prompt for credentials or bypass the login redirect if an active RHSSO session exists.
+								</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+										If <code class="literal">prompt: auto</code> is not set, the identity provider defaults to <code class="literal">prompt: none</code>, which assumes that you are already logged in and rejects sign-in requests without an active session.
+									</p></div></div><p class="simpara">
+									Optional: Add optional fields. See <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">Configuring Red Hat Developer Hub</a>.
+								</p></dd></dl></div></li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						To verify user and group provisioning, check the console logs.
+					</p><p class="simpara">
+						Successful synchronization example:
+					</p><pre class="screen">2025-06-27T16:02:34.647Z catalog info Read 5 Keycloak users and 3 Keycloak groups in 0.4 seconds. Committing... class="KeycloakOrgEntityProvider" taskId="KeycloakOrgEntityProvider:default:refresh" taskInstanceId="db55c34b-46b3-402b-b12f-2fbc48498e82" trace_id="606f80a9ce00d1c86800718c4522f7c6" span_id="7ebc2a254a546e90" trace_flags="01"
+
+2025-06-27T16:02:34.650Z catalog info Committed 5 Keycloak users and 3 Keycloak groups in 0.0 seconds. class="KeycloakOrgEntityProvider" taskId="KeycloakOrgEntityProvider:default:refresh" taskInstanceId="db55c34b-46b3-402b-b12f-2fbc48498e82" trace_id="606f80a9ce00d1c86800718c4522f7c6" span_id="7ebc2a254a546e90" trace_flags="01"</pre></li><li class="listitem"><p class="simpara">
+						To verify RHBK user authentication:
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+								Go to the Developer Hub login page.
+							</li><li class="listitem">
+								Your Developer Hub sign-in page displays <span class="strong strong"><strong>Sign in using OIDC</strong></span> and the Guest user sign-in is disabled.
+							</li><li class="listitem">
+								Log in with OIDC by using the saved <span class="strong strong"><strong>Username</strong></span> and <span class="strong strong"><strong>Password</strong></span> values.
+							</li></ol></div></li></ol></div></section><section class="section" id="enabling-user-authentication-with-github"><div class="titlepage"><div><div><h3 class="title">1.4. Enabling user authentication with GitHub</h3></div></div></div><p>
+				Authenticate users with GitHub by provisioning the users and groups from GitHub to the Developer Hub software catalog, and configuring the GitHub authentication provider in Red Hat Developer Hub.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">added a custom Developer Hub application configuration</a>, and have enough permissions to change it.
+					</li><li class="listitem">
+						You have enough permissions in GitHub to create and manage a <a class="link" href="https://docs.github.com/en/apps/overview">GitHub App</a>. Alternatively, you can ask your GitHub administrator to prepare the required GitHub App.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						To allow Developer Hub to authenticate with GitHub, create a GitHub App. Opt for a GitHub App instead of an OAuth app to use fine-grained permissions and use short-lived tokens.
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+								<a class="link" href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">Register a GitHub App</a> with the following configuration:
+							</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">GitHub App name</span></dt><dd>
+											Enter a unique name identifying your GitHub App, such as <code class="literal">authenticating-with-rhdh-<span class="emphasis"><em>&lt;GUID&gt;</em></span></code>.
+										</dd><dt><span class="term">Homepage URL</span></dt><dd>
+											Enter your Developer Hub URL: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_domain&gt;</em></span></code>.
+										</dd><dt><span class="term">Authorization callback URL</span></dt><dd>
+											Enter your Developer Hub authentication backend URL: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_domain&gt;</em></span>/api/auth/github/handler/frame</code>.
+										</dd><dt><span class="term">Webhook</span></dt><dd>
+											Clear "Active", as this is not needed for authentication and catalog providers.
+										</dd><dt><span class="term">Organization permissions</span></dt><dd>
+											Enable <code class="literal">Read-only</code> access to <span class="strong strong"><strong>Members</strong></span>.
+										</dd><dt><span class="term">Where can this GitHub App be installed?</span></dt><dd>
+											Select <code class="literal">Only on this account</code>.
+										</dd></dl></div></li><li class="listitem">
+								In the <span class="strong strong"><strong>General</strong></span> → <span class="strong strong"><strong>Clients secrets</strong></span> section, click <span class="strong strong"><strong>Generate a new client secret</strong></span>.
+							</li><li class="listitem">
+								In the <span class="strong strong"><strong>Install App</strong></span> tab, choose an account to install your GitHub App on.
+							</li><li class="listitem"><p class="simpara">
+								Save the following values for the next step:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<span class="strong strong"><strong>Client ID</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Client secret</strong></span>
+									</li></ul></div></li></ol></div></li><li class="listitem"><p class="simpara">
+						To add your GitHub credentials to Developer Hub, add the following key/value pairs to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index#provisioning-your-custom-configuration">your Developer Hub secrets</a>. You can use these secrets in the Developer Hub configuration files by using their environment variable name.
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">GITHUB_CLIENT_ID</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_CLIENT_SECRET</code></span></dt><dd>
+									Enter the saved <span class="strong strong"><strong>Client Secret</strong></span>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_URL</code></span></dt><dd>
+									Enter the GitHub host domain: <code class="literal">github.com</code>.
+								</dd><dt><span class="term"><code class="literal">GITHUB_ORG</code></span></dt><dd>
+									Enter your GitHub organization name, such as <code class="literal"><span class="emphasis"><em>&lt;your_github_organization_name&gt;</em></span></code>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						Enable the GitHub organization provisioning plugin (<code class="literal">backstage-plugin-catalog-backend-module-github-org</code>). This plugin imports GitHub users and groups to the Developer Hub software catalog.
+					</p><p class="simpara">
+						<code class="literal">dynamic-plugins.yaml</code> file fragment:
+					</p><pre class="programlisting language-yaml">plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org'
+    disabled: false</pre></li><li class="listitem"><p class="simpara">
+						Provision GitHub users and groups to the Developer Hub software catalog by adding the <code class="literal">catalog.providers.githubOrg</code> section to your custom Developer Hub <code class="literal">app-config.yaml</code> configuration file:
+					</p><pre class="programlisting language-yaml" id="githubProviderId">catalog:
+  providers:
+    githubOrg:
+      id: githuborg
+      githubUrl: "${GITHUB_URL}"
+      orgs: [ "${GITHUB_ORG}" ]
+      schedule:
+        frequency:
+          minutes: 30
+        initialDelay:
+          seconds: 15
+        timeout:
+          minutes: 15</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">id</code></span></dt><dd>
+									Enter a stable identifier for this provider, such as <code class="literal">githuborg</code>. Entities from this provider are associated with this identifier, therefore you must take care not to change it over time since that might lead to orphaned entities or conflicts.
+								</dd><dt><span class="term"><code class="literal">githubUrl</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${GITHUB_URL}</code>.
+								</dd><dt><span class="term"><code class="literal">orgs</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${GITHUB_ORG}</code>.
+								</dd><dt><span class="term"><code class="literal">schedule.frequency</code></span></dt><dd>
+									Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+								</dd><dt><span class="term"><code class="literal">schedule.timeout</code></span></dt><dd>
+									Enter your schedule timeout, in the ISO duration or "human duration" format.
+								</dd><dt><span class="term"><code class="literal">schedule.initialDelay</code></span></dt><dd>
+									Enter your schedule initial delay, in the ISO duration or "human duration" format.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						To set up the GitHub authentication provider, add the <code class="literal">auth.providers.github</code> section to your <code class="literal">app-config.yaml</code> file:
+					</p><pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${GITHUB_CLIENT_ID}
+        clientSecret: ${GITHUB_CLIENT_SECRET}
+signInPage: github</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">environment</code></span></dt><dd>
+									Enter <code class="literal">production</code> to disable the Guest login option in the Developer Hub login page.
+								</dd><dt><span class="term"><code class="literal">clientId</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${GITHUB_CLIENT_ID}</code>.
+								</dd><dt><span class="term"><code class="literal">clientSecret</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${GITHUB_CLIENT_SECRET}</code>.
+								</dd><dt><span class="term"><code class="literal">signInPage</code></span></dt><dd><p class="simpara">
+									Enter <code class="literal">github</code> to enable the GitHub provider as your Developer Hub sign-in provider.
+								</p><p class="simpara">
+									Optional: Consider adding optional fields. See <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">Configuring Red Hat Developer Hub</a>.
+								</p></dd></dl></div></li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Verify user and group provisioning by checking the console logs.
+					</p><p class="simpara">
+						Successful synchronization example:
+					</p><pre class="programlisting language-json">{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Reading GitHub users and teams for org: rhdh-dast","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:githuborg:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:58"}
+{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Read 7 GitHub users and 2 GitHub groups in 0.4 seconds. Committing...","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:githuborg:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:59"}</pre></li><li class="listitem"><p class="simpara">
+						To verify GitHub authentication:
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+								Go to the Developer Hub login page.
+							</li><li class="listitem">
+								Your Developer Hub sign-in page displays <span class="strong strong"><strong>Sign in using GitHub</strong></span> and the Guest user sign-in is disabled.
+							</li><li class="listitem">
+								Log in with a GitHub account.
+							</li></ol></div></li></ol></div><div class="itemizedlist"><p class="title"><strong>Additional resources</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						<a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/integrating_red_hat_developer_hub_with_github/index">Integrating Red Hat Developer Hub with GitHub</a>
+					</li></ul></div></section><section class="section" id="enabling-user-authentication-with-microsoft-azure"><div class="titlepage"><div><div><h3 class="title">1.5. Enabling user authentication with Microsoft Azure</h3></div></div></div><p>
+				Authenticate users with Microsoft Azure by provisioning the users and groups from Azure to the Developer Hub software catalog, and configuring the Azure authentication provider in Red Hat Developer Hub.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have the permission to register an application in Azure. Alternatively, you can ask your Azure administrator to prepare the required Azure application.
+					</li><li class="listitem">
+						You <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">added a custom Developer Hub application configuration</a>, and have enough permissions to change it.
+					</li><li class="listitem"><p class="simpara">
+						Your Developer Hub backend can access the following hosts:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">login.microsoftonline.com</code></span></dt><dd>
+									The Microsoft Azure authorization server, which enables the authentication flow.
+								</dd><dt><span class="term"><code class="literal">graph.microsoft.com</code></span></dt><dd>
+									The server for retrieving organization data, including user and group data, to import into the Developer Hub catalog.
+								</dd></dl></div></li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						To allow Developer Hub to authenticate with Azure, <a class="link" href="https://learn.microsoft.com/en-us/entra/identity-platform/scenario-web-app-sign-user-app-registration?tabs=aspnetcore#register-an-app-by-using-the-azure-portal">Register an app by using the Azure portal</a>.
+					</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+								Sign in to the <a class="link" href="https://entra.microsoft.com/">Microsoft Entra admin center</a>.
+							</li><li class="listitem">
+								Optional: If you have access to many tenants, use the <span class="strong strong"><strong>Settings</strong></span> icon in the top menu to switch to the tenant in which you want to register the application from the <span class="strong strong"><strong>Directories + subscriptions</strong></span> menu.
+							</li><li class="listitem"><p class="simpara">
+								Browse to <span class="strong strong"><strong>Applications &gt; App registrations</strong></span>, and create a <span class="strong strong"><strong>New registration</strong></span> with the configuration:
+							</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">Name</span></dt><dd>
+											Enter a name to identify your application in Azure, such as <span class="emphasis"><em>&lt;Authenticating with Developer Hub&gt;</em></span>.
+										</dd><dt><span class="term">Supported account types</span></dt><dd>
+											Select <span class="strong strong"><strong>Accounts in this organizational directory only</strong></span>.
+										</dd><dt><span class="term">Redirect URI</span></dt><dd><div class="variablelist"><dl class="variablelist"><dt><span class="term">Select a platform</span></dt><dd>
+														Select <span class="strong strong"><strong>Web</strong></span>.
+													</dd><dt><span class="term">URL</span></dt><dd>
+														Enter the backend authentication URI set in Developer Hub: <code class="literal">https://<span class="emphasis"><em>&lt;my_developer_hub_domain&gt;</em></span>/api/auth/microsoft/handler/frame</code>
+													</dd></dl></div></dd></dl></div></li><li class="listitem"><p class="simpara">
+								On the <span class="strong strong"><strong>Applications &gt; App registrations &gt; <span class="emphasis"><em>&lt;Authenticating with Developer Hub&gt;</em></span> &gt; Manage &gt; API permissions</strong></span> page, <span class="strong strong"><strong>Add a Permission</strong></span>, <span class="strong strong"><strong>Microsoft Graph</strong></span>, select the following permissions:
+							</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">Application Permissions</span></dt><dd><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">GroupMember.Read.All</code>, </span><span class="term"><code class="literal">User.Read.All</code></span></dt><dd><p class="simpara">
+														Enter permissions that enable provisioning user and groups to the Developer Hub software catalog.
+													</p><p class="simpara">
+														Optional: <span class="strong strong"><strong>Grant admin consent</strong></span> for these permissions. Even if your company does not require admin consent, consider doing so as it means users do not need to individually consent the first time they access Developer Hub.
+													</p></dd></dl></div></dd><dt><span class="term">Delegated Permissions</span></dt><dd><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">User.Read</code>, </span><span class="term"><code class="literal">email</code>, </span><span class="term"><code class="literal">offline_access</code>, </span><span class="term"><code class="literal">openid</code>, </span><span class="term"><code class="literal">profile</code></span></dt><dd><p class="simpara">
+														Enter permissions that enable authenticating users.
+													</p><p class="simpara">
+														Optional: Enter optional custom scopes for the Microsoft Graph API that you define both here and in your <code class="literal">app-config.yaml</code> Developer Hub configuration file.
+													</p></dd></dl></div></dd></dl></div></li><li class="listitem">
+								On the <span class="strong strong"><strong>Applications &gt; App registrations &gt; <span class="emphasis"><em>&lt;Authenticating with Developer Hub&gt;</em></span> &gt; Manage &gt; Certificates &amp; secrets</strong></span> page, in the <span class="strong strong"><strong>Client secrets</strong></span> tab, create a <span class="strong strong"><strong>New client secret</strong></span>.
+							</li><li class="listitem"><p class="simpara">
+								Save the following values for the next step:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										<span class="strong strong"><strong>Directory (tenant) ID</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Application (client) ID</strong></span>
+									</li><li class="listitem">
+										<span class="strong strong"><strong>Application (client) Secret ID</strong></span>
+									</li></ul></div></li></ol></div></li><li class="listitem"><p class="simpara">
+						To add your Azure credentials to Developer Hub, add the following key/value pairs to <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index#provisioning-your-custom-configuration">your Developer Hub secrets</a>:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">AUTHENTICATION_AZURE_TENANT_ID</code></span></dt><dd>
+									Enter your saved <span class="strong strong"><strong>Directory (tenant) ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">AUTHENTICATION_AZURE_CLIENT_ID</code></span></dt><dd>
+									Enter your saved <span class="strong strong"><strong>Application (client) ID</strong></span>.
+								</dd><dt><span class="term"><code class="literal">AUTHENTICATION_AZURE_CLIENT_SECRET</code></span></dt><dd>
+									Enter your saved <span class="strong strong"><strong>Application (client) secret</strong></span>.
+								</dd></dl></div></li><li class="listitem"><p class="simpara">
+						Enable the Microsoft Graph organization provisioning plugin (<code class="literal">backstage-plugin-catalog-backend-module-msgraph-dynamic</code>) in your <code class="literal">dynamic-plugins.yaml</code> file. This plugin imports Azure users and groups to the Developer Hub software catalog.
+					</p><pre class="programlisting language-yaml">plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-msgraph-dynamic'
+    disabled: false</pre></li><li class="listitem"><p class="simpara">
+						To provision Azure users and groups to the Developer Hub software catalog, add the <code class="literal">catalog.providers.microsoftGraphOrg</code> section to your custom Developer Hub <code class="literal">app-config.yaml</code> configuration file:
+					</p><pre class="programlisting language-yaml" id="microsoftGraphOrgProviderId">catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        target: https://graph.microsoft.com/v1.0
+        tenantId: ${AUTHENTICATION_AZURE_TENANT_ID}
+        clientId: ${AUTHENTICATION_AZURE_CLIENT_ID}
+        clientSecret: ${AUTHENTICATION_AZURE_CLIENT_SECRET}
+        schedule:
+          frequency:
+            hours: 1
+          timeout:
+            minutes: 50
+          initialDelay:
+            minutes: 50</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">target</code></span></dt><dd>
+									Enter <code class="literal">https://graph.microsoft.com/v1.0</code> to define the MSGraph API endpoint the provider is connecting to. You might change this parameter to use a different version, such as the <a class="link" href="https://learn.microsoft.com/en-us/graph/api/overview?view=graph-rest-beta#call-the-beta-endpoint">beta endpoint</a>.
+								</dd><dt><span class="term"><code class="literal">tenandId</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${AUTHENTICATION_AZURE_TENANT_ID}</code>.
+								</dd><dt><span class="term"><code class="literal">clientId</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${AUTHENTICATION_AZURE_CLIENT_ID}</code>.
+								</dd><dt><span class="term"><code class="literal">clientSecret</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${AUTHENTICATION_AZURE_CLIENT_SECRET}</code>.
+								</dd><dt><span class="term"><code class="literal">schedule</code></span></dt><dd><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">frequency</code></span></dt><dd>
+												Enter the schedule frequency in the cron, ISO duration, or human duration format. In a large organization, user provisioning might take a long time, therefore avoid using a low value.
+											</dd><dt><span class="term"><code class="literal">timeout</code></span></dt><dd>
+												Enter the schedule timeout in the ISO duration or human duration format. In a large organization, user provisioning might take a long time, therefore avoid using a low value.
+											</dd><dt><span class="term"><code class="literal">initialDelay</code></span></dt><dd><p class="simpara">
+												Enter the schedule initial delay in the ISO duration or human duration format.
+											</p><p class="simpara">
+												Optional: Consider adding optional fields. See <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">Configuring Red Hat Developer Hub</a>.
+											</p></dd></dl></div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						To set up the Azure authentication provider, add the <code class="literal">auth.providers.microsoft</code> section to your <code class="literal">app-config.yaml</code> file content:
+					</p><pre class="programlisting language-yaml">auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTHENTICATION_AZURE_CLIENT_ID}
+        clientSecret: ${AUTHENTICATION_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTHENTICATION_AZURE_TENANT_ID}
+signInPage: microsoft</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">environment</code></span></dt><dd>
+									Enter <code class="literal">production</code> to disable the <span class="strong strong"><strong>Guest</strong></span> login option in the Developer Hub login page.
+								</dd><dt><span class="term"><code class="literal">clientId</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${AUTHENTICATION_AZURE_CLIENT_ID}</code>.
+								</dd><dt><span class="term"><code class="literal">clientSecret</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${AUTHENTICATION_AZURE_CLIENT_SECRET}</code>.
+								</dd><dt><span class="term"><code class="literal">tenantId</code></span></dt><dd>
+									Enter the configured secret variable name: <code class="literal">${AUTHENTICATION_AZURE_TENANT_ID}</code>.
+								</dd><dt><span class="term"><code class="literal">signInPage</code></span></dt><dd><p class="simpara">
+									Enter <code class="literal">microsoft</code> to set the Azure provider as your Developer Hub sign-in provider.
+								</p><p class="simpara">
+									Optional: Add optional fields. See <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.7/html-single/configuring_red_hat_developer_hub/index">Configuring Red Hat Developer Hub</a>.
+								</p></dd></dl></div></li></ol></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm46413309275776"><h1 class="legalnotice">Legal Notice</h1><div class="para">
 		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
 	</div><div class="para">
 		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
