@@ -1,0 +1,70 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-enabling-software-template-version-update-notifications_{context}"]
+= Enabling Software Template version update notifications in {product}
+
+As a platform engineer, you can enable notification alerts for template version updates using the `@backstage-community/plugin-catalog-backend-module-scaffolder-relation-processor` module, an extension to the `catalog-backend` plugin. When enabled, this module automatically notifies component owners whenever the Software Template used to generate their components is updated to a new version.
+
+This functionality uses the `spec.scaffoldedFrom` field in catalog entities. This field links Software Templates to the entities they have scaffolded. By tracking this relationship, the module helps teams stay informed and take advantage of the latest improvements or fixes.
+
+The `plugin-catalog-backend-module-scaffolder-relation-processor` module is disabled by default.
+
+
+.Prerequisites
+
+* You have installed and configured the Backstage backend notification plugin `@backstage/plugin-notifications-backend`.
+* You have installed and configured the Backstage frontend plugin `@backstage/plugin-notifications`.
+
+
+.Procedure
+
+. To enable the notifications, in your `{product} app-config.yaml` file, add the following codes:
+.. In the `dynamicPlugins:frontend` section, add the following code:
++
+[source,yaml]
+----
+frontend:
+  backstage.plugin-notifications:
+    dynamicRoutes:
+      - importName: NotificationPage
+	      menuItem:
+	        config:
+	          props:
+              titleCounterEnabled: true
+		          webNotificationsEnabled: false
+	        importName: NotificationsSidebarItem
+	        path: /notifications
+----
+.. In a new section, add the following code:
++
+[source,yaml]
+----
+scaffolder:
+  notifications:
+    templateUpdate:
+      enabled: true # Set to false to disable notifications
+----
+You can also customize the notification title and description as shown in the following code:
++
+[source,yaml]
+----
+scaffolder:
+  notifications:
+    templateUpdate:
+      enabled: true
+      message:
+        title: 'Custom title for $ENTITY_DISPLAY_NAME'
+        description: 'Custom description'
+----
+`enabled`:: Set to `true` to enable the notification. Default value is `false`.
+`message.title`:: Enter the notification title.
+`message.description`:: Enter the notification description.
+
+[NOTE]
+====
+Both `message.title` and `message.description` support the template variable `$ENTITY_DISPLAY_NAME`. You can substitute this variable with the title (or the name, if the title is missing) of the entity that is scaffolded from the updated template. Setting scaffolder.notifications.templateUpdate.enabled to false, or omitting the configuration section entirely, disables the notification feature.
+====
+
+.Verification
+* In your {product} instance, on the left navigation menu, you are able to see `Notifications`, or, if configured, your custom title. 
+* When you update the version number in the Software Template, you receive a notification.
