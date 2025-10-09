@@ -13,7 +13,9 @@ In a network-restricted environment, a disconnected installation prevents unauth
 
 * You have mirrored the {product} Operator images to the local registry using the included script. For {product-very-short} installation using Operator, the mirroring script automatically deploys the {product-very-short} Operator for you.
 
-* You have mirrored the images for the Serverless Operator `v1.36` and the Serverless Logic Operator `v1.36` to the local registry using tools like Skopeo or podman.
+* You have mirrored the images for the Serverless Operator {rhoserverless-version} and the Serverless Logic Operator {rhoserverless-version} to the local registry using tools like Skopeo or podman.
+
+* Optional: Create and configure a local NPM server.
 
 .Procedure
 
@@ -53,7 +55,15 @@ spec:
      source: registry.redhat.io/openshift-serverless-1/logic-swf-devmode-rhel8
 ----
 
-. Wait for all the nodes to update after applying the `ImageTagMirrorSet`. You can track the update using `oc get mcp -A`.
+. Wait for all the nodes to update after applying the `ImageTagMirrorSet`.
+Track the update using the following command:
++
+[source,yaml]
+----
+oc get mcp -A
+----
++
+Once all MCPs are applied, the new image configuration propagates to all nodes.
 
 . Create `ImageDigestMirrorSet` for the SF images as shown in the following example:
 +
@@ -161,7 +171,7 @@ spec:
 ss-1/kn-eventing-mtping-rhel8
 ----
 
-. Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using the Operator.
+. Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using the {product-very-short} Operator.
 
 . Download the Node Package Manager (NPM) packages for orchestrator `1.7.1` using the following methods:
 +
@@ -175,15 +185,13 @@ ss-1/kn-eventing-mtping-rhel8
 +
 [source,subs="+attributes,+quotes"]
 ----
-npm pack "@redhat/backstage-plugin-orchestrator@1.7.0" --registry=https://npm.registry.redhat.com
-npm pack "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.7.0" --registry=https://npm.registry.redhat.com
-npm pack "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.7.0" --registry=https://npm.registry.redhat.com
-npm pack "@redhat/backstage-plugin-orchestrator-form-widgets@1.7.0" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-orchestrator@1.7.1" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.7.1" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.7.1" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-orchestrator-form-widgets@1.7.1" --registry=https://npm.registry.redhat.com
 ----
 
 . Push the NPM packages you have downloaded to a local NPM server.
-+
-Optional: You can create and configure this server.
 
 . Create a {product-custom-resource-type} custom resource (CR).
 
@@ -193,5 +201,11 @@ Create all the resources and configure the {product-custom-resource-type} instan
 
 .Verification
 
-. Go to the {product-very-short} UI.
-. {product-very-short} with the Orchestrator is deployed properly.
+* Restart the {product-very-short} pod and wait for the components to deploy properly.
+
+* Once stable go to the {product-very-short} UI, and confirm that the Orchestrator UI is accessible and functioning correctly.
+
+[NOTE]
+====
+The successful accessibility of the Orchestrator UI confirms that the underlying components are running and the cluster recognizes the plugin.
+====

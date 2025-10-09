@@ -9,11 +9,15 @@
 
 * You have mirrored the {product} {product-version} Helm chart images to the local registry. See {installing-in-air-gap-book-link}#assembly-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped[Installing {product} on {ocp-short} in an air-gapped environment with the Helm chart] for instructions.
 
-* You have mirrored the images for the Serverless Operator `v1.36` and the Serverless Logic Operator `v1.36`.
+* You have mirrored the images for the Serverless Operator {rhoserverless-version} and the Serverless Logic Operator {rhoserverless-version}.
+
+* You have permissions to push NPM packages to a local NPM server.
+
+* Optional: Create and configure a local NPM server.
 
 .Procedure
 
-. If the previous image mirroring step did not already create them, you must create `ImageTagMirrorSet` and `ImageDigestMirrorSet` for the Serverless Functions (SF) images as shown in the following examples:
+. Create the ImageTagMirrorSet and ImageDigestMirrorSet for the Serverless Functions (SF) images as shown in the following examples:
 +
 * Creating `ImageTagMirrorSet` for the SF images:
 +
@@ -156,8 +160,21 @@ spec:
        - <my.registry.example.com>/openshift-serverle
 ss-1/kn-eventing-mtping-rhel8
 ----
++
+[NOTE]
+====
+If these objects already exist from the previous image mirroring step, you can skip this task.
+====
 
-. Wait for all the nodes to update after applying the `ImageTagMirrorSet`. You can track the update using `oc get mcp -A` command.
+. Wait for all the nodes to update after applying the `ImageTagMirrorSet`.
+Track the update using the following command:
++
+[source,yaml]
+----
+oc get mcp -A
+----
++
+Once all MCPs are applied, the new image configuration propagates to all nodes.
 
 . Download the Node Package Manager (NPM) packages for orchestrator `1.7.1` using the following methods:
 +
@@ -167,19 +184,17 @@ ss-1/kn-eventing-mtping-rhel8
 ** https://npm.registry.redhat.com/@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic/-/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic-1.7.1.tgz
 ** https://npm.registry.redhat.com/@redhat/backstage-plugin-orchestrator-form-widgets/-/backstage-plugin-orchestrator-form-widgets-1.7.1.tgz
 +
-* Alternatively, use the NPM packages from link:https://npm.registry.redhat.com.https://npm.registry.redhat.com[{company-name} NPM registry] as shown in the following example:
+* Alternatively, use the NPM packages from link:https://npm.registry.redhat.com[{company-name} NPM registry] as shown in the following example:
 +
 [source,subs="+attributes,+quotes"]
 ----
-npm pack "@redhat/backstage-plugin-orchestrator@1.7.0" --registry=https://npm.registry.redhat.com
-npm pack "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.7.0" --registry=https://npm.registry.redhat.com
-npm pack "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.7.0" --registry=https://npm.registry.redhat.com
-npm pack "@redhat/backstage-plugin-orchestrator-form-widgets@1.7.0" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-orchestrator@1.7.1" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.7.1" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.7.1" --registry=https://npm.registry.redhat.com
+npm pack "@redhat/backstage-plugin-orchestrator-form-widgets@1.7.1" --registry=https://npm.registry.redhat.com
 ----
 
 . Push the NPM packages you have downloaded to a local NPM server.
-+
-Optional: You can create and configure this server.
 
 . Apply the `orchestrator-infra` Helm chart using the instructions provided in the {installing-in-air-gap-book-link}#assembly-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped[Installing {product} on {ocp-short} in an air-gapped environment with the Helm chart] guide and approve the install plans.
 
@@ -190,7 +205,7 @@ Optional: You can create and configure this server.
 orchestrator.enabled=true
 ----
 
-. See {release-notes-book-link}#removed-functionality-rhdhbugs-2000[Configuring a custom NPM registry] for instructions on how to point {product-very-short} towards the custom NPM registry. Modify the deployment created by the Helm chart instead of the {product-custom-resource-type} Custom Resource.
+. Modify the deployment created by the Helm chart instead of the {product-custom-resource-type} Custom Resource.
 +
 [NOTE]
 ====
@@ -209,6 +224,11 @@ In the default created `<release name>-dynamic-plugins` ConfigMap, replace the f
 
 .Verification
 
-. Restart the {product-very-short} pod and wait for the components to deploy properly.
-. Go to the {product-very-short} UI.
-. {product-very-short} with the Orchestrator is deployed properly.
+* Restart the {product-very-short} pod and wait for the components to deploy properly.
+
+* Once stable go to the {product-very-short} UI, and confirm that the Orchestrator UI is accessible and functioning correctly.
+
+[NOTE]
+====
+The successful accessibility of the Orchestrator UI confirms that the underlying components are running and the cluster recognizes the plugin.
+====
