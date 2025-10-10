@@ -14,50 +14,48 @@ Your changes on this configuration might get reverted on {product-short} restart
 .Prerequisites
 * By using the {platform-cli-link}, you have access, with developer permissions, to the {platform-generic} cluster aimed at containing your {product-short} instance.
 
+ifeval::["{context}" == "setting-up-and-configuring-your-first-rhdh-instance"]
+include::snip-provisioning-your-custom-configuration-prerequisites-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
+endif::[]
+
 .Procedure
-. Author your custom `_<my_product_secrets>_.txt` file to provision your secrets as environment variables values in {a-platform-generic} secret,
-rather than in clear text in your configuration files.
-It contains one secret per line in `KEY=value` form.
+. For security, store your secrets as environment variables values in an {ocp-short} secret, rather than in clear text in your configuration files.
+Collect all your secrets in the `secrets.txt` file, with one secret per line in `KEY=value` form.
 +
-* {authentication-book-link}[Enter your authentication secrets].
+--
+ifeval::["{context}" == "setting-up-and-configuring-your-first-rhdh-instance"]
+include::snip-provisioning-your-custom-configuration-secrets-steps-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
+endif::[]
+ifeval::["{context}" != "setting-up-and-configuring-your-first-rhdh-instance"]
+include::snip-provisioning-your-custom-configuration-secrets-steps-in-default-context.adoc[]
+endif::[]
+--
 
 . Author your custom `{my-app-config-file}` file.
 This is the main {product-short} configuration file.
 You need a custom `{my-app-config-file}` file to avoid the {product-short} installer to revert user edits during upgrades.
 When your custom `{my-app-config-file}` file is empty, {product-short} is using default values.
-
-** To prepare a deployment with the {product} Operator on {platform}, you can start with an empty file.
-
-** To prepare a deployment with the {product} Helm chart, or on Kubernetes, enter the {product-short} base URL in the relevant fields in your `{my-app-config-file}` file to ensure proper functionality of {product-short}.
-The base URL is what a {product-short} user sees in their browser when accessing {product-short}.
-The relevant fields are `baseUrl` in the `app` and `backend` sections, and `origin` in the `backend.cors` subsection:
 +
-.Configuring the `baseUrl` in `{my-app-config-file}`
-====
-[source,yaml,subs="+attributes,+quotes"]
+--
+include::snip-provisioning-your-custom-configuration-appconfig-step-with-optional-steps-{optional-steps}d.adoc[]
+--
+
+. Author your custom `dynamic-plugins.yaml` file to enable plugins.
+By default, {product-short} enables a minimal plugin set, and disables plugins that require configuration or secrets, such as the GitHub repository discovery plugin and the Role-based access control (RBAC) plugin.
++
+Enable the GitHub repository discovery and the RBAC features:
++
+.`dynamic.plugins.yaml`
+[source,yaml]
 ----
-app:
-  title: {product}
-  baseUrl: {my-product-url}
-
-backend:
-  auth:
-    externalAccess:
-      - type: legacy
-        options:
-          subject: legacy-default-config
-          secret: "${BACKEND_SECRET}"
-  baseUrl: {my-product-url}
-  cors:
-    origin: {my-product-url}
+includes:
+  - dynamic-plugins.default.yaml
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github
+    disabled: false
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-rbac
+    disabled: false
 ----
-====
-
-** Optionally, enter your configuration such as:
-
-*** {authentication-book-link}[{authentication-book-title}].
-*** {authorization-book-link}[{authorization-book-title}].
-*** {customizing-book-link}[Customization].
 
 . Provision your custom configuration files to your {platform} cluster.
 
@@ -68,21 +66,30 @@ backend:
 $ oc create namespace {my-product-namespace}
 ----
 
-.. Provision your `{my-app-config-file}` file to the `{my-app-config-config-map}` config map in the _<{my-product-namespace}>_ project.
+.. Provision your `{my-app-config-file}` and `dynamic-plugins.yaml` files respectively to the `{my-app-config-config-map}`, and `dynamic-plugins-rhdh` config maps in the _<{my-product-namespace}>_ project.
 +
 [source,terminal,subs="+attributes,+quotes"]
 ----
 $ oc create configmap {my-app-config-config-map} --from-file={my-app-config-file} --namespace={my-product-namespace}
+$ oc create configmap dynamic-plugins-rhdh --from-file=dynamic-plugins.yaml --namespace={my-product-namespace}
 ----
++
+Alternatively,
+link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps[create the config maps by using the web console].
 
-.. Provision your `_<my_product_secrets>_.txt` file to the `_<my_product_secrets>_` secret in the _<{my-product-namespace}>_ project.
+.. Provision your `secrets.txt` file to the `{my-product-secrets}` secret in the _<{my-product-namespace}>_ project.
 +
 [source,terminal,subs="+attributes,+quotes"]
 ----
-$ oc create secret generic `_<my_product_secrets>_` --from-file=`_<my_product_secrets>_.txt` --namespace={my-product-namespace}
+$ oc create secret generic {my-product-secrets} --from-file=secrets.txt --namespace={my-product-namespace}
 ----
++
+Alternatively,
+link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets[create the secret by using the web console].
 
-.Next steps
-* To use an external PostgreSQL database, {configuring-book-link}configuring-external-postgresql-databases[provision your PostgreSQL database secrets].
-* To enable dynamic plugins, {installing-and-viewing-plugins-book-link}[provision your dynamic plugins config map].
-* To configure authorization by using external files, {authorization-book-link}#managing-authorizations-by-using-external-files[provision your RBAC policies config map].
+ifeval::["{context}" == "setting-up-and-configuring-your-first-rhdh-instance"]
+include::snip-provisioning-your-custom-configuration-next-steps-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
+endif::[]
+ifeval::["{context}" != "setting-up-and-configuring-your-first-rhdh-instance"]
+include::snip-provisioning-your-custom-configuration-next-steps-in-default-context.adoc[]
+endif::[]
