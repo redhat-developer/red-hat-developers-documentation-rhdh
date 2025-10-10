@@ -1,0 +1,36 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-architecture-overview.adoc_{context}"]
+= Understand Orchestrator architecture
+
+The Orchestrator architecture is composed of several components, each contributing to the running and management of workflows.
+
+{product} ({product-very-short}):: Serves as the primary interface. It contains the following subcomponents:
+
+Orchestrator frontend plugins::: Provide the interface for users to run and monitor workflows within {product-very-short}.
+
+Orchestrator backend plugins::: Get workflow data into {product-short}.
+
+Notifications plugins::: Inform users about workflow events.
+
+Sonataflow::
+
+The Sonataflow orchestrator and its subcomponents handle the workflows.
+The {product} Orchestrator and the {product} Helm chart manage the following subcomponents lifecycle:
+
+OpenShift Serverless Logic Operator::: Manages the Sonataflow custom resource (CR), where each CR represents a deployed workflow.
+
+Sonataflow Runtime/Workflow Application::: Functions as a deployed workflow. Operates as an HTTP server, handling requests for running workflow instances. It is managed as a Kubernetes (K8s) deployment by the Openshift Serverless Logic Operator.
+
+Data Index Service::: Serves as a repository for workflow definitions, instances, and associated jobs. It exposes a GraphQL API used by the Orchestrator backend plugin to retrieve workflow definitions and instances.
+Job Service::: Orchestrates scheduled tasks for workflows.
+
+OpenShift Serverless::: Provides serverless capabilities essential for workflow communication. It employs Knative eventing to interface with the Data Index service and uses Knative functions to introduce more complex logic to workflows.
+
+PostgreSQL Server::: Provides a database solution essential for data persistence within the Orchestrator ecosystem. The system uses PostgreSQL Server for storing both Sonataflow information and {product-short} data.
+
+Keycloak:: Provides authentication and security services within applications. Keycloak must be provisioned externally to manage authentication, as the Orchestrator Operator does not install it.
+
+OpenShift AMQ Streams (Strimzi/Kafka):: Provides enhanced reliability of the eventing system. Eventing can work without Kafka by using direct HTTP calls, however, this approach is not reliable.
++
+Optional: The current deployment iteration does not natively integrate or include the AMQ Streams Operator. However, you can add the Operator post-install for enhanced reliability if you require it.
