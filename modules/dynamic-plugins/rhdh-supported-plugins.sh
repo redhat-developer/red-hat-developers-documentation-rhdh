@@ -327,7 +327,9 @@ for y in $yamls; do
         csv_content="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Lifecycle\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
         
         # split into three tables based on support level
-        if [[ ${Support_Level} == "Production" ]]; then
+        if [[ ${Lifecycle} == "deprecated" ]]; then
+            echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.deprecated.tmp"
+        elif [[ ${Support_Level} == "Production" ]]; then
             echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.production.tmp"
         elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
             echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.tech-preview.tmp"
@@ -337,7 +339,9 @@ for y in $yamls; do
 
         # Group CSV by support level
         SupportSort=3
-        if [[ ${Support_Level} == "Production" ]]; then
+        if [[ ${Lifecycle} == "deprecated" ]]; then
+            SupportSort=4
+        elif [[ ${Support_Level} == "Production" ]]; then
             SupportSort=1
         elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
             SupportSort=2
@@ -406,7 +410,22 @@ if [[ -f "$temp_file" ]]; then
 fi
 num_plugins+=($count)
 
-# Process CSV: sort by SupportSort (1,2,3) then PrettyName, and omit techdocs
+# 3) Deprecated
+temp_file="$TEMP_DIR/adoc.deprecated.tmp"
+out_file="${0/.sh/.ref-deprecated-plugins}"
+rm -f "$out_file"
+count=0
+if [[ -f "$temp_file" ]]; then
+    sort "$temp_file" | while IFS='|' read -r key content; do
+        (( count = count + 1 ))
+        if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+        echo -e "$content" >> "$out_file"
+    done
+    count=$(wc -l < "$temp_file")
+fi
+num_plugins+=($count)
+
+# Process CSV: sort by SupportSort (1,2,3,4) then PrettyName, and omit techdocs
 if [[ -f "$TEMP_DIR/csv.tmp" ]]; then
     sort -t '|' -k1,1 -k2,2 "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
         # RHIDP-4196 omit techdocs plugins from the .csv
@@ -420,10 +439,10 @@ fi
 
 if [[ $QUIET -eq 0 ]]; then echo; fi
 
-# merge the content from the three .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
+# merge the content from the 4 .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
 count=1
 index=0
-for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins; do
+for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins ref-deprecated-plugins; do
     (( index = count - 1 ))
     this_num_plugins=${num_plugins[$index]}
     echo -n -e "${green}[$count] Processing $d ${norm}..."
