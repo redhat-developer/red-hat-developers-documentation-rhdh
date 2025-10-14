@@ -1,5 +1,9 @@
 :_mod-docs-content-type: SNIPPET
 
+Authenticate users with GitHub by provisioning the users and groups from GitHub to the {product-short} software catalog, and configuring the GitHub authentication provider in {product}.
+
+.Prerequisites
+* You {configuring-book-link}[added a custom {product-short} application configuration], and have enough permissions to change it.
 * You have enough permissions in GitHub to create and manage a link:https://docs.github.com/en/apps/overview[GitHub App].
 Alternatively, you can ask your GitHub administrator to prepare the required GitHub App.
 
@@ -62,3 +66,68 @@ plugins:
   - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org'
     disabled: false
 ----
+
+. Provision GitHub users and groups to the {product-short} software catalog by adding the `catalog.providers.githubOrg` section to your custom {product-short} `{my-app-config-file}` configuration file:
++
+[id=githubProviderId]
+[source,yaml]
+----
+catalog:
+  providers:
+    githubOrg:
+      id: githuborg
+      githubUrl: "${GITHUB_URL}"
+      orgs: [ "${GITHUB_ORG}" ]
+      schedule:
+        frequency:
+          minutes: 30
+        initialDelay:
+          seconds: 15
+        timeout:
+          minutes: 15
+----
+
+`id`::
+Enter a stable identifier for this provider, such as `githuborg`.
+Entities from this provider are associated with this identifier, therefore you must take care not to change it over time since that might lead to orphaned entities or conflicts.
+
+`githubUrl`::
+Enter the configured secret variable name: `$\{GITHUB_URL}`.
+
+`orgs`::
+Enter the configured secret variable name: `$\{GITHUB_ORG}`.
+
+`schedule.frequency`::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`schedule.timeout`::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+`schedule.initialDelay`::
+Enter your schedule initial delay, in the ISO duration or "human duration" format.
+
+. To set up the GitHub authentication provider, add the `auth.providers.github` section to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${GITHUB_CLIENT_ID}
+        clientSecret: ${GITHUB_CLIENT_SECRET}
+signInPage: github
+----
+
+`environment`::
+Enter `production` to disable the Guest login option in the {product-short} login page.
+
+`clientId`::
+Enter the configured secret variable name: `$\{GITHUB_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name: `$\{GITHUB_CLIENT_SECRET}`.
+
+`signInPage`::
+Enter `github` to enable the GitHub provider as your {product-short} sign-in provider.
