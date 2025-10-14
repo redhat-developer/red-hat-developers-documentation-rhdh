@@ -1,0 +1,301 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-adding-localization-to-custom-plugins_{context}"]
+= Adding localization to custom plugins
+You can implement localization support in your custom Red Hat Developer Hub plugins so that your plugins are accessible to a diverse, international user base and follow recommended best practices.
+
+.Procedure
+. Create the following translation files in your plugin's `src/translations/ directory`:
++
+.`src/translations/ref.ts` English language reference
+[source,json]
+----
+src/translations/ref.ts - English Reference
+import { createTranslationRef } from "@backstage/core-plugin-api/alpha";
+
+
+export const myPluginMessages = {
+ page: {
+   title: "My Plugin",
+   subtitle: "Plugin description",
+ },
+ common: {
+   exportCSV: "Export CSV",
+   noResults: "No results found",
+ },
+ table: {
+   headers: {
+     name: "Name",
+     count: "Count",
+   },
+ },
+};
+
+
+export const myPluginTranslationRef = createTranslationRef({
+ id: "plugin.my-plugin",
+ messages: myPluginMessages,
+});
+----
+
++
+.`src/translations/de.ts` German language reference
+[source,json]
+----
+import { createTranslationMessages } from "@backstage/core-plugin-api/alpha";
+import { myPluginTranslationRef } from "./ref";
+
+
+const myPluginTranslationDe = createTranslationMessages({
+ ref: myPluginTranslationRef,
+ messages: {
+   "page.title": "Mein Plugin",
+   "page.subtitle": "Plugin-Beschreibung",
+   "common.exportCSV": "CSV exportieren",
+   "common.noResults": "Keine Ergebnisse gefunden",
+   "table.headers.name": "Name",
+   "table.headers.count": "Anzahl",
+ },
+});
+
+
+export default myPluginTranslationDe;
+----
+
++
+.`src/translations/fr.ts` French language reference
+[source,json]
+----
+import { createTranslationMessages } from "@backstage/core-plugin-api/alpha";
+import { myPluginTranslationRef } from "./ref";
+
+
+const myPluginTranslationFr = createTranslationMessages({
+ ref: myPluginTranslationRef,
+ messages: {
+   "page.title": "Mon Plugin",
+   "page.subtitle": "Description du plugin",
+   "common.exportCSV": "Exporter CSV",
+   "common.noResults": "Aucun résultat trouvé",
+   "table.headers.name": "Nom",
+   "table.headers.count": "Nombre",
+ },
+});
+
+
+export default myPluginTranslationFr;
+----
+
++
+.`src/translations/index.ts` translation resource
+[source,json]
+----
+import { createTranslationResource } from "@backstage/core-plugin-api/alpha";
+import { myPluginTranslationRef } from "./ref";
+
+
+export const myPluginTranslations = createTranslationResource({
+ ref: myPluginTranslationRef,
+ translations: {
+   de: () => import("./de"),
+   fr: () => import("./fr"),
+ },
+});
+
+
+export { myPluginTranslationRef };
+----
+
+. Create translation hooks
++
+.`src/hooks/useTranslation.ts` translation hooks
+[source,json]
+----
+src/hooks/useTranslation.ts
+import { useTranslationRef } from "@backstage/core-plugin-api/alpha";
+import { myPluginTranslationRef } from "../translations";
+
+
+export const useTranslation = () => useTranslationRef(myPluginTranslationRef);
+----
+
+. Update your plugin components to replace hardcoded strings with translation calls:
++
+.Before (hardcoded):
+[source,json]
+----
+const MyComponent = () => {
+ return (
+   <div>
+     <h1>My Plugin</h1>
+     <button>Export CSV</button>
+   </div>
+ );
+};
+----
++
+.After (translated):
+[source,json]
+----
+import { useTranslation } from '../hooks/useTranslation';
+
+
+const MyComponent = () => {
+ const { t } = useTranslation();
+
+
+ return (
+   <div>
+     <h1>{t('page.title')}</h1>
+     <button>{t('common.exportCSV')}</button>
+   </div>
+ );
+};
+----
+
+. (Optional) For content with variables, use interpolation:
++
+[source,json]
+----
+// In your translation files
+'table.pagination.topN': 'Top {{count}} items'
+----
+
++
+[source,json]
+----
+// In your component
+const { t } = useTranslation();
+const message = t('table.pagination.topN', { count: '10' });
+For dynamic translation keys (e.g., from configuration):
+// Configuration object with translation keys
+const CARD_CONFIGS = [
+ { id: 'overview', titleKey: 'cards.overview.title' },
+ { id: 'details', titleKey: 'cards.details.title' },
+ { id: 'settings', titleKey: 'cards.settings.title' },
+];
+
+
+// In your component
+const { t } = useTranslation();
+
+
+const CardComponent = ({ config }) => {
+ return (
+   <div>
+     <h2>{t(config.titleKey as any)}</h2>
+     {/* Use 'as any' for dynamic keys */}
+   </div>
+ );
+};
+----
+
+
+. Export translation resources
++
+[source,json]
+----
+In your plugin's src/index.ts:
+// Export your plugin
+export { myPlugin } from "./plugin";
+
+
+// Export translation resources for RHDH
+export { myPluginTranslations, myPluginTranslationRef } from "./translations";
+6. Configure in RHDH
+For RHDH (dynamic plugins configuration):
+Add to your dynamic-plugins.default.yaml:
+
+backstage-community.plugin-my-plugin:
+ translationResources:
+   - importName: myPluginTranslations
+     ref: myPluginTranslationRef
+For local Backstage app development:
+// In your app's App.tsx
+import { myPluginTranslations } from "@my-org/backstage-plugin-my-plugin";
+
+
+const app = createApp({
+ apis,
+ __experimentalTranslations: {
+   availableLanguages: ["en", "de", "fr"],
+   resources: [myPluginTranslations],
+ },
+});
+----
+
+. Testing Your Translations
++
+[source,json]
+----
+Create test mocks (src/test-utils/mockTranslations.ts):
+import { myPluginMessages } from "../translations/ref";
+
+
+function flattenMessages(obj: any, prefix = ""): Record<string, string> {
+ const flattened: Record<string, string> = {};
+ for (const key in obj) {
+   if (obj.hasOwnProperty(key)) {
+     const value = obj[key];
+     const newKey = prefix ? `${prefix}.${key}` : key;
+     if (typeof value === "object" && value !== null) {
+       Object.assign(flattened, flattenMessages(value, newKey));
+     } else {
+       flattened[newKey] = value;
+     }
+   }
+ }
+ return flattened;
+}
+
+
+const flattenedMessages = flattenMessages(myPluginMessages);
+
+
+export const mockT = (key: string, params?: any) => {
+ let message = flattenedMessages[key] || key;
+ if (params) {
+   for (const [paramKey, paramValue] of Object.entries(params)) {
+     message = message.replace(
+       new RegExp(`{{${paramKey}}}`, "g"),
+       String(paramValue),
+     );
+   }
+ }
+ return message;
+};
+
+
+export const mockUseTranslation = () => ({ t: mockT });
+Update your tests:
+import { mockUseTranslation } from "../test-utils/mockTranslations";
+
+
+jest.mock("../hooks/useTranslation", () => ({
+ useTranslation: mockUseTranslation,
+}));
+----
+
+// Your test code...
+== Best practices
+* Never modify original English strings - Keep them exactly as they were
+* Use flat dot notation in translation files (e.g., 'page.title')
+* Use nested objects in the reference file for TypeScript support
+* Test with mocks to ensure translations work correctly
+* Add all languages to your app configuration
+
+== Common Patterns
+Use Case	Pattern	Example
+Simple text	t('key')	t('page.title')
+With variables	t('key', {param})	t('table.topN', {count: '5'})
+Dynamic keys	t(config.titleKey as any)	t('cards.overview.title' as any)
+
+== Validation Checklist
+* All hardcoded strings replaced with translation calls
+* Translation files created for all target languages
+* Translation resources exported from src/index.ts
+* For RHDH: Dynamic plugins configuration updated with translationResources
+* For local app: App configuration updated with available languages
+* Tests updated with translation mocks
+* Language switching works in the UI
+* Fallback to English works for missing translations
