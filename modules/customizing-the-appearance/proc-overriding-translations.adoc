@@ -1,0 +1,84 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="prov-overriding-translations_{context}"]
+= Overriding translations
+In {product-very-short} 1.8, English and French are the supported languages. You can implement transalations for other languages by using an `allTranslations.json` file to override existing translation strings and updating the `i18n` section of your `{my-app-config-file}` configuration file.
+
+.Prerequisitea
+* You have enabled localization in your {product-very-short} application.
+
+.Procedure
+. Download the translation strings.
+. Create the JSON file containing all your translations, for example:
++
+[id=i18n-enable]
+.`allTranslations.json` fragment with translation string overrides
+[source,json]
+----
+{
+  "plugin.npm.translation-ref": {
+    "en": {
+      "infoCard.title": "NPM Packet JSON {{packageName}}"
+    },
+    "de": {
+      "infoCard.title": "NPM Pakettt JSON {{packageName}}"
+    },
+    "zh": {
+      "infoCard.title": "NPM 包 JSON {{packageName}}"
+    }
+  },
+  "catalog-import": {
+    "en": {
+      "defaultImportPage.headerTitle": "Import an existing Git repository JSON"
+    },
+    "de": {
+      "defaultImportPage.headerTitle": "Ein vorhandenes Git-Repository importieren JSON"
+    }
+  }
+}
+----
+. Login to your cluster and create a config map for your json translations:
++
+[source,bash]
+----
+oc create configmap all-translations --from-file=/<path-to>/allTranslations.json
+----
+
+. Update your Developer hub helm chart to mount the above config map in the app’s filesystem
+
+.. In the helm chart -> Root Schema -> Backstage chart schema -> Backstage parameters -> Backstage container additional volume mounts 
+
+.. Select `Add Backstage container additional volume mounts` and add the following
++
+[source,yaml]
+----
+MountPath: /opt/app-root/src/translation
+Name: all-translations
+---- 
+
+.. Add the translations to the `Backstage container additional volumes` in the helm chart
++
+[source,yaml]
+----
+name: all-translations
+configMap:
+	defaultMode: 420
+	name: all-translations
+----
+
+. Update the `i18n` section to your custom {product-short} `{my-app-config-file}` configuration file to include the translation override file:
++
+[id=i18n-override]
+.`{my-app-config-file}` fragment with localization `i18n` fields
+[source,yaml,subs="+quotes"]
+----
+i18n:
+  locales: # List of supported locales. Must include `en`, otherwise the translation framework will fail to load.
+    - en
+    - fr
+  defaultLocale: en # Optional. Defaults to `en` if not specified.
+  overrides: # List of JSON translation files applied in order (last file wins).  Each file may override/add translations for one or more plugins/locales
+    - <path-to>/<overrides-1>.json
+    - <path-to>/<overrides-2>.json
+----
+
