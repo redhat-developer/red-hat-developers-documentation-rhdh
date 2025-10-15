@@ -1,0 +1,133 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-extensions-enabling-plugins-installation_{context}"]
+= Configuring {product-very-short} to install plugins by using Extensions
+
+When you install a plugin using Extensions UI, the configuration that you use is saved to a `dynamic-plugins.extensions.yaml` file within the `dynamic-plugins-root` persistent volume. This ensures the configuration is available when you restart the application, allowing you to edit or re-enable the plugin.
+
+You must create a persistent volume claim (PVC) to ensure that the cache persists when you restart the {product-very-short} application. For more information about using the dynamic plugins cache, see {configuring-book-link}#using-the-dynamic-plugins-cache_running-behind-a-proxy[Using the dynamic plugins cache].
+
+.Prerequisites
+* You have created a persistent volume claim (PVC) for the dynamic plugins cache with the name *dynamic-plugins-root*.
+* You have installed {product} using the Helm chart or the Operator.
+* You have installed the OpenShift CLI (`oc`).
+
+.Procedure
+. Create the extensions configuration file and save it as `dynamic-plugins.extensions.yaml`. For example:
++
+[source,yaml]
+----
+includes:
+  - dynamic-plugins.default.yaml
+
+plugins:
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-marketplace:
+            appIcons:
+              - name: marketplace
+                importName: MarketplaceIcon
+            dynamicRoutes:
+              - path: /extensions/catalog
+                importName: DynamicMarketplacePluginRouter
+            mountPoints:
+              - mountPoint: application/provider
+                importName: InstallationContextProvider
+              - mountPoint: internal.plugins/tab
+                importName: DynamicMarketplacePluginContent
+                config:
+                  path: marketplace
+                  title: Catalog
+                  icon: CatalogTabIcon
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-marketplace-backend-dynamic
+    disabled: false
+    pluginConfig:
+      extensions:
+        installation:
+          enabled: true
+          saveToSingleFile:
+            file: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
+----
+. Copy the file to your cluster by running the following commands:
++
+[source,yaml]
+----
+oc get pods -n <your-namespace>
+
+oc cp ./dynamic-plugins.extensions.yaml <your-namespace>/<pod-name>:/opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
+----
+
+. Update your {product-very-short} application to use this file:
+.. For operator-based installations:
+//... Click on the overflow menu...
+... Update your Backstage CR to update the `NODE_ENV` environment variable  to `development`, as follows:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+  namespace: rhdh
+spec:
+  application:
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+      envs:
+        - name: NODE_ENV
+          value: "development"
+      secrets:
+        - name: secrets-rhdh
+    extraFiles:
+      mountPath: /opt/app-root/src
+    route:
+      enabled: true
+  database:
+    enableLocalDb: true
+----
+... Update your `dynamic-plugins-rhdh` config map to include your extensions configuration file, as follows:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+  namespace: rhdh
+data:
+ dynamic-plugins.yaml: |
+   includes:
+     - dynamic-plugins.default.yaml
+     - /dynamic-plugins-root/dynamic-plugins.extensions.yaml
+   plugins: []
+----
+
+
+.. For Helm chart installations:
+
+... Upgrade the Helm release to include your extensions configuration file and update the `NODE_ENV` environment variable  to `development`:
++
+[source,yaml]
+----
+global:
+  auth:
+    backend:
+      enabled: true
+  clusterRouterBase: apps.<clusterName>.com
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+      - /dynamic-plugins-root/dynamic-plugins.extensions.yaml
+upstream:
+  backstage:
+    extraEnvVars:
+      - name: NODE_ENV
+        value: development
+----
+... Click *Upgrade*
+
+.Verification
+Enable a plugin by using the Extensions UI, restart your {product-very-short} application and refresh the UI to confirm that the plugin is enabled.

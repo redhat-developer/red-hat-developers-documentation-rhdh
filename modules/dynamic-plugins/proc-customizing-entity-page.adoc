@@ -1,0 +1,185 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-customizing-entity-page.adoc_{context}"]
+= Customizing entity page
+
+You can extend catalog components and additional views.
+
+The available mount points include the following:
+
+.Input parameters
+[cols="25%,25%,50%", frame="all", options="header"]
+|===
+|Mount point
+|Description
+|Visible even when no plugins are enabled
+
+|`admin.page.plugins`
+|Administration plugins page
+|NO
+
+|`admin.page.rbac`
+|Administration RBAC page
+|NO
+
+|`entity.context.menu`
+|Catalog entity context menu
+|YES for all entities
+
+|`entity.page.overview`
+|Catalog entity overview page
+|YES for all entities
+
+|`entity.page.topology`
+|Catalog entity *Topology* tab
+|NO
+
+|`entity.page.issues`
+|Catalog entity *Issues* tab
+|NO
+
+|`entity.page.pull-requests`
+|Catalog entity *Pull Requests* tab
+|NO
+
+|`entity.page.ci`
+|Catalog entity *CI* tab
+|NO
+
+|`entity.page.cd`
+|Catalog entity *CD* tab
+|NO
+
+|`entity.page.kubernetes`
+|Catalog entity *Kubernetes* tab
+|NO
+
+|`entity.page.image-registry`
+|Catalog entity *Image Registry* tab
+|NO
+
+|`entity.page.monitoring`
+|Catalog entity *Monitoring* tab
+|NO
+
+|`entity.page.lighthouse`
+|Catalog entity *Lighthouse* tab
+|NO
+
+|`entity.page.api`
+|Catalog entity *API* tab
+|YES for entity of `kind: Component` and `spec.type: 'service'`
+
+|`entity.page.dependencies`
+|Catalog entity *Dependencies* tab
+|YES for entity of `kind: Component`
+
+|`entity.page.docs`
+|Catalog entity *Documentation* tab
+|YES for entity that satisfies `isTechDocsAvailable`
+
+|`entity.page.definition`
+|Catalog entity *Definitions* tab
+|YES for entity of `kind: Api`
+
+|`entity.page.diagram`
+|Catalog entity *Diagram* tab
+|YES for entity of `kind: System`
+
+|`search.page.types`
+|Search result type
+|YES, default catalog search type is available
+
+|`search.page.filters`
+|Search filters
+|YES, default catalog kind and lifecycle filters are visible
+
+|`search.page.results`
+|Search results content
+|YES, default catalog search is present
+|===
+
+[NOTE]
+====
+Mount points within catalog such as `entity.page.` are rendered as tabs and become visible only if at least one plugin contributes to them, or if they can render static content.
+====
+
+Each `entity.page.` mount point contains the following variations:
+
+* `/context` type that serves to create React contexts
+* `/cards` type for regular React components
+
+The following is an example of the overall configuration structure of a mount point:
+
+[source,yaml]
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          my-plugin: # The plugin package name
+            mountPoints: # (Optional): Uses existing mount points
+              - mountPoint: <mountPointName>/[cards|context]
+                module: CustomModule
+                importName: FooPluginPage
+                config: # (Optional): Allows you to pass additional configuration to the component
+                  layout: {} # Used only in `/cards` type which renders visible content
+                  # Use only in `/cards` type which renders visible content. `if` is passed to `<EntitySwitch.Case if={<here>}`.
+                  if:
+                    allOf|anyOf|oneOf:
+                      - isMyPluginAvailable
+                      - isKind: component
+                      - isType: service
+                      - hasAnnotation: annotationKey
+                  props: {} # Useful when you are passing additional data to the component
+----
+
+The available conditions include:
+
+* `allOf`: All conditions must be met
+* `anyOf`: At least one condition must be met
+* `oneOf`: Only one condition must be met
+
+Conditions are:
+
+* `isKind`: Accepts a string or a list of string with entity kinds. For example `isKind: component` renders the component only for entity of `kind: Component`.
+* `isType`: Accepts a string or a list of string with entity types. For example `isType: service` renders the component only for entities of `spec.type: 'service'`.
+* `hasAnnotation`: Accepts a string or a list of string with annotation keys. For example `hasAnnotation: my-annotation` renders the component only for entities that have defined `metadata.annotations['my-annotation']`.
+* Condition imported from the `module` of the plugin: Must be function name exported from the same `module` within the plugin. For example `isMyPluginAvailable` renders the component only if `isMyPluginAvailable` function returns `true`. The function must have the following signature: `(e: Entity) => boolean`.
+
+The entity page supports adding more items to the context menu at the top right of the page. The exported component is a form of dialog wrapper component that accepts an `open` boolean property and an `onClose` event handler property as shown in the following example:
+
+[source,yaml]
+----
+export type SimpleDialogProps = {
+  open: boolean;
+  onClose: () => void;
+};
+----
+
+You can configure the context menu entry using the props configuration entry for the mount point. The `title` and `icon` properties sets the text and icon of the menu item. You can use any system icon or icon added through a dynamic plugin. The following is an example configuration:
+
+[source,yaml]
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          my-dynamic-plugin-package:
+            appIcons:
+              - name: dialogIcon
+                importName: DialogIcon
+            mountPoints:
+              - mountPoint: entity.context.menu
+                importName: SimpleDialog
+                config:
+                  props:
+                    title: Open Simple Dialog
+                    icon: dialogIcon
+----

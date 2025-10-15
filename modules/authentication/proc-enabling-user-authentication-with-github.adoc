@@ -1,86 +1,26 @@
+:_mod-docs-content-type: PROCEDURE
+
 [id="enabling-user-authentication-with-github"]
 = Enabling user authentication with GitHub
 
-To authenticate users with GitHub, configure the GitHub authentication provider in {product} and provision the users and groups from GitHub to the {product-short} software catalog.
+Authenticate users with GitHub by provisioning the users and groups from GitHub to the {product-short} software catalog, and configuring the GitHub authentication provider in {product}.
 
 .Prerequisites
-* You link:{configuring-book-url}[added a custom {product-short} application configuration], and have sufficient permissions to modify it.
+* You {configuring-book-link}[added a custom {product-short} application configuration], and have enough permissions to change it.
 
-* You have sufficient permissions in GitHub to create and manage a link:https://docs.github.com/en/apps/overview[GitHub App].
-Alternatively, you can ask your GitHub administrator to prepare the required GitHub App.
+include::snip-enabling-user-authentication-with-github-common-steps.adoc[]
 
-.Procedure
-. To allow {product-short} to authenticate with GitHub, create a GitHub App.
-Opt for a GitHub App instead of an OAuth app to use fine-grained permissions and use short-lived tokens.
-
-.. link:https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app[Register a GitHub App] with the following configuration:
-
-GitHub App name::
-Enter a unique name identifying your GitHub App, such as `authenticating-with-rhdh-__<GUID>__`.
-
-Homepage URL::
-Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
-
-Authorization callback URL::
-Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/github/handler/frame]`.
-
-Webhook::
-Clear "Active", as this is not needed for authentication and catalog providers.
-
-Organization permissions::
-Enable `Read-only` access to *Members*.
-
-Where can this GitHub App be installed?::
-Select `Only on this account`.
-
-.. In the *General* -> *Clients secrets* section, click *Generate a new client secret*.
-
-.. In the *Install App* tab, choose an account to install your GitHub App on.
-
-.. Save the following values for the next step:
-
-* **Client ID**
-* **Client secret**
-
-. To add your GitHub credentials to {product-short}, add the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
-You can use these secrets in the {product-short} configuration files by using their respective environment variable name.
-
-`AUTHENTICATION_GITHUB_CLIENT_ID`::
-Enter the saved **Client ID**.
-
-`AUTHENTICATION_GITHUB_CLIENT_SECRET`::
-Enter the saved **Client Secret**.
-
-`AUTHENTICATION_GITHUB_HOST_DOMAIN`::
-Enter the GitHub host domain: `github.com`.
-
-`AUTHENTICATION_GITHUB_ORGANIZATION`::
-Enter your GitHub organization name, such as `__<your_github_organization_name>__`.
-
-. Enable the GitHub organization provisioning plugin (`backstage-plugin-catalog-backend-module-github-org`).
-This plugin ingests GitHub users and groups to the {product-short} software catalog.
+. Provision GitHub users and groups to the {product-short} software catalog by adding the `catalog.providers.githubOrg` section to your custom {product-short} `{my-app-config-file}` configuration file:
 +
-.`dynamic-plugins.yaml` file fragment
-[source,yaml]
-----
-plugins:
-  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org'
-    disabled: false
-----
-
-. To provision GitHub users and groups to the {product-short} software catalog, add the `catalog.providers.githubOrg` section to your custom {product-short} `{my-app-config-file}` configuration file:
-+
---
 [id=githubProviderId]
-.`{my-app-config-file}` fragment with mandatory `catalog.providers.githubOrg` fields
 [source,yaml]
 ----
 catalog:
   providers:
     githubOrg:
       id: githuborg
-      githubUrl: "${AUTHENTICATION_GITHUB_HOST_DOMAIN}"
-      orgs: [ "${AUTHENTICATION_GITHUB_ORGANIZATION}" ]
+      githubUrl: "${GITHUB_URL}"
+      orgs: [ "${GITHUB_ORG}" ]
       schedule:
         frequency:
           minutes: 30
@@ -92,13 +32,13 @@ catalog:
 
 `id`::
 Enter a stable identifier for this provider, such as `githuborg`.
-Entities from this provider are associated with this identifier, therefore you must take care not to change it over time since that might lead to orphaned entities and/or conflicts.
+Entities from this provider are associated with this identifier, therefore you must take care not to change it over time since that might lead to orphaned entities or conflicts.
 
 `githubUrl`::
-Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_HOST_DOMAIN}`.
+Enter the configured secret variable name: `$\{GITHUB_URL}`.
 
 `orgs`::
-Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_ORGANIZATION}`.
+Enter the configured secret variable name: `$\{GITHUB_ORG}`.
 
 `schedule.frequency`::
 Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
@@ -108,12 +48,9 @@ Enter your schedule timeout, in the ISO duration or "human duration" format.
 
 `schedule.initialDelay`::
 Enter your schedule initial delay, in the ISO duration or "human duration" format.
---
 
-. To set up the GitHub authentication provider, add the `auth.providers.github` section to the `{my-app-config-file}` file content:
+. To set up the GitHub authentication provider, add the `auth.providers.github` section to your `{my-app-config-file}` file:
 +
---
-.`{my-app-config-file}` file fragment with mandatory fields to enable authentication with GitHub
 [source,yaml]
 ----
 auth:
@@ -121,8 +58,8 @@ auth:
   providers:
     github:
       production:
-        clientId: ${AUTHENTICATION_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTHENTICATION_GITHUB_CLIENT_SECRET}
+        clientId: ${GITHUB_CLIENT_ID}
+        clientSecret: ${GITHUB_CLIENT_SECRET}
 signInPage: github
 ----
 
@@ -130,17 +67,19 @@ signInPage: github
 Enter `production` to disable the Guest login option in the {product-short} login page.
 
 `clientId`::
-Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_CLIENT_ID}`.
+Enter the configured secret variable name: `$\{GITHUB_CLIENT_ID}`.
 
 `clientSecret`::
-Enter the configured secret variable name: `${AUTHENTICATION_GITHUB_CLIENT_SECRET}`.
+Enter the configured secret variable name: `$\{GITHUB_CLIENT_SECRET}`.
 
 `signInPage`::
 Enter `github` to enable the GitHub provider as your {product-short} sign-in provider.
-
-Optional: Consider adding the following optional fields:
-
-.`{my-app-config-file}` file fragment including optional fields to enable authentication with GitHub
++
+Optional: Consider adding optional fields.
+ifeval::["{optional-steps}" == "disable"]
+See {configuring-book-link}[{configuring-book-title}].
+endif::[]
+ifeval::["{optional-steps}" == "enable"]
 [source,yaml,subs="+quotes"]
 ----
 auth:
@@ -148,8 +87,8 @@ auth:
   providers:
     github:
       production:
-        clientId: ${AUTHENTICATION_GITHUB_CLIENT_ID}
-        clientSecret: ${AUTHENTICATION_GITHUB_CLIENT_SECRET}
+        clientId: ${GITHUB_CLIENT_ID}
+        clientSecret: ${GITHUB_CLIENT_SECRET}
         callbackUrl: __<your_intermediate_service_url/handler>__
         sessionDuration: { hours: 24 }
         signIn:
@@ -176,7 +115,10 @@ Enter the resolver list to override the default resolver: `usernameMatchingUserE
 +
 The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
 +
-WARNING: In production mode, only configure one resolver to ensure users are securely matched.
+[WARNING]
+====
+Make sure users are securely matched in production mode, by configuring only one resolver.
+====
 
 `resolver`::::
 Enter the sign-in resolver name.
@@ -189,13 +131,17 @@ Available resolvers:
 `dangerouslyAllowSignInWithoutUserInCatalog: true`::::
 Configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
 +
-WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-short} features, but do not use it in production.
---
+[WARNING]
+====
+Do not use `dangerouslyAllowSignInWithoutUserInCatalog` in production. Use this configuration only to explore {product-short} features.
+====
+endif::[]
 
 .Verification
-. To verify user and group provisioning, check the console logs.
+. Verify user and group provisioning by checking the console logs.
 +
-.Successful synchronization example:
+Successful synchronization example:
++
 [source,json]
 ----
 {"class":"GithubMultiOrgEntityProvider","level":"info","message":"Reading GitHub users and teams for org: rhdh-dast","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:githuborg:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:58"}
@@ -208,6 +154,5 @@ WARNING: Use `dangerouslyAllowSignInWithoutUserInCatalog` to explore {product-sh
 .. Log in with a GitHub account.
 
 .Additional resources
-
-* link:{integrating-with-github-book-url}[{integrating-with-github-book-title}].
+* {integrating-with-github-book-link}[{integrating-with-github-book-title}]
 
