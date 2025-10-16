@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Integrating Red Hat Developer Hub with GitHub</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub (RHDH) platform engineer, you can integrate RHDH with the GitHub Git provider."/><link rel="next" href="#enabling-github-repository-discovery" title="1. Enabling GitHub repository discovery"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm46091392599680"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.8</span></div><div><h1 class="title">Integrating Red Hat Developer Hub with GitHub</h1></div><div><h3 class="subtitle"><em>Configuring integration to the GitHub Git provider in Red Hat Developer Hub</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm46091369222784">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Integrating Red Hat Developer Hub with GitHub</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub (RHDH) platform engineer, you can integrate RHDH with the GitHub Git provider."/><link rel="next" href="#enabling-github-repository-discovery" title="1. Enabling GitHub repository discovery"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm46021924665968"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.8</span></div><div><h1 class="title">Integrating Red Hat Developer Hub with GitHub</h1></div><div><h3 class="subtitle"><em>Configuring integration to the GitHub Git provider in Red Hat Developer Hub</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm46021906952496">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
 				As a Red Hat Developer Hub (RHDH) platform engineer, you can integrate RHDH with the GitHub Git provider.
 			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#enabling-github-repository-discovery">1. Enabling GitHub repository discovery</a></span></li><li><span class="section"><a href="#bulk-importing-github-repositories">2. Bulk importing GitHub repositories</a></span><ul><li><span class="section"><a href="#enabling-and-giving-access-to-the-bulk-import-feature">2.1. Enabling and giving access to the Bulk Import feature</a></span></li><li><span class="section"><a href="#importing-multiple-github-repositories">2.2. Importing multiple GitHub repositories</a></span></li><li><span class="section"><a href="#managing-the-added-repositories">2.3. Managing the added repositories</a></span></li><li><span class="section"><a href="#understanding-bulk-import-audit-logs">2.4. Understanding the Bulk Import audit Logs</a></span></li><li><span class="section"><a href="#integrating-bulk-import-with-orchestrator-workflows">2.5. Setting up a custom scaffolder workflow for bulk import</a></span></li><li><span class="section"><a href="#full-data-handoff-and-custom-workflow-design">2.6. Data handoff and custom workflow design</a></span></li></ul></li></ul></div><section class="section" id="enabling-github-repository-discovery"><div class="titlepage"><div><div><h2 class="title">1. Enabling GitHub repository discovery</h2></div></div></div><p>
 			Consider configuring Developer Hub to discover and ingest your GitHub repositories automatically. If a repository contains a <code class="literal">catalog-info.yaml</code> file, Developer Hub ingests the repository into the catalog as a component.
@@ -280,33 +280,35 @@ g, user:default/<span class="emphasis"><em>&lt;your_user&gt;</em></span>, role:d
 						Create pull requests for cleanup
 					</li><li class="listitem">
 						Call webhooks for external system integration
-					</li></ul></div><p>
+					</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					This is not a full list of tasks. The actual Scaffolder tasks in your workflow depend on the actions defined in your template, and the import steps automatically adjust based on your template content when you create and run your workflow.
+				</p></div></div><p>
 				You can execute a custom automation workflow of a Scaffolder template on multiple selected repositories using the bulk import plugin.
 			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
 						You created a Scaffolder template specifically designed for the Bulk Import function and provided the Scaffolder template within the configuration of your application. This template is the core definition of your customized import scenario.
-					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+					</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
 						Configure your app-config.yaml configuration to instruct the Bulk Import plugin to use your custom templates.
-					</li></ul></div><p>
-				You can direct the Bulk Import plugin to hand off the entire list of selected repositories to a custom Orchestrator workflow. To configure the Bulk Import workflow:
-			</p><p>
-				+
-			</p><pre class="programlisting language-yaml">bulkImport:
+					</p><p class="simpara">
+						You can direct the Bulk Import plugin to hand off the entire list of selected repositories to a custom Orchestrator workflow.
+					</p><p class="simpara">
+						To configure the Bulk Import workflow:
+					</p><pre class="programlisting language-yaml">bulkImport:
   importTemplate: your-template-entity-reference-or-template-name
-  importAPI: `open-pull-requests` | `scaffolder`;</pre><p>
-				where:
-			</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">importTemplate:</code></span></dt><dd>
-							Enter your Scaffolder template entity reference.
-						</dd><dt><span class="term"><code class="literal">importAPI</code></span></dt><dd>
-							Set the API to 'scaffolder' to trigger the defined workflow for high-fidelity automation. This field defines the import workflow and currently supports two following options:
-						</dd><dt><span class="term"><code class="literal">open-pull-requests</code></span></dt><dd>
-							This is the default import workflow, which includes the logic for creating pull requests for every selected repository.
-						</dd><dt><span class="term"><code class="literal">scaffolder</code></span></dt><dd><p class="simpara">
-							This workflow uses an import scenario defined in the Scaffolder template to create import jobs. Select this option to use the custom import scenario defined in your Scaffolder template.
-						</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
-								The Scaffolder template must be generic and not specific to a single repository if you want your custom Scaffolder template to run successfully for every repository in the bulk list.
-							</p></div></div></dd></dl></div><p>
-				For the RHDH instance to use the Scaffolder functionality, you must run it with the following environment variable enabled:
-			</p><pre class="programlisting language-yaml">export NODE_OPTIONS=--no-node-snapshot</pre><div class="itemizedlist"><p class="title"><strong>Verification</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+  importAPI: `open-pull-requests` | `scaffolder`;</pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">importTemplate:</code></span></dt><dd>
+									Enter your Scaffolder template entity reference.
+								</dd><dt><span class="term"><code class="literal">importAPI</code></span></dt><dd>
+									Set the API to 'scaffolder' to trigger the defined workflow for high-fidelity automation. This field defines the import workflow and currently supports two following options:
+								</dd><dt><span class="term"><code class="literal">open-pull-requests</code></span></dt><dd>
+									This is the default import workflow, which includes the logic for creating pull requests for every selected repository.
+								</dd><dt><span class="term"><code class="literal">scaffolder</code></span></dt><dd><p class="simpara">
+									This workflow uses an import scenario defined in the Scaffolder template to create import jobs. Select this option to use the custom import scenario defined in your Scaffolder template.
+								</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+										The Scaffolder template must be generic and not specific to a single repository if you want your custom Scaffolder template to run successfully for every repository in the bulk list.
+									</p></div></div></dd></dl></div></li><li class="listitem">
+						For the RHDH instance to use the Scaffolder functionality, you must run it with the following environment variable enabled:
+					</li></ul></div><pre class="programlisting language-yaml">export NODE_OPTIONS=--no-node-snapshot</pre><div class="itemizedlist"><p class="title"><strong>Verification</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
 						The Bulk Import plugin executes the custom Scaffolder template for the list of repositories using the <code class="literal">/task-imports</code> API endpoint (the <code class="literal">createTaskImportJobs</code> method).
 					</li></ul></div></section><section class="section" id="full-data-handoff-and-custom-workflow-design"><div class="titlepage"><div><div><h3 class="title">2.6. Data handoff and custom workflow design</h3></div></div></div><p>
 				When you configure the Bulk Import plugin by setting the importAPI field to <code class="literal">scaffolder</code>, the Bulk Import Backend ensures all necessary context is passed directly to the Scaffolder API.
@@ -328,7 +330,7 @@ g, user:default/<span class="emphasis"><em>&lt;your_user&gt;</em></span>, role:d
 							Loop through the list, executing the custom logic for example, creating the <code class="literal">catalog-info.yaml</code> if needed, then running compliance checks, then registering with the catalog.
 						</dd><dt><span class="term">Manage lifecycle</span></dt><dd>
 							The Scaffolder template workflow owns the entire import lifecycle for the repository list, providing a single point of management and traceability.
-						</dd></dl></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm46091369222784"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+						</dd></dl></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm46021906952496"><h1 class="legalnotice">Legal Notice</h1><div class="para">
 		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
 	</div><div class="para">
 		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
