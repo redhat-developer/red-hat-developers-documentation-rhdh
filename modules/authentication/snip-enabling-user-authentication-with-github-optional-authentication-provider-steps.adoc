@@ -1,0 +1,58 @@
+:_mod-docs-content-type: SNIPPET
+Optional: Add optional fields to the GitHub authentication provider section in your `{my-app-config-file}` file:
+
+[source,yaml,subs="+quotes"]
+----
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${GITHUB_CLIENT_ID}
+        clientSecret: ${GITHUB_CLIENT_SECRET}
+        callbackUrl: __<your_intermediate_service_url/handler>__
+        sessionDuration: { hours: 24 }
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+signInPage: github
+----
+
+`callbackUrl`::
+Enter the callback URL that GitHub uses when initiating an OAuth flow, such as: __<your_intermediate_service_url/handler>__.
+Define it when {product-short} is not the immediate receiver, such as in cases when you use one OAuth app for many {product-short} instances.
+
+`sessionDuration`::
+Enter the user session lifespan, in `ms` library format (such as '24h', '2 days'), ISO duration, or "human duration".
+
+`signIn`::
+
+`resolvers`:::
+After successful authentication, {product-short} resolves the user signing in to an existing user in the {product-short} catalog.
+Configure a specific resolver to best match users securely for your use case..
++
+Enter the resolver list to override the default resolver: `usernameMatchingUserEntityName`.
++
+The authentication provider tries each sign-in resolver in order until it succeeds. If none of the attempts succeed, the sign-in fails.
++
+[WARNING]
+====
+In production mode, configure only one resolver to make sure users are securely matched.
+====
+
+`resolver`::::
+Enter the sign-in resolver name.
+Available resolvers:
+
+* `usernameMatchingUserEntityName`
+* `preferredUsernameMatchingUserEntityName`
+* `emailMatchingUserEntityProfileEmail`
+
+`dangerouslyAllowSignInWithoutUserInCatalog`::::
+Enter `true` to configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
++
+[WARNING]
+====
+In production more, do not enable `dangerouslyAllowSignInWithoutUserInCatalog`.
+====

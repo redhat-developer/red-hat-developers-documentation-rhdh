@@ -1,0 +1,91 @@
+:_mod-docs-content-type: SNIPPET
+
+Optional: Add optional fields to the Microsoft authentication provider section in your `{my-app-config-file}` file:
+
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        authority: https://login.microsoftonline.com/
+        queryMode: advanced
+        user:
+          expand: manager
+          filter: accountEnabled eq true and userType eq 'member'
+          loadPhotos: true
+          select: ['id', 'displayName', 'description']
+        userGroupMember:
+          filter: "displayName eq 'Backstage Users'"
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
+        group:
+          expand: member
+          filter: securityEnabled eq false and mailEnabled eq true and groupTypes/any(c:c+eq+'Unified')
+          search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
+          select: ['id', 'displayName', 'description']
+----
+
+`authority`::
+Enter your link:https://learn.microsoft.com/en-us/graph/deployments#app-registration-and-token-service-root-endpoints[{azure-short} authority URL] if it is different from the default: `\https://login.microsoftonline.com`.
+
+`queryMode`::
+Enter `advanced` when the default `basic` query mode is insufficient for your queries to the Microsoft Graph API.
+See link:https://learn.microsoft.com/en-us/graph/aad-advanced-queries[{azure-brand-name} advanced queries].
+
+`user`::
+Add this section to configure optional user query parameters.
+
+`expand`:::
+Enter your expansion parameter to include the expanded resource or collection referenced by a single relationship (navigation property) in your results.
+A single request can expand only one relationship.
+See https://learn.microsoft.com/en-us/graph/query-parameters#expand-parameter[Microsoft Graph query expand parameter].
++
+You can combine this parameter with `userGroupMember.filter` or `user.filter`.
+
+`filter`:::
+Enter your user filter.
+See link:https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0#properties[Microsoft Graph API] and link:https://learn.microsoft.com/en-us/graph/query-parameters#filter-parameter[Microsoft Graph API query filter parameters syntax].
++
+This parameter and `userGroupMember.filter` are mutually exclusive, specify only one.
+
+`loadPhotos`:::
+{product-short} loads photos by default.
+Enter `false` to avoid loading user photos.
+
+`select`:::
+Enter the link:https://learn.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0[Microsoft Graph resource type] list to retrieve.
+
+`userGroupMember`::
+Add this section to use group membership to get users.
+
+`filter`:::
+Enter your filter to filter groups and fetch their members.
++
+This parameter and `user.filter` are mutually exclusive, specify only one.
+
+`search`:::
+Enter your search query to search for groups and fetch their members.
++
+This parameter and `user.filter` are mutually exclusive, specify only one.
+
+`group`::
+Enter your configuration to get groups.
+
+`expand`:::
+Enter your expansion parameter to include the expanded resource or collection referenced by a single relationship (navigation property) in your results.
+A single request can expand only one relationship.
+See link:https://learn.microsoft.com/en-us/graph/query-parameters#expand-parameter[Customize Microsoft Graph responses with query parameters].
++
+You can combine this parameter with
+`user.filter` or `userGroupMember.filter`.
+
+`filter`:::
+Enter your group filter parameter.
+See link:https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0#properties[Microsoft Graph API query group syntax].
+
+`search`:::
+Enter your group search parameter.
+See link:https://learn.microsoft.com/en-us/graph/search-query-parameter[Microsoft Graph API query search parameter].
+
+`select`:::
+Enter the link:https://learn.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0[Microsoft Graph resource type] list to retrieve.

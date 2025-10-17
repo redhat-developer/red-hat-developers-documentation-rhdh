@@ -1,0 +1,79 @@
+:_mod-docs-content-type: SNIPPET
+
+Optional: Add optional fields to the Microsoft authentication provider section in your `{my-app-config-file}` file:
+
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${AUTHENTICATION_AZURE_CLIENT_ID}
+        clientSecret: ${AUTHENTICATION_AZURE_CLIENT_SECRET}
+        tenantId: ${AUTHENTICATION_AZURE_TENANT_ID}
+        domainHint: ${AUTHENTICATION_AZURE_TENANT_ID}
+        additionalScopes:
+           - Mail.Send
+        sessionDuration:
+          hours: 24
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+signInPage: microsoft
+----
+
+`domainHint`::
+* Leave this parameter empty, or enter the tenant ID when your application registration is single-tenant.
+* Leave this parameter empty when your application registration is multi-tenant.
+* Enter the tenant ID to reduce login friction for users with accounts in multiple tenants, by automatically filtering out accounts from other tenants.
++
+For more information, see link:https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/home-realm-discovery-policy[Home Realm Discovery].
+
+`additionalScopes`::
+Enter the list of additional scopes to add scopes for the application registration.
+The default and mandatory value lists following scopes:
+* `openid`
+* `offline_access`
+* `profile`
+* `email`
+* `User.Read`
+
+`sessionDuration`::
+Lifespan of the user session.
+Enter a duration in `ms` library (such as '24h', '2 days'), ISO duration, or "human duration" format.
+
+`signIn.resolvers`::
+After successful authentication, {product-short} resolves the user signing in to an existing user in the {product-short} catalog.
+To best match users securely for your use case, consider configuring a specific resolver.
++
+Enter the resolver list to override the default resolver: `userIdMatchingUserEntityAnnotation`.
++
+The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
++
+[WARNING]
+====
+In production mode, configure only one resolver to make sure users are securely matched.
+====
+
+`resolver`::
+Enter the sign-in resolver name.
+Available resolvers:
+
+`emailMatchingUserEntityAnnotation`:::
+Use this resolver to look up the user by matching their Microsoft email to the email entity annotation.
+
+`emailLocalPartMatchingUserEntityName`:::
+Use this resolver to look up the user by matching their Microsoft email user name to the user entity name.
+
+`emailMatchingUserEntityProfileEmail`:::
+Use this resolver to look up the user by matching their Microsoft email to the user entity profile email.
+
+`dangerouslyAllowSignInWithoutUserInCatalog`::
+Enter `true` to configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
++
+[WARNING]
+====
+In production mode, do not enable `dangerouslyAllowSignInWithoutUserInCatalog`.
+====
