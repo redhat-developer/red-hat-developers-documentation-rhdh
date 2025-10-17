@@ -3,11 +3,9 @@
 [id="enabling-user-provisioning-with-ldap"]
 = Enabling user provisioning with LDAP
 
-When your authentication provider depends on Lightweight Directory Access Protocol (LDAP) to resolve user and group identities, you can opt to provision users and groups from LDAP directly to the {product} software catalog, rather than using the provisioning mechanism from your authentication provider.
+When {rhbk-brand-name} ({rhbk}) depends on Lightweight Directory Access Protocol (LDAP) to resolve user and group identities, you can opt to provision users and groups from LDAP directly to the {product} software catalog, rather than using the {rhbk} provisioning mechanism.
 
 .Prerequisites
-* You link:{configuring-book-url}[added a custom {product-short} application configuration], and have sufficient permissions to modify it.
-
 * You have configured xref:assembly-authenticating-with-rhbk[authentication with {rhbk-brand-name} ({rhbk})].
 
 * You have collected the required LDAP credentials:
@@ -22,26 +20,36 @@ LDAP secret::
 Your LDAP secret.
 
 Recommended: LDAP certificates and keys::
-Your LDAP certificates and keys, when using a secure LDAP connexion (`ldaps://`).
-
+To use a secure LDAP connexion (`ldaps://`):
+you stored your LDAP certificates and keys respectively in the `ldap_certs.pem` and `ldap_keys.pem` files.
++
+[WARNING]
+====
+In production mode, use a secure LDAP connexion.
+====
 
 .Procedure
-. Enter your LDAP credentials to {product-short}, by adding the following key/value pairs to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
-You can use these secrets in the {product-short} configuration files by using their respective environment variable name.
+. Enter your LDAP credentials to {product-short}, by adding the `LDAP_SECRET` environment variable to {configuring-book-link}#provisioning-your-custom-configuration[your {product-short} secrets].
++
+[source,subs="+attributes,+quotes"]
+----
+$ oc patch secret {my-product-secrets} --patch '{"stringData": { "LDAP_SECRET": "<ldap_secret>" }}'
+----
 
-`LDAP_SECRET`::
+_<ldap_secret>_::
 Enter your LDAP secret.
 
-. Recommended: To use a secure LDAP connection (`ldaps://`), add your LDAP certificates and keys files to link:{configuring-dynamic-plugins-book-url}#provisioning-your-custom-configuration[your {product-short} secrets].
-
-`ldap_certs`::
-
-`ldap_keys`::
-
-. Enable the LDAP organization provisioning plugin (`backstage-plugin-catalog-backend-module-ldap`).
-This plugin ingests LDAP users and groups to the {product-short} software catalog.
+. Recommended: To use a secure LDAP connection (`ldaps://`), add your LDAP certificates and keys files to a {a-platform-generic} secret.
 +
-.`dynamic-plugins.yaml` file fragment
+[source,subs="+attributes,+quotes"]
+----
+$ oc create secret generic my-rhdh-ldap-secrets \
+    --from-file=./ldap_certs.pem \
+    --from-file=./ldap_keys.pem
+----
+
+. Enable the LDAP catalog provider plugin in your `dynamic-plugins.yaml` file.
++
 [source,yaml]
 ----
 plugins:
@@ -97,7 +105,7 @@ Enter the DN containing the user information.
 `options`:::
 
 `filter`::::
-Enter your filter, such as `(uid=*)` to provision to the {product-very-short} software catalog only users with a valid `uid`.
+Enter your filter, such as `(uid=*)` to provision to the {product-very-short} software catalog only users with an existing `uid`.
 
 `groups`::
 Enter information about how to find your groups:
@@ -357,9 +365,21 @@ Enter a value to enable paged results.
 Enter a value to set the results page size, such as `500`.
 
 `pagePause`:::
-Enter `true` to tell the client to wait for the asynchronous results of the next page,
-when the page limit has been reached.
+Enter `true` to tell the client to wait for the asynchronous results of the next page, when the page limit has been reached.
 
+
+. Recommended: To use a secure LDAP connection (`ldaps://`), mount your LDAP certificates and keys files in your {product-short} deployment, by editing your {backstage} custom resource.
++
+----
+kind: Backstage
+spec:
+  application:
+    extraFiles:
+      mountPath: /opt/ldap-secrets
+      secrets:
+        - name: my-rhdh-database-database-secrets
+          key: ldap-certs.pem, ldap-keys.pem
+----
 
 .Verification
 * To verify user and group provisioning, check the console logs.
