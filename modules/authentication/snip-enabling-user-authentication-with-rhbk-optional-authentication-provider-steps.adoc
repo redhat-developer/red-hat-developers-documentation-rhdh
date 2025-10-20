@@ -1,0 +1,96 @@
+:_mod-docs-content-type: SNIPPET
+
+Optional: Add optional fields to the OIDC authentication provider section in your `{my-app-config-file}` file:
+
+[source,yaml]
+----
+auth:
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${KEYCLOAK_BASE_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        callbackUrl: ${KEYCLOAK_CALLBACK_URL}
+        tokenEndpointAuthMethod: ${KEYCLOAK_TOKEN_ENDPOINT_METHOD}
+        tokenSignedResponseAlg: ${KEYCLOAK_SIGNED_RESPONSE_ALG}
+        additionalScopes: ${KEYCLOAK_SCOPE}
+        signIn:
+          resolvers:
+            - resolver: oidcSubClaimMatchingKeycloakUserId
+            - resolver: preferredUsernameMatchingUserEntityName
+            - resolver: emailMatchingUserEntityProfileEmail
+            - resolver: emailLocalPartMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+        sessionDuration: { hours: 24 }
+  backstageTokenExpiration: { minutes: _<user_defined_value>_ }
+signInPage: oidc
+----
+
+`callbackUrl`::
+{rhbk} callback URL.
+
+`tokenEndpointAuthMethod`::
+Enter your token endpoint authentication method.
+
+`tokenSignedResponseAlg`::
+Token signed response algorithm.
+
+`additionalScopes`::
+Enter additional {rhbk} scopes to request for during the authentication flow.
+
+`signIn`::
+`resolvers`:::
+After successful authentication, the user signing in must be resolved to an existing user in the {product-short} catalog.
+To best match users securely for your use case, consider configuring a specific resolver.
++
+Enter the resolver list to override the default resolver: `oidcSubClaimMatchingKeycloakUserId`.
++
+Available values:
+
+`oidcSubClaimMatchingKeycloakUserId`::::
+Matches the user with the immutable `sub` parameter from OIDC to the {RHBK} user ID.
+Consider using this resolver for enhanced security.
+
+`emailLocalPartMatchingUserEntityName`::::
+Matches the email local part with the user entity name.
+
+`emailMatchingUserEntityProfileEmail`::::
+Matches the email with the user entity profile email.
+
+`preferredUsernameMatchingUserEntityName`::::
+Matches the preferred username with the user entity name.
++
+The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
++
+[WARNING]
+====
+In production mode, configure only one resolver to make sure users are securely matched.
+====
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::::
+Configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
++
+[WARNING]
+====
+In production mode, do not enable the `dangerouslyAllowSignInWithoutUserInCatalog` option. 
+====
+
+`sessionDuration`::
+Lifespan of the user session.
+Enter a duration in `ms` library format (such as '24h', '2 days'), ISO duration, or "human duration" as used in code.
+
+`backstageTokenExpiration`::
+Enter a value to modify the {product-short} token expiration from its default value of one hour.
+It refers to the validity of short-term cryptographic tokens, not to the session duration.
+The expiration value must be set between 10 minutes and 24 hours.
++
+[WARNING]
+====
+If multiple valid refresh tokens are issued due to frequent refresh token requests, older tokens will remain valid until they expire.
+Enhance security and prevent potential misuse of older tokens by enabling a refresh token rotation strategy in your {rhbk} realm.
+
+. From the *Configure* section of the navigation menu, click *Realm Settings*.
+. From the *Realm Settings* page, click the *Tokens* tab.
+. From the *Refresh tokens* section of the *Tokens* tab, toggle the *Revoke Refresh Token* to the *Enabled* position.
+====
