@@ -3,9 +3,7 @@
 [id="integrating-bulk-import-with-orchestrator-workflows"]
 = Setting up a custom Scaffolder workflow for Bulk Import
 
-As an administrator, you can create a Scaffolder template that reflects the repository conventions of your organization and add it into the {product} catalog for use by the Bulk Import plugin.
-
-The Scaffolder workflow offers flexibility because the specific import steps are defined by your template content.
+As an administrator, you can create a custom Scaffolder template in line with the repository conventions of your organization and add the template into the {product} catalog for use by the Bulk Import plugin on multiple selected repositories.
 
 You can define various custom tasks, including, but not limited to the following:
 
@@ -13,24 +11,27 @@ You can define various custom tasks, including, but not limited to the following
 * Creating pull requests for cleanup
 * Calling webhooks for external system integration
 
-You can run a custom automation workflow of a Scaffolder template on multiple selected repositories using the bulk import plugin.
-
 .Prerequisites
 
 * You created a custom Scaffolder template for the Bulk Import plugin.
 
+* For the {product-very-short} instance to use the Scaffolder functionality, you must run it with the following environment variable enabled:
++
+[source,yaml]
+----
+export NODE_OPTIONS=--no-node-snapshot
+----
+
 .Procedure
 
-* Configure your {my-app-config-file} configuration to instruct the Bulk Import plugin to use your custom templates.
-+
-Optional: You can direct the Bulk Import plugin to hand off the entire list of selected repositories to a custom Orchestrator workflow.
+* Configure your {my-app-config-file} configuration to instruct the Bulk Import plugin to use your custom template.
 +
 To configure the Bulk Import workflow:
 +
 [source,yaml]
 ----
 bulkImport:
-  importTemplate: your-template-entity-reference-or-template-name
+  importTemplate: <your_template_entity_reference_or_template_name>
   importAPI: `open-pull-requests` | `scaffolder`;
 ----
 +
@@ -45,19 +46,14 @@ Set the API to 'scaffolder' to trigger the defined workflow for high-fidelity au
 `open-pull-requests`:: This is the default import workflow, which includes the logic for creating pull requests for every selected repository.
 
 `scaffolder`:: This workflow uses an import scenario defined in the Scaffolder template to create import jobs. Select this option to use the custom import scenario defined in your Scaffolder template.
+
+Optional: You can direct the Bulk Import plugin to hand off the entire list of selected repositories to a custom Orchestrator workflow.
 +
 [IMPORTANT]
 ====
 The Scaffolder template must be generic and not specific to a single repository if you want your custom Scaffolder template to run successfully for every repository in the bulk list.
 ====
 
-* For the {product-very-short} instance to use the Scaffolder functionality, you must run it with the following environment variable enabled:
-
-[source,yaml]
-----
-export NODE_OPTIONS=--no-node-snapshot
-----
-
 .Verification
 
-* The Bulk Import plugin runs the custom Scaffolder template for the list of repositories using the `/task-imports` API endpoint (the `createTaskImportJobs` method).
+* The Bulk Import plugin runs the custom Scaffolder template for the list of repositories using the `/task-imports` API endpoint.
