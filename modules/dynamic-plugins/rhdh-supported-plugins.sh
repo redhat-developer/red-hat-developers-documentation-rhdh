@@ -166,29 +166,32 @@ for y in $yamls; do
         Path="${Path/-dynamic-dynamic/-dynamic}"
     fi
 
-    # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend)
+    # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
     # Accept both patterns:
     #  - Frontend: ./dynamic-plugins/dist/<name>
     #  - Backend:  ./dynamic-plugins/dist/<name>-dynamic
+    #  - NRRC registry: @redhat/<package>@version
     #  this change was made since FE plugins were not being included in the .csv file
-    [[ $Path == ./dynamic-plugins/dist/* ]] || continue
+    [[ $Path == ./dynamic-plugins/dist/* ]] || [[ $Path == "@redhat"* ]] || continue
     
     # Filter 2: Exclude oci:// paths
     [[ $Path == "oci://"* ]] && continue
     
-    # Filter 3: Exclude @redhat packages
-    [[ $Plugin == "@redhat"* ]] && continue
-
-    # shellcheck disable=SC2016
-    found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
-    # shellcheck disable=SC2016
-    found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
-    
-    Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-    if [[ $Path2 ]]; then
-        Path=$Path2
+    # Filter 3: Handle @redhat packages - exclude unless they have dynamicArtifact from NRRC registry
+    if [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") != "@redhat"* ]]; then
+        continue
     else
-        Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        # shellcheck disable=SC2016
+        found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
+        # shellcheck disable=SC2016
+        found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
+
+        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+        if [[ $Path2 ]]; then
+            Path=$Path2
+        else
+            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        fi
     fi
     
     # For marketplace YAML files, skip the default config check for inclusion
