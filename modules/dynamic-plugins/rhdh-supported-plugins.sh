@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set consistent locale for sorting across different systems
+export LC_ALL=C
+
 # script to generate rhdh-supported-plugins.adoc from content in
 # https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/marketplace/packages/
 
@@ -108,7 +111,8 @@ if [[ -f "${tmpdir}"/dynamic-plugins/imports/package.json ]]; then
     jq -r '.peerDependencies' "${tmpdir}"/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > "$pluginVersFile"
 fi
 jq -r '.dependencies' "${tmpdir}"/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> "$pluginVersFile"
-cat "$pluginVersFile" | sort -uV > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
+# Use LC_ALL=C for consistent sorting across different locales
+cat "$pluginVersFile" | sort -u > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
 
 rm -fr /tmp/warnings_"${BRANCH}".txt
 
@@ -118,7 +122,7 @@ mkdir -p "$TEMP_DIR"
 rm -f "$TEMP_DIR"/*.tmp
 
 # process YAML files from catalog-entities/marketplace/packages/
-yamls=$(find "${tmpdir}"/catalog-entities/marketplace/packages/ -maxdepth 1 -name "*.yaml" | sort -V)
+yamls=$(find "${tmpdir}"/catalog-entities/marketplace/packages/ -maxdepth 1 -name "*.yaml" | sort)
 c=0
 tot=0
 for y in $yamls; do
@@ -229,7 +233,7 @@ for y in $yamls; do
         allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
         # echo "Found $allVersionsPublished"
         # clean out any pre-release versions
-        latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
+        latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -u | tail -1)"
         # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
         if [[ "$latestXYRelease" != "$Version" ]]; then
             echo -e "${blue}[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
