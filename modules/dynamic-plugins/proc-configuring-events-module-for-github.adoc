@@ -1,0 +1,104 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-events-module-for-github"]
+
+= Configuring Events Module for GitHub
+
+Learn how to configure Events Module for use with the {product-very-short} GitHub Discovery feature, and GitHub organization data.
+
+.Procedure
+. Update your `dynamic-plugins.yaml` file with GitHub Discovery or GitHub organization data.
+.. For GitHub Discovery, use the following file example as a guideline:
++
+[source,yaml]
+----
+data:
+dynamic-plugins.yaml: |
+includes:
+- dynamic-plugins.default.yaml
+plugins:
+- package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic
+disabled: false
+pluginConfig:
+catalog:
+providers:
+github:
+providerId:
+organization: <your_organization_name>
+schedule:
+frequency: { hours: 24 }
+timeout: { minutes: 3 }
+----
+.. For GitHub organization data, use the following file example as a guideline:
++
+[source,yaml]
+----
+data:
+dynamic-plugins.yaml: |
+includes:
+- dynamic-plugins.default.yaml
+plugins:
+- package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic
+disabled: false
+pluginConfig:
+catalog:
+providers:
+githubOrg:
+id: production
+githubUrl: https://github.com
+orgs: [ '<your_organization_name>' ]
+schedule:
+frequency:
+hours: 24
+initialDelay:
+seconds: 15
+timeout:
+minutes: 10
+----
+. Add your GitHub integration credentials in the `app-config.yaml` file:
++
+[source,yaml]
+----
+integrations:
+github:
+- host: github.com
+token: ${GITHUB_PAT_TOKEN}
+----
+. Create a GitHub webhook with the following specifications:
+** *Events*: push, repository
+** *Content Type*: application/json
+** *Payload URL*: https://<your_instance_name>/api/events/http/github
+
+. Add the GitHub Events Module to your `dynamic-plugins.yaml` configuration file:
++
+[source,yaml]
+----
+data:
+dynamic-plugins.yaml: |
+includes:
+- dynamic-plugins.default.yaml
+plugins:
+- package: oci://04kash/events-backend-module-github:v0.0.1!backstage-plugin-events-backend-module-github
+disabled: false
+----
+
+. Add the following HHTP events configuration to the `app-config.yaml` file:
++
+[source,yaml]
+----
+events:
+http:
+topics:
+- github
+----
+
+.Verification
+* After you used a GitHub push event to make changes to or delete the `catalog-info.yaml` file, check if a new log appeared in the Software Catalog of your {product-very-short} instance
++
+Example of a log
+[source,code]
+----
+{"level":"\u001b[32minfo\u001b[39m","message":"Processed Github push event: added 0 - removed 0 - modified 1","plugin":"catalog","service":"backstage","span_id":"47534b96c4afc654","target":"github-provider:providerId","timestamp":"2025-06-15 21:33:14","trace_flags":"01","trace_id":"ecc782deb86aed2027da0ae6b1999e5c"}
+----
+
+
