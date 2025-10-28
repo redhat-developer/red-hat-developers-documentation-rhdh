@@ -1,0 +1,57 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="integrating-bulk-import-with-orchestrator-workflows"]
+= Setting up a custom Scaffolder workflow for Bulk Import
+
+As an administrator, you can create a custom Scaffolder template in line with the repository conventions of your organization and add the template into the {product} catalog for use by the Bulk Import plugin on multiple selected repositories.
+
+You can define various custom tasks, including, but not limited to the following:
+
+* Importing existing catalog entities from a repository
+* Creating pull requests for cleanup
+* Calling webhooks for external system integration
+
+.Prerequisites
+
+* You created a custom Scaffolder template for the Bulk Import plugin.
+
+* You have run your {product-very-short} instance with the following environment variable enabled to allow the use of the Scaffolder functionality:
++
+[source,yaml]
+----
+export NODE_OPTIONS=--no-node-snapshot
+----
+
+.Procedure
+
+* Configure your {my-app-config-file} configuration to instruct the Bulk Import plugin to use your custom template as shown in the following example:
++
+[source,yaml]
+----
+bulkImport:
+  importTemplate: <your_template_entity_reference_or_template_name>
+  importAPI: `open-pull-requests` | `scaffolder`;
+----
++
+where:
+
+`importTemplate:`::
+Enter your Scaffolder template entity reference.
+
+`importAPI`::
+Set the API to 'scaffolder' to trigger the defined workflow for high-fidelity automation. This field defines the import workflow and currently supports two following options:
+
+`open-pull-requests`:: This is the default import workflow, which includes the logic for creating pull requests for every selected repository.
+
+`scaffolder`:: This workflow uses an import scenario defined in the Scaffolder template to create import jobs. Select this option to use the custom import scenario defined in your Scaffolder template.
++
+Optional: You can direct the Bulk Import plugin to hand off the entire list of selected repositories to a custom Orchestrator workflow.
++
+[IMPORTANT]
+====
+The Scaffolder template must be generic and not specific to a single repository if you want your custom Scaffolder template to run successfully for every repository in the bulk list.
+====
+
+.Verification
+
+* The Bulk Import plugin runs the custom Scaffolder template for the list of repositories using the `/task-imports` API endpoint.
