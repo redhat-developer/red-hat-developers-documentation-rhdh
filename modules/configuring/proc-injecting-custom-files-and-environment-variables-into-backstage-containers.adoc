@@ -6,19 +6,51 @@
 
 You must use the `spec.application` path to configure the injection of custom files and environment variables into your {backstage} Pod containers. This ensures necessary configurations, credentials, and dependencies (such as certificates) are available at runtime.
 
-By default, resources inject into the **`backstage-backend`** container. You can also specify other targets, including a list of containers by name (such as `dynamic-plugin-install` or custom sidecars) or opt to in all containers in the {backstage} Pod.
+You can mount extra files, sourced from pre-created Kubernetes ConfigMaps or Secrets, to your {backstage} Pod containers using the `spec.application.extraFiles` path.
 
-.Procedure
-. To configure resource injection, use the following fields under `spec.application`:
+By default, files mount only to the `backstage-backend` container. You can also specify other targets, including a list of containers by name (such as `dynamic-plugin-install` or custom sidecars) or opt to in all containers in the {backstage} Pod.
 
-.. File Injection (`spec.application.extraFiles`): Define external file resources to be mounted as volumes from pre-created ConfigMaps, Secrets, or PVCs.
-** **File Sources:**
-*** `configMaps`:: Sources file volumes from Kubernetes ConfigMaps.
-*** `secrets`:: Sources file volumes from Kubernetes Secrets.
-*** `pvcs`:: Sources volume claims from Kubernetes Persistent Volume Claims (PVCs).
+. To mount extra files, apply the configuration to your `{product-custom-resource-type} custom resource (CR)` as shown in the following code:
++
+[source,yaml]
+----
+spec:
+  application:
+    extraFiles:
+      mountPath: /my/path
+      configMaps:
+        - name: cm1
+        - name: cm2
+          key: file21.txt
+          containers:
+            - "*"
+        - name: cm3
+          mountPath: /my/cm3/path
+          containers:
+            - backstage-backend
+            - install-dynamic-plugins
+      secrets:
+        - name: secret1
+          key: file3.txt
+          containers:
+            - install-dynamic-plugins
+        - name: secret2
+          mountPath: /my/secret2/path
+----
 
-.. Environment Variable Injection (`spec.application.extraEnvs`): Define the environment variables to be injected into the targeted containers.
-** **Environment Sources:**
-*** `configMaps`:: Injects environment variables sourced from Kubernetes ConfigMaps.
-*** `secrets`:: Injects environment variables sourced from Kubernetes Secrets.
-*** `envs`:: Injects hardcoded environment variables defined directly in the manifest.
+If the `containers` field is not specified, the volume mounts to the `backstage-backend` container only. The following explicit options are supported:
+
+* No or empty field: Mounts only to the `backstage-backend` container.
+* `*` (asterisk) as the first and only array element: Mounts to all containers.
+* Explicit container names (for example, `install-dynamic-plugins`): Mounts only to the listed containers.
+
+.Verification
+
+The files are mounted with the following paths and container targets:
+
+* `/my/path/file11.txt`: Mounted to `backstage-backend` container only.
+* `/my/path/file12.txt`: Mounted to `backstage-backend` container only.
+* `/my/path/file21.txt`: Mounted to all containers.
+* `/my/secret1/path/file3.txt`: Mounted to `install-dynamic-plugins` container only.
+* `/my/cm3/path/`: Directory mounted to `backstage-backend` and `install-dynamic-plugins` containers.
+* `/my/secret2/path/`: Directory mounted to `backstage-backend` container only.
