@@ -4,36 +4,55 @@
 [id="proc-injecting-custom-files-and-environment-variables-into-backstage-containers"]
 = Injecting extra files and environment variables into {backstage} containers
 
-You must use the `spec.application.extraFiles|extraEnvs.configMaps|secrets.containers` path to configure the injection of extra files and environment variables into your {backstage} Pod containers. This ensures necessary configurations, credentials, and dependencies (such as certificates) are available at runtime.
+You must use the `spec.application` path to configure the injection of extra files and environment variables into your {backstage} Pod containers. This ensures necessary configurations, credentials, and dependencies (such as certificates) are available at runtime.
 
 By default, files mount only to the `backstage-backend` container. If the `containers` field is not specified, the volume mounts to the `backstage-backend` container only. You can also specify other targets, including a list of containers by name (such as `dynamic-plugin-install` or custom sidecars) or opt to in all containers in the {backstage} Pod.
 
-. To mount extra files, apply the configuration to your `{product-custom-resource-type} custom resource (CR)` as shown in the following code:
+. To mount files, PVCs, and injecting environment variables into different container targets., apply the configuration to your `{product-custom-resource-type} custom resource (CR)` as shown in the following code:
 +
 [source,yaml]
 ----
 spec:
   application:
+    # Default mount path for extraFiles without a specific mountPath
     extraFiles:
-      mountPath: /my/path
+      mountPath: /my/path 
       configMaps:
-        - name: cm1
+        - name: cm1 # Mounts all entries from cm1 to /my/path/
         - name: cm2
-          key: file21.txt
+          key: file21.txt # Mounts only 'file21.txt'
           containers:
-            - "*"
+            - "*" # Targets all containers
         - name: cm3
-          mountPath: /my/cm3/path
+          mountPath: /my/cm3/path # Mounts all entries as a directory
           containers:
             - backstage-backend
             - install-dynamic-plugins
       secrets:
         - name: secret1
-          key: file3.txt
+          key: file3.txt # Must specify key for security
           containers:
             - install-dynamic-plugins
         - name: secret2
-          mountPath: /my/secret2/path
+          mountPath: /my/secret2/path # Mounts all secret entries as a directory
+      pvcs:
+        - name: myclaim1 # Mounts to /my/path/myclaim1 (using default mountPath)
+        - name: myclaim2
+          mountPath: /vol/my/claim # Overrides default mountPath
+
+    extraEnvs:
+      configMaps:
+        - name: cm1
+          key: ENV_VAR1
+          containers:
+            - "*" # Injects into all containers
+      secrets:
+        - name: secret1 # Injects all keys from secret1
+      envs:
+        - name: MY_VAR
+          value: "my-value"
+          containers:
+           - install-dynamic-plugins # Targets only this container
 ----
 
 The following explicit options are supported:
@@ -46,9 +65,34 @@ The following explicit options are supported:
 
 The files are mounted with the following paths and container targets:
 
-* `/my/path/file11.txt`: Mounted to `backstage-backend` container only.
-* `/my/path/file12.txt`: Mounted to `backstage-backend` container only.
-* `/my/path/file21.txt`: Mounted to all containers.
-* `/my/secret1/path/file3.txt`: Mounted to `install-dynamic-plugins` container only.
-* `/my/cm3/path/`: Directory mounted to `backstage-backend` and `install-dynamic-plugins` containers.
-* `/my/secret2/path/`: Directory mounted to `backstage-backend` container only.
+|===
+| Resource | Mount Path / Variable | Target Container(s)
+
+| File (`cm1`)
+| `/my/path/file11.txt`, `/my/path/file12.txt`
+| `backstage-backend` only
+
+| File (`cm2`)
+| `/my/path/file21.txt`
+| All containers
+
+| Directory (`cm3`)
+| `/my/cm3/path/` (Directory)
+| `backstage-backend`, `install-dynamic-plugins`
+
+| PVC (`myclaim1`)
+| `/my/path/myclaim1` (Directory)
+| `backstage-backend` only
+
+| Env Var (`ENV_VAR1`)
+| `ENV_VAR1 = 1`
+| All containers
+
+| Env Var (`ENV_VAR3`, `ENV_VAR4`)
+| `ENV_VAR3`, `ENV_VAR4` (from `secret1`)
+| `backstage-backend` only
+
+| Env Var (`MY_VAR`)
+| `MY_VAR = my-value`
+| `install-dynamic-plugins` only
+|===
