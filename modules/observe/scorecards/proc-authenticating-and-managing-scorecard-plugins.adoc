@@ -1,0 +1,50 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-authenticating-and-managing-scorecard-plugins_{context}"]
+= Authenticating and managing Scorecard plugins to control who sees the metrics
+
+As an administrator, you can secure the connection to your metric providers by managing user access to the Scorecards using the Role-Based Access Control (RBAC) permissions. For users to view the Scorecard metrics, you must provide users with read access to the Scorecard metrics. You can configure these permissions either by modifying your RBAC csv file directly or by using the RBAC Web UI.
+
+.Procedure
+. Set the required RBAC permissions using any of the following methods:
+** To use the csv file, in your csv file, you can directly add the following code:
++
+[source,yaml]
+----
+g, user:default/<YOUR_USERNAME>, role:default/scorecard-viewer
+p, role:default/scorecard-viewer, scorecard.metric.read, read, allow
+p, role:default/scorecard-viewer, catalog.entity.read, read, allow
+----
+See {authorization-book-link}#ref-rbac-permission-policies_title-authorization[Permission policies reference].
+
+** To use the RBAC Web UI, complete the following steps:
+... In your {product} menu, go to *Settings > Role Based Access Control (RBAC)*.
+... Select or create the *Role* to which you want to grant access to the Scorecards.
+... To enable read access for the Scorecard plugin, add a policy with the following details:
+**** *Permission*: `scorecard.metric.read`
+**** *Action*: `read`
+**** *Effect*: `allow`
+
+. Provide users access to specific metrics by their identifiers by using a conditional policy to restrict access, for example, only to the GitHub Open PRs metric (`github.open_prs`) using any of the following ways:
+** {audit-log-book-link}#managing-authorizations-by-using-the-web-ui[Using the Web UI]. 
+** Using the file as shown in the following code:
++
+[source,yaml]
+----
+result: CONDITIONAL
+roleEntityRef: "role:default/scorecard-viewer"
+pluginId: scorecard
+resourceType: scorecard-metric
+permissionMapping:
+  - read
+conditions:
+  rule: HAS_METRIC_ID
+  resourceType: scorecard-metric
+  params:
+    metricIds: [_<your_metric_id>_]
+----
++
+where:
+`metricIds`:: Enter the metric ID you want to give access to a user. For example: `github.open_prs`.
+
+This policy would allow users to read only the GitHub Open PRs metric, while restricting access to other available metrics. 

@@ -1,0 +1,150 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-jira-scorecards-in-rhdh-instance_{context}"]
+= Configuring Jira Scorecards to view GitHub metrics in your {product} instance
+
+To view project tracking data from Atlassian Jira in your {product-very-short} instance, configure Jira Scorecards.
+The following Jira versions are supported:
+* Jira Cloud: API version 3
+* Jira Data Center: API version 2
+
+.Prerequisites
+
+* You must have administrator privileges for Jira and {product-very-short}.
+* You have installed your {product-very-short} instance.
+* You have installed the Scorecard images.
+* You must have added a custom {product-very-short} application configuration.
+
+---
+== Procedure
+
+. Create a Jira configuration token using one of the following methods, depending on your Jira product:
+** Jira Cloud: Create a personal token. You must then create a `Base64-encoded` string using the following plain text format: `your-atlassian-email:your-jira-api-token`.
++
+[source,bash]
+----
+echo -n 'your-atlassian-email:your-jira-api-token' | base64
+----
+** Jira Data Center: Create and use a Personal Access Token (PAT) directly.
+
+. Configure the Jira Scorecard plugin in your `{product-very-short} dynamic-plugins-config.yaml` using either a direct setup or a proxy setup.
+** Use a direct setup (Recommended for simpler environments): Add the following code to your `{product-very-short} dynamic-plugins-config.yaml`:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:pr_1499__0.1.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira
+    disabled: false
+    pluginConfig:
+      jira:
+        baseUrl: ${JIRA_BASE_URL}
+        token: ${JIRA_TOKEN}
+        product: datacenter # Change to 'cloud' if using Jira Cloud
+----
++
+where:
+`baseUrl`:: Enter the Jira URL.
+`token`:: Enter the Jira token (Base64 string for Cloud, PAT for Data Center).
+`product`:: Enter the supported product: `cloud` or `datacenter`.
+
+.. Use a proxy setup (Recommended for complex network environments): In your `{product-very-short} dynamic-plugins-config.yaml`, add the following code:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:pr_1499__0.1.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira
+    disabled: false
+    pluginConfig:
+      jira:
+        proxyPath: /jira/api
+        product: datacenter # Change to 'cloud' if using Jira Cloud
+----
+
+.. In your `{product-very-short} app-config.yaml` file, add the following proxy settings:
++
+[source,yaml]
+----
+proxy:
+  endpoints:
+    '/jira/api':
+      target: ${JIRA_BASE_URL}
+      headers:
+        Accept: 'application/json'
+        Content-Type: 'application/json'
+        X-Atlassian-Token: 'no-check'
+        Authorization: ${JIRA_TOKEN} # Must be configured in your environment
+----
+where:
+`Authorization`:: Set any of the following header value:
+* For *Cloud*: `Basic YourCreatedAboveToken`
+* For *Data Center*: `Bearer YourJiraToken`
+
+. Annotate the component entity in the `catalog-info.yaml`.
+.. In the `catalog-info.yaml` file for the entity you want to configure, link the component to the Jira data source by adding the necessary annotations:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    jira/project-key: PROJECT
+    jira/component: Component
+    jira/label: UI
+    jira/team: 9d3ea319-fb5b-4621-9dab-05fe502283e
+    jira/custom-filter: 'reporter = "abc@xyz.com" AND resolution is not EMPTY'
+spec:
+  type: website
+  lifecycle: experimental
+  owner: guests
+  system: examples
+  providesApis: [example-grpc-api]
+----
+
+where:
+
+`jira/project-key`:: Enter the Jira project key.
+`jira/component`:: Optional: Enter the Jira component name.
+`jira/label`:: Optional: Enter the Jira label.
+`jira/team`:: Optional: Enter the Jira team ID (not the team title).
+`jira/custom-filter`:: Optional: Enter a custom Jira Query Language (JQL) filter.
+
+. (Optional) Configure Jira Open Issues metric thresholds.
+.. To customize the thresholds for the *Jira Open Issues* (`jira.open_issues`) metric, add the following to your `{product-very-short} app-config.yaml` file:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    jira:
+      open_issues:
+        thresholds:
+          rules:
+            - key: success
+              expression: '<10'
+            - key: warning
+              expression: '10-50'
+            - key: error
+              expression: '>50'
+----
+. (Optional) Define global or custom mandatory filters.
+.. You can apply global mandatory filters or define custom filters that entities can override. Add the following to your `{product-very-short} app-config.yaml`:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    jira:
+      open_issues:
+        options:
+          mandatoryFilter: Type = Task AND Resolution = Resolved
+          customFilter: priority in ("Critical", "Blocker")
+----
+
+where:
+
+`mandatoryFilter`:: Optional: Replaces the default filter (`type = Bug and resolution = Unresolved`).
+`customFilter`:: Optional: Specifies a global custom filter. The entity annotation `jira/custom-filter` overrides this value.
+
+For more information about how to customize the threshold values, see link:https://documentation.example.com/scorecard-plugins-thresholds/[Thresholds in Scorecard plugins].
