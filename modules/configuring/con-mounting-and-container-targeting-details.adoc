@@ -1,0 +1,44 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-mounting-and-container-targeting-details_context"]
+= Mounting and Container Targeting Details
+
+The mounting behavior is determined by the combination of the optional `key` and `mountPath` fields. Use the `containers` field (available since `v1alpha4`/`v0.8`) to specify targets other than the default container.
+
+.Container targeting options
+|===
+| Configuration | Target Containers
+
+| No or empty `containers` field
+| Only the **`backstage-backend`** container (default).
+
+| `containers: ["*"]`
+| **All** containers in the Pod.
+
+| Explicit container names
+| Only the containers listed (e.g., `backstage-backend`, `install-dynamic-plugins`).
+|===
+
+.File mounting behavior
+
+[cols="1,1,1", options="header"]
+|===
+| Configuration | Mounting Behavior | Watch/Update Status
+
+| Nothing specified
+| Each key/value mounts as filename/content with `subPath`.
+| Resources are watched by the Operator and the Pod is refreshed on change.
+
+| `key` specified (with or without `mountPath`)
+| The specified key/value mounts with `subPath`.
+| Resources are watched by the Operator.
+
+| Only `mountPath` specified
+| A directory containing all key/values mounts without `subPath`.
+| Related resources are typically auto-updated by Kubernetes.
+|===
+
+[NOTE]
+====
+To limit read access to Secrets by the Operator Service Account, you must specify both `mountPath` and `key` when mounting files from Secrets.
+====
