@@ -1,0 +1,110 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-github-scorecards-in-rhdh-instance_{context}"]
+= Configuring GitHub Scorecards to view GitHub metrics in your {product} instance
+
+You can view GitHub metrics for software components registered in the {product-very-short} catalog. To allow the {product-very-short} to access the GitHub API, you must create a GitHub App and configure the necessary integration.
+
+.Prerequisites
+
+* You have installed your {product-very-short} instance.
+* You have installed the Scorecard images.
+* You must have permissions in GitHub to create and manage a GitHub App.
+* You must have permissions to add and change the custom {product-very-short} application configuration.
+
+.Procedure
+
+. Create and configure a GitHub App.
+.. Create the GitHub App with **Read-only** permissions for **Contents** to allow reading repositories.
+.. Generate a client secret and a private key.
+.. Install the app on the desired account or organization.
+.. Save the following credential values:
+*** `App ID`
+*** `Client ID`
+*** `Client secret`
+*** `Private key`
+
+. Add GitHub credentials to your {product-very-short} secrets.
++
+Set the following key/value pairs as environment variables in your secrets store:
++
+* `GITHUB_INTEGRATION_APP_ID`
+* `GITHUB_INTEGRATION_CLIENT_ID`
+* `GITHUB_INTEGRATION_CLIENT_SECRET`
+* `GITHUB_INTEGRATION_HOST_DOMAIN` (e.g., `github.com`)
+* `GITHUB_INTEGRATION_PRIVATE_KEY_FILE`
+
+. Configure the GitHub integration in your `{product-very-short} app-config.yaml`.
++
+Add the `integrations.github` section to your custom `{product-very-short} app-config.yaml` configuration file using the environment variables:
++
+[source,yaml]
+----
+integrations:
+  github:
+    - host: ${GITHUB_INTEGRATION_HOST_DOMAIN}
+      apps:
+        - appId: ${GITHUB_INTEGRATION_APP_ID}
+          clientId: ${GITHUB_INTEGRATION_CLIENT_ID}
+          clientSecret: ${GITHUB_INTEGRATION_CLIENT_SECRET}
+          privateKey: |
+            ${GITHUB_INTEGRATION_PRIVATE_KEY_FILE}
+----
+
+. Annotate the component entity in `catalog-info.yaml`.
++
+Link a software component to the GitHub data source by adding the required annotations to its `catalog-info.yaml` file as shown in the following example:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    # Required: GitHub project slug in format "owner/repository"
+    github.com/project-slug: myorg/my-service
+    # Required: Entity source location
+    backstage.io/source-location: url:https://github.com/myorg/my-service
+spec:
+  type: service
+  lifecycle: production
+  owner: _<your_team_name>_
+----
++
+Where:
++
+`annotations:github.com/project-slug`:: The GitHub repository format, for example, `owner/repository`.
+`annotations:backstage.io/source-location`:: The entity source location format, for example, `url:https://github.com/owner/repository`.
+`spec:owner`:: Your team name.
+
+[NOTE]
+====
+You must add the team entity to the Catalog to ensure the provided permissions are applicable.
+====
+. (Optional) Configure metric threshold values.
++
+To customize the thresholds for the **GitHub Open Pull Requests** (`github.open_prs`) metric, add the following section to your `app-config.yaml` file:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    github:
+      open_prs:
+        thresholds:
+          rules:
+            - key: success
+              expression: '<10'
+            - key: warning
+              expression: '10-50'
+            - key: error
+              expression: '>50'
+----
++
+`scorecard:plugins:github:open_prs:threshold`:: Lists the custom threshold values for the GitHub metrics.
+
+[NOTE]
+====
+To read more information about how to customize the threshold values, see link:https://documentation.example.com/scorecard-plugins-thresholds/[Thresholds in Scorecard plugins].
+====

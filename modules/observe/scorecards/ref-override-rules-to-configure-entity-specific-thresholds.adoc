@@ -1,0 +1,54 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-override-rules-to-configure-entity-specific-thresholds_{context}"]
+= Threshold rules to metrics for your Scorecard plugin
+
+:_mod-docs-content-type: CONCEPT
+
+You can override individual threshold rules for a specific component by using annotations in its `catalog-info.yaml` file. These annotations are merged with the existing global rules defined in your `{product-very-short} app-config.yaml` file.
+
+.Annotation Format Reference
+
+The annotation key follows a strict structure:
+`scorecard.io/{providerId}.thresholds.rules.{thresholdKey}: '{expression}'`
++
+[cols="1,2,2,2", options="header"]
+|===
+| Element | Description | Example Annotation | Example Value
+
+| `{providerId}`
+| Unique identifier of the metric
+| `scorecard.io/jira.open_issues...`
+| `jira.open_issues`
+
+| `{thresholdKey}`
+| The overridden category
+| `...rules.warning`
+| `success`, `warning`, or `error`
+
+| `{expression}`
+| The new condition for the rule
+| `...: '>15'`
+| `>15`
+|===
+
+.Example: Entity Annotation Override
+
+The following example describes the entity overriding only the `warning` and `error` rules for the `jira.open_issues` metric. The `success` rule falls back to the value defined in the global `{product-very-short} app-config.yaml` file.
++
+[source,yaml]
+----
+# catalog-info.yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: critical-production-service
+  annotations:
+    # Overrides the global 'warning' rule (e.g., changing '11-50' to '10-15')
+    scorecard.io/jira.open_issues.thresholds.rules.warning: '10-15'
+    # Overrides the global 'error' rule (e.g., changing '>50' to '>15')
+    scorecard.io/jira.open_issues.thresholds.rules.error: '>15'
+    # The 'success' rule (<10) remains defined by the global app-config
+spec:
+  type: service
+----
