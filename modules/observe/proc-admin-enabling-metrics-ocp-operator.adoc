@@ -3,7 +3,9 @@
 [id="proc-admin-enabling-metrics-ocp-operator_{context}"]
 = Enabling metrics monitoring in a {product} Operator installation on an {ocp-short} cluster
 
-You can enable and view metrics for an Operator-installed {product} instance from the *Developer* perspective of the {ocp-short} web console.
+You can enable and view metrics for an Operator-installed {product} instance from the {ocp-short} web console. Metrics are exposed through an HTTP service endpoint under the `/metrics` canonical name.
+
+By setting the `spec.monitoring.enabled` field to `true` in your {product} custom resource (CR), you instruct the Operator to automatically create and manage the necessary `ServiceMonitor` to scrape metrics from the service endpoint.
 
 .Prerequisites
 
@@ -13,53 +15,29 @@ You can enable and view metrics for an Operator-installed {product} instance fro
 
 .Procedure
 
-Currently, the {product} Operator does not support creating a `ServiceMonitor` custom resource (CR) by default. You must complete the following steps to create a `ServiceMonitor` CR to scrape metrics from the endpoint.
-
-. Create the `ServiceMonitor` CR as a YAML file:
+. Use the *OpenShift CLI* (`oc`) to edit your existing {product} CR.
 +
-[source,yaml,subs="+attributes,+quotes"]
+[source,bash]
 ----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: _<developer_hub_service_monitor_name>_ <1>
-  namespace: _<rhdh_namespace_name>_ <2>
-  labels:
-    app.kubernetes.io/instance: _<rhdh_cr_name>_ <3>
-    app.kubernetes.io/name: {product-custom-resource-type}
+oc edit Backstage <instance-name>
+----
+. In the CR, locate the `spec` field and add the `monitoring` configuration block.
++
+[source,yaml]
+----
 spec:
-  namespaceSelector:
-    matchNames:
-      - _<rhdh_namespace_name>_ <4>
-  selector:
-    matchLabels:
-      app.kubernetes.io/instance: _<deployment_name>_ <5>
-      app.kubernetes.io/name: _<rhdh_cr_type>_ <6>
-  endpoints:
-  - port: http-metrics
-    path: '/metrics'
+  monitoring:
+    enabled: true
 ----
-<1> The name of your `ServiceMonitor` resource, for example, `developer_hub_service_monitor`.
-<2> The namespace where your `ServiceMonitor` will live, for example, `{my-product-namespace}`.
-<3> The label name identifying the `ServiceMonitor` CR instance, for example, `{my-product-cr-name}`.
-<4> The namespace where your {product-very-short} instance is installed, for example, `{my-product-namespace}`.
-<5> The name of your {product-very-short} deployment, for example, `developer-hub`.
-<6> The name of your {product-very-short} application, for example, `backstage`.
+. Save the {product-very-short} CR. The {product-very-short} Operator detects the configuration and automatically creates the corresponding `ServiceMonitor` custom resource (CR).
 +
 [NOTE]
 ====
-`spec.selector.matchLabels` configuration must match the labels of your {product-very-short} installation.
+The Operator automatically configures the `ServiceMonitor` with the correct labels (`app.kubernetes.io/instance` and `app.kubernetes.io/name`) that match your Backstage CR. The `ServiceMonitor` will be named `metrics-<cr-name>`. No additional label configuration is required.
 ====
-
-. Apply the `ServiceMonitor` CR by running the following command:
-+
-[source,terminal]
-----
-oc apply -f <filename>
-----
 
 .Verification
 
-. From the *Developer* perspective in the {ocp-short} web console, select the *Observe* view.
+. From the {ocp-short} web console, select the *Observe* view.
 . Click the *Metrics* tab to view metrics for {product} pods.
-. From the Developer perspective in the {ocp-short} web console, click **Project > Services** and verify the labels for `backstage-developer-hub`.
+. From the {ocp-short} web console, click **Project > Services** and verify the labels for `backstage-developer-hub`.
