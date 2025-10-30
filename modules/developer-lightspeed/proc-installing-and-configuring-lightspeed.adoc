@@ -3,7 +3,7 @@
 [id="proc-installing-and-configuring-lightspeed_{context}"]
 = Installing and configuring {ls-brand-name}
 
-You must install and configure both the {ls-short} and the {rcs-short} sidecar container manually.
+You must install and configure the {ls-short}, {lcs-short}, and Llama Stack container manually.
 
 .Prerequisites
 * You are logged into your {ocp-short} account.
@@ -13,7 +13,7 @@ You must install and configure both the {ls-short} and the {rcs-short} sidecar c
 
 .Procedure
 
-. Create the {rcs-short} ConfigMap.
+. Create the {lcs-short} ConfigMap (`lightspeed-stack.yaml`).
 .. In the {ocp-short} web console, go to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMaps*.
 .. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via*, and edit the file as shown in the following example:
@@ -23,70 +23,73 @@ You must install and configure both the {ls-short} and the {rcs-short} sidecar c
 kind: ConfigMap
 apiVersion: v1
 metadata:
- name: rcsconfig
- namespace: _<namespace>_ # Enter your namespace (For example, `rhdh`)
-data:
- rcsconfig.yaml: |
-  llm_providers:
-    # Start: Do not remove this block
-    - name: dummy
-      type: openai
-      url: https://dummy.com
-      models:
-        - name: dummymodel
-      # End: Do not remove this block
-  ols_config:
-    user_data_collection:
-      log_level: "DEBUG"
-      feedback_disabled: false
-      feedback_storage: "/tmp/feedback"
-    reference_content:
-      product_docs_index_path: "./vector_db/rhdh_product_docs/1.7"
-      product_docs_index_id: rhdh-product-docs-1_7
-      embeddings_model_path: "./embeddings_model"
-    conversation_cache:
-      type: memory
-      memory:
-        max_entries: 1000
-    logging_config:
-      app_log_level: info
-      lib_log_level: warning
-      uvicorn_log_level: info
-      suppress_metrics_in_log: false
-      suppress_auth_checks_warning_in_log: false
-    authentication_config:
-      module: "noop"
-    default_provider: dummy
-    default_model: dummymodel
-    query_validation_method: disabled
-  dev_config:
-    enable_dev_ui: false
-    disable_auth: false
-    disable_tls: true
-    enable_system_prompt_override: true
-  user_data_collector_config:
-    user_agent: "example-user-agent"
-    ingress_url: "https://example.ingress.com/upload"
+ name: Lightspeed Core Service (LCS)
+service:
+  host: 0.0.0.0
+  port: 8080
+  auth_enabled: false
+  workers: 1
+  color_log: true
+  access_log: true
+llama_stack:
+  use_as_library_client: false
+  url: http://localhost:8321
+user_data_collection:
+  feedback_enabled: true
+  feedback_storage: "/tmp/data/feedback"
+  transcripts_enabled: true
+  transcripts_storage: "/tmp/data/transcripts"
+authentication:
+  module: "noop"
+conversation_cache:
+  type: "sqlite"
+  sqlite:
+    db_path: "./lcs_cache.db"
+mcp_servers:
+  - name: mcp::backstage
+    provider_id: model-context-protocol
+    url: https://rhdh-mcp-proxy-apicast-production.apps.rosa.redhat-ai-dev.m6no.p3.openshiftapps.com:443/api/mcp-actions/v1
 ----
-+
-[IMPORTANT]
-====
-Do not remove the block in the `llm_providers` section. This requirement is crucial when working with {ls-short} because of limitations discovered in Road Core. If you decide to use an alternative LLM provider, you should refer to additional information in the guide. For more information, see {developer-lightspeed-link}#proc-changing-your-llm-provider_customizing-developer-lightspeed[Changing your LLM provider].
-====
-.. Optional: Configure the number of workers that scale the REST API by specifying the following example to the `ols_config.max_workers` parameter in the {rcs-short} ConfigMap.
+where:
+`mcp_servers:name`:: This value must match the entry in the {ls-short} app config file for MCP servers.
+
+.. Click *Create*.
+
+. Create a Llama Stack ConfigMap.
+.. In the {ocp-short} web console, go to your {product-very-short} instance and select the *ConfigMaps* tab.
+.. Click *Create ConfigMaps*.
+.. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via*, and edit the file as shown in the following example:
 +
 [source,yaml]
 ----
-ols_config:
-    max_workers: _<number_of_workers>_
+models:
+  - model_id: sentence-transformers/all-mpnet-base-v2
+    metadata:
+      embedding_dimension: 768
+    model_type: embedding
+    provider_id: sentence-transformers
+    provider_model_id: "/app-root/embeddings_model"
+providers:
+  inference:
+  - provider_id: team-cluster
+    provider_type: remote::vllm
+    config:
+      url: _<llm-server>_/v1
+      api-token: <token>
+  - provider_id: openai
+    provider_type: remote::openai
+    config:
+      api_key: _<openai_api_key>_
 ----
-.. Click *Create*.
+where:
+`_<llm_server>_`:: Enter your LLM server details.
+`_<openai_api_key>_`:: Enter your OpenAI API key.
 
 . Create the {ls-short} ConfigMap.
 +
 [NOTE]
 ====
-Create a dedicated {ls-short} ConfigMap instead of adding an additional section to your existing {product-very-short} custom application configuration file (for example, `lightspeed-app-config.yaml`). Creating two files prevents the entire {product-very-short} ConfigMap from being loaded into {rcs-short}.
+Create a dedicated {ls-short} ConfigMap instead of adding an additional section to your existing {product-very-short} custom application configuration file (for example, `lightspeed-app-config.yaml`). Creating two files prevents the entire {product-very-short} ConfigMap from being loaded into {lcs-short}.
 ====
 .. In the {ocp-short} web console, go to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMap*.
@@ -115,11 +118,9 @@ data:
            - https://cdn.jsdelivr.net
 
     lightspeed:
-      # REQUIRED: Configure LLM servers with OpenAI API compatibility
-      servers:
-        - id: ${LLM_SERVER_ID}
-          url: ${LLM_SERVER_URL}
-          token: ${LLM_SERVER_TOKEN}
+      mcpServers:
+      - name: mcp::backstage
+        token: ${MCP_TOKEN} 
 
       # OPTIONAL: Enable/disable question validation (default: true)
       # When enabled, restricts questions to RHDH-related topics for better security
@@ -154,6 +155,30 @@ stringData:
   LLM_SERVER_TOKEN: _<token>_ # Enter your server token value
   LLM_SERVER_URL: _<server_url>_ # Enter your server URL
 type: Opaque
+----
+.. Click *Create*.
+
+. Create the Llama Stack secret file.
+.. In the {ocp-short} web console, go to *Secrets*.
+.. Click *Create > Key/value secret*.
+.. In the *Create key/value secret* page, select the *YAML view* option in *Configure via*, and add the following example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+    name: llama-stack-secrets
+type: Opaque
+stringData:
+    VLLM_URL: "" # Set this if you are using redhat-ai-dev Llama Stack image
+    VLLM_API_KEY: "" # Set this if you are using redhat-ai-dev Llama Stack
+    VLLM_MAX_TOKENS: "" # Optional
+    VLLM_TLS_VERIFY: "" # Optional
+    OLLAMA_URL: "" # Set if you altered the run.yaml to use it
+    OPENAI_API_KEY: "" # Set if you altered the run.yaml to use it
+    VALIDATION_PROVIDER: "" # One of vllm, ollama, openai depending on above
+    VALIDATION_MODEL_NAME: "" # Name of model you want used for validation
 ----
 .. Click *Create*.
 
@@ -205,7 +230,7 @@ includes:
 
 . Update your deployment configuration based on your installation method:
 .. For an Operator-installed {product-very-short} instance, update your {product-custom-resource-type} custom resource (CR).
-... In the `spec.application.appConfig.configMaps` section, add the {ls-short} custom app configuration as shown in the following example:
+... In the `spec.application.appConfig.configMaps` section, add the {ls-short} and Llama Stack custom app configurations as shown in the following example:
 +
 [source,yaml]
 ----
@@ -213,120 +238,119 @@ includes:
         configMaps:
           - name: lightspeed-app-config
         mountPath: /opt/app-root/src
+        configMaps:
+          - name: llama-stack
+        mountPath: /opt/app-root/src
 ----
-... Update the `extraVolumes` specification to include the {rcs-short} ConfigMap as shown in the following example:
+... Update the `extraVolumes` specification to include the {lcs-short} and Llama Stack ConfigMaps as shown in the following example:
 +
 [source,yaml]
 ----
             volumes:
               - configMap:
-                  name: rcsconfig
-                name: rcsconfig
+                  name: lightspeed-stack
+              - configMap:
+                  name: llama-stack
 ----
-... Update the `volumeMounts` specification to mount the {rcs-short} ConfigMap as shown in the following example:
+... Update the `volumeMounts` specification to mount the {lcs-short} and Llama Stack ConfigMaps as shown in the following example:
 +
 [source,yaml]
 ----
         volumeMounts:
-          - mountPath: /app-root/config/rcsconfig.yaml
-            name: rcsconfig
-            subPath: rcsconfig.yaml
+          - mountPath: /app-root/config/lightspeed-stack.yaml
+            name: lightspeed-stack
+            subPath: lightspeed-stack.yaml
           - mountPath: /app-root/config/app-config-rhdh.yaml
             name: lightspeed-app-config
             subPath: app-config.yaml
+          - mountPath: /app-root-config/llama-stack/run.yaml
+            subPath: llama-stack/run.yaml
 ----
-... Add the {ls-short} Secret file as shown in the following example:
+... Add the {ls-short} and Llama Stack Secret file as shown in the following example:
 +
 [source,yaml]
 ----
         envFrom:
           - secretRef:
               name: lightspeed-secrets
+          - secretRef:
+              name: llama-stack-secrets
 ----
-... In your `deployment.patch.spec.template.spec.containers.env` section, set the {rcs-short} environment variables as shown in the following example:
+... In your `deployment.patch.spec.template.spec.containers.env` section, set the {lcs-short} and Llama Stack environment variables as shown in the following example:
 +
 [source,yaml]
 ----
     - name: PROJECT
       value: rhdh
-    - name: RCS_CONFIG_FILE
-      value: /app-root/config/rcsconfig.yaml
+    - name: LCS_CONFIG_FILE
+      value: /app-root/config/lightspeed-stack.yaml
     - name: RHDH_CONFIG_FILE
       value: /app-root/config/app-config-rhdh.yaml
+    - name: LLAMA_CONFIG_FILE
+      value: /app-root/config/llama-stack/run.yaml
 ----
 +
 [NOTE]
 ====
-Your {product-very-short} container is typically already present in your CR. You are adding the second container definition `road-core-sidecar` as the {rcs-short} sidecar.
+Your {product-very-short} container is typically already present in your CR. You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
 ====
 ... Click *Save*. The Pods are automatically restarted.
 +
-.Example of a Backstage CR with the {rcs-short} container
+.Example of a Backstage CR with the {lcs-short} container
 [source,yaml,subs=+attributes]
 ----
-apiVersion: rhdh.redhat.com/v1alpha3
 kind: Backstage
 metadata:
-  name: backstage
-  namespace: _<namespace>_ # your {product-very-short} instance namespace
+...
+name: name
+namespace: namespace
 spec:
-  application:
-    appConfig:
-     configMaps:
-# Adding the Developer Lightspeed custom app config file
-       - name: lightspeed-app-config
-     mountPath: /opt/app-root/src
-    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
-    extraEnvs:
-# Adding the Developer Lightspeed secrets file
-      secrets:
-        - name: lightspeed-secrets
-    replicas: 1
-    extraFiles:
-      mounthPath: /opt/app-root/src
-    replicas: 1
-    route:
-      enabled: true
-  database:
-    enableLocalDb: true
-  deployment:
-    patch:
-      spec:
-        template:
-          spec:
-            containers:
-              - env:
-                  - name: PROJECT
-                    value: rhdh
-# Mounting the RCS sidecar to your {product-very-short} instance
-                  - name: RCS_CONFIG_FILE
-                    value: /app-root/config/rcsconfig.yaml
-# Your existing {product-very-short} ConfigMap
-                  - name: RHDH_CONFIG_FILE
-                    value: /app-root/config/app-config-rhdh.yaml
-                envFrom:
-                  - secretRef:
-                      name: lightspeed-secrets
-                image: 'quay.io/redhat-ai-dev/road-core-service:rcs-06302025-rhdh-1.7'
-                name: road-core-sidecar
-                ports:
-                  - containerPort: 8080
-                    name: rcs-backend
-                    protocol: TCP
-                volumeMounts:
-# Mounting the RCS sidecar to your {product-very-short} instance
-                  - mountPath: /app-root/config/rcsconfig.yaml
-                    name: rcsconfig
-                    subPath: rcsconfig.yaml
-# Mounting the Lightspeed app config file to your RCS container
-                  - mountPath: /app-root/config/app-config-rhdh.yaml
-                    name: lightspeed-app-config
-                    subPath: app-config.yaml
-            volumes:
-              - configMap:
-                  name: rcsconfig
-                name: rcsconfig
-
+ deployment:
+   patch:
+     spec:
+       template:
+         spec:
+           initContainers:
+             - name: init-rag-data
+               image: 'quay.io/redhat-ai-dev/rag-content:release-1.7-lcs'
+               command:
+                 - "sh"
+                 - "-c"
+                 - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /data/ && cp -r /rag/embeddings_model /data/ && echo 'Copy complete.'"
+               volumeMounts:
+                 - mountPath: /data
+                   name: rag-data-volume
+           containers:
+             - envFrom:
+               - secretRef:
+                   name: llama-stack-secrets
+               image: 'quay.io/redhat-ai-dev/llama-stack:latest'
+               name: llama-stack
+               volumeMounts:
+                 - mountPath: /app-root/.llama
+                   name: shared-storage
+                 - mountPath: /app-root/embeddings_model
+                   name: rag-data-volume
+                   subPath: embeddings_model
+                 - mountPath: /app-root/vector_db/rhdh_product_docs
+                   name: rag-data-volume
+                   subPath: rhdh_product_docs
+             - image: <your-lcs-image>
+               name: lightspeed-core
+               volumeMounts:
+                 - mountPath: /app-root/lightspeed-stack.yaml
+                   name: lightspeed-stack
+                   subPath: lightspeed-stack.yaml
+                 - mountPath: /tmp/data/feedback
+                   name: shared-storage
+           volumes:
+             - configMap:
+                 name: lightspeed-stack
+               name: lightspeed-stack
+             - emptyDir: {}
+               name: shared-storage
+             - emptyDir: {}
+               name: rag-data-volume
 ----
 .. For a Helm-installed {product-very-short} instance, update your Helm chart.
 ... Add your dynamic plugins configuration in the`global.dynamic` property as shown in the following example:
@@ -383,31 +407,31 @@ dynamic:
       - configMapRef: lightspeed-app-config
         filename: app-config.yaml
 ----
-... Update the `extraVolumes` section to include the {rcs-short} ConfigMap as shown in the following example:
+... Update the `extraVolumes` section to include the {lcs-short} ConfigMap as shown in the following example:
 +
 [source,yaml]
 ----
 extraVolumes:
       - configMap:
-          name: rcsconfig
-        name: rcsconfig
+          name: /app-root/config/lightspeed-stack.yaml
+        name: lightspeed-stack
 ----
-... Update the `extraVolumeMounts` section to mount the {rcs-short} ConfigMap as shown in the following example:
+... Update the `extraVolumeMounts` section to mount the {lcs-short} and Llama Stack ConfigMap as shown in the following example:
 +
 [source,yaml]
 ----
  extraVolumeMounts:
-      - mountPath: /app-root/config/rcsconfig.yaml
-        name: rcsconfig
+      - mountPath: /app-root/config/lightspeed-stack.yaml
+        name: lightspeed-stack
 ----
-... Add the {ls-short} Secret file as shown in the following example:
+... Add the {ls-short} and Llama Stack Secret file as shown in the following example:
 +
 [source,yaml]
 ----
  extraEnvVarsSecrets:
       - lightspeed-secrets
 ----
-... Add the {rcs-short} image as shown in the following example:
+... Add the {lcs-short} image as shown in the following example:
 +
 [source,yaml,subs="+attributes"]
 ----
@@ -415,36 +439,39 @@ extraVolumes:
       - env:
           - name: PROJECT
             value: rhdh
-          - name: RCS_CONFIG_FILE
-            value: /app-root/config/rcsconfig.yaml
+          - name: LCS_CONFIG_FILE
+            value: /app-root/config/lightspeed-stack.yaml
           - name: RHDH_CONFIG_FILE
             value: /app-root/config/lightspeed-app-config.yaml
         envFrom:
           - secretRef:
               name: lightspeed-secrets
-        image: 'quay.io/redhat-ai-dev/road-core-service:rcs-06302025-rhdh-1.7'
+        image: 'quay.io/redhat-ai-dev/llama-stack:latest'
         name: road-core-sidecar
         ports:
           - containerPort: 8080
-            name: rcs-backend
+            name: lcs-backend
             protocol: TCP
         volumeMounts:
-          - mountPath: /app-root/config/rcsconfig.yaml
-            name: rcsconfig
-            subPath: rcsconfig.yaml
+          - mountPath: /app-root/config/lightspeed-stack.yaml
+            name: lightspeed-stack
+            subPath: lightspeed-stack.yaml
           - mountPath: /app-root/config/lightspeed-app-config.yaml
             name: lightspeed-app-config
             subPath: app-config.yaml
+          - mountPath: /app-root/run.yaml
+            name: llama-stack-config
+            subPath: run.yaml
 ----
 +
 [NOTE]
 ====
-Your {product-very-short} container is typically already present in your Helm chart. You are adding the second container definition `road-core-sidecar` as the {rcs-short} sidecar.
+Your {product-very-short} container is typically already present in your Helm chart. You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
 ====
 ... Click *Save*.
 ... Click *Helm upgrade*.
 +
-.Example of a Helm chart with the RCS container
+.Example of a Helm chart with the LCS and Llama Stack container
 [source,yaml,subs="+attributes"]
 ----
 global:
@@ -458,27 +485,34 @@ upstream:
    extraAppConfig:
      - configMapRef: lightspeed-app-config
        filename: app-config.yaml
+     - configMapRef: llama-stack-config
+       filename: run.yaml
    extraContainers:
      - env:
          - name: PROJECT
            value: rhdh
-         - name: RCS_CONFIG_FILE
-           value: /app-root/config/rcsconfig.yaml
+         - name: LCS_CONFIG_FILE
+           value: /app-root/config/lcsconfig.yaml
+         - name: LLAMA_STACK_CONFIG_FILE
+           value: /app-root/run.yaml
          - name: RHDH_CONFIG_FILE
            value: /app-root/config/lightspeed-app-config.yaml
        envFrom:
          - secretRef:
              name: lightspeed-secrets
-       image: 'quay.io/redhat-ai-dev/road-core-service:rcs-06302025-rhdh-1.7'
-       name: road-core-sidecar
+       image: 'quay.io/redhat-ai-dev/llama-stack:latest'
+       name: lightspeed-core-sidecar
        ports:
          - containerPort: 8080
-           name: rcs-backend
+           name: lcs-backend
            protocol: TCP
        volumeMounts:
-         - mountPath: /app-root/config/rcsconfig.yaml
-           name: rcsconfig
-           subPath: rcsconfig.yaml
+         - mountPath: /app-root/config/lightspeed-stack.yaml
+           name: lightspeed-stack
+           subPath: lightspeed-stack.yaml
+         - mountPath: /app-root/run.yaml
+           name: llama-stack-config
+           subPath: run.yaml
          - mountPath: /app-root/config/lightspeed-app-config.yaml
            name: lightspeed-app-config
            subPath: lightspeed-app-config.yaml
@@ -487,12 +521,14 @@ upstream:
    extraEnvVarsSecrets:
      - lightspeed-secrets
    extraVolumeMounts:
-     - mountPath: /app-root/config/rcsconfig.yaml
-       name: rcsconfig
+     - mountPath: /app-root/config/lightspeed-stack.yaml
+       name: lightspeed-stack
+     - mountPath: /app-root/run.yaml
+       name: llama-stack-config
    extraVolumes:
      - configMap:
-         name: rcsconfig
-       name: rcsconfig
+         name: lightspeed-stack
+       name: lightspeed-stack
      ...
    image:
      ...
