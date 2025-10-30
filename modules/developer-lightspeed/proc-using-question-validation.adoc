@@ -3,18 +3,42 @@
 [id="proc-using-question-validation_{context}"]
 = Using Question Validation in {ls-short}
 
-{ls-short} utilizes *Question Validation* to validate the query to check if it relates to {product}.
+Question Validation is a feature utilized by {ls-short} to validate user queries, making sure they relate specifically to {product-very-short} and related topics. When enabled, this feature restricts questions to {product-very-short}-related topics for enhanced security.
 
-When a user asks a question that falls outside of these restricted topics, {ls-short} provides a general response to notify the user that the question is out of scope.
-If you want to disable the *Question Validation* feature to allow for broader questioning, you can set `questionValidation` to `false` in your {ls-short} app config file.
+. Prerequisites
+
+* The Developer Lightspeed for RHDH plugin must be configured in your {product-very-short} instance.
+* The {lcs-short} and Llama Stack sidecars must be deployed, as LCS handles question validation by implementing it as a safety shield on the Llama Stack side.
 
 .Procedure
 
-* To disable the *Question Validation* feature, in your {ls-short} `{my-app-config-file}` file, add the following example:
+The Question Validation feature is controlled through configuration settings in both the frontend plugin configuration and the Llama Stack backend.
+
+. Make sure the feature is configured in the {ls-short} plugin.
+
+To make sure the feature is explicitly enabled or to confirm its state, verify the setting in the {ls-short} application configuration file (`lightspeed-app-config.yaml`) as showin the following code:
 +
 [source,yaml]
 ----
 lightspeed:
-  # ... other lightspeed configurations
-  questionValidation: false
+# OPTIONAL: Enable/disable question validation (default: true)
+# When enabled, restricts questions to RHDH-related topics for better security
+  questionValidation: true
+----
+[NOTE]
+====
+* By default, `Question Validation` is typically enabled, restricting queries to {product-very-short}-related topics. 
+
+* The configuration of the LLM servers must also be present in this file, referencing the appropriate environment variables sourced from a Kubernetes Secret.
+====
+. Verify backend safety shield configuration.
+
+For `Question Validation` to function, the Llama Stack sidecar (which handles the AI logic) must have the `lightspeed_question_validity` provider configured as a safety shield in its `run.yaml`. This shield defines the allowed topics (Backstage, {product-very-short}, Kubernetes, Openshift, CI/CD, and GitOps Pipelines).
++
+.Llama Stack Safety Shield Definition (Example Snippet from run.yaml)
+[source,yaml]
+----
+shields:
+  - shield_id: lightspeed_question_validity-shield
+    provider_id: lightspeed_question_validity
 ----
