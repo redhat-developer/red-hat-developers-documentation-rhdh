@@ -9,14 +9,83 @@ In a network-restricted environment, a disconnected installation prevents unauth
 
 .Prerequisites
 
-* You have mirrored the {product} Operator images to the local registry using the included script. For {product-very-short} installation using Operator, the mirroring script automatically deploys the {product-very-short} Operator for you.
+* You have mirrored the {product} Operator images to the local registry using the {product-very-short} mirroring script and a custom `ImageSetConfiguration` file. For {product-very-short} installation using Operator, the mirroring script automatically deploys the {product-very-short} Operator for you.
 
 include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 .Procedure
 
-include::snip-installing-the-orchestrator-common-steps.adoc[]
+. Download the mirroring script by running the following command:
++
+[source,subs="+attributes,+quotes"]
+----
+curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-{product-version}/.rhdh/scripts/prepare-restricted-environment.sh
+----
 
+. Create an `ImageSetConfiguration` file for `oc-mirror`. Because `oc-mirror` does not automatically mirror all images required by the Serverless Logic Operator, you must use an `ImageSetConfiguration` file to include them as shown in the following example:
++
+[source,subs="+attributes,+quotes"]
+----
+apiVersion: mirror.openshift.io/v2alpha1
+kind: ImageSetConfiguration
+mirror:
+  additionalimages:
+  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-postgresql-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-ephemeral-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-ephemeral-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-db-migrator-tool-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-swf-builder-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-swf-devmode-rhel8:{rhoserverless-version}.0
+  operators:
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.19
+      packages:
+      - name: logic-operator-rhel8
+        channels:
+        - name: alpha
+          minVersion: {rhoserverless-version}.0
+          maxVersion: {rhoserverless-version}.0
+      - name: serverless-operator
+        channels:
+        - name: stable
+          minVersion: {rhoserverless-version}.0
+          maxVersion: {rhoserverless-version}.1
+----
++
+Alternatively, you can use the podman commands to find the missing images and add them to the `additionalimages` list if the versions change:
++
+[source,subs="+attributes,+quotes"]
+----
+IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}.0-8
+mkdir local-manifests-osl
+podman create --name temp-container "$IMG" -c "cat /manifests/logic-operator-rhel8.clusterserviceversion.yaml"
+podman cp temp-container:/manifests ./local-manifests-osl
+podman rm temp-container
+yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | select(test("^.*\\/.*:.*$"))' ./local-manifests-osl/manifests/logic-operator-rhel8-controllers-config_v1_configmap.yaml
+----
+
+. Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
++
+[source,subs="+attributes,+quotes"]
+----
+oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
+cd <workspace folder>/working-dir/cluster-resources/
+oc apply -f .
+----
+
+. Optional: Mirror the images for the Serverless Operator {rhoserverless-version} and the Serverless Logic Operator {rhoserverless-version} by using tools like Skopeo or podman.
++
+For example:
++
+[source,terminal,subs="+quotes"]
+----
+sudo skopeo copy --authfile /path/to/auth/file --all --preserve-digests
+docker://registry.redhat.io/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
+docker://<registry_path>/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
+----
++
+include::snip-installing-the-orchestrator-common-steps.adoc[]
++
 . Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using the OperatorHub.
 
 . Create a {product-custom-resource-type} custom resource (CR).

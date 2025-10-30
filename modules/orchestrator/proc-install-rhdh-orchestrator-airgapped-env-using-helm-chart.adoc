@@ -17,6 +17,65 @@ include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 . Mirror the `redhat-developer-hub-orchestrator-infra` chart images to the local registry.
 
+. Create an `ImageSetConfiguration` file for `oc-mirror`. Because `oc-mirror` does not automatically mirror all images required by the Serverless Logic Operator, you must use an `ImageSetConfiguration` file to include them as shown in the following example:
++
+[source,subs="+attributes,+quotes"]
+----
+apiVersion: mirror.openshift.io/v2alpha1
+kind: ImageSetConfiguration
+mirror:
+  additionalimages:
+  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-postgresql-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-ephemeral-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-ephemeral-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-db-migrator-tool-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-swf-builder-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-swf-devmode-rhel8:{rhoserverless-version}.0
+
+  helm:
+    repositories:
+      - name: openshift-charts
+        url: https://charts.openshift.io
+        charts:
+          - name: redhat-developer-hub
+            version: "{product-bundle-version}"
+          - name: redhat-developer-hub-orchestrator-infra
+            version: "{product-bundle-version}"
+----
++
+Alternatively, you can use the podman commands to find the missing images and add them to the `additionalimages` list if the versions change:
++
+[source,subs="+attributes,+quotes"]
+----
+IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}.0-8
+mkdir local-manifests-osl
+podman create --name temp-container "$IMG" -c "cat /manifests/logic-operator-rhel8.clusterserviceversion.yaml"
+podman cp temp-container:/manifests ./local-manifests-osl
+podman rm temp-container
+yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | select(test("^.*\\/.*:.*$"))' ./local-manifests-osl/manifests/logic-operator-rhel8-controllers-config_v1_configmap.yaml
+----
+
+. Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
++
+[source,subs="+attributes,+quotes"]
+----
+oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
+cd <workspace folder>/working-dir/cluster-resources/
+oc apply -f .
+----
+
+. Optional: Mirror the images for the Serverless Operator {rhoserverless-version} and the Serverless Logic Operator {rhoserverless-version} by using tools like Skopeo or podman.
++
+For example:
++
+[source,terminal,subs="+quotes"]
+----
+sudo skopeo copy --authfile /path/to/auth/file --all --preserve-digests
+docker://registry.redhat.io/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
+docker://<registry_path>/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
+----
++
 include::snip-installing-the-orchestrator-common-steps.adoc[]
 
 . Apply the `redhat-developer-hub-orchestrator-infra` Helm chart and approve the install plans. See {installing-in-air-gap-book-link}#assembly-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped[Air-gapped installation with Helm chart instructions] for details.
