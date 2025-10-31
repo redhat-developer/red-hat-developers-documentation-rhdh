@@ -3,11 +3,12 @@
 [id="proc-configure-mcp-components_{context}"]
 = Configuring the Model Context Protocol (MCP)
 
-You can configure the Model Context Protocol (MCP) to leverage {ls-short}. With MCP configuration, the deployed {lcs-short} and Llama Stack server utilize external tools and retrieve real-time data. This allows the virtual assistant to execute complex actions and incorporate current operational context into its responses. You must synchronize settings across three components: the Llama Stack tool definition, the {lcs-short} server endpoint definition, and the {ls-brand-name} Plugin authorization token.
+To leverage Model Context Protocol (MCP) servers, you must configure them within the Llama Stack service. Configuring the MCP in {lcs-short} enables the deployed {lcs-short} and Llama Stack to use external tools and retrieve real-time data. This integration allows the virtual assistant to execute complex actions and incorporate current operational context into its responses.
+
+Configuration requires synchronizing settings across three components: the Llama Stack tool definition, the {lcs-short} MCP server endpoint definition, and the {ls-brand-name} plugin MCP authorization token.
 
 .Procedure
-. Configure the {llama-name} tool definition.
-Define the MCP provider in the `tool_runtime` section of the Llama Stack configuration file (`run.yaml`).
+. Configure the Llama Stack tool definition by defining the MCP provider in the `tool_runtime` section of the Llama Stack configuration file (`run.yaml`), as shown in the following code:
 +
 [source,yaml]
 ----
@@ -18,9 +19,8 @@ providers:
       config: {}
 ----
 
-. Configure the {lcs-short} server endpoint.
-In the {lcs-short} configuration file (`lightspeed-stack.yaml`), define the MCP server endpoints. The `provider_id` must** match the Llama Stack definition (`model-context-protocol`).
-
+. Configure the {lcs-short} MCP server endpoint by defining the MCP server endpoints in the {lcs-short} configuration file (`lightspeed-stack.yaml`), as shown in the following code:
++
 [source,yaml]
 ----
 mcp_servers:
@@ -28,9 +28,13 @@ mcp_servers:
     provider_id: model-context-protocol
     url: https://rhdh-mcp-proxy-apicast-production.apps.rosa.redhat-ai-dev.m6no.p3.openshiftapps.com:443/api/mcp-actions/v1
 ----
++
+[IMPORTANT]
+====
+`provider_id` must match the Llama Stack definition (`model-context-protocol`).
+====
 
-. Configure the {ls-brand-name} plugin authorization token.
-In the {ls-brand-name} plugin configuration file (`lightspeed-app-config.yaml`), specify the MCP servers and provide the token for authorization. This token is used when the plugin makes requests to the {lcs-short} `/v1/streaming_query` endpoint.
+. Configure the {ls-brand-name} plugin authorization token by specifying the MCP servers and providing the token for authentication in the {ls-brand-name} plugin configuration file (`lightspeed-app-config.yaml`), as shown in the following code:
 +
 [source,yaml]
 ----
@@ -39,3 +43,8 @@ lightspeed:
   - name: mcp::backstage
     token: ${MCP_TOKEN}
 ----
++
+[IMPORTANT]
+====
+`name` must match the {lcs-name} definition (`mcp::backstage`).
+====
