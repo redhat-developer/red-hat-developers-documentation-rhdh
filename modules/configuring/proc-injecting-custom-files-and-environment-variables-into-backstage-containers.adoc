@@ -4,7 +4,7 @@
 [id="proc-injecting-custom-files-and-environment-variables-into-backstage-containers"]
 = Injecting extra files and environment variables into {backstage} containers
 
-By default, files mount only to the `backstage-backend` container. If the `containers` field is not specified, the volume mounts to the `backstage-backend` container only. You can also specify other targets, including a list of containers by name (such as `dynamic-plugin-install` or custom sidecars) or opt to in all containers in the {backstage} Pod.
+By default, files mount only to the `backstage-backend` container. If the `containers` field is not specified, the volume mounts only to the `backstage-backend` container. You can also specify other targets, including a list of containers by name (such as `dynamic-plugin-install` or selectcustom sidecars) or select all containers in the {backstage} Pod.
 
 . To mount files and injecting environment variables into different container targets, apply the configuration to your `{product-custom-resource-type} custom resource (CR)` as shown in the following code:
 +
@@ -12,52 +12,65 @@ By default, files mount only to the `backstage-backend` container. If the `conta
 ----
 spec:
   application:
-    # Default mount path for extraFiles without a specific mountPath
     extraFiles:
       mountPath: /my/path 
       configMaps:
-        - name: cm1 # Mounts all entries from cm1 to /my/path/
+        - name: cm1
         - name: cm2
-          key: file21.txt # Mounts only 'file21.txt'
+          key: file21.txt 
           containers:
-            - "*" # Targets all containers
+            - "*"
         - name: cm3
-          mountPath: /my/cm3/path # Mounts all entries as a directory
+          mountPath: /my/cm3/path
           containers:
             - backstage-backend
             - install-dynamic-plugins
       secrets:
         - name: secret1
-          key: file3.txt # Must specify key for security
+          key: file3.txt
           containers:
             - install-dynamic-plugins
         - name: secret2
-          mountPath: /my/secret2/path # Mounts all secret entries as a directory
+          mountPath: /my/secret2/path
       pvcs:
-        - name: myclaim1 # Mounts to /my/path/myclaim1 (using default mountPath)
+        - name: myclaim1
         - name: myclaim2
-          mountPath: /vol/my/claim # Overrides default mountPath
+          mountPath: /vol/my/claim
 
     extraEnvs:
       configMaps:
         - name: cm1
           key: ENV_VAR1
           containers:
-            - "*" # Injects into all containers
+            - "*"
       secrets:
-        - name: secret1 # Injects all keys from secret1
+        - name: secret1
       envs:
         - name: MY_VAR
           value: "my-value"
           containers:
-           - install-dynamic-plugins # Targets only this container
+           - install-dynamic-plugins
 ----
+where:
+
+`spec.application.extraFiles.mountPath`:: Specifies default mount path for extraFiles without a specific mountPath
+`spec.application.extraFiles.configMaps.name`:: Mounts all entries from cm1 to `/my/path/`
+`spec.application.extraFiles.configMaps.key`:: Mounts only `file21.txt`
+`spec.application.extraFiles.configMaps.container`:: Targets all containers
+`spec.application.extraFiles.configMaps.mountPath`:: Mounts all entries as a directory
+`spec.application.extraFiles.configMaps.secrets.key`:: Specify key for security
+`spec.application.extraFiles.configMaps.secrets.mountPath`:: Mounts all secret entries as a directory
+`spec.application.extraFiles.configMaps.pvcs.name`:: Mounts to /my/path/myclaim1 (using default mountPath)
+`spec.application.extraFiles.configMaps.pvcs.mountPath`:: Overrides default mountPath
+`spec.application.extraEnvs.configMaps.containers`:: Injects into all containers
+`spec.application.secrets.configMaps.containers`:: Injects all keys from secret1
+`spec.application.envs.containers`:: Targets only this container.
 
 The following explicit options are supported:
 
-* No or empty field: Mounts only to the `backstage-backend` container.
+* *No* or an empty field: Mounts only to the `backstanamege-backend` container.
 * `*` (asterisk) as the first and only array element: Mounts to all containers.
-* Explicit container names (for example, `install-dynamic-plugins`): Mounts only to the listed containers.
+* Explicit container names, for example, `install-dynamic-plugins`: Mounts only to the listed containers.
 
 .Verification
 
