@@ -1,0 +1,79 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="proc-enabling-localization-in-quickstarts_{context}"]
+= Enabling Quickstart localization in {product-very-short}
+
+You can enable translation key support for Quickstart titles, descriptions, and CTAs, so that users can onboard in their preferred language. In {product-short}, all existing and newly created Quickstart steps support localization using dedicated translation keys (`titleKey`, `descriptionKey`, `cta.textKey`). 
+
+[NOTE]
+If a translation key is present but the corresponding localized string is missing, the system defaults to the original text defined in the Quickstart configuration (`title`, `description`, `text`). If no translation key is defined at all, the original text is displayed.
+
+.Prerequisites
+* You have enabled localization in your {product-very-short} application.
+
+.Procedure 
+
+. For *all* Quickstart steps (both existing and new) in your configuration file, you must define both the original text and the new localization keys. For example, in the `quickstart` section of your custom `{my-app-config-file}` file, add the `titleKey`, `descriptionKey`, and `textKey` values, as follows:
++
+.`{my-app-config-file}` fragment
+[source,yaml,subs="+quotes"]
+----
+app:
+  quickstart:
+    # Existing Quickstart steps should also be updated with keys
+    - title: 'Setup Authentication' <1> 
+      titleKey: steps.setupAuth.title <2>
+      description: 'Learn the basics of navigating the Developer Hub interface' <3>
+      descriptionKey: steps.setupAuth.description <4>
+      icon: 'home'
+      cta:
+        text: 'Get Started' <5>
+        textKey: steps.setupAuth.ctaTitle <6>
+        link: '/catalog'
+# ...
+----
+<1> (Mandatory) Fallback for the title.
+<2> Key for the translated title.
+<3> (Mandatory) Fallback for the description.
+<4> Key for the translated description.
+<5> (Mandatory) Fallback for the CTA text.
+<6> Key for the translated CTA text.
+
+. In your `dynamic-plugins.yaml` file, add the `translationResources` section to your `red-hat-developer-hub-backstage-plugin-quickstart` configuration, as follows:
++
+.`{my-app-config-file}` fragment
+[source,yaml,subs="+quotes"]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-quickstart
+      disabled: false
+      pluginConfig:
+        dynamicPlugins:
+          frontend:
+            red-hat-developer-hub.backstage-plugin-quickstart:
+              # translationResources definition is required for translations to work
+              translationResources:
+                - importName: quickstartTranslations <1>
+                  ref: quickstartTranslationRef <2>
+              # ... other configurations like mountPoints ...
+----
+<1> Name used to reference the import.
+<2> Reference to the resource definition.
+. In your translation file, map the keys from the first step to the localized strings for each supported language.
++
+.`allTranslations.json` fragment
+[source,yaml,subs="+quotes"]
+----
+"plugin.quickstart": {
+  "en": {
+    "steps.setupAuth.title": "Manage plugins EN",
+    "steps.setupAuth.description": "EN Browse and install extensions to add features, connect with external tools, and customize your experience.",
+    "steps.setupAuth.ctaTitle": "Start"
+  },
+  "fr": {
+    "steps.setupAuth.title": "Gérer les plugins FR",
+    "steps.setupAuth.description": "FR Parcourez et installez des extensions pour ajouter des fonctionnalités, vous connecter à des outils externes et personnaliser votre expérience.",
+    "steps.setupAuth.ctaTitle": "Commencer"
+  }
+}
+----
