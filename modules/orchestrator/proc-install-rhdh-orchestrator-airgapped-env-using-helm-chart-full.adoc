@@ -1,11 +1,11 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="proc-install-rhdh-orchestrator-airgapped-env-using-helm-chart.adoc_{context}"]
-= Installing {product} with Orchestrator in an air-gapped {ocp-short} environment using the Helm chart
+[id="proc-install-rhdh-orchestrator-airgapped-env-using-helm-chart-full.adoc_{context}"]
+= Installing {product} with Orchestrator  in a fully disconnected {ocp-short} environment using the Helm chart
 
 You can install {product} ({product-very-short}) with the Orchestrator plugin in an air-gapped {ocp-short} environment using the Helm chart.
 
-In a network-restricted environment, a disconnected installation prevents unauthorized access, data transfer, or communication with external sources.
+In a fully network-restricted environment, you can mirror images to an intermediary disk, and then mirror from the disk to your target registry.
 
 .Prerequisites
 
@@ -17,7 +17,7 @@ include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 . Mirror the `redhat-developer-hub-orchestrator-infra` chart images to the local registry.
 
-. Create an `ImageSetConfiguration` file for `oc-mirror`. Because `oc-mirror` does not automatically mirror all images required by the Serverless Logic Operator, you must use an `ImageSetConfiguration` file to include them as shown in the following example:
+. Create an `ImageSetConfiguration` file for `oc-mirror`. You must use an `ImageSetConfiguration` file to include all mirrored images required by the Serverless Logic Operator as shown in the following example:
 +
 [source,subs="+attributes,+quotes"]
 ----
@@ -42,6 +42,19 @@ mirror:
             version: "{product-bundle-version}"
           - name: redhat-developer-hub-orchestrator-infra
             version: "{product-bundle-version}"
+  operators:
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.19
+      packages:
+      - name: logic-operator-rhel8
+        channels:
+        - name: alpha
+          minVersion: {rhoserverless-version}.0
+          maxVersion: {rhoserverless-version}.0
+      - name: serverless-operator
+        channels:
+        - name: stable
+          minVersion: {rhoserverless-version}.0
+          maxVersion: {rhoserverless-version}.1
 ----
 +
 Alternatively, you can use the podman commands to find the missing images and add them to the `additionalimages` list if the versions change:
@@ -61,22 +74,38 @@ yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | 
 [source,subs="+attributes,+quotes"]
 ----
 oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
+----
++
+[NOTE]
+====
+The `oc-mirror` command pulls the charts listed in the `ImageSetConfiguration` file and makes them available as `tgz` archives under the `<workspace folder>` directory.
+====
++
+. Transfer the generated mirror archive file, for example, `/path/to/mirror-archive/mirror_seq1_000000.tar`, to a host within your disconnected environment.
+
+. From the host in your disconnected environment, which has access to the mirror registry, mirror the images from the archive file to your target registry. For example:
++
+[source,subs="+attributes,+quotes"]
+----
+oc-mirror --v2 --from <mirror-archive-file> docker://<target-registry-url:port> --workspace file://<workspace folder> --authfile /path/to/authfile
+----
++
+where:
+
+`<mirror-archive-file>`:: Enter the name of the transferred `tar` file.
+
+`<target-registry-url:port>`:: Enter your local registry, for example, `registry.localhost:5000`.
++
+include::snip-installing-the-orchestrator-common-steps.adoc[]
+
+. Apply the cluster-wide resources generated during the push step to redirect all image pulls to your local registry as shown in the following example:
++
++
+[source,subs="+attributes,+quotes"]
+----
 cd <workspace folder>/working-dir/cluster-resources/
 oc apply -f .
 ----
-
-. Optional: Mirror the images for the Serverless Operator {rhoserverless-version} and the Serverless Logic Operator {rhoserverless-version} by using tools like Skopeo or podman.
-+
-For example:
-+
-[source,terminal,subs="+quotes"]
-----
-sudo skopeo copy --authfile /path/to/auth/file --all --preserve-digests
-docker://registry.redhat.io/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
-docker://<registry_path>/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
-----
-+
-include::snip-installing-the-orchestrator-common-steps.adoc[]
 
 . Apply the `redhat-developer-hub-orchestrator-infra` Helm chart and approve the install plans. See {installing-in-air-gap-book-link}#assembly-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped[Air-gapped installation with Helm chart instructions] for details.
 
