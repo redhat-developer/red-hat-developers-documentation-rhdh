@@ -3,7 +3,7 @@
 [id="proc-installing-and-configuring-lightspeed_{context}"]
 = Installing and configuring {ls-brand-name}
 
-You must install and configure the {ls-short}, {lcs-short}, and Llama Stack container manually.
+You must install and configure the {ls-short}, {lcs-short}, and Llama Stack containers manually.
 
 .Prerequisites
 * You are logged into your {ocp-short} account.
@@ -14,6 +14,11 @@ You must install and configure the {ls-short}, {lcs-short}, and Llama Stack cont
 .Procedure
 
 . Create the {lcs-short} ConfigMap (`lightspeed-stack.yaml`).
++
+[IMPORTANT]
+====
+You must name the {lcs-short} ConfigMap as `lightspeed-stack.yaml`.
+====
 .. In the {ocp-short} web console, go to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMaps*.
 .. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via*, and edit the file as shown in the following example:
@@ -48,10 +53,11 @@ conversation_cache:
 mcp_servers:
   - name: mcp::backstage
     provider_id: model-context-protocol
-    url: https://rhdh-mcp-proxy-apicast-production.apps.rosa.redhat-ai-dev.m6no.p3.openshiftapps.com:443/api/mcp-actions/v1
+    url: https://<RHDH_HOST>/api/mcp-actions/v1
 ----
 where:
 `mcp_servers:name`:: This value must match the entry in the {ls-short} app config file for MCP servers.
+`model-context-protocol`:: This is the tool runtime provider defined and configured in the llama-stack `run.yaml` configuration for use in {lcs-short}.
 
 .. Click *Create*.
 
@@ -62,24 +68,224 @@ where:
 +
 [source,yaml]
 ----
+version: '2'
+image_name: minimal-viable-llama-stack-configuration
+
+apis:
+  - agents
+  - datasetio
+  - eval
+  - inference
+  - post_training
+  - safety
+  - scoring
+  - telemetry
+  - tool_runtime
+  - vector_io
+benchmarks: []
+container_image: null
+datasets: []
+external_providers_dir: "/app-root/config/providers.d"
+inference_store:
+  db_path: .llama/distributions/ollama/inference_store.db
+  type: sqlite
+logging: null
+metadata_store:
+  db_path: .llama/distributions/ollama/registry.db
+  namespace: null
+  type: sqlite
 models:
-  - model_id: sentence-transformers/all-mpnet-base-v2
-    metadata:
+- model_id: sentence-transformers/all-mpnet-base-v2
+  metadata:
       embedding_dimension: 768
-    model_type: embedding
-    provider_id: sentence-transformers
-    provider_model_id: "/app-root/embeddings_model"
+  model_type: embedding
+  provider_id: sentence-transformers
+  provider_model_id: "/app-root/embeddings_model"
 providers:
+  agents:
+  - config:
+      persistence_store:
+        db_path: .llama/distributions/ollama/agents_store.db
+        namespace: null
+        type: sqlite
+      responses_store:
+        db_path: .llama/distributions/ollama/responses_store.db
+        type: sqlite
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
+  datasetio:
+  - config:
+      kvstore:
+        db_path: .llama/distributions/ollama/huggingface_datasetio.db
+        namespace: null
+        type: sqlite
+    provider_id: huggingface
+    provider_type: remote::huggingface
+  - config:
+      kvstore:
+        db_path: .llama/distributions/ollama/localfs_datasetio.db
+        namespace: null
+        type: sqlite
+    provider_id: localfs
+    provider_type: inline::localfs
+  eval:
+  - config:
+      kvstore:
+        db_path: .llama/distributions/ollama/meta_reference_eval.db
+        namespace: null
+        type: sqlite
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
   inference:
-  - provider_id: team-cluster
-    provider_type: remote::vllm
+    - provider_id: vllm
+      provider_type: remote::vllm
+      config:
+        url: ${env.VLLM_URL}
+        api_token: ${env.VLLM_API_KEY}
+        max_tokens: ${env.VLLM_MAX_TOKENS:=4096}
+        tls_verify: ${env.VLLM_TLS_VERIFY:=true}
+    - provider_id: sentence-transformers
+      provider_type: inline::sentence-transformers
+      config: {}
+  post_training:
+  - config:
+      checkpoint_format: huggingface
+      device: cpu
+      distributed_backend: null
+      dpo_output_dir: "."
+    provider_id: huggingface
+    provider_type: inline::huggingface
+  safety:
+    - config:
+        excluded_categories: []
+      provider_id: llama-guard
+      provider_type: inline::llama-guard
+    - provider_id: lightspeed_question_validity
+      provider_type: inline::lightspeed_question_validity
+      config:
+        model_id: ${env.VALIDATION_PROVIDER:=vllm}/${env.VALIDATION_MODEL_NAME}
+        model_prompt: |-
+          Instructions:
+
+          You area question classification tool. You are an expert in the following categories:
+          - Backstage
+          - Red Hat Developer Hub (RHDH)
+          - Kubernetes
+          - Openshift
+          - CI/CD
+          - GitOps
+          - Pipelines
+          - Developer Portals
+          - Deployments
+          - Software Catalogs
+          - Software Templates
+          - Tech Docs
+          
+          Your job is to determine if a user's question is related to the categories you are an expert in. If the question is related to those categories, \
+          or any features that may be related to those categories, you will answer with ${allowed}.
+
+          If a question is not related to your expert categories, answer with ${rejected}.
+
+          You do not need to explain your answer.
+
+          Below are some example questions:
+          Example Question:
+          Why is the sky blue?
+          Example Response:
+          ${rejected}
+
+          Example Question:
+          Can you help configure my cluster to automatically scale?
+          Example Response:
+          ${allowed}
+
+          Example Question:
+          How do I create import an existing software template in Backstage?
+          Example Response:
+          ${allowed}
+
+          Example Question:
+          How do I accomplish a task in RHDH?
+          Example Response:
+          ${allowed}
+
+          Example Question:
+          How do I explore a component in RHDH catalog?
+          Example Response:
+          ${allowed}
+
+          Example Question:
+          How can I integrate GitOps into my pipeline?
+          Example Response:
+          ${allowed}
+
+          Question:
+          ${message}
+          Response:
+        invalid_question_response: |-
+          Hi, I'm the Red Hat Developer Hub Lightspeed assistant, I can help you with questions about Red Hat Developer Hub or Backstage.
+          Please ensure your question is about these topics, and feel free to ask again!
+  scoring:
+  - config: {}
+    provider_id: basic
+    provider_type: inline::basic
+  - config: {}
+    provider_id: llm-as-judge
+    provider_type: inline::llm-as-judge
+  - config:
+      openai_api_key: '********'
+    provider_id: braintrust
+    provider_type: inline::braintrust
+  telemetry:
+  - config:
+      service_name: 'lightspeed-stack-telemetry'
+      sinks: sqlite
+      sqlite_db_path: .llama/distributions/ollama/trace_store.db
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
+  tool_runtime:
+  - provider_id: model-context-protocol
+    provider_type: remote::model-context-protocol
+    config: {}
+  - provider_id: rag-runtime 
+    provider_type: inline::rag-runtime
+    config: {}
+  vector_io:
+  - config:
+      kvstore:
+        db_path: .llama/distributions/ollama/faiss_store.db
+        namespace: null
+        type: sqlite
+    provider_id: faiss
+    provider_type: inline::faiss
+  - provider_id: rhdh-docs 
+    provider_type: inline::faiss
     config:
-      url: _<llm-server>_/v1
-      api-token: <token>
-  - provider_id: openai
-    provider_type: remote::openai
-    config:
-      api_key: _<openai_api_key>_
+      kvstore:
+        type: sqlite
+        namespace: null
+        db_path: /app-root/vector_db/rhdh_product_docs/1.7/faiss_store.db
+scoring_fns: []
+server:
+  auth: null
+  host: null
+  port: 8321
+  quota: null
+  tls_cafile: null
+  tls_certfile: null
+  tls_keyfile: null
+shields:
+  - shield_id: lightspeed_question_validity-shield
+    provider_id: lightspeed_question_validity
+tool_groups:
+- provider_id: rag-runtime
+  toolgroup_id: builtin::rag
+  description: "Only use for questions specifically about Red Hat Developer Hub (RHDH). Searches technical documentation for RHDH installation, discovery, configuration, release, upgrade, control access, integration, observability, and extending with plugins. Do not use for any other topic outside RHDH."
+vector_dbs:
+- embedding_dimension: 768
+  embedding_model: sentence-transformers/all-mpnet-base-v2
+  provider_id: rhdh-docs
+  vector_db_id: rhdh-product-docs-1_7
 ----
 where:
 `_<llm_server>_`:: Enter your LLM server details.
@@ -282,21 +488,17 @@ includes:
 ----
     - name: PROJECT
       value: rhdh
-    - name: LCS_CONFIG_FILE
-      value: /app-root/config/lightspeed-stack.yaml
-    - name: RHDH_CONFIG_FILE
-      value: /app-root/config/app-config-rhdh.yaml
     - name: LLAMA_CONFIG_FILE
       value: /app-root/config/llama-stack/run.yaml
 ----
 +
 [NOTE]
 ====
-Your {product-very-short} container is typically already present in your CR. You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
+* Your {product-very-short} container is typically already present in your CR. You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
 ====
 ... Click *Save*. The Pods are automatically restarted.
 +
-.Example of a Backstage CR with the {lcs-short} container
+.Example of a Backstage CR with the {lcs-short} and Llama Stack container
 [source,yaml,subs=+attributes]
 ----
 kind: Backstage
@@ -439,10 +641,6 @@ extraVolumes:
       - env:
           - name: PROJECT
             value: rhdh
-          - name: LCS_CONFIG_FILE
-            value: /app-root/config/lightspeed-stack.yaml
-          - name: RHDH_CONFIG_FILE
-            value: /app-root/config/lightspeed-app-config.yaml
         envFrom:
           - secretRef:
               name: lightspeed-secrets
@@ -456,9 +654,6 @@ extraVolumes:
           - mountPath: /app-root/config/lightspeed-stack.yaml
             name: lightspeed-stack
             subPath: lightspeed-stack.yaml
-          - mountPath: /app-root/config/lightspeed-app-config.yaml
-            name: lightspeed-app-config
-            subPath: app-config.yaml
           - mountPath: /app-root/run.yaml
             name: llama-stack-config
             subPath: run.yaml
@@ -491,12 +686,8 @@ upstream:
      - env:
          - name: PROJECT
            value: rhdh
-         - name: LCS_CONFIG_FILE
-           value: /app-root/config/lcsconfig.yaml
          - name: LLAMA_STACK_CONFIG_FILE
            value: /app-root/run.yaml
-         - name: RHDH_CONFIG_FILE
-           value: /app-root/config/lightspeed-app-config.yaml
        envFrom:
          - secretRef:
              name: lightspeed-secrets
@@ -513,9 +704,6 @@ upstream:
          - mountPath: /app-root/run.yaml
            name: llama-stack-config
            subPath: run.yaml
-         - mountPath: /app-root/config/lightspeed-app-config.yaml
-           name: lightspeed-app-config
-           subPath: lightspeed-app-config.yaml
    extraEnvVars:
      ...
    extraEnvVarsSecrets:
