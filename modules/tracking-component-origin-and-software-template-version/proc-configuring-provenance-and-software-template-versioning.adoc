@@ -1,0 +1,49 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-provenance-and-software-template-versioning_{context}"]
+= Configuring provenance and Software Template versioning {product}
+
+As a platform engineer, you must modify the Software Template YAML definition to ensure the required provenance information is added during the scaffolding process.
+
+.Prerequisites
+
+* You have administrator rights to {product}.
+
+.Procedure
+
+. Locate the Software Template object YAML file where you want to add the provenance information and add a step that uses the `catalog:scaffolded-from` action. This action links the resulting catalog entity back to the source template.
+. Optional: To track the template version (for example, v1.0 versus v1.5), include the `catalog:template:version` action in the `steps` section.
++
+[NOTE]
+====
+This action reads a version parameter defined in the template and applies it as an annotation to the resulting catalog entity.
+====
++
+[source,yaml]
+----
+# Example: Adding the versioning action to the steps section
+steps:
+  - id: create-version-annotation
+    name: Create Template Version Annotation
+    action: catalog:template:version
+    input:
+      templateVersion: ${{ parameters.version }} # Reads the version parameter
+  - ... other steps ...
+----
+
+. Modify the `catalog.rules` and `catalog.locations` sections in your `{product} app-config.yaml` file to register and import the updated Software Template into your {product-very-short} instance.
+
+.Verification
+
+After creating a component with the updated template, verify the provenance annotations in the resulting Catalog Entity YAML.
+
+. In the {product} navigation menu, go to *Catalog* and locate the newly created catalog component.
+. To view the underlying data that links the entity to the template, select the **INSPECT ENTITY** option.
+. To verify provenance annotations, complete the following steps:
+.. Select the *YAML Raw* or *JSON Raw* view and verify the presence of the data item for the `scaffoldedFrom` link.
+.. Optional: If versioning was included, verify the presence of the `backstage.io/template-version` annotation.
++
+[NOTE]
+====
+If you publish the catalog component to an external repository (such as Git), the component file in that repository must also contain the `backstage.io/template-version` annotation.
+====
