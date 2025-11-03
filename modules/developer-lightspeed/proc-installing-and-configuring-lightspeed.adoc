@@ -529,7 +529,39 @@ spec:
 ----
 For detailed information, see {authorization-book-link}##con-rbac-conditional-policies-rhdh_title-authorization[Managing authorizations by using external files].
 
-.. For a Helm-installed {product-very-short} instance, see {authorization-book-link}##defining-authorizations-in-external-files-by-using-helm[Defining authorizations in external files by using Helm].
+.. For a Helm-installed {product-very-short} instance,  define permissions and roles for your users who are not administrators by completing the following steps:
+... The RBAC plugin is installed but disabled by default. To enable the `./dynamic-plugins/dist/backstage-community-plugin-rbac plugin`, edit your `dynamic-plugins.yaml` with the following content:
++
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-rbac
+    disabled: false
+----
+... Configure the required RBAC permission by defining an `rbac-policies.csv` file as shown in the following example:
++
+[source,yaml]
+----
+p, role:default/_<your_team>_, lightspeed.chat.read, read, allow
+p, role:default/_<your_team>_, lightspeed.chat.create, create, allow
+p, role:default/_<your_team>_, lightspeed.chat.delete, delete, allow
+
+g, user:default/_<your_user>_, role:default/_<your_team>_
+----
+... Declare policy administrators to enable a select number of authenticated users to configure RBAC policies through the REST API or Web UI, instead of modifying the CSV file directly. The permissions can be specified in a separate CSV file referenced in your `my-rhdh-app-config` config map, or permissions can be created using the REST API or Web UI.
+To declare users such as _<your_policy_administrator_name>_ as policy administrators, edit your custom {product-very-short} ConfigMap, such as `app-config-rhdh`, and add following code to the `app-config.yaml` content:
++
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/<your_policy_administrator_name>
+----
+
+See {authorization-book-link}##defining-authorizations-in-external-files-by-using-helm[Defining authorizations in external files by using Helm].
 
 .Verification
 
