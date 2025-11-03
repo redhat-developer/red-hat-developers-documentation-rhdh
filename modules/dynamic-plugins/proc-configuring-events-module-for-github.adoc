@@ -16,26 +16,12 @@ For more information about the support scope of Red Hat Developer Preview featur
 ====
 
 .Prerequisites
-* For GitHub Discovery only: you have enabled {product-docs-link}/html-single/integrating_red_hat_developer_hub_with_github/index#enabling-github-repository-discovery[GitHub Discovery].
-* For GitHub Organizational Data only: you have enabled {product-docs-link}/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-github [Github Authentication with user ingestion].
+* You have added your GitHub integration credentials in the `app-config.yaml` file.
+* You have defined the `schedule.frequency` in the `app-config.yaml` file as longer time period, such as 24 hours.
+* For GitHub Discovery only: You have enabled {product-docs-link}/html-single/integrating_red_hat_developer_hub_with_github/index#enabling-github-repository-discovery[GitHub Discovery].
+* For GitHub Organizational Data only: You have enabled {product-docs-link}/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-github [Github Authentication with user ingestion].
 
 .Procedure
-
-. Add your GitHub integration credentials in the `app-config.yaml` file:
-+
-[source,yaml]
-----
-integrations:
-github:
-- host: github.com
-token: ${GITHUB_PAT_TOKEN}
-----
-. Create a GitHub webhook with the following specifications:
-** *For Github Discovery Events*: push, repository
-** *For Github Organizational Data Events*: organization,team and membership
-** *Content Type*: application/json
-** *Payload URL*: https://<your_instance_name>/api/events/http/github
-
 . Add the GitHub Events Module to your `dynamic-plugins.yaml` configuration file:
 +
 [source,yaml]
@@ -48,7 +34,6 @@ plugins:
 - package: oci://redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-events-backend-module-github:bs_1.42.5__0.4.3!backstage-plugin-events-backend-module-github
 disabled: false
 ----
-
 . Add the following HTTP events configuration to the `app-config.yaml` file:
 +
 [source,yaml]
@@ -58,17 +43,34 @@ events:
     github:
       webhookSecret: ${GITHUB_WEBHOOK_SECRET}
 ----
+. Create a GitHub webhook with the following specifications:
+** *For Github Discovery Events*: push, repository
+** *For Github Organizational Data Events*: organization,team and membership
+** *Content Type*: application/json
+** *Payload URL*: https://<your_instance_name>/api/events/http/github
 
 .Verification
-* Github Discovery:
+* Check the log for an entry that confirms that http endpoint was set up successfully to receive events from the GitHub webhook.
++
+Example of a log of successfully set up http endpoint::
++
+[source,code]
+----
+{"level":"\u001b[32minfo\u001b[39m","message":"Registered /api/events/http/github to receive events","plugin":"events","service":"backstage","timestamp":"2025-11-03 02:19:12"}
+----
+* For GitHub Discovery only:
 ** Trigger a GitHub push event by adding,
 modifying or deleting the  `catalog-info.yaml` file in the repository where you set up your webhook.
 A record of this event should appear in the pod logs of your {product-very-short} instance.
 +
 Example of a log with changes to `catalog-info.yaml` file::
++
 [source,code]
 ----
 {"level":"\u001b[32minfo\u001b[39m","message":"Processed Github push event: added 0 - removed 0 - modified 1","plugin":"catalog","service":"backstage","span_id":"47534b96c4afc654","target":"github-provider:providerId","timestamp":"2025-06-15 21:33:14","trace_flags":"01","trace_id":"ecc782deb86aed2027da0ae6b1999e5c"}
 ----
+
+* For GitHub Organizationl Data only:
+** Newly added users and teams appear in the {product-very-short} catalog.
 
 
