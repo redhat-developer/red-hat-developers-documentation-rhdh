@@ -7,11 +7,11 @@ You can install {product} with Orchestrator plugin in a fully air-gapped environ
 
 A disconnected installation prevents unauthorized access, data transfer, or communication with external sources.
 
-You can use the helper script to install {product} with Orchestrator plugin by mirroring the Operator-related images to disk and transferring them to your your disconnected environment without any connection to the internet.
+You can use the helper script to install {product} by mirroring the Operator-related images to disk and transferring them to your your disconnected environment without any connection to the internet.
 
 .Prerequisites
 
-* You have mirrored the {product} Operator images to the local registry using the {product-very-short} mirroring script and a custom `ImageSetConfiguration` file. For {product-very-short} installation using Operator, the mirroring script automatically deploys the {product-very-short} Operator for you.
+* You have mirrored the {product} Operator images to the local registry using the {product-very-short} mirroring script. For more information, see {installing-in-air-gap-book-link}#proc-install-rhdh-operator-airgapped-full.adoc_title-install-rhdh-air-grapped[Installing {product} in a fully disconnected environment with the Operator].
 
 include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
@@ -63,9 +63,7 @@ yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | 
 +
 [source,subs="+attributes,+quotes"]
 ----
-oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
-cd <workspace folder>/working-dir/cluster-resources/
-oc apply -f .
+oc-mirror --config=ImageSetConfiguration.yaml file:///path/to/mirror-archive --authfile /path/to/authfile  --v2
 ----
 +
 [NOTE]
@@ -73,7 +71,7 @@ oc apply -f .
 The `oc-mirror` command generates a local workspace containing the mirror archive files and the required cluster manifests.
 ====
 +
-. Transfer the directory specified by `/path/to/mirror/dir/on/disk` to a bastion host within your disconnected environment.
+. Transfer the directory specified by `/path/to/mirror-archive` to a bastion host within your disconnected environment.
 
 . From the bastion host which has access to the mirror registry, mirror the images from the disk directory to your target registry. For example:
 +
@@ -88,8 +86,6 @@ where:
 
 `<target-registry-url:port>`:: Enter your local registry, for example, `registry.localhost:5000`.
 +
-include::snip-installing-the-orchestrator-common-steps.adoc[]
-
 . Apply the cluster-wide resources generated during the push step to redirect all image pulls to your local registry as shown in the following example:
 +
 +

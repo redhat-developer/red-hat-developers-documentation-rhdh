@@ -13,11 +13,7 @@ include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 .Procedure
 
-. Mirror the {product} {product-version} Helm chart images to the local registry. See {installing-in-air-gap-book-link}#assembly-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped[Installing {product} on {ocp-short} in an air-gapped environment with the Helm chart] for instructions.
-
-. Mirror the `redhat-developer-hub-orchestrator-infra` chart images to the local registry.
-
-. Create an `ImageSetConfiguration` file for `oc-mirror`. You must use an `ImageSetConfiguration` file to include all mirrored images required by the Serverless Logic Operator as shown in the following example:
+. Create an `ImageSetConfiguration.yaml` file for `oc-mirror`. You must use an `ImageSetConfiguration` file to include all mirrored images required by the Serverless Logic Operator as shown in the following example:
 +
 [source,subs="+attributes,+quotes"]
 ----
@@ -73,15 +69,15 @@ yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | 
 +
 [source,subs="+attributes,+quotes"]
 ----
-oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
+oc-mirror --config=ImageSetConfiguration.yaml file:///path/to/mirror-archive --authfile /path/to/authfile  --v2
 ----
 +
 [NOTE]
 ====
-The `oc-mirror` command pulls the charts listed in the `ImageSetConfiguration` file and makes them available as `tgz` archives under the `<workspace folder>` directory.
+The `oc-mirror` command pulls the charts listed in the `ImageSetConfiguration` file and makes them available as `tgz` archives under the `/path/to/mirror-archive` directory.
 ====
 +
-. Transfer the generated mirror archive file, for example, `/path/to/mirror-archive/mirror_seq1_000000.tar`, to a bastion host within your disconnected environment.
+. Transfer the generated mirror archive file, for example, `/path/to/mirror-archive/mirror_000001.tar`, to a bastion host within your disconnected environment.
 
 . From the bastion host in your disconnected environment, which has access to the mirror registry, mirror the images from the archive file to your target registry. For example:
 +
