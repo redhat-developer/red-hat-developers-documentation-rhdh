@@ -1,0 +1,75 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-injecting-custom-files-and-environment-variables-into-backstage-containers"]
+= Injecting custom files and environment variables into backstage containers
+
+You can mount extra files, such as a ConfigMaps, Secrets or PVCs and inject environment variables into your {product-very-short} containers by configuring the `extraFiles` and `extraEnvs` fields in your `{product-custom-resource-type}` custom resource (CR).
+
+By default, files mount only to the backstage-backend container. If the containers field is not specified, the volume mounts only to the `backstage-backend` container. You can also specify other targets, including a list of containers by name (such as `dynamic-plugin-install` or `selectcustom` sidecars) or select all containers in the {backstage} Pod.
+
+By default, files mount only to the `backstage-backend` container, but you can target other containers explicitly using the `containers` field.
+
+.Prerequisites
+* You have developer permissions to access the {ocp-short} cluster containing your {product-short} instance using the {openshift-cli}.
+* {installing-on-ocp-book-link}[Your {ocp-short} administrator has installed the {product} Operator in {ocp-short}].
+
+.Procedure
+
+. Apply the configuration to your `{product-custom-resource-type} custom resource (CR)`. The following code block is an example:
++
+[source,yaml]
+----
+spec:
+  application:
+    extraEnvs:
+      configMaps:
+        - name: _<configmap_name_env_var>_
+          key: _<env_var_key>_
+          containers:
+            - "*"
+      secrets:
+        - name: _<secret_name_all_envs>_
+      envs:
+        - name: _<static_env_var_name>_
+          value: "_<static_env_var_value>_"
+          containers:
+           - install-dynamic-plugins
+----
+where:
+
+`spec.application.extraEnvs.configMaps.containers`:: Injects the specified ConfigMap key as an environment variable into all containers (`"*"`).
+`spec.application.extraEnvs.secrets.name`:: Injects all keys from the Secret as environment variables into the default container.
+`spec.application.envs.containers`:: Targets only the listed container for the static environment variable injection.
+
+[NOTE]
+====
+The following explicit options are supported:
+
+* *No* or an empty field: Mounts only to the `backstanamege-backend` container.
+* `*` (asterisk) as the first and only array element: Mounts to all containers.
+* Explicit container names, for example, `install-dynamic-plugins`: Mounts only to the listed containers.
+====
+
+.Verification
+
+The files are mounted with the following correct paths and container targets:
+
+[cols="1,2,3,2", options="header"]
+|===
+| Resource | Target type | Path(s) or name(s) | Container(s)
+
+| ConfigMap (`<configmap_name_env_var>`)
+| Env Var
+| `<env_var_key>`
+| All
+
+| Secret (`<secret_name_all_envs>`)
+| Env Var
+| `<secret_key_a>`, `<secret_key_b>`
+| `backstage-backend`
+
+| CRD (`envs`)
+| Env Var
+| `<static_env_var_name> = <static_env_var_value>`
+| `install-dynamic-plugins`
+|===
