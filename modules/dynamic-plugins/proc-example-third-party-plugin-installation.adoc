@@ -1,15 +1,15 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="ref-example-third-party-plugin-installation_{context}"]
-= Example of installing a third-party plugin in {product}
+= Example of installing a custom plugin in {product}
 
 This section describes the process for integrating the Todo plugin into your {product-short}.
 
 .Procedure
-. *Obtain the third-party plugin source code*: Clone the plugins repository and navigate to the link:https://github.com/backstage/community-plugins/tree/main/workspaces/todo/plugins[Todo plugin] directory:
+. *Obtain the custom plugin source code*: Clone the plugins repository and navigate to the link:https://github.com/backstage/community-plugins/tree/main/workspaces/todo/plugins[Todo plugin] directory:
 +
 --
-.Obtain the third-party plugin source code
+.Obtain the custom plugin source code
 [source,terminal]
 ----
 $ git clone https://github.com/backstage/community-plugins
@@ -161,3 +161,196 @@ packages:
    disabled: false
 ----
 --
+
+
+// = [UPDATED] Example of installing a custom plugin in {product}
+
+// .Prerequisites
+// * Node.js: ~20.x
+// * Yarn: ~4.x
+// * oc: The OpenShift CLI client.
+// * An active OpenShift cluster with an operator-based installation of Red Hat Developer Hub.
+// * Access to an OCI-compliant container registry (this guide will use the internal OpenShift registry).
+
+// .Procedure
+// * Ensure all dependencies are installed and the plugin source code is built.
+// +
+// [source,terminal]
+// ----
+// # Install dependencies and build the project
+// yarn install
+// yarn tsc
+// yarn build
+// ----
+
+// * Step 2
+// +
+// .Plugin definitions in `dynamic-plugins.yaml` file
+// [source,yaml]
+// ----
+// Test
+// ----
+//
+
+= [Updated] Example of installing a custom plugin in {product}
+
+This section describes the process for integrating a Simple Chat custom plugin into your {product-short}.
+
+.Prerequisites
+* Node.js: ~20.x
+* Yarn: ~4.x
+* oc: The OpenShift CLI client.
+* An active OpenShift cluster with an operator-based installation of Red Hat Developer Hub.
+Access to an OCI-compliant container registry (this guide will use the internal OpenShift registry).
+
+.Procedure
+. Clone the link:https://github.com/gashcrumb/dynamic-plugins-getting-started[plugins repository] and navigate to the root directory (`dynamic-plugins-getting-started`):
++
+[source,terminal]
+----
+$ git clone https://github.com/gashcrumb/dynamic-plugins-getting-started
+$ cd dynamic-plugins-getting-started
+----
+
+. Ensure all dependencies are installed and the plugin source code is built.
++
+[source,terminal]
+----
+$ yarn install
+$ yarn tsc
+$ yarn build
+----
+
+. Run the following commands to build the Simple Chat plugin, adjust package dependencies for dynamic loading, and generate self-contained configuration schema:
++
+[source,terminal]
+----
+$ npx @red-hat-developer-hub/cli@latest plugin export
+----
++
+.Output of the `@red-hat-developer-hub/cli@latest plugin export` command
+[source,terminal]
+----
+Using generated command to export plugin package plugins/simple-chat/package.json
+  executing     /Users/gforde/.nvm/versions/node/v20.18.1/bin/node /Users/gforde/.npm/_npx/a905a0daa334e91d/node_modules/.bin/rhdh-cli plugin export ✔ 
+Using generated command to export plugin package plugins/simple-chat-backend/package.json
+  executing     /Users/gforde/.nvm/versions/node/v20.18.1/bin/node /Users/gforde/.npm/_npx/a905a0daa334e91d/node_modules/.bin/rhdh-cli plugin export ✔ 
+Copying 'plugins/simple-chat/dist-dynamic' to '/var/folders/hs/ykpwk4x95dxdvvv2sqf5xf1h0000gn/T/package-dynamic-plugins3tRJvM/red-hat-developer-hub-backstage-plugin-simple-chat
+Copying 'plugins/simple-chat-backend/dist-dynamic' to '/var/folders/hs/ykpwk4x95dxdvvv2sqf5xf1h0000gn/T/package-dynamic-plugins3tRJvM/red-hat-developer-hub-backstage-plugin-simple-chat-backend
+Writing plugin registry metadata to '/var/folders/hs/ykpwk4x95dxdvvv2sqf5xf1h0000gn/T/package-dynamic-plugins3tRJvM/index.json'
+Writing exported plugins to ./dynamic-plugins-root
+
+Here is an example dynamic-plugins.yaml for these plugins: 
+
+plugins:
+  - package: ./local-plugins/red-hat-developer-hub-backstage-plugin-simple-chat
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-simple-chat:
+            appIcons:
+              - name: chatIcon
+                importName: ChatIcon
+            dynamicRoutes:
+              - path: /simple-chat
+                importName: SimpleChatPage
+                menuItem:
+                  text: Simple Chat
+                  icon: chatIcon
+  - package: ./local-plugins/red-hat-developer-hub-backstage-plugin-simple-chat-backend
+    disabled: false
+----
+
+. Run the following commands to navigate to the workspace directory and package the dynamic plugin to build the OCI image:
++
+.Log in to Quay.io
+[source,terminal]
+----
+$ podman login quay.io
+----
++
+.Package the plugins
+[source,terminal]
+----
+# Set your Quay.io username
+$ export QUAY_USERNAME=<your-quay-username>
+
+# Package all workspace plugins into a single OCI artifact
+$ npx -y @red-hat-developer-hub/cli plugin package --tag quay.io/$QUAY_USERNAME/simple-chat:latest
+----
++
+.Output of building an OCI image commands
+[source,terminal]
+----
+  executing     podman --version ✔
+Using existing 'dist-dynamic' directory at plugins/todo
+Using existing 'dist-dynamic' directory at plugins/todo-backend
+Copying 'plugins/todo/dist-dynamic' to '/var/folders/5c/67drc33d0018j6qgtzqpcsbw0000gn/T/package-dynamic-pluginsmcP4mU/backstage-community-plugin-todo
+No plugin configuration found at undefined create this file as needed if this plugin requires configuration
+Copying 'plugins/todo-backend/dist-dynamic' to '/var/folders/5c/67drc33d0018j6qgtzqpcsbw0000gn/T/package-dynamic-pluginsmcP4mU/backstage-community-plugin-todo-backend-dynamic
+No plugin configuration found at undefined create this file as needed if this plugin requires configuration
+Writing plugin registry metadata to '/var/folders/5c/67drc33d0018j6qgtzqpcsbw0000gn/T/package-dynamic-pluginsmcP4mU/index.json'
+Creating image using podman
+  executing     echo "from scratch
+COPY . .
+" | podman build --annotation com.redhat.rhdh.plugins='[{"backstage-community-plugin-todo":{"name":"@backstage-community/plugin-todo","version":"0.2.40","description":"A Backstage plugin that lets you browse TODO comments in your source code","backstage":{"role":"frontend-plugin","pluginId":"todo","pluginPackages":["@backstage-community/plugin-todo","@backstage-community/plugin-todo-backend"]},"homepage":"https://backstage.io","repository":{"type":"git","url":"https://github.com/backstage/community-plugins","directory":"workspaces/todo/plugins/todo"},"license":"Apache-2.0"}},{"backstage-community-plugin-todo-backend-dynamic":{"name":"@backstage-community/plugin-todo-backend","version":"0.3.19","description":"A Backstage backend plugin that lets you browse TODO comments in your source code","backstage":{"role":"backend-plugin","pluginId":"todo","pluginPackages":["@backstage-community/plugin-todo","@backstage-community/plugin-todo-backend"]},"homepage":"https://backstage.io","repository":{"type":"git","url":"https://github.com/backstage/community-plugins","directory":"workspaces/todo/plugins/todo-backend"},"license":"Apache-2.0"}}]' -t 'quay.io/user/backstage-community-plugin-todo:v0.1.1' -f - .
+    ✔
+Successfully built image quay.io/user/backstage-community-plugin-todo:v0.1.1 with following plugins:
+  backstage-community-plugin-todo
+  backstage-community-plugin-todo-backend-dynamic
+
+Here is an example dynamic-plugins.yaml for these plugins:
+
+plugins:
+  - package: oci://quay.io/user/backstage-community-plugin-todo:v0.1.1!backstage-community-plugin-todo
+    disabled: false
+  - package: oci://quay.io/user/backstage-community-plugin-todo:v0.1.1!backstage-community-plugin-todo-backend-dynamic
+    disabled: false
+----
++
+.Push the OCI image to a container registry:
+[source,terminal]
+----
+$ podman push quay.io/$QUAY_USERNAME/simple-chat:latest
+----
++
+.Output of pushing the OCI image command
+[source,terminal]
+----
+Getting image source signatures
+Copying blob sha256:6f59cf3a1288edf82f8aacd1e812270b6b64aa0db9975ddae680611432022fd3
+Copying config sha256:4d958f5f2812ce733588c76443912848f1ab2ff38a8ed3236826b0df8099c160
+Writing manifest to image destination
+----
++
+[NOTE]
+Copy the  plugins YAML block from the command's output. You will paste it into your ConfigMap in the next step.
+
+. To install and configure the third-party plugin, add the following plugin configuration to your `dynamic-plugins.yaml` file:
++
+.Plugin configuration in `dynamic-plugins.yaml` file
+[source,yaml]
+----
+plugins:
+  - package: oci://quay.io/gforde/simple-chat:latest!red-hat-developer-hub-backstage-plugin-simple-chat
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-simple-chat:
+            appIcons:
+              - name: chatIcon
+                importName: ChatIcon
+            dynamicRoutes:
+              - path: /simple-chat
+                importName: SimpleChatPage
+                menuItem:
+                  text: Simple Chat
+                  icon: chatIcon
+  - package: oci://quay.io/gforde/simple-chat:latest!red-hat-developer-hub-backstage-plugin-simple-chat-backend
+    disabled: false
+----
+
+.Verification
+When you redeploy {product-short}, the "Simple Chat" plugin will appear in the sidebar.
