@@ -27,29 +27,12 @@ Structure and Extensibility:::
 Data flow and runtime management::
 +
 Controlling data flow is critical for efficient workflows. Tasks are the fundamental computing units of a workflow. The Domain Specific Language defines several default task types that runtimes must do. These include `Do`, `Listen`, `Raise`, `Run`, `Try`, and `Wait`.
-+
-You can apply data transformations at several key points:
-
-Workflow input validation::: Before the workflow starts, validate input data against the `input.schema` and use the top-level `input.from` expression to filter out data that is not relevant data to the workflow context.
-
-Task Input/Output::: Before a task runs, transform its input using the `input.from` to match specific task requirements. After the task completes, use `output.as` runtime expression to transform its output before it is passed to the next task.
-
-Context Management::: Use the `export.as` runtime expression to update the context of the workflow. This evaluates the transformed task output, making sure the final output is accurate and relevant.
-
-Workflow output transformation::: Finally, transform the overall workflow output using `output.as` before returning it to the caller, making sure the final output is relevant.
 
 Security and error handling::
 +
-Secrets::: Use Secrets with caution. Use them within the `input.from` runtime expression to prevent them from being unintentionally exposed. Avoid passing them directly in expressions or call inputs as this might expose sensitive information.
+Secrets::: Use Secrets with caution. Avoid passing them directly in call inputs as this might expose sensitive information.
 
 Fault tolerance and error handling::: Serverless Workflow is designed with resilience in mind to recover from failures.
-+
-Standard Errors:::: Use _standard error types_, such as timeouts, to categorize errors consistently across different runtimes. These also facilitate seamless migration from one runtime environment to another.
-Describe errors using the _Problem Details Request for Comments (RFC)_, with the `instance` property pointing to the component causing the error.
-
-Retries:::: Use `try` blocks to implement retries for transient errors, such as a temporary network issue.
-
-Timeouts:::: Configure timeouts for workflows and individual tasks. If a timeout occurs, you must interrupt the execution, and a standard timeout error with the type `https://serverlessworkflow.io/spec/0.8/errors/timeout` and status `408`is raised.
 
 Orchestrator UI integration best practices::
 +
@@ -72,20 +55,18 @@ version: "0.8"
 specVersion: "0.8"
 name: My Workflow
 start: ImmediatelyEnd
+dataInputSchema: schemas/basic__main-schema.json
 extensions:
   - extensionid: workflow-output-schema
     outputSchema: schemas/workflow-output-schema.json
 states:
-  - name: ImmediatelyEnd
-     type: inject
-     data:
-       result:
-          message: A human-readable description of the successful status. Or an error.
-          outputs:
-            - key: Foo Bar human readable name which will be shown in the UI
-              value: Example string value produced on the output. This might be an input for a next workflow.
-          nextWorkflows:
-            - id: my-next-workflow-id
-              name: Next workflow name suggested if this is an assessment workflow. Human readable, it's text does not need to match true workflow name.
+  - name: successResult
+    type: expression
+    operation: '{
+      "result": {
+      "message": "Project " + .projectName + " active",
+      "outputs":[]
+      }
+      }'
     end: true
 ----
