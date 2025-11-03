@@ -13,7 +13,7 @@ The following Jira versions are supported:
 
 * You must have administrator privileges for Jira and {product-very-short}.
 * You have installed your {product-very-short} instance.
-* You have installed the Scorecard images.
+* You have {scorecard-plugin-book-link}#proc-installing-scorecard-plugin-in-rhdh-instance[installed the Scorecard images].
 * You must have {configuring-book-link}[added a custom {product-very-short} application configuration] and have enough permissions to change it.
 
 .Procedure
@@ -35,6 +35,11 @@ echo -n 'your-atlassian-email:your-jira-api-token' | base64
 plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:pr_1499__0.1.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira
     disabled: false
+----
+... In your `{product-very-short} {my-app-config-file}` file, add the following direct setup settings:
++
+[source,yaml]
+----
     pluginConfig:
       jira:
         baseUrl: ${JIRA_BASE_URL}
@@ -46,6 +51,7 @@ where:
 `baseUrl`:: Enter the Jira URL.
 `token`:: Enter the Jira token (Base64 string for Cloud, PAT for Data Center). The Jira token must be added as a secret file in your {configuring-book-link}#provisioning-your-custom-configuration[`{product} app-config.yaml` file].
 `product`:: Enter the supported product: `cloud` or `datacenter`. (`cloud` is the preferred option)
+----
 
 .. Use a proxy setup: In your `{product-very-short} dynamic-plugins-config.yaml`, add the following code:
 +
@@ -54,13 +60,9 @@ where:
 plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:pr_1499__0.1.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira
     disabled: false
-    pluginConfig:
-      jira:
-        proxyPath: /jira/api
-        product: datacenter # Change to 'cloud' if using Jira Cloud
 ----
 
-... In your `{product-very-short} app-config.yaml` file, add the following proxy settings:
+... In your `{product-very-short} {my-app-config-file}` file, add the following proxy settings:
 +
 [source,yaml]
 ----
@@ -73,6 +75,9 @@ proxy:
         Content-Type: 'application/json'
         X-Atlassian-Token: 'no-check'
         Authorization: ${JIRA_TOKEN} # Must be configured in your environment
+jira:
+  proxyPath: /jira/api
+  product: cloud # Change to 'datacenter' if using Jira Datacenter
 ----
 where:
 
