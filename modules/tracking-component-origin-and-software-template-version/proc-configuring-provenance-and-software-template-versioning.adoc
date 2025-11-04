@@ -1,0 +1,73 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-provenance-and-software-template-versioning_{context}"]
+= Configuring provenance and Software Template versioning {product}
+
+As a platform engineer, you must modify the Software Template YAML definition to ensure the required provenance information is added during the scaffolding process.
+
+.Prerequisites
+
+* You have administrator rights to {product}.
+
+.Procedure
+
+. Locate the Software Template object YAML file where you want to add the provenance information and add a step that uses the `catalog:scaffolded-from` action. This action links the resulting catalog entity back to the source template.
+. Optional: To track the template version (for example, v1.0 versus v1.5), include the `catalog:template:version` action in the `steps` section. The following code block is an example to adding versioning action to the `steps` section:
++
+[source,yaml]
+----
+steps:
+  - id: create-provenance-annotation
+    name: Append the entityRef of this template to the entityRef
+    action: catalog:scaffolded-from
+  - id: create-version-annotation
+    name: Create Template Version Annotation
+    action: catalog:template:version
+    input:
+      templateVersion: ${{ parameters.version }}
+  - ... other steps ...
+----
++
+where:
+
+`steps:input:templateVersion`:: Reads the version parameter
++
+[NOTE]
+====
+The `catalog:template:version` action reads a version parameter defined in the template and applies it as an annotation to the resulting catalog entity.
+====
+
+. In your {product} `{my-app-config-file}` file, configure the `catalog.locations` section to point to the Software Template that you want to add. You might need to add `Template` to the global `catalog.rules.allow` list or add a granular rule to the location to allow for Software Templates ingestion, as shown in the following example:
++
+[source,yaml]
+----
+# ...
+catalog:
+  locations:
+    - type: url 
+      target: https://<repository_url>/example-template.yaml
+      rules:
+        - allow: [Template]
+# ...
+----
++
+where:
+
+`catalog.locations.type`:: Enter the `url` type if you are importing templates from a repository, such as GitHub or GitLab.
+`catalog.locations.target`:: Enter the URL for the template.
+`catalog.locations.rules.allow`:: Enter the `Template` rule to allow new Software Templates to be added to the catalog.
+
+.Verification
+
+After creating a component with the updated template, verify the provenance annotations in the resulting Catalog Entity YAML.
+
+. In the {product} navigation menu, go to *Catalog* and locate the newly created catalog component.
+. To view the underlying data that links the entity to the template, select the **INSPECT ENTITY** option.
+. To verify provenance annotations, complete the following steps:
+.. Select the *YAML Raw* or *JSON Raw* view and verify the presence of the data item for the `scaffoldedFrom` link.
+.. Optional: If versioning was included, verify the presence of the `backstage.io/template-version` annotation.
++
+[NOTE]
+====
+If you publish the catalog component to an external repository (such as Git), the component file in that repository must also contain the `backstage.io/template-version` annotation.
+====
