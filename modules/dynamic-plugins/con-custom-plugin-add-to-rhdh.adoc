@@ -1,0 +1,82 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-using-custom-dynamic-plugins"]
+= Using the dynamic plugins
+== Adding a custom dynamic plugin to {product}
+To add your custom dynamic plugins to {product}. you must update the `dynamic-plugins.yaml` file by using the following configuration that is generated from the `npx @red-hat-developer-hub/cli@latest plugin package` command:
+
+[source,yaml]
+----
+plugins:
+  - package: oci://quay.io/evanshortiss/entity-feedback-plugin:0.5.0!backstage-community-plugin-entity-feedback
+    disabled: false
+
+  - package: oci://quay.io/evanshortiss/entity-feedback-plugin-backend:0.6.0!backstage-community-plugin-entity-feedback-backend
+    disabled: false
+----
+
+[NOTE]
+Ensure that your container images are publicly accessible, or that you have configured a pull secret in your environment. A pull secret provides {product} with credentials to authenticate pulling your plugin container images from a container registry.
+
+//Before proceeding, there’s one additional configuration required. Remember the pluginConfig shown earlier? 
+
+= Displaying the frontend plugin
+You need to update the `pluginConfig` section of your `dynamic-plugins.yaml` file to specify how the *Entity Feedback* should be added to the {product} UI.
+
+.`dynamic-plugins.yaml` file fragment
+[source,yaml]
+----
+- package: oci://quay.io/evanshortiss/entity-feedback-plugin:0.5.0!backstage-community-plugin-entity-feedback
+  disabled: false
+  pluginConfig:
+    dynamicPlugins:
+      frontend:
+        backstage-community.plugin-entity-feedback:
+          entityTabs: <1>
+            - mountPoint: entity.page.feedback
+              path: /feedback
+              title: Feedback
+          mountPoints: <2>
+            - config:
+                layout:
+                  gridColumn: 1 / -1
+              importName: StarredRatingButtons 
+              mountPoint: entity.page.feedback/cards
+            - config:
+                layout:
+                  gridColumn: 1 / -1
+              importName: EntityFeedbackResponseContent
+              mountPoint: entity.page.feedback/cards
+            - config:
+                layout:
+                  gridColumnEnd:
+                    lg: span 6
+                    md: span 6
+                    xs: span 6
+              importName: StarredRatingButtons
+              mountPoint: entity.page.overview/cards
+----
+<1> Set the `entityTabs` array to define a new tab, named “Feedback” on the *Entity Overview* screen in {product}.
+<2> The `mountPoints` array defines the following configurations to mount React components exposed by the plugin:
+
+. The `StarredRatingButtons` component is added to the new *Feedback* tab defined in entityTabs.
+. Similar to the `StarredRatingButtons`, the  `EntityFeedbackResponseContent` is mounted on the *Feedback* tab.
+. The `StarredRatingButtons` is added to the default *Overview* tab for each entity.
+
+When you have updated your `dynamic-plugins.yaml` file , redeploy your instance of {product} to trigger an install of the new plugins. 
+
+== Test the custom dynamic plugin
+When your new instance of {product} has started, you can check that your plugins are installed and enabled by visiting the *Administration > Extensions* screen and searching for “entity” on the *Installed* tab.
+
+image::rhdh/custom-extensions.png[]
+
+When you click *Catalog*, you shpould see the new *Feedback* tab, and the *StarredRatingButtons* displayed, as follows:
+
+image::rhdh/custom-entity-view.png[]
+
+Selecting a low star rating prompts the user to provide feedback, as follows:
+
+image::rhdh/custom-feedback-overlay.png[]
+
+[NOTE]
+The user provided feedback is not saved if you are logged in as the Guest user.
