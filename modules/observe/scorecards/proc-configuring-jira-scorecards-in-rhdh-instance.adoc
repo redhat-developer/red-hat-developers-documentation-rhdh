@@ -17,6 +17,7 @@ The following Jira versions are supported:
 * You must have {configuring-book-link}[added a custom {product-very-short} application configuration] and have enough permissions to change it.
 
 .Procedure
+To install and configure Jira Scorecards in your {product-very-short} instance, complete the following steps:
 
 . Create a Jira configuration token using one of the following methods, depending on your Jira product:
 ** Jira Cloud: https://id.atlassian.com/manage-profile/security/api-tokens[Create a personal token]. You must then create a `Base64-encoded` string using the following plain text format: `your-atlassian-email:your-jira-api-token`.
@@ -27,10 +28,12 @@ echo -n 'your-atlassian-email:your-jira-api-token' | base64
 ----
 ** Jira datacenter: Create and use a Personal Access Token (PAT) in your Jira datacenter account. For more information, see the https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html[Atlassian] documentation.
 
-. Add your Jira token (${JIRA_TOKEN}) to {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets] using the following key/value pairs.
+. Add your Jira configuration (${JIRA_TOKEN}) to {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets] using the following key/value pairs:
+*** `JIRA_TOKEN`
+*** `JIRA_BASE_URL`
 
-. Configure the Jira Scorecard plugin in your `{product-very-short} dynamic-plugins-config.yaml` using either a direct setup or a proxy setup.
-.. Use a direct setup: Add the following code to your `{product-very-short} dynamic-plugins-config.yaml`:
+. Install the Jira Scorecard plugin in your {product-very-short} `dynamic-plugins-config.yaml` using either a direct setup or a proxy setup.
+.. Use a direct setup: Add the following code to your {product-very-short} `dynamic-plugins-config.yaml`:
 +
 [source,yaml]
 ----
@@ -38,23 +41,22 @@ plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:pr_1499__0.1.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira
     disabled: false
 ----
-... In your `{product-very-short} {my-app-config-file}` file, add the following direct setup settings:
+... In your {product-very-short} `{my-app-config-file}` file, add the following direct setup settings:
 +
 [source,yaml]
 ----
-    pluginConfig:
-      jira:
-        baseUrl: ${JIRA_BASE_URL}
-        token: ${JIRA_TOKEN}
-        product: _<jira_product>_
+jira:
+  baseUrl: ${JIRA_BASE_URL}
+  token: ${JIRA_TOKEN}
+  product: _<jira_product>_
 ----
 where:
 
-`baseUrl`:: Enter the Jira URL.
-`token`:: Enter the Jira token (Base64 string for Cloud, PAT for Data Center).
-`product`:: Enter the supported product: `cloud` or `datacenter`. (`cloud` is the preferred option)
+`baseUrl`:: The base URL of your Jira instance, configured under ${JIRA_BASE_URL} in your {product-very-short} secrets.
+`token`:: The Jira token (Base64 string for Cloud, PAT for Data Center), configured under ${JIRA_TOKEN} in your {product-very-short} secrets.
+`product`:: Enter the supported product: `cloud` or `datacenter`.
 
-.. Use a proxy setup: In your `{product-very-short} dynamic-plugins-config.yaml`, add the following code:
+.. Use a proxy setup: In your {product-very-short} `dynamic-plugins-config.yaml`, add the following code:
 +
 [source,yaml]
 ----
@@ -62,8 +64,13 @@ plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:pr_1499__0.1.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira
     disabled: false
 ----
++
+[NOTE]
+====
+You must use the proxy setup to ensure configuration compatibility if the Roadie Jira Frontend Plugin is also in use.
+====
 
-... In your `{product-very-short} {my-app-config-file}` file, add the following proxy settings:
+... In your {product-very-short} `{my-app-config-file}` file, add the following proxy settings:
 +
 [source,yaml]
 ----
@@ -82,8 +89,9 @@ jira:
 ----
 where:
 
-`Authorization`:: Set any of the following header value:
-* For *Cloud*: `Basic YourCreatedAboveToken`
+`target`:: The base URL of your Jira instance, configured under ${JIRA_BASE_URL} in your {product-very-short} secrets.
+`Authorization`:: The Jira token, configured under ${JIRA_TOKEN} in your {product-very-short} secrets. Set the token value as one of the following values:
+* For *Cloud*: `Basic YourCreatedCloudToken`
 * For *Data Center*: `Bearer YourJiraToken`
 
 . Annotate the component entity in the `catalog-info.yaml`.
@@ -116,8 +124,18 @@ where:
 `jira/team`:: Optional: Enter the Jira team ID (not the team title).
 `jira/custom-filter`:: Optional: Enter a custom Jira Query Language (JQL) filter.
 
+. Statically ingest the catalog entity by adding the `catalog.locations` section in your {product-very-short} `{my-app-config-file}` that links to the `catalog-info.yaml` file
++
+[source,yaml]
+----
+catalog:
+  locations:
+    - type: url
+      target: https://github.com/owner/repo/catalog-info.yaml
+----
+
 . (Optional) Configure Jira Open Issues metric thresholds.
-.. To customize the thresholds for the *Jira Open Issues* (`jira.open_issues`) metric, add the following to your `{product-very-short} app-config.yaml` file:
+.. To customize the thresholds for the *Jira Open Issues* (`jira.open_issues`) metric, add the following to your {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
 ----
@@ -139,7 +157,7 @@ where:
 `scorecard:plugins:jira:open_issues:thresholds`:: Lists the default threshold values for the Jira open Issues metric.
 
 . (Optional) Define global or custom mandatory filters.
-.. You can apply global mandatory filters or define custom filters that entities can override. Add the following to your `{product-very-short} app-config.yaml`:
+.. You can apply global mandatory filters or define custom filters that entities can override. Add the following to your {product-very-short} `{my-app-config-file}`:
 +
 [source,yaml]
 ----
