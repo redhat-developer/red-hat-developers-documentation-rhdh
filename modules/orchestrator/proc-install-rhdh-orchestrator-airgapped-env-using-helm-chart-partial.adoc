@@ -1,6 +1,6 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="proc-install-rhdh-orchestrator-airgapped-env-using-helm-chart-partial.adoc_{context}"]
+[id="proc-install-rhdh-orchestrator-airgapped-env-using-helm-chart-partial_{context}"]
 = Installing {product} with Orchestrator in a partially disconnected {ocp-short} environment using the Helm chart
 
 You can install {product} ({product-very-short}) with the Orchestrator plugin in a partial {ocp-short} environment using the Helm chart.
@@ -15,9 +15,9 @@ include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 .Procedure
 
-. Create an `ImageSetConfiguration` file for `oc-mirror`. Because `oc-mirror` does not automatically mirror all images required by the Serverless Logic Operator, you must use an `ImageSetConfiguration` file to include them as shown in the following example:
+. Create an `ImageSetConfiguration` file for `oc-mirror`. You must include the images and operators required by the Serverless Logic Operator in the `ImageSetConfiguration` file, as `oc-mirror` does not automatically mirror all images. Use the following example:
 +
-[source,subs="+attributes,+quotes"]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: mirror.openshift.io/v2alpha1
 kind: ImageSetConfiguration
@@ -58,7 +58,7 @@ mirror:
 
 . Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command to pull images and charts, and push the images directly to the target registry. For example:
 +
-[source,subs="+attributes,+quotes"]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
 ----
@@ -70,7 +70,7 @@ The `oc-mirror` command pulls the charts listed in the `ImageSetConfiguration` f
 
 . Apply the generated cluster resources to the disconnected cluster. For example:
 +
-[source,subs="+attributes,+quotes"]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 cd <workspace folder>/working-dir/cluster-resources/
 oc apply -f .
@@ -80,7 +80,7 @@ include::snip-installing-the-orchestrator-common-steps.adoc[]
 
 . Apply the `redhat-developer-hub-orchestrator-infra` Helm chart and approve the install plans. See {installing-in-air-gap-book-link}#assembly-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped[Air-gapped installation with Helm chart instructions] for details.
 
-. Apply the {product-very-short} {product-version} Helm chart. Include the version {product-bundle-version} and enable the Orchestrator plugin as shown in the following example:
+. Apply the {product-very-short} {product-version} Helm chart. Include the version {product-bundle-version} and enable the Orchestrator plugin, as shown in the following example:
 +
 [source,yaml]
 ----
@@ -90,11 +90,11 @@ orchestrator.enabled=true
 . The {product-very-short} {product-version} Helm chart defaults to pulling Orchestrator plugins from the official {company-name} NPM registry using full URL references. You must override this behavior to point to your local registry.
 +
 To configure the Orchestrator plugins to use a custom registry, complete the following steps:
+
+** Open your `values.yaml` file.
+** Explicitly list the Orchestrator plugin packages under the `orchestrator.plugins`  section.
 +
-* Open your `values.yaml` file.
-+
-* Explicitly list the Orchestrator plugin packages under the `orchestrator.plugins`  section.
-You must replace the simplified package references with the full URLs that point to your custom NPM registry as shown in the following example:
+You must replace the simplified package references with the full URLs that point to your custom NPM registry, as shown in the following example:
 +
 [source,yaml]
 ----

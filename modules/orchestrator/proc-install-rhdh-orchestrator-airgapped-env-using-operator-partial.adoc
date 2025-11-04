@@ -1,9 +1,9 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="proc-install-rhdh-orchestrator-airgapped-env-using-operator-partial.adoc_{context}"]
+[id="proc-install-rhdh-orchestrator-airgapped-env-using-operator-partial_{context}"]
 = Installing {product} with Orchestrator in a partially disconnected {ocp-short} environment using the Operator
 
-You can install {product} with Orchestrator plugin in a partial air-gapped environment using Operator.
+You can install {product} with Orchestrator plugin in a partial air-gapped environment using the Operator.
 
 A disconnected installation prevents unauthorized access, data transfer, or communication with external sources.
 
@@ -11,15 +11,15 @@ You can use the `oc-mirror` command to mirror resources directly to your accessi
 
 .Prerequisites
 
-* You have mirrored the {product} Operator images to the local registry using the {product-very-short} mirroring script. For more information, see {installing-in-air-gap-book-link}#proc-install-rhdh-operator-airgapped-partial.adoc_title-install-rhdh-air-grapped[Installing {product} in a partially disconnected environment with the Operator].
+* You have mirrored the {product} Operator images to the local registry using the {product-very-short} mirroring script. For more information, see {installing-in-air-gap-book-link}#proc-install-rhdh-operator-airgapped-partial_title-install-rhdh-air-grapped[Installing {product} in a partially disconnected environment with the Operator].
 
 include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 .Procedure
 
-. Create an `ImageSetConfiguration` file for `oc-mirror`. Because `oc-mirror` does not automatically mirror all images required by the Serverless Logic Operator, you must use an `ImageSetConfiguration` file to include them as shown in the following example:
+. Create an `ImageSetConfiguration` file for `oc-mirror`. You must include the images and operators required by the Serverless Logic Operator in the `ImageSetConfiguration` file, as `oc-mirror` does not automatically mirror all images. Use the following example:
 +
-[source,subs="+attributes,+quotes"]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: mirror.openshift.io/v2alpha1
 kind: ImageSetConfiguration
@@ -48,9 +48,9 @@ mirror:
           maxVersion: {rhoserverless-version}.1
 ----
 +
-Alternatively, you can use the podman commands to find the missing images and add them to the `additionalimages` list if the versions change:
+Alternatively, you can use the `podman` commands to find the missing images and add them to the `additionalimages` list if the versions change:
 +
-[source,subs="+attributes,+quotes"]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}.0-8
 mkdir local-manifests-osl
@@ -62,7 +62,7 @@ yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | 
 
 . Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
 +
-[source,subs="+attributes,+quotes"]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
 cd <workspace folder>/working-dir/cluster-resources/
@@ -71,11 +71,11 @@ oc apply -f .
 +
 include::snip-installing-the-orchestrator-common-steps.adoc[]
 +
-. Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using the OperatorHub.
+. Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using `OperatorHub`.
 
 . Create a {product-custom-resource-type} custom resource (CR).
 
-. Configure the {product-custom-resource-type} CR for the Orchestrator as described in the {orchestrator-book-link}#con-orchestrator-plugin-dependencies-operator.adoc_orchestrator-rhdh[Orchestrator plugin dependencies for Operator installation].
+. Configure the {product-custom-resource-type} CR for the Orchestrator as described in the {orchestrator-book-link}#con-orchestrator-plugin-dependencies-operator_orchestrator-rhdh[Orchestrator plugin dependencies for Operator installation].
 +
 Create all the resources and configure the {product-custom-resource-type} instance accordingly. See {release-notes-book-link}#removed-functionality-rhdhbugs-2000[Configuring a custom NPM registry] for instructions on how to point {product-very-short} towards the custom NPM registry.
 

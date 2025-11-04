@@ -1,13 +1,13 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="proc-install-rhdh-orchestrator-airgapped-env-using-operator-full.adoc_{context}"]
+[id="proc-install-rhdh-orchestrator-airgapped-env-using-operator-full_{context}"]
 = Installing {product} with Orchestrator in a fully disconnected {ocp-short} environment using the Operator
 
-You can install {product} with Orchestrator plugin in a fully air-gapped environment using Operator.
+You can install {product} with Orchestrator plugin in a fully air-gapped environment using the Operator.
 
 A disconnected installation prevents unauthorized access, data transfer, or communication with external sources.
 
-You can use the helper script to install {product} by mirroring the Operator-related images to disk and transferring them to your your disconnected environment without any connection to the internet.
+You can use the helper script to install {product} by mirroring the Operator-related images to disk and transferring them to your disconnected environment without any connection to the internet.
 
 .Prerequisites
 
@@ -17,9 +17,9 @@ include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 .Procedure
 
-. Create an `ImageSetConfiguration` file for `oc-mirror`. Because `oc-mirror` does not automatically mirror all images required by the Serverless Logic Operator, you must use an `ImageSetConfiguration` file to include them as shown in the following example:
+. Create an `ImageSetConfiguration` file for `oc-mirror`. You must include the images and operators required by the Serverless Logic Operator in the `ImageSetConfiguration` file, as `oc-mirror` does not automatically mirror all images. Use the following example:
 +
-[source,subs="+attributes,+quotes"]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: mirror.openshift.io/v2alpha1
 kind: ImageSetConfiguration
@@ -48,9 +48,9 @@ mirror:
           maxVersion: {rhoserverless-version}.1
 ----
 +
-Alternatively, you can use the podman commands to find the missing images and add them to the `additionalimages` list if the versions change:
+Alternatively, you can use the `podman` commands to find the missing images and add them to the `additionalimages` list if the versions change:
 +
-[source,subs="+attributes,+quotes"]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}
 mkdir local-manifests-osl
@@ -62,7 +62,7 @@ yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | 
 
 . Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
 +
-[source,subs="+attributes,+quotes"]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 oc-mirror --config=ImageSetConfiguration.yaml file:///path/to/mirror-archive --authfile /path/to/authfile  --v2
 ----
@@ -76,7 +76,7 @@ The `oc-mirror` command generates a local workspace containing the mirror archiv
 
 . From the bastion host which has access to the mirror registry, mirror the images from the disk directory to your target registry. For example:
 +
-[source,subs="+attributes,+quotes"]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 oc-mirror --v2 --from <mirror-archive-file> docker://<target-registry-url:port> --workspace file://<workspace folder> --authfile /path/to/authfile
 ----
@@ -89,8 +89,7 @@ where:
 +
 . Apply the cluster-wide resources generated during the push step to redirect all image pulls to your local registry as shown in the following example:
 +
-+
-[source,subs="+attributes,+quotes"]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 cd <workspace folder>/working-dir/cluster-resources/
 oc apply -f .
@@ -98,7 +97,7 @@ oc apply -f .
 
 include::snip-installing-the-orchestrator-common-steps.adoc[]
 +
-. Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using the OperatorHub.
+. Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using the `OperatorHub`.
 
 . Create a {product-custom-resource-type} custom resource (CR).
 
