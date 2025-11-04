@@ -3,6 +3,21 @@
 [id="reducing-token-size"]
 = Reducing the size of issued tokens
 
+By default,
+the authentication backend issues user identity tokens with ownership references of the user in the `ent` claim of the JWT payload.
+This makes it easier for consumers of the token to resolve ownership of the user.
+However, depending on the shape of your organization and how you resolve ownership claims,
+the tokens can grow large and lead to HTTP errors that prevent you from accessing parts of {product-very-short}.
+Use the `omitIdentityTokenOwnershipClaim` flag to remove the `ent` claim from tokens and reduce their size.
+
+[IMPORTANT]
+====
+Without the `ent` claim in the token, consumers of the token must call the `/v1/userinfo` endpoint on the auth backend to fetch the ownership references of the user.
+However, there's usually no action required for the consumers.
+Clients still receive the full set of claims during authentication,
+and plugin backends that use the `UserInfoService` to access the ownership references from user credentials can call the `userinfo` endpoint if necessary.
+====
+
 .Procedure
 
 . In the `app-config.yaml` file, set `omitIdentityTokenOwnershipClaim` to `true`:
@@ -12,3 +27,17 @@
 auth:
   omitIdentityTokenOwnershipClaim: true
 ----
++
+[IMPORTANT]
+====
+When you enable the `omitIdentityTokenOwnershipClaim` flag, it is important that any custom sign-in resolvers directly return the result of the sign-in method.
+
+Example of a correct setup::
+
+[source,yaml]
+----
+return ctx.issueToken({
+  claims: { sub: entityRef, ent: [entityRef] },
+});
+----
+
