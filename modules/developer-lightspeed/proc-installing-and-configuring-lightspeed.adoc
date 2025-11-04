@@ -138,6 +138,7 @@ providers:
         type: sqlite
     provider_id: meta-reference
     provider_type: inline::meta-reference
+   #START - Adding your LLM provider
   inference:
     - provider_id: vllm
       provider_type: remote::vllm
@@ -149,6 +150,7 @@ providers:
     - provider_id: sentence-transformers
       provider_type: inline::sentence-transformers
       config: {}
+  #END - Adding your LLM provider
   post_training:
   - config:
       checkpoint_format: huggingface
@@ -350,26 +352,6 @@ where:
 
 `mcp_servers`:: Optional: Set this configuration if you want to integrate MCP.
 
-. Create {ls-short} secret file.
-.. In the {ocp-short} web console, go to *Secrets*.
-.. Click *Create > Key/value secret*.
-.. In the *Create key/value secret* page, select the *YAML view* option in *Configure via*, and add the following example:
-+
-[source,yaml]
-----
-kind: Secret
-apiVersion: v1
-metadata:
-  name: lightspeed-secrets
-  namespace: _<namespace>_ # Enter your rhdh instance namespace
-stringData:
-  LLM_SERVER_ID: _<server_id>_ # Enter your server ID (for example, `ollama` or `granite`)
-  LLM_SERVER_TOKEN: _<token>_ # Enter your server token value
-  LLM_SERVER_URL: _<server_url>_ # Enter your server URL
-type: Opaque
-----
-.. Click *Create*.
-
 . Create the Llama Stack secret file.
 .. In the {ocp-short} web console, go to *Secrets*.
 .. Click *Create > Key/value secret*.
@@ -401,7 +383,7 @@ stringData:
 includes:
   - dynamic-plugins.default.yaml
  plugins:
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed
+  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:next__1.0.0
     disabled: false
     pluginConfig:
       lightspeed:
@@ -426,16 +408,9 @@ includes:
                 menuItem:
                   icon: LightspeedIcon
                   text: Lightspeed
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed-backend
+  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:next__1.0.1
     disabled: false
     pluginConfig:
-      lightspeed:
-        # REQUIRED: Configure LLM servers with OpenAI API compatibility
-        servers:
-          - id: ${LLM_SERVER_ID}
-            url: ${LLM_SERVER_URL}
-            token: ${LLM_SERVER_TOKEN}
-
         # OPTIONAL: Port for lightspeed service (default: 8080)
         # servicePort: ${LIGHTSPEED_SERVICE_PORT}
 ----
@@ -469,14 +444,15 @@ includes:
 [source,yaml]
 ----
         volumeMounts:
-          - mountPath: /app-root/config/lightspeed-stack.yaml
-            name: lightspeed-stack
-            subPath: lightspeed-stack.yaml
-          - mountPath: /app-root/config/app-config-rhdh.yaml
-            name: lightspeed-app-config
-            subPath: app-config.yaml
-          - mountPath: /app-root-config/llama-stack/run.yaml
-            subPath: llama-stack/run.yaml
+          - mountPath: /app-root/.llama
+            name: shared-storage
+          - mountPath: /app-root/embeddings_model
+            name: rag-data-volume
+            subPath: embeddings_model
+          - mountPath: /app-root/vector_db/rhdh_product_docs
+            name: rag-data-volume
+            subPath: rhdh_product_docs
+
 ----
 ... Add the {ls-short} and Llama Stack Secret file as shown in the following example:
 +
@@ -484,23 +460,12 @@ includes:
 ----
         envFrom:
           - secretRef:
-              name: lightspeed-secrets
-          - secretRef:
               name: llama-stack-secrets
-----
-... In your `deployment.patch.spec.template.spec.containers.env` section, set the {lcs-short} and Llama Stack environment variables as shown in the following example:
-+
-[source,yaml]
-----
-    - name: PROJECT
-      value: rhdh
-    - name: LLAMA_CONFIG_FILE
-      value: /app-root/config/llama-stack/run.yaml
 ----
 +
 [NOTE]
 ====
-* Your {product-very-short} container is typically already present in your CR. You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
+* Your {product-very-short} container is typically already present in your Kubernetes CR. You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
 ====
 ... Click *Save*. The Pods are automatically restarted.
 +
@@ -551,6 +516,10 @@ spec:
                    subPath: lightspeed-stack.yaml
                  - mountPath: /tmp/data/feedback
                    name: shared-storage
+              # OPTIONAL: `llama-stack-config mount path configuration is only needed if you want to override the custom configuration
+                  - mountPath: /app-root/run.yaml
+                    name: llama-stack-config
+                    subPath: run.yaml
            volumes:
              - configMap:
                  name: lightspeed-stack
@@ -570,7 +539,7 @@ dynamic:
   includes:
   - dynamic-plugins.default.yaml
   plugins:
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed
+  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:next__1.0.0
     disabled: false
     pluginConfig:
       lightspeed:
@@ -595,15 +564,9 @@ dynamic:
                 menuItem:
                   icon: LightspeedIcon
                   text: Lightspeed
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.39.1__0.5.7!red-hat-developer-hub-backstage-plugin-lightspeed-backend
+  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:next__1.0.1
     disabled: false
     pluginConfig:
-      lightspeed:
-        # REQUIRED: Configure LLM servers with OpenAI API compatibility
-        servers:
-          - id: ${LLM_SERVER_ID}
-            url: ${LLM_SERVER_URL}
-            token: ${LLM_SERVER_TOKEN}
         # OPTIONAL: Port for lightspeed service (default: 8080)
         # servicePort: ${LIGHTSPEED_SERVICE_PORT}
 ----
@@ -644,9 +607,6 @@ extraVolumes:
 [source,yaml,subs="+attributes"]
 ----
    extraContainers:
-      - env:
-          - name: PROJECT
-            value: rhdh
         envFrom:
           - secretRef:
               name: lightspeed-secrets
@@ -689,11 +649,6 @@ upstream:
      - configMapRef: llama-stack-config
        filename: run.yaml
    extraContainers:
-     - env:
-         - name: PROJECT
-           value: rhdh
-         - name: LLAMA_STACK_CONFIG_FILE
-           value: /app-root/run.yaml
        envFrom:
          - secretRef:
              name: lightspeed-secrets
@@ -707,6 +662,7 @@ upstream:
          - mountPath: /app-root/config/lightspeed-stack.yaml
            name: lightspeed-stack
            subPath: lightspeed-stack.yaml
+           # OPTIONAL: `llama-stack-config mount path configuration is only needed if you want to override the custom configuration
          - mountPath: /app-root/run.yaml
            name: llama-stack-config
            subPath: run.yaml
