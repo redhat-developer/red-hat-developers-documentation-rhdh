@@ -39,7 +39,8 @@ mirror:
           - name: redhat-developer-hub-orchestrator-infra
             version: "{product-bundle-version}"
   operators:
-    - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.19
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:{ocp-version}
+      # For example: registry.redhat.io/redhat/redhat-operator-index:v4.19
       packages:
       - name: logic-operator-rhel8
         channels:
@@ -57,7 +58,7 @@ Alternatively, you can use the podman commands to find the missing images and ad
 +
 [source,subs="+attributes,+quotes"]
 ----
-IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}.0-8
+IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}
 mkdir local-manifests-osl
 podman create --name temp-container "$IMG" -c "cat /manifests/logic-operator-rhel8.clusterserviceversion.yaml"
 podman cp temp-container:/manifests ./local-manifests-osl
@@ -117,16 +118,31 @@ To configure the Orchestrator plugins to use a custom registry, complete the fol
 +
 * Open your `values.yaml` file.
 +
-* Explicitly list the Orchestrator plugin packages under the `orchestrator.plugins` section.
-You must replace the full URLs with the simplified package references that point to your custom NPM registry as shown in the following example:
+* Explicitly list the Orchestrator plugin packages under the `orchestrator.plugins`  section.
+You must replace the simplified package references with the full URLs that point to your custom NPM registry as shown in the following example:
 +
 [source,yaml]
 ----
-- package: "@redhat/backstage-plugin-orchestrator@{product-bundle-version}"
-- package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@{product-bundle-version}"
-- package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@{product-bundle-version}"
-- package: "@redhat/backstage-plugin-orchestrator-form-widgets@{product-bundle-version}"
+orchestrator:
+  plugins:
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-orchestrator-backend-dynamic/-/backstage-plugin-orchestrator-backend-dynamic-{product-bundle-version}.tgz
+      integrity: sha512-xxxxxx
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-orchestrator/-/backstage-plugin-orchestrator-{product-bundle-version}.tgz
+      integrity: sha512-xxxxxy
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-orchestrator-form-widgets/-/backstage-plugin-orchestrator-form-widgets-{product-bundle-version}.tgz
+      integrity: sha512-xxxxxz
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic/-/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic-{product-bundle-version}.tgz
+      integrity: sha512-xxxx1
 ----
++
+where:
+
+<custom_NPM_registry_URL>::
+Enter the address of your custom registry and make sure the integrity checksum, such as sha512-xxxxxx, matches the files in your registry.
 
 .Verification
 
