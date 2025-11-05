@@ -1,0 +1,82 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-model-context-protocol_{context}"]
+= Configuring Model Context Protocol in {product}
+
+You can enable your MCP client applications to use the MCP protocol to access {product-very-short} information and workflows. This configuration is a prerequisite for MCP clients to use the defined MCP tools and access the exposed capabilities of {product-very-short}.
+
+.Prerequisite
+
+* You have {model-context-protocol-link}#proc-installing-the-mcp-server-and-tool-plugins[installed the MCP server and tool plugins in {product}].
+
+.Procedure
+
+. In your {product} {my-app-config-file}` file, configure a static token for authentication against the MCP server endpoint. MCP clients (such as `Cursor`, `Continue`, or `Lightspeed Core`) use these tokens to authenticate against the {backstage} MCP server. For example:
++
+[source,yaml]
+----
+backend:  
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${MCP_TOKEN}
+          subject: mcp-clients
+----
+where:
+
+`${MCP_TOKEN}`:: Set the token value that you generate manually and share with your MCP clients
++
+[NOTE]
+====
+Tokens must be long and complex strings without whitespace to prevent brute-force guessing.
+
+To generate a sample token, use the following command:
+[source,bash]
+----
+node -p `require("crypto").randomBytes(24).toString("base64")`
+----
+====
+
+. Register the MCP tools that you install as a plugin source, as shown in the following example:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  actions:
+    pluginSources:
+      - software-catalog-mcp-tool
+      - techdocs-mcp-tool
+----
++
+.Full `{my-app-config-file}` file example with MCP configuration
+[source,yaml,subs="+attributes,+quotes"]
+----
+app:
+  title: AI Dev Developer Hub
+  baseUrl: "${{product-very-short}_BASE_URL}"
+auth:
+  environment: development
+  session:
+    secret: "${BACKEND_SECRET}"
+  providers:
+    guest:
+      dangerouslyAllowOutsideDevelopment: true
+backend:
+  actions:
+    pluginSources:
+      - 'software-catalog-mcp-tool'
+      - 'techdocs-mcp-tool'
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${MCP_TOKEN}
+          subject: mcp-clients
+    keys:
+      - secret: "${BACKEND_SECRET}"
+  baseUrl: "${{product-very-short}_BASE_URL}"
+  cors:
+    origin: "${{product-very-short}_BASE_URL}"
+signInPage: oidc
+----
