@@ -55,9 +55,11 @@ mcp_servers:
     provider_id: model-context-protocol
     url: https://<RHDH_HOST>/api/mcp-actions/v1
 ----
++
 where:
 
-`mcp_servers`:: Optional: Set this configuration if you want to integrate MCP. See {model-context-protocol-link}[{model-context-protocol-title}].
+
+(Optional) `mcp_servers`:: Set this configuration if you want to integrate MCP. See {model-context-protocol-link}[{model-context-protocol-title}].
 `mcp_servers:name`:: This value must match the entry in the {ls-short} app config file for MCP servers.
 `model-context-protocol`:: This is the tool runtime provider defined and configured in the llama-stack `run.yaml` configuration for use in {lcs-short}.
 
@@ -268,7 +270,7 @@ providers:
       kvstore:
         type: sqlite
         namespace: null
-        db_path: /app-root/vector_db/rhdh_product_docs/1.7/faiss_store.db
+        db_path: /app-root/vector_db/rhdh_product_docs/1.8/faiss_store.db
 scoring_fns: []
 server:
   auth: null
@@ -289,11 +291,8 @@ vector_dbs:
 - embedding_dimension: 768
   embedding_model: sentence-transformers/all-mpnet-base-v2
   provider_id: rhdh-docs
-  vector_db_id: rhdh-product-docs-1_7
+  vector_db_id: rhdh-product-docs-1_8
 ----
-where:
-`_<llm_server>_`:: Enter your LLM server details.
-`_<openai_api_key>_`:: Enter your OpenAI API key.
 
 . Create the {ls-short} ConfigMap.
 +
@@ -350,7 +349,7 @@ data:
 ----
 where:
 
-`mcp_servers`:: Optional: Set this configuration if you want to integrate MCP.
+`lightspeed:mcpServers`:: Optional: Set this configuration if you want to integrate MCP.
 
 . Create the Llama Stack secret file.
 .. In the {ocp-short} web console, go to *Secrets*.
@@ -383,7 +382,7 @@ stringData:
 includes:
   - dynamic-plugins.default.yaml
  plugins:
-  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:next__1.0.0
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:next__1.0.0
     disabled: false
     pluginConfig:
       lightspeed:
@@ -408,7 +407,7 @@ includes:
                 menuItem:
                   icon: LightspeedIcon
                   text: Lightspeed
-  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:next__1.0.1
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:next__1.0.1
     disabled: false
     pluginConfig:
         # OPTIONAL: Port for lightspeed service (default: 8080)
@@ -454,7 +453,7 @@ includes:
             subPath: rhdh_product_docs
 
 ----
-... Add the {ls-short} and Llama Stack Secret file as shown in the following example:
+... Add the Llama Stack Secret file as shown in the following example:
 +
 [source,yaml]
 ----
@@ -465,7 +464,7 @@ includes:
 +
 [NOTE]
 ====
-* Your {product-very-short} container is typically already present in your Kubernetes CR. You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
+* Your {product-very-short} container is typically already present in your Kubernetes custom resource (CR). You are adding the two additional container definitions for {lcs-short} and Llama Stack as the {lcs-short} sidecar.
 ====
 ... Click *Save*. The Pods are automatically restarted.
 +
@@ -539,7 +538,7 @@ dynamic:
   includes:
   - dynamic-plugins.default.yaml
   plugins:
-  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:next__1.0.0
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:next__1.0.0
     disabled: false
     pluginConfig:
       lightspeed:
@@ -564,7 +563,7 @@ dynamic:
                 menuItem:
                   icon: LightspeedIcon
                   text: Lightspeed
-  - package: ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:next__1.0.1
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:next__1.0.1
     disabled: false
     pluginConfig:
         # OPTIONAL: Port for lightspeed service (default: 8080)
@@ -595,12 +594,12 @@ extraVolumes:
       - mountPath: /app-root/config/lightspeed-stack.yaml
         name: lightspeed-stack
 ----
-... Add the {ls-short} and Llama Stack Secret file as shown in the following example:
+... Add the Llama Stack Secret file as shown in the following example:
 +
 [source,yaml]
 ----
  extraEnvVarsSecrets:
-      - lightspeed-secrets
+      - llama-stack-secrets
 ----
 ... Add the {lcs-short} image as shown in the following example:
 +
@@ -609,9 +608,9 @@ extraVolumes:
    extraContainers:
         envFrom:
           - secretRef:
-              name: lightspeed-secrets
+              name: llama-stack-secrets
         image: 'quay.io/redhat-ai-dev/llama-stack:latest'
-        name: road-core-sidecar
+        name: llama-stack
         ports:
           - containerPort: 8080
             name: lcs-backend
@@ -662,10 +661,6 @@ upstream:
          - mountPath: /app-root/config/lightspeed-stack.yaml
            name: lightspeed-stack
            subPath: lightspeed-stack.yaml
-           # OPTIONAL: `llama-stack-config mount path configuration is only needed if you want to override the custom configuration
-         - mountPath: /app-root/run.yaml
-           name: llama-stack-config
-           subPath: run.yaml
    extraEnvVars:
      ...
    extraEnvVarsSecrets:
