@@ -1,0 +1,77 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-techdocs-pipeline-github-actions_{context}"]
+= Streamlining documentation builds using GitHub Actions
+
+{product} ({product-very-short}) includes a built-in TechDocs builder, however, the default setup is not intended for production use. Deploying TechDocs documentation in a production environment involves the following actions:
+
+* *Building the documentation in a CI/CD system*
+* *Publishing the generated documentation site to external object storage*, such as AWS S3, to ensure that the generated documentation persists between restarts of {product-very-short} and can handle larger documentation workloads.
+* *Configuring TechDocs in your {product-very-short} deployment to run in read-only mode* so that TechDocs reads the static generated documentation files from the cloud storage bucket without attempting to generate them at runtime.
+
+You can implement a TechDocs pipeline using GitHub Actions to automatically generate and publish your TechDocs whenever a user in your organization makes a change to a documentation file stored in your GitHub repository.
+
+.Prerequisites
+
+* The TechDocs plugin is enabled and configured on your {product-very-short} instance.
+* Your organization has documentation files stored in a remote repository.
+* You have an mkdocs.yaml file located in the root directory of your repository.
+* You have the `catalog.entity.create` and `catalog.location.create` permissions to import documentation into TechDocs from a remote repository.
+* You have an AWS S3 bucket to store your TechDocs sites.
+* Minimal IAM Policies are configured for your S3 bucket, granting both Write and Read access.
+* An administrator has created an IAM User, attached the necessary policy, and generated an access key in the AWS console.
+
+.Procedure
+
+. Set up the GitHub Actions workflow.
+.. On GitHub, create a fork of the link:https://github.com/redhat-developer/rhdh-techdocs-pipeline[{product-very-short} TechDocs Pipeline] repository.
++
+[NOTE]
+====
+The `rhdh-techdocs-pipeline` repository contains a `generate-and-publish-techdocs.yaml` workflow that automatically generates TechDocs from the docs folder and publishes them to an Amazon S3 bucket.
+====
++
+.. Use the GitHub GUI to make sure that all of the permissions required to run the workflow are enabled.
+.. Add the *Repository secrets* required to connect the workflow to your AWS account, for example, `TECHDOCS_S3_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
++
+[NOTE]
+====
+The default `mkdocs.yaml` file in the `rhdh-techdocs-pipeline` workflow installs the `techdocs-core` and `minify` plugins.
+====
+.. Optional: Customize the default structure or files of the `rhdh-techdocs-pipeline` repository to meet the needs of your organization.
+.. Optional: Add other `mkdocs` plugins that you want to use by adding the name of the plugins to the `plugins` section of the `mkdocs.yaml` file and to the `steps.name: install mkdocs and mkdocs plugins` section of the `generate-and-publish-techdocs.yaml` file.
+. . In the navigation menu of the {ocp-short} console, click *ConfigMaps* and select your {product-very-short} `app-config.yaml` file.
+. Update the `app-config.yaml` file to enable your Amazon S3 bucket to serve TechDocs to your {product-very-short} instance. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+techdocs:
+  builder: external
+  publisher:
+    type: awsS3
+    awsS3:
+      bucketName: ${AWS_S3_BUCKET_NAME}
+      accountId: ${AWS_ACCOUNT_ID}
+      region: ${AWS_REGION}
+
+aws:
+  accounts:
+    - accountId: ${AWS_ACCOUNT_ID}
+      accessKeyId: ${AWS_ACCESS_KEY_ID}
+      secretAccessKey: ${AWS_SECRET_ACCESS_KEY}
+
+catalog:
+     locations:
+        - type: url
+          target: https://github.com/_<your_org>_/rhdh-techdocs-pipeline/blob/main/catalog-info.yaml
+----
+. Click *Save*.
+. In the navigation menu of the {ocp-short} console, click *Topology* and restart the pod.
++
+[NOTE]
+====
+Changes to the `docs` folder or the `mkdocs.yaml` file trigger the `rhdh-techdocs-pipeline` workflow to run. After the `rhdh-techdocs-pipeline` workflow runs successfully, the generated TechDocs are uploaded to your Amazon S3 bucket.
+====
+
+.Verification
+. Go to your {product-very-short} instance and click *Docs* to see the TechDocs served from your Amazon S3 bucket.

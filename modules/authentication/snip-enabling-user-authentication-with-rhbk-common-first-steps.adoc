@@ -1,0 +1,87 @@
+:_mod-docs-content-type: SNIPPET
+
+Authenticate users with {rhbk-brand-name} ({rhbk}), by provisioning the users and groups from {rhbk} to the {product-short} software catalog, and configuring the OpenID Connect (OIDC) authentication provider in {product}.
+
+.Prerequisites
+* You {configuring-book-link}[added a custom {product-short} application configuration], and have enough permissions to change it.
+* You have enough permissions in {rhsso} to create and manage a realm and a client.
++
+[TIP]
+====
+Alternatively, ask your {rhbk} administrator to prepare in {rhbk} the required realm and client.
+====
+
+.Procedure
+. Register your {product-short} app in {rhbk}:
+
+.. Use an existing realm, or {rhbk-docs-link}/html/getting_started_guide/getting-started-zip-#getting-started-zip-create-a-realm[create a realm], with a distinctive **Name** such as __<my_realm>__.
+Save the value for the next step:
+* **{rhbk} realm base URL**, such as: __<your_rhbk_URL>__/realms/__<your_realm>__.
+
+.. To register your {product-short} in {rhbk}, in the created realm, {rhbk-docs-link}/html-single/getting_started_guide/index#getting-started-zip-secure-the-first-application[secure the first application], with:
+... **Client ID**: A distinctive client ID, such as __<{product-very-short}>__.
+... **Valid redirect URIs**: Set to the OIDC handler URL: `pass:c,a,q[{my-product-url}/api/auth/oidc/handler/frame]`.
+... Go to the **Credentials** tab and copy the **Client secret**.
+... Save the values for the next step:
+* **Client ID**
+* **Client Secret**
+
+.. To prepare for the verification steps, in the same realm, get the credential information for an existing user or {rhbk-docs-link}/html-single/getting_started_guide/index#getting-started-zip-create-a-user[create a user].
+Save the user credential information for the verification steps.
+
+. Add your {rhsso} credentials to {product-short}, by
+adding the following key/value pairs to {configuring-dynamic-plugins-book-link}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their environment variable name.
++
+`KEYCLOAK_CLIENT_ID`::
+Enter the saved **Client ID**.
+
+`KEYCLOAK_CLIENT_SECRET`::
+Enter the saved **Client Secret**.
+
+`KEYCLOAK_BASE_URL`::
+Enter the saved **{rhbk} realm base URL**.
+
+. Enable the Keycloak catalog provider plugin in your `dynamic-plugins.yaml` file.
++
+The plugin is named after {rhbk} upstream project.
++
+This plugin imports {rhbk} users and groups to the {product-short} software catalog.
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-keycloak-dynamic'
+    disabled: false
+----
+
+. Enable provisioning {rhbk} users and groups to the {product-short} software catalog, by adding the `catalog.providers.keycloakOrg` section to your `{my-app-config-file}` file:
++
+[id=keycloakOrgProviderId]
+[source,yaml]
+----
+catalog:
+  providers:
+    keycloakOrg:
+      default:
+        baseUrl: ${KEYCLOAK_BASE_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        realm: master
+        loginRealm: master
+----
+
+`baseUrl`::
+Enter your {rhbk} server URL, defined earlier.
+
+`clientId`::
+Enter your {product-short} application client ID in {rhbk}, defined earlier.
+
+`clientSecret`::
+Enter your {product-short} application client secret in {rhbk}, defined earlier.
+
+`realm`::
+Enter the realm name to provision users, such as `master`.
+
+`loginRealm`::
+Enter the realm name to authenticate users, such as `master`.

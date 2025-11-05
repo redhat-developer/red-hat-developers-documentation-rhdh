@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set consistent locale for sorting across different systems
+export LC_ALL=C
+
 # script to generate rhdh-supported-plugins.adoc from content in
 # https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/marketplace/packages/
 
@@ -10,6 +13,9 @@ green="\033[1;32m"
 blue="\033[1;34m"
 red="\033[1;31m"
 QUIET=0
+DO_CLEAN=0
+
+BRANCH=main
 
 rhdhRepo="https://github.com/redhat-developer/rhdh"
 usage() {
@@ -27,22 +33,26 @@ Usage:
 $0 -b stable-ref-branch
 
 Options:
-  -b, --ref-branch    : Reference branch against which plugin versions should be incremented, like release-1.y or main
+  -b, --ref-branch    : Branch against which plugin versions should be incremented, like release-1.y; default: main
   --clean             : Force a clean GH checkout (do not reuse files on disk)
   -q                  : quieter output
   -h, --help          : Show this help
 
 Examples:
 
-  $0 -b release-1.7 --clean
+  $0 -b release-1.8 --clean
 
 EOF
 }
 
+tmpdir="/tmp/rhdh_$BRANCH"
+
+if [[ "$#" -lt 1 ]]; then usage; exit 1; fi
+
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    '--clean') rm -fr /tmp/plugin-versions.txt /tmp/rhdh;;
-    '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
+    '--clean') DO_CLEAN=1;;
+    '-b'|'--ref-branch') BRANCH="$2" tmpdir="/tmp/rhdh_$BRANCH"; shift 1;;        # reference branch, eg., 1.1.x
     '-q') QUIET=1;;
     '-h'|'--help') usage;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
@@ -52,11 +62,15 @@ done
 
 if [[ ! $BRANCH ]]; then usage; exit 1; fi
 
+if [[ $DO_CLEAN -eq 1 ]]; then
+    rm -fr /tmp/plugin-versions_"${BRANCH}".txt "${tmpdir}"
+fi
+
 # fetch GH repos
 # TODO use metadata from https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/release-1.7/workspaces
-if [[ ! -d /tmp/rhdh ]]; then
+if [[ ! -d "$tmpdir" ]]; then
     pushd /tmp >/dev/null || exit
-        git clone "$rhdhRepo" --depth 1 -b "$BRANCH" rhdh
+        git clone "$rhdhRepo" --depth 1 -b "$BRANCH" "rhdh_$BRANCH"
     popd >/dev/null || exit
 fi
 
@@ -92,22 +106,23 @@ titlecase() {
 # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
 # * packages/app/package.json#.dependencies
 # * packages/backend/package.json#.dependencies
-pluginVersFile=/tmp/plugin-versions.txt
-if [[ -f /tmp/rhdh/dynamic-plugins/imports/package.json ]]; then
-    jq -r '.peerDependencies' /tmp/rhdh/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > $pluginVersFile
+pluginVersFile=/tmp/plugin-versions_"${BRANCH}".txt
+if [[ -f "${tmpdir}"/dynamic-plugins/imports/package.json ]]; then
+    jq -r '.peerDependencies' "${tmpdir}"/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > "$pluginVersFile"
 fi
-jq -r '.dependencies' /tmp/rhdh/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> $pluginVersFile
-cat $pluginVersFile | sort -uV > $pluginVersFile.out; mv -f $pluginVersFile.out $pluginVersFile
+jq -r '.dependencies' "${tmpdir}"/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> "$pluginVersFile"
+# Use LC_ALL=C for consistent sorting across different locales
+cat "$pluginVersFile" | sort -u > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
 
-rm -fr /tmp/warnings.txt
+rm -fr /tmp/warnings_"${BRANCH}".txt
 
 # create temporary files instead of associative arrays
-TEMP_DIR="/tmp/rhdh-processing"
+TEMP_DIR="/tmp/rhdh-processing_${BRANCH}"
 mkdir -p "$TEMP_DIR"
 rm -f "$TEMP_DIR"/*.tmp
 
 # process YAML files from catalog-entities/marketplace/packages/
-yamls=$(find /tmp/rhdh/catalog-entities/marketplace/packages/ -maxdepth 1 -name "*.yaml" | sort -V)
+yamls=$(find "${tmpdir}"/catalog-entities/marketplace/packages/ -maxdepth 1 -name "*.yaml" | sort)
 c=0
 tot=0
 for y in $yamls; do
@@ -116,7 +131,7 @@ for y in $yamls; do
 done
 
 # string listing the enabled-by-default plugins to add to con-preinstalled-dynamic-plugins.template.adoc
-ENABLED_PLUGINS="/tmp/ENABLED_PLUGINS.txt"; rm -f $ENABLED_PLUGINS; touch $ENABLED_PLUGINS
+ENABLED_PLUGINS="/tmp/ENABLED_PLUGINS_${BRANCH}.txt"; rm -f "$ENABLED_PLUGINS"; touch "$ENABLED_PLUGINS"
 
 for y in $yamls; do
     [[ $(basename "$y") == "all.yaml" ]] && continue
@@ -155,29 +170,32 @@ for y in $yamls; do
         Path="${Path/-dynamic-dynamic/-dynamic}"
     fi
 
-    # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend)
+    # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
     # Accept both patterns:
     #  - Frontend: ./dynamic-plugins/dist/<name>
     #  - Backend:  ./dynamic-plugins/dist/<name>-dynamic
+    #  - NRRC registry: @redhat/<package>@version
     #  this change was made since FE plugins were not being included in the .csv file
-    [[ $Path == ./dynamic-plugins/dist/* ]] || continue
+    [[ $Path == ./dynamic-plugins/dist/* ]] || [[ $Path == "@redhat"* ]] || continue
     
     # Filter 2: Exclude oci:// paths
     [[ $Path == "oci://"* ]] && continue
     
-    # Filter 3: Exclude @redhat packages
-    [[ $Plugin == "@redhat"* ]] && continue
-
-    # shellcheck disable=SC2016
-    found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' /tmp/rhdh/dynamic-plugins.default.yaml)
-    # shellcheck disable=SC2016
-    found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' /tmp/rhdh/dynamic-plugins.default.yaml)
-    
-    Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-    if [[ $Path2 ]]; then
-        Path=$Path2
+    # Filter 3: Handle @redhat packages - exclude unless they have dynamicArtifact from NRRC registry
+    if [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") != "@redhat"* ]]; then
+        continue
     else
-        Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        # shellcheck disable=SC2016
+        found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
+        # shellcheck disable=SC2016
+        found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
+
+        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+        if [[ $Path2 ]]; then
+            Path=$Path2
+        else
+            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        fi
     fi
     
     # For marketplace YAML files, skip the default config check for inclusion
@@ -202,7 +220,7 @@ for y in $yamls; do
         if [[ $match ]]; then
             Version=$(echo "${match}" | sed -r -e "s/.+\": \"([0-9.]+)\"/\1/")
             if [[ "$Version" != "$VersionJQ" ]]; then
-                echo -e "${blue}[WARN] ! Using $pluginVersFile version = $Version, not $VersionJQ from $Path ${norm}" | tee -a /tmp/warnings.txt
+                echo -e "${blue}[WARN] ! Using $pluginVersFile version = $Version, not $VersionJQ from $Path ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
             fi
         fi
 
@@ -215,11 +233,11 @@ for y in $yamls; do
         allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
         # echo "Found $allVersionsPublished"
         # clean out any pre-release versions
-        latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
+        latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -u | tail -1)"
         # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
         if [[ "$latestXYRelease" != "$Version" ]]; then
-            echo -e "${blue}[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease ${norm}" | tee -a /tmp/warnings.txt
-            # echo | tee -a /tmp/warnings.txt
+            echo -e "${blue}[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
+            # echo | tee -a /tmp/warnings_"${BRANCH}".txt
         fi
 
         # Extract support level from YAML metadata
@@ -238,9 +256,9 @@ for y in $yamls; do
 
         # compute Default from dynamic-plugins.default.yaml
         # shellcheck disable=SC2016
-        disabled=$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path) | .disabled' /tmp/rhdh/dynamic-plugins.default.yaml)
+        disabled=$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path) | .disabled' "${tmpdir}"/dynamic-plugins.default.yaml)
         # shellcheck disable=SC2016
-        if [[ ! $disabled ]]; then disabled=$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path) | .disabled' /tmp/rhdh/dynamic-plugins.default.yaml); fi
+        if [[ ! $disabled ]]; then disabled=$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path) | .disabled' "${tmpdir}"/dynamic-plugins.default.yaml); fi
         # echo "Using Path = $Path got disabled = $disabled"
         # null or false == enabled by default
         Default="Enabled"
@@ -479,9 +497,9 @@ if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;cat "${ENABLED_PLUGINS}.error
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
 rm -rf "$TEMP_DIR"
-# rm -fr /tmp/rhdh
+# rm -fr "${tmpdir}"
 
-warnings=$(grep -c "WARN" "/tmp/warnings.txt" 2>/dev/null || echo "0")
+warnings=$(grep -c "WARN" "/tmp/warnings_${BRANCH}.txt" 2>/dev/null || echo "0")
 if [[ $warnings -gt 0 ]]; then
-    echo; echo -e "${blue}[WARN] $warnings warnings collected in /tmp/warnings.txt ! Consider upgrading upstream project to newer plugin versions !${norm}"
+    echo; echo -e "${blue}[WARN] $warnings warnings collected in /tmp/warnings_${BRANCH}.txt ! Consider upgrading upstream project to newer plugin versions !${norm}"
 fi
