@@ -3,12 +3,20 @@
 [id="proc-installing-and-configuring-lightspeed_{context}"]
 = Installing and configuring {ls-brand-name}
 
-{ls-short} operates on a _Bring Your Own Model_ approach, meaning you must provide and configure access to your preferred Large Language Model (LLM) provider for the service to function. The {lcs-name} ({lcs-short}) acts as an intermediary and service layer for interfacing with LLM providers, relying on the Llama Stack service for core operations. {lcs-short} handles LLM provider setup, authentication, feedback, and Retrieval Augmented Generation (RAG). The {lcs-short} is designed to run as a sidecar container within the {product-very-short} Pod.
+{ls-short} includes three main components that work together to provide virtual assistant (chat) functionality to your developers.
+
+* Llama Stack server (container sidecar):: This server, based on open source Llama Stack, operates as the main gateway to your LLM inferencing provider for chat services. Its modular nature allows you to integrate other services, such as the Model Context Protocol (MCP). You must integrate your LLM provider with the Llama Stack server to support the chat functionality. This dependency on external LLM providers is called *Bring Your Own Model* (BYOM).
+
+* {lcs-name} (container sidecar):: This service, based on the open source Lightspeed Core, enables features that complement the Llama Stack server, including maintaining chat history and gathering user feedback.
+
+* {ls-short} (dynamic plugins):: These plugins are required to enable the {ls-short} user interface within your {product-very-short} instance.
+
+Configuring these components to initialise correctly and communicate with each other is essential in order to provide {ls-short} to your users. 
 
 [NOTE]
 ====
-If you have already installed the previous {ls-short} (Developer Preview) with Road-Core Service (RCS), remove the previous {ls-short} configurations and settings and reinstall.
-This step is necessary as {ls-short} originally required the use of the {rcs-name} as a sidecar container for interfacing with LLM providers. The updated architecture removes and replaces RCS with the new Lightspeed Core Service (LCS) and Llama Stack, which require a new configuration for volumes, containers, and secrets.
+If you have already installed the previous {ls-short} (Developer Preview) with Road-Core Service (RCS), you must remove the previous {ls-short} configurations and settings and reinstall.
+This step is necessary as {ls-short} has a new architecture. In the previous release, {ls-short} required the use of the {rcs-name} as a sidecar container for interfacing with LLM providers. The updated architecture removes and replaces RCS with the new {lcs-name} and Llama Stack server, and requires new configurations for the plugins, volumes, containers, and secrets.
 ====
 
 .Prerequisites
@@ -636,12 +644,12 @@ extraVolumes:
       - mountPath: /app-root/config/lightspeed-stack.yaml
         name: lightspeed-stack
 ----
-... Add the {ls-short} and Llama Stack Secret file as shown in the following example:
+... Add the Llama Stack Secret file as shown in the following example:
 +
 [source,yaml]
 ----
  extraEnvVarsSecrets:
-      - lightspeed-secrets
+      - llama-stack-secrets
 ----
 ... Add the {lcs-short} image as shown in the following example:
 +
@@ -717,7 +725,7 @@ upstream:
    extraEnvVars:
      ...
    extraEnvVarsSecrets:
-     - lightspeed-secrets
+     - llama-stack-secrets
    extraVolumeMounts:
      - mountPath: /app-root/config/lightspeed-stack.yaml
        name: lightspeed-stack
