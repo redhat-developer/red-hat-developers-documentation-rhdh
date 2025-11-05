@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Operator flavors for Red Hat Developer Hub</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="The Red Hat Developer Hub (RHDH) Operator Flavors feature provides a structured framework for deploying opinionated, pre-configured installations of RHDH tailored to specific use cases. This design builds upon the existing Operator Profiles framework to enable turnkey solutions that avoid the &quot;blank page&quot; experience of an empty RHDH installation. Flavors allow teams to quickly deploy RHDH instances optimized for their specific needs."/><link rel="next" href="#assembly-operator-flavors" title="1. Red Hat Developer Hub Operator Flavors"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm46621388152592"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.8</span></div><div><h1 class="title">Operator flavors for Red Hat Developer Hub</h1></div><div><h3 class="subtitle"><em>The Red Hat Developer Hub (RHDH) Operator Flavors feature provides a structured framework for deploying opinionated, pre-configured installations of RHDH tailored to specific use cases</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm46621369273696">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				The Red Hat Developer Hub (RHDH) Operator Flavors feature provides a structured framework for deploying opinionated, pre-configured installations of RHDH tailored to specific use cases. This design builds upon the existing Operator Profiles framework to enable turnkey solutions that avoid the "blank page" experience of an empty RHDH installation. Flavors allow teams to quickly deploy RHDH instances optimized for their specific needs.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#assembly-operator-flavors">1. Red Hat Developer Hub Operator Flavors</a></span><ul><li><span class="section"><a href="#con-install-operator-flavors_assembly-operator-flavors">1.1. Flavor framework architecture</a></span></li><li><span class="section"><a href="#flavor-framework-implementation">1.2. Flavor framework implementation</a></span></li><li><span class="section"><a href="#proc-install-create-custom-flavor_assembly-operator-flavors">1.3. Creating a custom flavor</a></span></li><li><span class="section"><a href="#proc-install-distribute-custom-flavor_assembly-operator-flavors">1.4. Distributing a custom flavor</a></span></li><li><span class="section"><a href="#ref-install-flavor-schema_assembly-operator-flavors">1.5. Flavor manifest schema</a></span></li></ul></li></ul></div><section class="section" id="assembly-operator-flavors"><div class="titlepage"><div><div><h2 class="title">1. Red Hat Developer Hub Operator Flavors</h2></div></div></div><section class="section" id="con-install-operator-flavors_assembly-operator-flavors"><div class="titlepage"><div><div><h3 class="title">1.1. Flavor framework architecture</h3></div></div></div><p>
+				The flavor framework for the Red Hat Developer Hub (RHDH) Operator is an extension of the existing Configuration Profiles mechanism. A flavor is a specialized profile that goes beyond simple configuration to encompass a complete, opinionated RHDH installation. The architecture is designed to be flexible and modular, allowing for the creation of turnkey solutions.
+			</p><p>
+				The core of the framework is its reliance on Kustomize, a tool used by the operator to manage and apply Kubernetes manifests. Flavors act as Kustomize overlays, which means they can modify and extend a base RHDH deployment with specific configurations, resources, and dependencies.
+			</p><p>
+				A complete flavor is defined by a standardized set of directories and files:
+			</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">Flavor Manifest</span></dt><dd>
+							A <code class="literal">kustomization.yaml</code> file that acts as the central definition for the flavor, orchestrating how all the other components are applied.
+						</dd><dt><span class="term">Configuration Directory (<code class="literal">config/</code>)</span></dt><dd>
+							Contains RHDH application and plugin configuration files.
+						</dd><dt><span class="term">Resources Directory (<code class="literal">resources/</code>)</span></dt><dd>
+							Holds additional Kubernetes resources that need to be deployed, such as custom resource definitions (CRDs), catalog entities, and templates.
+						</dd><dt><span class="term">Hooks Directory (<code class="literal">hooks/</code>)</span></dt><dd>
+							Stores manifests for pre-installation and post-installation tasks, which are executed as Kubernetes jobs.
+						</dd></dl></div></section><section class="section" id="flavor-framework-implementation"><div class="titlepage"><div><div><h3 class="title">1.2. Flavor framework implementation</h3></div></div></div><p>
+				The implementation of the flavor framework is handled by the RHDH Operator itself, which is extended to recognize and process the <code class="literal">spec.flavor</code> field in the Backstage custom resource (CR).
+			</p><p>
+				The implementation details include:
+			</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">Flavor selection</span></dt><dd>
+							The Backstage CR is extended to include a <code class="literal">spec.flavor</code> field, allowing users to select a predefined or custom flavor.
+						</dd><dt><span class="term">Operator integration</span></dt><dd>
+							When a Backstage CR is applied, the operator checks for the specified flavor. It then uses Kustomize to process the flavor’s manifest and apply its configurations, resources, and hooks to the cluster.
+						</dd><dt><span class="term">Dependency management</span></dt><dd>
+							The Operator is responsible for automatically checking for and deploying any required infrastructure dependencies (for example, other operators or CRDs) that a flavor’s plugins might need. It validates these requirements before applying the flavor’s configuration.
+						</dd><dt><span class="term">Hooks execution</span></dt><dd>
+							The Operator handles the lifecycle of pre-installation and post-installation hooks. It monitors the status of the Kubernetes jobs created by these hooks and adjusts the deployment process accordingly.
+						</dd><dt><span class="term">Distribution</span></dt><dd>
+							Flavors can be shipped with the Operator or distributed externally as container images. When a user specifies an external flavor image, the Operator pulls the image, extracts the files of the flavor, and applies them in the same way as a built-in flavor. This container-based approach provides a consistent and secure way to manage custom flavors.
+						</dd></dl></div></section><section class="section" id="proc-install-create-custom-flavor_assembly-operator-flavors"><div class="titlepage"><div><div><h3 class="title">1.3. Creating a custom flavor</h3></div></div></div><p>
+				A custom flavor is a new operator profile with a specific directory structure. You can create a new flavor by following these steps:
+			</p><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Create a dedicated directory for your flavor, following a standardized structure. This structure helps the operator identify and process all the components of your flavor:
+					</p><pre class="programlisting language-terminal">flavors/
+└── my-custom-flavor/
+    ├── kustomize.yaml
+    ├── config/
+    │   ├── app-config.yaml
+    │   └── plugins/
+    │       └── my-plugin.yaml
+    ├── resources/
+    │   ├── dependencies.yaml
+    │   └── catalog/
+    │       └── entities.yaml
+    └── hooks/
+        ├── pre-install/
+        │   └── job.yaml
+        └── post-install/
+            └── job.yaml</pre><p class="simpara">
+						where
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="emphasis"><em>kustomize.yaml</em></span></span></dt><dd>
+									This is your flavor’s manifest file that acts as the central definition, orchestrating the application of all other files in the directory.
+								</dd><dt><span class="term"><span class="emphasis"><em>config/</em></span></span></dt><dd>
+									Contains the core app-config.yaml for Red Hat Developer Hub, along with any plugin-specific configuration files.
+								</dd><dt><span class="term"><span class="emphasis"><em>resources/</em></span></span></dt><dd>
+									Holds additional Kubernetes resources your flavor needs. This can include CRDs for dependencies or initial catalog entities to populate RHDH.
+								</dd><dt><span class="term"><span class="emphasis"><em>hooks/</em></span></span></dt><dd>
+									Contains manifests for Kubernetes jobs that run before (pre-install) or after (post-install) the RHDH instance is deployed.
+								</dd></dl></div></li><li class="listitem">
+						(Optional) If your flavor uses dynamic plugins that require specific Kubernetes resources, define these resources as YAML manifests in your <code class="literal">config/profile/{PROFILE}/plugin-deps</code> directory.
+					</li><li class="listitem">
+						(Optional) For dependencies that require operators or other infrastructure, specify them in the <span class="emphasis"><em>plugin-infra</em></span> directory.
+					</li><li class="listitem">
+						(Optional) Write Kubernetes job manifests for any pre-installation or post-installation tasks. The Operator will execute these jobs and monitor their status.
+					</li></ol></div></section><section class="section" id="proc-install-distribute-custom-flavor_assembly-operator-flavors"><div class="titlepage"><div><div><h3 class="title">1.4. Distributing a custom flavor</h3></div></div></div><p>
+				Custom flavors can be distributed as container images, offering a secure and versioned approach.
+			</p><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Create a container image that contains your flavor’s directory structure at a specific location, typically <code class="literal">/flavor/</code>. The image should be lightweight and contain only the necessary manifests and files.
+					</p><pre class="programlisting language-terminal">/flavor/
+├── flavor.yaml             # Flavor manifest
+├── config/
+├── resources/
+└── hooks/</pre></li><li class="listitem"><p class="simpara">
+						When the image is built, push it to a container registry which makes the flavor accessible to others, for example:
+					</p><pre class="programlisting language-terminal">podman push quay.io/myorg/my-custom-flavor:1.0.0</pre></li><li class="listitem"><p class="simpara">
+						Users can deploy your custom flavor by referencing the container image directly in their Backstage custom resource. The operator pulls the image, extracts the contents, and applies the configuration automatically. For example:
+					</p><pre class="programlisting language-yaml">apiVersion: backstage.redhat.com/v1alpha1
+kind: Backstage
+metadata:
+  name: custom-hub
+spec:
+  flavor:
+    name: my-custom-flavor
+    image: quay.io/myorg/my-custom-flavor:1.0.0</pre></li></ol></div></section><section class="section" id="ref-install-flavor-schema_assembly-operator-flavors"><div class="titlepage"><div><div><h3 class="title">1.5. Flavor manifest schema</h3></div></div></div><p>
+				The flavor manifest is a <code class="literal">kustomization.yaml</code> file that serves as the central definition for a flavor. This file is used by the RHDH Operator to orchestrate the deployment of all other components. The manifest schema leverages standard Kustomize fields and is typically structured as follows:
+			</p><pre class="programlisting language-yaml">apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - config/
+  - resources/
+  - hooks/</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="emphasis"><em>apiVersion</em></span> and <span class="emphasis"><em>kind</em></span></span></dt><dd>
+							These are standard Kustomize fields that define the schema version and type.
+						</dd><dt><span class="term"><span class="emphasis"><em>resources</em></span></span></dt><dd>
+							This field is a list that points to the directories containing the flavor’s configuration files, Kubernetes resources, and hooks. The Operator uses this list to process and apply all the components within the flavor.
+						</dd></dl></div><section class="section" id="configuration-options"><div class="titlepage"><div><div><h4 class="title">1.5.1. Configuration options</h4></div></div></div><p>
+					A flavor’s configuration is managed through the directories and files referenced in its manifest. The primary configuration options are:
+				</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">RHDH application configuration</span></dt><dd>
+								The <span class="emphasis"><em>config/app-config.yaml</em></span> file contains the core configuration for the RHDH instance. This can include settings for the backend, authentication providers, and other core functionalities.
+							</dd><dt><span class="term">Dynamic plugins configuration</span></dt><dd>
+								Files located in the <span class="emphasis"><em>config/plugins/</em></span> directory define the settings for specific dynamic plugins. This includes enabling or disabling plugins and configuring their unique properties.
+							</dd><dt><span class="term">Kubernetes resources</span></dt><dd><p class="simpara">
+								The <span class="emphasis"><em>resources/</em></span> directory contains standard Kubernetes manifests. This can include:
+							</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+										Dependency manifests that define Custom Resource Definitions (CRDs) for external services.
+									</li><li class="listitem">
+										Catalog entities which are YAML files for initial catalog entries, such as templates, components, and APIs.
+									</li></ul></div></dd><dt><span class="term">Hooks</span></dt><dd>
+								The <span class="emphasis"><em>hooks/</em></span> directory contains manifests for Kubernetes jobs. These jobs can be used to perform pre-installation or post-installation tasks, such as creating secrets or running data migrations.
+							</dd><dt><span class="term">Platform-Specific Overrides</span></dt><dd>
+								Flavors can include platform-specific patches. Files with a <span class="emphasis"><em>.k8s</em></span> or <span class="emphasis"><em>.ocp</em></span> extension for example, <span class="emphasis"><em>app-config.yaml.ocp</em></span> provide overrides for vanilla Kubernetes and OpenShift environments, respectively. The operator automatically applies the correct patch based on the cluster’s platform.
+							</dd></dl></div></section></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm46621369273696"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
