@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set consistent locale for sorting across different systems
+export LC_ALL=C
+
 # script to generate rhdh-supported-plugins.adoc from content in
 # https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/marketplace/packages/
 
@@ -108,7 +111,8 @@ if [[ -f "${tmpdir}"/dynamic-plugins/imports/package.json ]]; then
     jq -r '.peerDependencies' "${tmpdir}"/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > "$pluginVersFile"
 fi
 jq -r '.dependencies' "${tmpdir}"/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> "$pluginVersFile"
-cat "$pluginVersFile" | sort -uV > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
+# Use LC_ALL=C for consistent sorting across different locales
+cat "$pluginVersFile" | sort -u > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
 
 rm -fr /tmp/warnings_"${BRANCH}".txt
 
@@ -118,7 +122,7 @@ mkdir -p "$TEMP_DIR"
 rm -f "$TEMP_DIR"/*.tmp
 
 # process YAML files from catalog-entities/marketplace/packages/
-yamls=$(find "${tmpdir}"/catalog-entities/marketplace/packages/ -maxdepth 1 -name "*.yaml" | sort -V)
+yamls=$(find "${tmpdir}"/catalog-entities/marketplace/packages/ -maxdepth 1 -name "*.yaml" | sort)
 c=0
 tot=0
 for y in $yamls; do
@@ -166,29 +170,32 @@ for y in $yamls; do
         Path="${Path/-dynamic-dynamic/-dynamic}"
     fi
 
-    # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend)
+    # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
     # Accept both patterns:
     #  - Frontend: ./dynamic-plugins/dist/<name>
     #  - Backend:  ./dynamic-plugins/dist/<name>-dynamic
+    #  - NRRC registry: @redhat/<package>@version
     #  this change was made since FE plugins were not being included in the .csv file
-    [[ $Path == ./dynamic-plugins/dist/* ]] || continue
+    [[ $Path == ./dynamic-plugins/dist/* ]] || [[ $Path == "@redhat"* ]] || continue
     
     # Filter 2: Exclude oci:// paths
     [[ $Path == "oci://"* ]] && continue
     
-    # Filter 3: Exclude @redhat packages
-    [[ $Plugin == "@redhat"* ]] && continue
-
-    # shellcheck disable=SC2016
-    found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
-    # shellcheck disable=SC2016
-    found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
-    
-    Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-    if [[ $Path2 ]]; then
-        Path=$Path2
+    # Filter 3: Handle @redhat packages - exclude unless they have dynamicArtifact from NRRC registry
+    if [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") != "@redhat"* ]]; then
+        continue
     else
-        Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        # shellcheck disable=SC2016
+        found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
+        # shellcheck disable=SC2016
+        found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${tmpdir}"/dynamic-plugins.default.yaml)
+
+        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+        if [[ $Path2 ]]; then
+            Path=$Path2
+        else
+            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        fi
     fi
     
     # For marketplace YAML files, skip the default config check for inclusion
@@ -226,7 +233,7 @@ for y in $yamls; do
         allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
         # echo "Found $allVersionsPublished"
         # clean out any pre-release versions
-        latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -uV | tail -1)"
+        latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -u | tail -1)"
         # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
         if [[ "$latestXYRelease" != "$Version" ]]; then
             echo -e "${blue}[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
