@@ -1,0 +1,83 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="ref-best-practices-for-creating-workflows.adoc_{context}"]
+= Best practices when creating serverless workflows
+
+Create effective serverless workflows using thoughtful approaches to design, handle data, and manage error by following these best practices based on the Serverless Workflow Domain Specific Language (DSL) principles. These principles help you to build robust workflows.
+
+Workflow design principles::
++
+The Serverless Workflow DSL prioritizes clarity and ease of use when writing workflows.
+
+Priority of constituencies:::
++
+When developing workflows or APIs, ensure the needs of the author (workflow writer) come first. The constituencies are prioritized in the following order: Authors > Operators > Implementors > Specifications writers.
+
+Linguistic fluency and clarity:::
++
+** Use imperative verbs such as `Call`, `Emit`, `For`, `Fork`, `Raise`, `Run`, `Set`, `Switch`, and `Wait`. These simple, universally understood terms make your workflow simple to read and understand.
+
+Structure and extensibility:::
++
+** Use implicit default behaviors to reduce redundancy.
+** Declare components inline if they are not reusable to keep the definition self-contained.
+** Use external references to import and reuse shared components, which promotes a modular design.
+** Prioritize flexibility over strict enumerations to ensure extensibility and adaptability across different runtime environments.
+
+Data flow and runtime management::
++
+Controlling data flow is critical for efficient workflows. Tasks are the fundamental computing units of a workflow. The Domain Specific Language (DSL) defines several default task types that runtimes must do. These include `Do`, `Listen`, `Raise`, `Run`, `Try`, and `Wait`.
+
+Security and error handling::
++
+Secrets::: Use Secrets with caution. Avoid passing them directly in call inputs as this might expose sensitive information.
+
+Fault tolerance and error handling::: Serverless Workflow is designed with resilience in mind to recover from failures.
+
+Orchestrator UI integration best practices::
++
+For your workflow results to be effectively displayed in the Orchestrator UI and to facilitate chaining of workflows, you must structure the output data according to the `WorkflowResult` schema. Additionally, include any error information as part of the workflow output so the UI and subsequent workflows can handle them accordingly.
++
+Workflow output schema:::
++
+Results placement:::: The primary output intended for subsequent processing must be placed under the `data.result` property.
+
+Schema reference:::: Your output schema file (`schemas/workflow-output-schema.json`) must reference the `WorkflowResult` schema.
+
+Outputs definition:::: Include an `outputs` section in your workflow definition. This section contains human-readable key/value pairs that the UI will display.
++
+Structure of workflow:
++
+[source,yaml]
+----
+id: my-workflow
+version: "0.8"
+specVersion: "0.8"
+name: My Workflow
+start: ImmediatelyEnd
+dataInputSchema: schemas/basic__main-schema.json
+extensions:
+  - extensionid: workflow-output-schema
+    outputSchema: schemas/workflow-output-schema.json
+functions:
+  - name: print
+    type: custom
+    operation: sysout
+  - name: successResult
+    type: expression
+    operation: '{
+      "result": {
+      "message": "Project " + .projectName + " active",
+      "outputs":[]
+      }
+      }'
+start: "successResult"
+states:
+  - name: successResult
+    type: operation
+    actions:
+      - name: setOutput
+        functionRef:
+          refName: successResult
+    end: true
+----
