@@ -1,0 +1,142 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-injecting-custom-files-and-environment-variables-into-backstage-containers"]
+= Injecting extra files and environment variables into {backstage} containers
+
+The `mountPath` field specifies the location where a ConfigMap or Secret is mounted.
+The behavior of the mount, whether it includes or excludes a `subPath`, depends on the specification of the `key` or `mountPath` fields.
+
+* If `key` and `mountPath` are not specified: Each key or value is mounted as a `filename` or content with a `subPath`.
+* If `key` is specified with or without `mountPath`: The specified key or value is mounted with a `subPath`.
+* If only `mountPath` is specified: A directory containing all the keys or values is mounted without a `subPath`.
+* If the `containers` field is not specified: The volume mounts only to the `backstage-backend` container. By default, files mount only to the `backstage-backend` container. You can also specify other targets, including a list of containers by name (such as `dynamic-plugin-install` or `selectcustom` sidecars) or select all containers in the {backstage} Pod.
+
+[NOTE]
+====
+* {ocp-short} does not automatically update a volume mounted with `subPath`. By default, the {product-very-short} Operator monitors these ConfigMaps or Secrets and refreshes the {product-very-short} Pod when changes occur.
+* For security purposes, {product} does not give the Operator Service Account read access to Secrets. As a result, mounting files from Secrets without specifying both mountPath and key is not supported.
+====
+
+.Procedure
+
+. Apply the configuration to your `{product-custom-resource-type} custom resource (CR)`. The following code block is an example:
++
+[source,yaml]
+----
+spec:
+  application:
+    extraFiles:
+      mountPath: _<default_mount_path>_
+      configMaps:
+        - name: _<configmap_name_all_entries>_
+        - name: _<configmap_name_single_key>_
+          key: _<specific_file_key>_
+          containers:
+            - "*"
+        - name: _<configmap_name_custom_path>_
+          mountPath: _<custom_cm_mount_path>_
+          containers:
+            - backstage-backend
+            - install-dynamic-plugins
+      secrets:
+        - name: _<secret_name_single_key>_
+          key: _<specific_secret_key>_
+          containers:
+            - install-dynamic-plugins
+        - name: _<secret_name_custom_path>_
+          mountPath: _<custom_secret_mount_path>_
+      pvcs:
+        - name: _<pvc_name_default_path>_
+        - name: _<pvc_name_custom_path>_
+          mountPath: _<custom_pvc_mount_path>_
+    extraEnvs:
+      configMaps:
+        - name: _<configmap_name_env_var>_
+          key: _<env_var_key>_
+          containers:
+            - "*"
+      secrets:
+        - name: _<secret_name_all_envs>_
+      envs:
+        - name: _<static_env_var_name>_
+          value: "_<static_env_var_value>_"
+          containers:
+           - install-dynamic-plugins
+----
+where:
+
+`spec.application.extraFiles.mountPath`:: Specifies the default base mount path for files if no specific `mountPath` is set for a resource (for example, `/<default_mount_path>`).
+`spec.application.extraFiles.configMaps.name`:: Mounts all entries from `<configmap_name_all_entries>` to the default mount path.
+`spec.application.extraFiles.configMaps.key`:: Mounts **only the specified key (for example, `<specific_file_key>.txt`) from the ConfigMap.
+`spec.application.extraFiles.configMaps.containers`:: Targets all containers (`"*"`) for mounting.
+`spec.application.extraFiles.configMaps.mountPath`:: Overrides the default and mounts all ConfigMap entries as a directory at the specified path (for example, `/<custom_cm_mount_path>`).
+`spec.application.extraFiles.secrets.key`:: Mounts only a specific key from the Secret.
+`spec.application.extraFiles.secrets.mountPath`:: Overrides the default and mounts all Secret entries as a directory at the specified path (for example, `/<custom_secret_mount_path>`).
+`spec.application.extraFiles.pvcs.name`:: Mounts the PVC to the default mount path, appending the PVC name (for example, `/<default_mount_path>/<pvc_name_default_path>`).
+`spec.application.extraFiles.pvcs.mountPath`:: Overrides the default and mounts the PVC to the specified path (for example, `/<custom_pvc_mount_path>`).
+`spec.application.extraEnvs.configMaps.containers`:: Injects the specified ConfigMap key as an environment variable into all containers (`"*"`).
+`spec.application.extraEnvs.secrets.name`:: Injects all keys from the Secret as environment variables into the default container.
+`spec.application.envs.containers`:: Targets only the listed container for the static environment variable injection.
+
+[NOTE]
+====
+The following explicit options are supported:
+
+* *No* or an empty field: Mounts only to the `backstage-backend` container.
+* `*` (asterisk) as the first and only array element: Mounts to all containers.
+* Explicit container names, for example, `install-dynamic-plugins`: Mounts only to the listed containers.
+====
+
+.Verification
+
+The files are mounted with the following correct paths and container targets:
+
+[cols="1,2,3,2", options="header"]
+|===
+| Resource | Target type | Path(s) or name(s) | Container(s)
+
+| ConfigMap (`<configmap_name_all_entries>`)
+| File
+| `/<default_mount_path>/<file_1_key>`, `/<default_mount_path>/<file_2_key>`
+| `backstage-backend`
+
+| ConfigMap (`<configmap_name_single_key>`)
+| File
+| `/<default_mount_path>/<specific_file_key>.txt`
+| All
+
+| ConfigMap (`<configmap_name_custom_path>`)
+| Directory
+| `/<custom_cm_mount_path>/`
+| `backstage-backend`, `install-dynamic-plugins`
+
+| Secret (`<secret_name_single_key>`)
+| File
+| `/<default_mount_path>/<specific_secret_key>.txt`
+| `install-dynamic-plugins`
+
+| Secret (`<secret_name_custom_path>`)
+| Directory
+| `/<custom_secret_mount_path>/`
+| `backstage-backend`
+
+| PVC (`<pvc_name_default_path>`)
+| Directory
+| `/<default_mount_path>/<pvc_name_default_path>`
+| `backstage-backend`
+
+| ConfigMap (`<configmap_name_env_var>`)
+| Env Var
+| `<env_var_key>`
+| All
+
+| Secret (`<secret_name_all_envs>`)
+| Env Var
+| `<secret_key_a>`, `<secret_key_b>`
+| `backstage-backend`
+
+| CRD (`envs`)
+| Env Var
+| `<static_env_var_name> = <static_env_var_value>`
+| `install-dynamic-plugins`
+|===

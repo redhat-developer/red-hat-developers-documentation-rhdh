@@ -1,0 +1,142 @@
+:_mod-docs-content-type: SNIPPET
+
+Authenticate users with {azure-brand-name} by provisioning the users and groups from {azure-short} to the {product-short} software catalog, and configuring the {azure-short} authentication provider in {product}.
+
+.Prerequisites
+* You have the permission to register an application in {azure-short}.
++
+[TIP]
+====
+Alternatively, ask your {azure-short} administrator to prepare the required {azure-short} application.
+====
+
+* You {configuring-book-link}[added a custom {product-short} application configuration], and have enough permissions to change it.
+
+* Your {product-short} backend can access the following hosts:
+
+`login.microsoftonline.com`::
+The {azure-brand-name} authorization server, which enables the authentication flow.
+
+`graph.microsoft.com`::
+The server for retrieving organization data, including user and group data, to import into the {product-short} catalog.
+
+.Procedure
+:my-product-app-name-in-azure: <Authenticating with {product-short}>
+. Register your {product-short} app in {azure-short}, link:https://learn.microsoft.com/en-us/entra/identity-platform/scenario-web-app-sign-user-app-registration?tabs=aspnetcore#register-an-app-by-using-the-azure-portal[by using the {azure-short} portal].
+
+.. Sign in to the link:https://entra.microsoft.com/[Microsoft Entra admin center].
+
+.. Optional: If you have access to multiple tenants, use the *Settings* icon in the top menu to switch to the tenant in which you want to register the application from the *Directories + subscriptions* menu.
+
+.. Browse to *Applications > App registrations*, and create a **New registration** with the configuration:
+
+Name::
+Enter a name to identify your application in {azure-short}, such as __{my-product-app-name-in-azure}__.
+
+Supported account types::
+Select *Accounts in this organizational directory only*.
+
+Redirect URI::
+
+Select a platform:::
+Select *Web*.
+
+URL:::
+Enter the backend authentication URI set in {product-short}: `pass:c,a,q[{my-product-url}/api/auth/microsoft/handler/frame]`
+
+.. On the *Applications > App registrations > __{my-product-app-name-in-azure}__ > Manage > API permissions* page, *Add a Permission*, *Microsoft Graph*, select the following permissions:
+
+Application Permissions::
+`GroupMember.Read.All`:::
+`User.Read.All`:::
+Enter permissions that enable provisioning user and groups to the {product-short} software catalog.
++
+Optional: *Grant admin consent* for these permissions.
+Even if your company does not require admin consent, consider doing so as it means users do not need to individually consent the first time they access {product-short}.
+
+Delegated Permissions::
+`User.Read`:::
+`email`:::
+`offline_access`:::
+`openid`:::
+`profile`:::
+Enter permissions that enable authenticating users.
++
+Optional: Enter optional custom scopes for the Microsoft Graph API that you define both here and in your `{my-app-config-file}` {product-short} configuration file.
+
+.. On the *Applications > App registrations > __{my-product-app-name-in-azure}__ > Manage > Certificates & secrets* page, in the *Client secrets* tab, create a *New client secret*.
+
+.. Save the following values for the next step:
+- **Directory (tenant) ID**
+- **Application (client) ID**
+- **Application (client) Secret ID**
+
+. Add your {azure-short} credentials to {product-short}, by adding the following key/value pairs to {configuring-book-link}#provisioning-your-custom-configuration[your {product-short} secrets]:
+
+`AUTHENTICATION_AZURE_TENANT_ID`::
+Enter your saved *Directory (tenant) ID*.
+
+`AUTHENTICATION_AZURE_CLIENT_ID`::
+Enter your saved *Application (client) ID*.
+
+`AUTHENTICATION_AZURE_CLIENT_SECRET`::
+Enter your saved *Application (client) secret*.
+
+. Enable the Microsoft Graph catalog provider plugin in your `dynamic-plugins.yaml`
+file.
+This plugin imports {azure-short} users and groups to the {product-short} software catalog.
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-msgraph-dynamic'
+    disabled: false
+----
+
+. Enable provisioning {azure-short} users and groups to the {product-short} software catalog, by adding the Microsoft Graph catalog provider section in your `{my-app-config-file}` file:
++
+[id=microsoftGraphOrgProviderId]
+[source,yaml]
+----
+catalog:
+  providers:
+    microsoftGraphOrg:
+      providerId:
+        target: https://graph.microsoft.com/v1.0
+        tenantId: ${AUTHENTICATION_AZURE_TENANT_ID}
+        clientId: ${AUTHENTICATION_AZURE_CLIENT_ID}
+        clientSecret: ${AUTHENTICATION_AZURE_CLIENT_SECRET}
+        schedule:
+          frequency:
+            hours: 1
+          timeout:
+            minutes: 50
+          initialDelay:
+            minutes: 50
+----
+
+`target`::
+Enter `\https://graph.microsoft.com/v1.0` to define the MSGraph API endpoint the provider is connecting to.
+You might change this parameter to use a different version, such as the link:https://learn.microsoft.com/en-us/graph/api/overview?view=graph-rest-beta#call-the-beta-endpoint[beta endpoint].
+
+`tenandId`::
+Enter the configured secret variable name: `$\{AUTHENTICATION_AZURE_TENANT_ID}`.
+
+`clientId`::
+Enter the configured secret variable name: `$\{AUTHENTICATION_AZURE_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name: `$\{AUTHENTICATION_AZURE_CLIENT_SECRET}`.
+
+`schedule`::
+
+`frequency`:::
+Enter the schedule frequency in the cron, ISO duration, or human duration format.
+In a large organization, user provisioning might take a long time, therefore avoid using a low value.
+
+`timeout`:::
+Enter the schedule timeout in the ISO duration or human duration format.
+In a large organization, user provisioning might take a long time, therefore avoid using a low value.
+
+`initialDelay`:::
+Enter the schedule initial delay in the ISO duration or human duration format.

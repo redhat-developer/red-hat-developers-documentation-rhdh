@@ -1,0 +1,130 @@
+:_mod-docs-content-type: SNIPPET
+.Procedure
+. Allow {product-short} to authenticate with GitHub, by creating a GitHub App.
++
+[NOTE]
+====
+Use a GitHub App instead of an OAuth app to use fine-grained permissions, use short-lived tokens, scale with the number of installations by avoiding rate limits, and have a more transparent integration by avoiding to request user input.
+====
+
+.. link:https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app[Register a GitHub App] with the following configuration:
+
+GitHub App name::
+Enter a unique name identifying your GitHub App, such as `authenticating-with-rhdh-__<GUID>__`.
+
+Homepage URL::
+Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+
+Authorization callback URL::
+Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/github/handler/frame]`.
+
+Webhook::
+Clear "Active".
+
+Organization permissions::
+Enable `Read-only` access to *Members*.
+
+Where can this GitHub App be installed?::
+Select `Only on this account`.
+
+.. In the *General* -> *Clients secrets* section, click *Generate a new client secret*.
+
+.. In the *Install App* tab, choose an account to install your GitHub App on.
+
+.. Save the following values for the next step:
+
+* **Client ID**
+* **Client secret**
+
+. Add your GitHub credentials to {product-short} by adding the following key/value pairs to {configuring-book-link}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their environment variable name.
+
+`GITHUB_CLIENT_ID`::
+Enter the saved **Client ID**.
+
+`GITHUB_CLIENT_SECRET`::
+Enter the saved **Client Secret**.
+
+`GITHUB_URL`::
+Enter the GitHub host domain: `github.com`.
+
+`GITHUB_ORG`::
+Enter your GitHub organization name, such as `__<your_github_organization_name>__`.
+
+. Enable the GitHub catalog provider plugin in your `dynamic-plugins.yaml` file to import GitHub users and groups to the {product-short} software catalog.
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org'
+    disabled: false
+----
+
+. Enable provisioning GitHub users and groups to the {product-short} software catalog by adding the GitHub catalog provider section to your `{my-app-config-file}` file:
++
+[id=githubProviderId]
+[source,yaml]
+----
+catalog:
+  providers:
+    githubOrg:
+      id: githuborg
+      githubUrl: "${GITHUB_URL}"
+      orgs: [ "${GITHUB_ORG}" ]
+      schedule:
+        frequency:
+          minutes: 30
+        initialDelay:
+          seconds: 15
+        timeout:
+          minutes: 15
+----
+
+`id`::
+Enter a stable identifier for this provider, such as `githuborg`.
+[WARNING]
+====
+Entities from this provider are associated with this identifier. 
+Therefore, do not to change the identifier over time since that might lead to orphaned entities or conflicts.
+====
+
+`githubUrl`::
+Enter the configured secret variable name: `$\{GITHUB_URL}`.
+
+`orgs`::
+Enter the configured secret variable name: `$\{GITHUB_ORG}`.
+
+`schedule.frequency`::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`schedule.timeout`::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+`schedule.initialDelay`::
+Enter your schedule initial delay, in the ISO duration or "human duration" format.
+
+. Enable the GitHub authentication provider, by adding the GitHub authentication provider section to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${GITHUB_CLIENT_ID}
+        clientSecret: ${GITHUB_CLIENT_SECRET}
+signInPage: github
+----
+
+`environment`::
+Enter `production` to disable the Guest login option in the {product-short} login page.
+
+`clientId`::
+Enter the configured secret variable name: `$\{GITHUB_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name: `$\{GITHUB_CLIENT_SECRET}`.
+
+`signInPage`::
+Enter `github` to enable the GitHub provider as your {product-short} sign-in provider.

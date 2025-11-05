@@ -1,0 +1,393 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enabling-user-provisioning-with-ldap"]
+= Enabling user provisioning with LDAP
+
+When {rhbk-brand-name} ({rhbk}) depends on Lightweight Directory Access Protocol (LDAP) to resolve user and group identities, you can opt to provision users and groups from LDAP directly to the {product} software catalog, rather than using the {rhbk} provisioning mechanism.
+
+.Prerequisites
+* You have configured xref:assembly-authenticating-with-rhbk[authentication with {rhbk-brand-name} ({rhbk})].
+
+* You have collected the required LDAP credentials:
+
+LDAP URL::
+Your LDAP server URL, such as `ldaps://ds.example.net`.
+
+Bind dn::
+Your bind distinguished name, such as `cn=admin,OU=Users,DC=rhdh,DC=test`
+
+LDAP secret::
+Your LDAP secret.
+
+Recommended: LDAP certificates and keys::
+To use a secure LDAP connexion (`ldaps://`):
+you stored your LDAP certificates and keys respectively in the `ldap_certs.pem` and `ldap_keys.pem` files.
++
+[WARNING]
+====
+In production mode, use a secure LDAP connexion.
+====
+
+.Procedure
+. Enter your LDAP credentials to {product-short}, by adding the `LDAP_SECRET` environment variable to {configuring-book-link}#provisioning-your-custom-configuration[your {product-short} secrets].
++
+[source,subs="+attributes,+quotes"]
+----
+$ oc patch secret {my-product-secrets} --patch '{"stringData": { "LDAP_SECRET": "<ldap_secret>" }}'
+----
+
+_<ldap_secret>_::
+Enter your LDAP secret.
+
+. Recommended: To use a secure LDAP connection (`ldaps://`), add your LDAP certificates and keys files to a {a-platform-generic} secret.
++
+[source,subs="+attributes,+quotes"]
+----
+$ oc create secret generic my-rhdh-ldap-secrets \
+    --from-file=./ldap_certs.pem \
+    --from-file=./ldap_keys.pem
+----
+
+. Enable the LDAP catalog provider plugin in your `dynamic-plugins.yaml` file.
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-ldap-dynamic'
+    disabled: false
+----
+
+. Enable provisioning GitHub users and groups to the {product-short} software catalog, by adding the LDAP catalog provider section to your `{my-app-config-file}` file:
+
+.. Optional: Remove other catalog providers, by removing the other catalog providers section.
+
+.. Enter the mandatory fields:
++
+[source,yaml]
+----
+catalog:
+  providers:
+    ldapOrg:
+      default:
+        target: ldaps://ds.example.net
+        bind:
+          dn: cn=admin,ou=Users,dc=rhdh
+          secret: ${LDAP_SECRET}
+        users:
+          - dn: OU=Users,OU=RHDH Local,DC=rhdh,DC=test
+            options:
+              filter: (uid=*)
+        groups:
+          - dn: OU=Groups,OU=RHDH Local,DC=rhdh,DC=test
+        schedule:
+          frequency: PT1H
+          timeout: PT15M
+----
+
+`target`::
+Enter your LDAP server URL, such as `ldaps://ds.example.net`.
+
+`bind`::
+Enter your service account informations:
+
+`dn`:::
+Enter your service account distinguished name (DN), such as `cn=admin,OU=Users,DC=rhdh,DC=test`
+
+`secret`:::
+Enter the name of the variable containing your LDAP secret: `${LDAP_SECRET}`.
+
+`users`::
+Enter information about how to find your users:
+
+`dn`:::
+Enter the DN containing the user information.
+
+`options`:::
+
+`filter`::::
+Enter your filter, such as `(uid=*)` to provision to the {product-very-short} software catalog only users with an existing `uid`.
+
+`groups`::
+Enter information about how to find your groups:
+
+`dn`:::
+Enter the DN containing the group information.
+
+`schedule`::
+Enter your schedule information:
+
+`frequency`:::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`timeout`:::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+`initialDelay`:::
+Enter your schedule initial delay, in the ISO duration or "human duration" format.
+
+.. Optional: To change how {product-short} maps LDAP user fields to the software catalog, enter optional `maps` and `set` fields.
++
+[source,yaml]
+----
+catalog:
+  providers:
+    ldapOrg:
+      default:
+        target: ldaps://ds.example.net
+        bind:
+          dn: cn=admin,ou=Users,dc=rhdh
+          secret: ${LDAP_SECRET}
+        users:
+          - dn: OU=Users,OU=RHDH Local,DC=rhdh,DC=test
+            options:
+              filter: (uid=*)
+            map:
+              rdn: uid
+              name: uid
+              description: {}
+              displayName: cn
+              email: mail
+              picture: {}
+              memberOf: memberOf
+            set:
+              metadata.customField: 'hello'
+        groups:
+          - dn: OU=Groups,OU=RHDH Local,DC=rhdh,DC=test
+        schedule:
+          frequency: PT1H
+          timeout: PT15M
+----
+
+`rdn`::
+To change the default value: `uid`, enter the relative distinguished name of each entry.
+
+`name`::
+To change the default value: `uid`, enter the LDAP field to map to the {product-very-short} `metadata.name` field.
+
+`description`::
+To set a value, enter the LDAP field to map to the {product-very-short} `metadata.description` field.
+
+`displayName`::
+To change the default value: `cn`, enter the LDAP field to map to the {product-very-short} `metadata.displayName` field.
+
+`email`::
+To change the default value: `mail`, enter the LDAP field to map to the {product-very-short} `spec.profile.email` field.
+
+`picture`::
+To set a value, enter the LDAP field to map to the {product-very-short} `spec.profile.picture` field.
+
+`memberOf`::
+To change the default value: `memberOf`, enter the LDAP field to map to the {product-very-short} `spec.memberOf` field.
+
+`set`::
+To set a value, enter the hard coded JSON to apply to the entities after ingestion, such as `metadata.customField: 'hello'`.
+
+.. Optional: To change how {product-short} maps LDAP group fields to the software catalog, enter optional `groups.maps` fields.
++
+[source,yaml]
+----
+catalog:
+  providers:
+    ldapOrg:
+      default:
+        target: ldaps://ds.example.net
+        bind:
+          dn: cn=admin,ou=Users,dc=rhdh
+          secret: ${LDAP_SECRET}
+        users:
+          - dn: OU=Users,OU=RHDH Local,DC=rhdh,DC=test
+            options:
+              filter: (uid=*)
+        groups:
+          - dn: OU=Groups,OU=RHDH Local,DC=rhdh,DC=test
+            map:
+              rdn: uid
+              name: uid
+              description: {}
+              displayName: cn
+              email: mail
+              picture: {}
+              memberOf: memberOf
+              members: member
+              type: groupType
+            set:
+              metadata.customField: 'hello'
+        schedule:
+          frequency: PT1H
+          timeout: PT15M
+----
+
+`rdn`::
+To change the default value: `cn`, enter the relative distinguished name of each entry.
+
+`name`::
+To change the default value: `cn`, enter the LDAP field to map to the {product-very-short} `metadata.name` field.
+
+`description`::
+To set a value, enter the LDAP field to map to the {product-very-short} `metadata.description` field.
+
+`displayName`::
+To change the default value: `cn`, enter the LDAP field to map to the {product-very-short} `metadata.displayName` field.
+
+`email`::
+To change the default value: `mail`, enter the LDAP field to map to the {product-very-short} `spec.profile.email` field.
+
+`picture`::
+To set a value, enter the LDAP field to map to the {product-very-short} `spec.profile.picture` field.
+
+`memberOf`::
+To change the default value: `memberOf`, enter the LDAP field to map to the {product-very-short} `spec.memberOf` field.
+
+`members`::
+To change the default value: `member`, enter the LDAP field to map to the {product-very-short} `spec.children` field.
+
+`type`::
+To change the default value: `groupType`, enter the LDAP field to map to the {product-very-short} `spec.type` field.
+
+`set`::
+To set a value, enter the hard coded JSON to apply to the entities after ingestion, such as `metadata.customField: 'hello'`.
+
+.. Recommended: To use a secure LDAP connection (`ldaps://`), enter optional `tls` fields.
++
+.Optional `tls` fields
+[source,yaml]
+----
+catalog:
+  providers:
+    ldapOrg:
+      default:
+        target: ldaps://ds.example.net
+        bind:
+          dn: cn=admin,ou=Users,dc=rhdh
+          secret: ${LDAP_SECRET}
+        users:
+ldapOrg:
+  default:
+    tls:
+      rejectUnauthorized: true
+      keys: '/path/to/keys.pem'
+      certs: '/path/to/certs.pem'
+----
+
+`rejectUnauthorized`::
+Set to `false` to allow self-signed certificates
++
+[WARNING]
+====
+This option is not recommended for production.
+====
+
+`keys`::
+Enter a file containing private keys in PEM format
+
+`certs`::
+Enter a file containing cert chains in PEM format
+
+.. Optional: Enter configuration for vendor-specific attributes to set custom attribute names for distinguished names (DN) and universally unique identifiers (UUID) in LDAP directories.
+Default values are defined per supported vendor and automatically detected.
++
+[source,yaml]
+----
+catalog:
+  providers:
+    ldapOrg:
+      default:
+        vendor:
+          dnAttributeName: customDN
+          uuidAttributeName: customUUID
+----
+
+`dnAttributeName`::
+Enter the attribute name that holds the distinguished name (DN) for an entry.
+
+`uuidAttributeName`::
+Enter the attribute name that holds a universal unique identifier (UUID) for an entry.
+
+.. Optional: Enter low level users and groups configuration in the `options` subsection.
++
+[source,yaml]
+----
+catalog:
+  providers:
+    ldapOrg:
+      default:
+        target: ldaps://ds.example.net
+        bind:
+          dn: cn=admin,ou=Users,dc=rhdh
+          secret: ${LDAP_SECRET}
+        users:
+          options:
+            scope: sub
+            filter: (uid=*)
+            attributes:
+              - cn
+              - uid
+              - description
+            paged:
+            pageSize: 500
+        groups:
+          options:
+            scope: sub
+            filter: (cn=*)
+            attributes:
+              - cn
+              - uid
+              - description
+            paged:
+              pageSize: 500
+              pagePause: true
+----
+
+`scope`::
+To change the default value: `one`, enter how deep the search should go within the directory tree:
+* `base` to search only the base DN.
+* `one` to search one level below the base DN.
+* `sub` to search all descendant entries.
+
+`filter`::
+To change the default value: `(objectclass=*)`, enter your LDAP filter.
+With the default mapping:
+* For users, enter `(uid=*)` to make sure only users with valid uid field is synced, since users without uid will cause error and ingestion fails.
+* For groups, enter `(cn=*)`
++
+[TIP]
+====
+When you change the mapping, also update the filter.
+====
+
+`attributes`::
+To change the default value: all attributes `['*', '+']`, enter the array of attribute names to import from LDAP.
+
+`paged`::
+Enter a value to enable paged results.
+
+`pageSize`:::
+Enter a value to set the results page size, such as `500`.
+
+`pagePause`:::
+Enter `true` to tell the client to wait for the asynchronous results of the next page, when the page limit has been reached.
+
+
+. Recommended: To use a secure LDAP connection (`ldaps://`), mount your LDAP certificates and keys files in your {product-short} deployment, by editing your {backstage} custom resource.
++
+----
+kind: Backstage
+spec:
+  application:
+    extraFiles:
+      mountPath: /opt/ldap-secrets
+      secrets:
+        - name: my-rhdh-database-database-secrets
+          key: ldap-certs.pem, ldap-keys.pem
+----
+
+.Verification
+* To verify user and group provisioning, check the console logs.
++
+Successful synchronization example:
++
+[source,json]
+----
+2025-10-15T20:45:49.072Z catalog info Read 4 LDAP users and 6 LDAP groups in 0.3 seconds. Committing... class="LdapOrgEntityProvider" taskId="LdapOrgEntityProvider:default:refresh" taskInstanceId="9bb48fd5-2f55-4096-9fd0-61cee6679952" trace_id="6a318e2eadba84e20df773948668aa4c" span_id="cbec568cb6e64985" trace_flags="01"
+2025-10-15T20:45:49.075Z catalog info Committed 4 LDAP users and 6 LDAP groups in 0.0 seconds. class="LdapOrgEntityProvider" taskId="LdapOrgEntityProvider:default:refresh" taskInstanceId="9bb48fd5-2f55-4096-9fd0-61cee6679952" trace_id="6a318e2eadba84e20df773948668aa4c" span_id="cbec568cb6e64985" trace_flags="01"
+----
