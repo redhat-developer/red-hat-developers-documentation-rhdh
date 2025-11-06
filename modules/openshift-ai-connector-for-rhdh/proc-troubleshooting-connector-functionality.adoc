@@ -1,0 +1,67 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-troubleshooting-connector-functionality_{context}"]
+= Troubleshooting Connector functionality
+
+The connector system consists of the two dynamic plugins and the three Model Catalog Bridge sidecar containers. Generally speaking, the logs collected should be provided to {company-name} Support for analysis.
+
+== Checking Dynamic Plugins status
+
+Validate that the dynamic plugins have been successfully installed into your {product-very-short} project Pod by using the following command:
++
+[source,bash]
+----
+oc logs -c install-dynamic-plugins deployment/<your RHDH deployment>
+----
+
+The `install-dynamic-plugin` logs allow you to check the following installation logs for successful logs:
+
+* `red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog` (Entity Provider)
+* `red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend` (TechDoc URL Reader)
+
+== Inspecting plugin logs
+
+View the {openshift-ai-connector-name}plugins in the `backstage-backend` container. Items to look for:
+
+[cols="3,4,4"]
+|===
+|Plugin Component |Logger Service Target |Common Log Text
+
+|Model Catalog Entity Provider
+|`ModelCatalogResourceEntityProvider`
+|`Discovering ResourceEntities from Model Server...`
+
+|Model Catalog TechDoc URL Reader
+|`ModelCatalogBridgeTechdocUrlReader`
+|`ModelCatalogBridgeTechdocUrlReader.readUrl`
+|===
+
+To enable debug logging, set the `LOG_LEVEL` environment variable to `debug` on the `backstage-backend` container. For more information, see {monitoring-and-logging-book-link}[{monitoring-and-logging-book-title}].
+
+== Inspecting the Model Catalog Bridge
+
+The Model Catalog Bridge sidecars manage the data fetching and storage:
+
+. Check Cached Data (ConfigMap): The processed AI Model metadata is stored in a `ConfigMap`.
++
+[source,bash]
+----
+oc get configmap bac-import-model -o json | jq -r '.binaryData | to_entries[] | "=== \(.key) ===\n" + (.value | @base64d | fromjson | .body | @base64d | fromjson | tostring)' | jq -R 'if startswith("=== ") then . else (. | fromjson) end'
+----
+
+. Check Location Service API: Confirm the location service is providing data to the {product-very-short} Entity Provider.
++
+[source,bash]
+----
+oc rsh -c backstage-backend deployment/<your RHDH deployment>
+curl http://localhost:9090/list
+----
+
+. Check Sidecar Container Logs:
++
+[source,bash]
+----
+oc logs -c rhoai-normalizer deployment/<your RHDH deployment>
+oc logs -c storage-rest deployment/<your RHDH deployment>
+oc logs -c location deployment/<your RHDH deployment>
+----
