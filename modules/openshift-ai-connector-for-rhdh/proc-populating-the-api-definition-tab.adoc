@@ -1,0 +1,27 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-populating-the-api-definition-tab_{context}"]
+= Populating the API Definition tab
+
+The AI platform engineer must follow these steps to provide this valuable information because {rhoai-short} does not expose the OpenAPI specification by default.
+
+.Procedure
+
+. Retrieve OpenAPI JSON: Use a tool like `curl` to fetch the specification directly from the running endpoint of the AI model server. The following command provides the precise endpoint (`/openapi.json`) and shows how to include a `Bearer` token if the model requires authentication for access.
++
+[source,bash]
+----
+curl -k -H "Authorization: Bearer $MODEL_API_KEY" https://$MODEL_ROOT_URL_INCLUDING_PORT/openapi.json | jq > open-api.json
+----
+
+. Set Property in {rhoai-short}.
+.. In the *{rhoai-short}* dashboard, go to *Model Registry* and select the appropriate *Model Version*.
++
+[NOTE]
+====
+We recommend using *Model Version* instead of *Registered Model* to maintain stability if the API changes between versions.
+====
+
+.. In the **Properties** section, set a key/value pair where the key is `API Spec` and the value is the entire JSON content from the `open-api.json` file.
+
+. Propagation: The {openshift-ai-connector-name} periodically polls the {rhoai-short} Model Registry, propagates this JSON, and renders the interactive API documentation in the {product-very-short} API Entity *Definition* tab.

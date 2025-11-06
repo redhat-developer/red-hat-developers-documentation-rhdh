@@ -1,0 +1,143 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-setting-up-openshift-ai-connector-for-rhdh-with-rhoai_{context}"]
+= Setting up {openshift-ai-connector-name} with {rhoai-brand-name}
+
+The installation of the {openshift-ai-connector-name} requires manual updates to {product-very-short}-related Kubernetes resources.
+
+.{rhoai-short} Prerequisites
+
+* To have Model Cards from the Model Catalog imported as Tech Docs, you must use {rhoai-short} version 2.25 or later, and the Model Catalog dashboard and a Model Registry need to be enabled (they are both off by default).
+* If you employed Model Catalog at earlier versions of {rhoai-short}, Tech Doc propagation does not work for any models you registered into the Model Registry while at those earlier versions; only models registered into Model Registry from a 2.25 (or later) Model Catalog have their Model Cards transferred to {product-very-short} as TechDocs.
+* For the rest of the features, version 2.20 or later suffices. Enabling Model Registry and its associated dashboard allows for a user experience that more directly allows for customizing AI Model metadata.
+
+//connect with Lindsey to update the above prereqs
+
+.Procedure
+
+. Configure {rhoai-short}-related RBAC and credentials.
+A Kubernetes `ServiceAccount` and a `service-account-token` Secret are required for the connector to retrieve data from {rhoai-short}. The following resources must be created, replacing namespace names (`ai-rhdh` for {product-very-short}, `rhoai-model-registries` for {rhoa``}) as needed:
+** `ServiceAccount` (`rhdh-rhoai-bridge`)
+** `ClusterRole` and `ClusterRoleBinding` (`rhdh-rhoai-bridge`) to allow access to OCP resources like `routes`, `services`, and `inferenceservices`.
+** `Role` and `RoleBinding` to allow ConfigMap updates within the {product-very-short} namespace.
+** `RoleBinding` in the {rhoai-short} namespace to grant the {product-very-short} `ServiceAccount` read permissions to the Model Registry data (binding to `registry-user-modelregistry-public`).
+** Secret (`rhdh-rhoai-bridge-token`) of type `kubernetes.io/service-account-token` that goes along with the `rhdh-rhoai-bridge` `ServiceAccount`.
+
+. Update your {product-very-short} dynamic plugin configuration.
+The {product-very-short} Pod requires two dynamic plugins. 
+.. In your {product-very-short} dynamic plugins ConfigMap, add the following code:
++
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog:bs_1.42.5__0.7.0!red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog
+  - disabled: false
+    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend:bs_1.42.5__0.3.0!red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend
+----
+
+. Add Connector sidecar containers to the {product-very-short} Pod.
+The system relies on three sidecar containers (Model Catalog Bridge) running alongside the `backstage-backend` container. These sidecar containers must be added to your {product-very-short} deployment specification, referencing the `rhdh-rhoai-bridge-token` Secret:
+** `location`: Provides the REST API for RHDH plugins to fetch model metadata.
+** `storage-rest`: Maintains a cache of AI Model metadata in a ConfigMap called `bac-import-model`.
+** `rhoai-normalizer`: Acts as a Kubernetes controller and RHOAI client, normalizing RHOAI metadata for the connector. The following code block is an example:
++
+[source,yaml]
+----
+spec:
+  template:
+    spec:
+      containers:
+        - name: backstage-backend
+        - env:
+            - name: NORMALIZER_FORMAT
+              value: JsonArrayFormat
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          envFrom:
+            - secretRef:
+                name: rhdh-rhoai-bridge-token
+          image: quay.io/redhat-ai-dev/model-catalog-location-service@sha256:4f6ab6624a29f627f9f861cfcd5d18177d46aa2c67a81a75a1502c49bc2ff012
+
+          imagePullPolicy: Always
+          name: location
+          ports:
+            - containerPort: 9090
+              name: location
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /opt/app-root/src/dynamic-plugins-root
+              name: dynamic-plugins-root
+            workingDir: /opt/app-root/src
+          - env:
+            - name: NORMALIZER_FORMAT
+              value: JsonArrayFormat
+            - name: STORAGE_TYPE
+              value: ConfigMap
+            - name: BRIDGE_URL
+              value: http://localhost:9090
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          envFrom:
+            - secretRef:
+                name: rhdh-rhoai-bridge-token
+          image: quay.io/redhat-ai-dev/model-catalog-storage-rest@sha256:398095e7469e86d84b1196371286363f4b7668aa3e26370b4d78cb8d4ace1dc9
+
+          imagePullPolicy: Always
+          name: storage-rest
+          volumeMounts:
+            - mountPath: /opt/app-root/src/dynamic-plugins-root
+              name: dynamic-plugins-root
+            workingDir: /opt/app-root/src
+          - env:
+            - name: NORMALIZER_FORMAT
+              value: JsonArrayFormat
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          envFrom:
+            - secretRef:
+                name: rhdh-rhoai-bridge-token
+          image: quay.io/redhat-ai-dev/model-catalog-rhoai-normalizer@sha256:fe6c05d57495d6217c4d584940ec552c3727847ff60f39f5d04f94be024576d8
+
+          imagePullPolicy: Always
+          name: rhoai-normalizer
+          volumeMounts:
+            - mountPath: /opt/app-root/src/dynamic-plugins-root
+              name: dynamic-plugins-root
+            workingDir: /opt/app-root/src
+----
+
+. Enable `Connector` in your `{product-very-short}{my-app-config-file}` file.
+In your `{backstage} `app-config.extra.yaml` file, configure `Entity Provider` under the `catalog.providers` section:
++
+[source,yaml]
+----
+providers:
+  modelCatalog:
+    development:
+      baseUrl: http://localhost:9090
+----
+
+where:
+
+`modelCatalog`:: Specifies the name of the provider.
+`development`:: Defines future connector capability beyond a single `baseUrl`.
+`baseUrl`:: For Developer Preview, this value is the only one supported. Future releases might support external routes.
