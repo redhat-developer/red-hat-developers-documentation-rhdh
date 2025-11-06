@@ -7,7 +7,7 @@ The installation of the {openshift-ai-connector-name} requires manual updates to
 
 .{rhoai-short} Prerequisites
 
-* To import model cards from the model catalog into TechDocs, you need to use {rhoai-short} 2.25.
+* To import model cards from the model catalog into TechDocs, you must use {rhoai-short} 2.25.
 +
 [NOTE]
 ====
@@ -25,11 +25,136 @@ For more details, see link:https://docs.redhat.com/en/documentation/red_hat_open
 
 . Configure {rhoai-short}-related RBAC and credentials.
 A Kubernetes `ServiceAccount` and a `service-account-token` Secret are required for the connector to retrieve data from {rhoai-short}. The following resources must be created, replacing namespace names (`ai-rhdh` for {product-very-short}, `rhoai-model-registries` for {rhoai-short}) as needed:
-** `ServiceAccount` (`rhdh-rhoai-bridge`)
-** `ClusterRole` and `ClusterRoleBinding` (`rhdh-rhoai-bridge`) to allow access to OCP resources like `routes`, `services`, and `inferenceservices`.
-** `Role` and `RoleBinding` to allow ConfigMap updates within the {product-very-short} namespace.
+** `ServiceAccount` (`rhdh-rhoai-bridge`). For example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhdh-rhoai-bridge
+  namespace: ai-rhdh
+----
+** `ClusterRole` and `ClusterRoleBinding` (`rhdh-rhoai-bridge`) to allow access to OCP resources like `routes`, `services`, and `inferenceservices`. For example:
++
+[source,yaml]
+----
+# Example for `ClusterRole`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rhdh-rhoai-bridge
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+rules:
+  - apiGroups:
+      - apiextensions.k8s.sio
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - routes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: [""]
+    resources:
+      - serviceaccounts
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+
+  - apiGroups: ["serving.kserve.io"]
+    resources: ["inferenceservices"]
+    verbs: ["get", "list", "watch"]
+----
++
+[source,yaml]
+----
+# Example for `ClusterRoleBinding`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhdh-rhoai-bridge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rhdh-rhoai-bridge
+subjects:
+  - kind: ServiceAccount
+    name: rhdh-rhoai-bridge
+    namespace: ai-rhdh
+----
+** `Role` and `RoleBinding` to allow ConfigMap updates within the {product-very-short} namespace. For example:
++
+[source,yaml]
+----
+# Example for `Role`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rhdh-rhoai-bridge
+  namespace: ai-rhdh
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+----
++
+[source,yaml]
+----
+# Example for `RoleBinding`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rhdh-rhoai-dashboard-permissions
+  namespace: rhoai-model-registries
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: registry-user-modelregistry-public
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:serviceaccounts:ai-rhdh
+----
 ** `RoleBinding` in the {rhoai-short} namespace to grant the {product-very-short} `ServiceAccount` read permissions to the Model Registry data (binding to `registry-user-modelregistry-public`).
++
+[source,yaml]
+----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rhdh-rhoai-bridge
+  namespace: ai-rhdh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rhdh-rhoai-bridge
+subjects:
+  - kind: ServiceAccount
+    name: rhdh-rhoai-bridge
+    namespace: ai-rhdh
+----
 ** Secret (`rhdh-rhoai-bridge-token`) of type `kubernetes.io/service-account-token` that goes along with the `rhdh-rhoai-bridge` `ServiceAccount`.
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rhdh-rhoai-bridge-token
+  namespace: ai-rhdh
+  annotations:
+    kubernetes.io/service-account.name: rhdh-rhoai-bridge
+type: kubernetes.io/service-account-token
+----
 
 . Update your {product-very-short} dynamic plugin configuration.
 The {product-very-short} Pod requires two dynamic plugins. 
