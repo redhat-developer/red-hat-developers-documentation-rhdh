@@ -1,0 +1,62 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-techdocs-embed-video_{context}"]
+= Adding video content to enhance TechDocs
+
+You can use `<iframe>` elements to add video content to enhance your experience with TechDocs.
+
+.Prerequisites
+
+* An administrator has configured your AWS S3 bucket to store TechDocs sites.
+* An administrator has configured the appropriate `techdocs.sanitizer.allowedIframeHosts` and `backend.csp` settings in your `app-config.yaml` file.
+
+.Procedure
+
+. In the section of the TechDocs file that you want to embed a video into, add the following configuration:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+<iframe
+  width="_<video_width>_"
+  height="_<video_height>_"
+  src="_<video_url>_"
+  title="_<video_title>_"
+  frameborder="_<frame_border>_"
+  allow="picture-in-picture"
+  allowfullscreen>
+</iframe>
+----
++
+where
+
+_<video_width>_ :: Specifies the width of the video in number of pixels, for example, `672`.
+_<video_height>_ :: Specifies the height of the video in number of pixels, for example, `378`.
+_<video_url>_ :: Specifies the url of the video, for example, `https://www.youtube.com/watch?v=LB1w8hjBt5k`.
+_<video_title>_ :: Specifies the title of the video, for example, `{product} Overview Video`.
+_<frame_border>_ :: Specifies the size of the frame border in number of pixels, for example, `0`. Use a value of `0` for no border.
++
+[NOTE]
+====
+TechDocs uses DOMPurify to sanitize HTML. To prevent DOMPurify from removing the `<iframe>` elements, you must list every permitted video host, such as www.youtube.com, under the `techdocs.sanitizer.allowedIframeHosts` section of your `app-config.yaml` file. You must also add the video host to the `backend.csp` section of your `app-config.yaml` file.
+====
+. In the `frame-src` and `allowedIframeHosts` fields of your `app-config.yaml` file, add any video hosts that you want to use. You can add multiple hosts. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+backend:
+        csp:
+connect-src: ['https:']
+frame-src: ['https://www.youtube.com/']
+techdocs:
+  builder: external
+  sanitizer:
+    allowedIframeHosts:
+      - www.youtube.com
+      - _<additional_video_host_url>_
+  publisher:
+    type: awsS3
+    awsS3:
+      bucketName: ${AWS_S3_BUCKET_NAME}
+      accountId: ${AWS_ACCOUNT_ID}
+      region: ${AWS_REGION}
+----

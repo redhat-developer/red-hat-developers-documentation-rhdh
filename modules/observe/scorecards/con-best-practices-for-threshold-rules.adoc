@@ -1,0 +1,33 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-best-practices-for-threshold-rules"]
+= Best practices for threshold rules
+
+Threshold rule evaluation is order-dependent. You must follow logical ordering to avoid unintended category assignments, as the system stops evaluation once a value matches the first rule.
+
+== Follow logical ordering
+
+Rules must be sequenced logically. Order rules from the most strict (smallest range) to the least strict (largest range) or ensure all ranges are mutually exclusive.
+
+=== Problematic rule order example
+
+If rules are ordered incorrectly, a less restrictive rule can prevent stricter rules from being evaluated:
+
+. `warning: <50`: Any value less than 50 triggers the warning rule and stops evaluation.
+. `success: <10`: This rule is not evaluated because all values less than 10 have already matched the preceding warning rule.
+
+=== Correct ordering example
+
+Order the rules from the most restrictive value range to the least restrictive to ensure a logical flow.
+
+[source,yaml]
+----
+# Correct Example: Order from most restrictive (Success) to least restrictive (Error)
+rules:
+  - key: success
+    expression: '<10'     # Only values below 10
+  - key: warning
+    expression: '10-50'   # Only values between 10 and 50
+  - key: error
+    expression: '>50'     # All remaining values above 50
+----

@@ -1,0 +1,112 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-mpc-clients-to-access-the-rhdh-server_{context}"]
+= Configuring MCP clients to access the {product-very-short} server
+
+You must configure an MCP client before it can interact with the MCP server. For more information on the list of clients and their respective configurations, see https://modelcontextprotocol.io/clients[Example Clients].
+
+.Prerequisites
+
+* You have configured one of the following endpoints as the server URL, where `<{product-very-short}_HOST>` is the hostname of your {product-very-short} instance.
+
+** Streamable: https://<{product-very-short}_HOST>/api/mcp-actions/v1 
+** SSE (Legacy): https://<{product-very-short}_HOST>/api/mcp-actions/v1/sse 
++
+[NOTE]
+====
+Some clients do not yet support the Streamable endpoint, and you might need to use the SSE endpoint instead. 
+====
+
+* You have set the ${MCP_TOKEN} in your MCP server configuration as the bearer token when authenticating with the MCP server. 
+
+.Procedure
+
+. Configure the *Cursor* client.
+.. From your Desktop app, navigate to *Cursor Settings* and select *MCP Tools > New MCP Server*.
+.. Add the following configuration:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+{
+  "mcpServers": {
+    "backstage-actions": {
+      "url": "https://<{product-very-short}_HOST>/api/mcp-actions/v1",
+      "headers": {
+        "Authorization": "Bearer <MCP_TOKEN>"
+      }
+    }
+  }
+}
+----
+where:
+
+`<MCP_TOKEN>`:: Enter the previously configured static token
+`<{product-very-short}_HOST>`:: Enter the hostname of your {product-very-short} instance
+
+. Configure the *Continue* client.
+
+.. In your agent yaml configuration file, add the following configuration:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+mcpServers:
+  - name: backstage-actions
+    type: sse
+    url: https://<{product-very-short}_HOST>/api/mcp-actions/v1/sse
+    requestOptions:
+      headers:
+        Authorization: "Bearer <MCP_TOKEN>"
+----
++
+where:
+
+`<MCP_TOKEN>`:: Enter the previously configured static token
+`<{product-very-short}_HOST>`:: Enter the hostname of your {product-very-short} instance
+
+. Configure the *Lightspeed Plugin/Lightspeed Core (LCS)* client.
+.. In the `lightspeed-stack.yaml` configuration, add the following configuration for `mcp_servers`:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+mcp_servers:
+  - name: mcp::backstage
+    provider_id: model-context-protocol
+    url: https://<{product-very-short}_HOST>/api/mcp-actions/v1
+----
+where:
+
+`model-context-protocol`:: This is the tool runtime provider defined and configured in the llama-stack `run.yaml` configuration for use in LCS.
+
+.. Optional: If you want to use your own Llama Stack configuration, add the following code to your Llama Stack configuration file (`run.yaml`).
++
+[source,yaml]
+----
+providers:
+  tool_runtime:
+  - provider_id: model-context-protocol
+    provider_type: remote::model-context-protocol
+    config: {}
+----
+.. To authorize requests to the MCP endpoint using `<MCP_TOKEN>`, add it in the {ls-short} {my-app-config-file}` file, to make POST requests to the LCS `/v1/streaming_query` endpoint, as shown in the following code:
++
+[source,yaml]
+----
+lightspeed:
+  mcpServers:
+  - name: mcp::backstage
+    token: ${MCP_TOKEN}
+----
+.. Optional: You can query the LCS `/v1/streaming_query` endpoint directly by providing the `MCP_TOKEN` in the header, as shown in the following code:
++
+[source,yaml]
+----
+curl -X POST \
+  -H `Content-Type: application/json` \
+  -H `MCP-HEADERS: {"mcp::backstage": {"Authorization": "Bearer <MCP_TOKEN>"}}` \
+  -d `{"query": "Can you give me all catalog templates of type 'service', "model": "gpt-4o-mini", "provider": "openai"}` \
+  _<url>_/v1/streaming_query
+----
+
+where:
+
+`<url>`:: Enter the LCS endpoint. You can use localhost(<{product-very-short}_servicename>.<{product-very-short}-namespace>.svc.cluster.local:8080) or the service name for this field if you are inside the {backstage} container.
