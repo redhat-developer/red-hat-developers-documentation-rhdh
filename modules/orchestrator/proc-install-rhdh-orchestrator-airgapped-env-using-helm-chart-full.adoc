@@ -1,0 +1,156 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-install-rhdh-orchestrator-airgapped-env-using-helm-chart-full_{context}"]
+= Installing {product} with Orchestrator in a fully disconnected {ocp-short} environment using the Helm chart
+
+You can install {product} ({product-very-short}) with the Orchestrator plugin in a fully air-gapped {ocp-short} environment using the Helm chart.
+
+You can mirror images to an intermediary disk, and then mirror from the disk to your target local registry and apply the generated cluster resources.
+
+.Prerequisites
+
+include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
+
+.Procedure
+
+. Create an `ImageSetConfiguration.yaml` file for `oc-mirror`. You must use an `ImageSetConfiguration` file to include all mirrored images required by the Serverless Logic Operator, as shown in the following example:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: mirror.openshift.io/v2alpha1
+kind: ImageSetConfiguration
+mirror:
+  additionalimages:
+  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-postgresql-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-ephemeral-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-postgresql-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-ephemeral-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-db-migrator-tool-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-swf-builder-rhel8:{rhoserverless-version}.0
+  - name: registry.redhat.io/openshift-serverless-1/logic-swf-devmode-rhel8:{rhoserverless-version}.0
+
+  helm:
+    repositories:
+      - name: openshift-charts
+        url: https://charts.openshift.io
+        charts:
+          - name: redhat-developer-hub
+            version: "{product-bundle-version}"
+          - name: redhat-developer-hub-orchestrator-infra
+            version: "{product-bundle-version}"
+  operators:
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:{ocp-version}
+      # For example: registry.redhat.io/redhat/redhat-operator-index:v4.19
+      packages:
+      - name: logic-operator-rhel8
+        channels:
+        - name: alpha
+          minVersion: {rhoserverless-version}.0
+          maxVersion: {rhoserverless-version}.0
+      - name: serverless-operator
+        channels:
+        - name: stable
+          minVersion: {rhoserverless-version}.0
+          maxVersion: {rhoserverless-version}.1
+----
++
+Alternatively, you can use `podman` commands to find the missing images and add them to the `additionalimages` list if the versions change:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}
+mkdir local-manifests-osl
+podman create --name temp-container "$IMG" -c "cat /manifests/logic-operator-rhel8.clusterserviceversion.yaml"
+podman cp temp-container:/manifests ./local-manifests-osl
+podman rm temp-container
+yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | select(test("^.*\\/.*:.*$"))' ./local-manifests-osl/manifests/logic-operator-rhel8-controllers-config_v1_configmap.yaml
+----
+
+. Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+oc-mirror --config=ImageSetConfiguration.yaml file:///path/to/mirror-archive --authfile /path/to/authfile  --v2
+----
++
+[NOTE]
+====
+The `oc-mirror` command pulls the charts listed in the `ImageSetConfiguration` file and makes them available as `tgz` archives under the `/path/to/mirror-archive` directory.
+====
++
+. Apply the cluster-wide resources generated during the push step to redirect all image pulls to your local registry, as shown in the following example:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+cd <workspace folder>/working-dir/cluster-resources/
+oc apply -f .
+----
++
+. Transfer the generated mirror archive file, for example, `/path/to/mirror-archive/mirror_000001.tar`, to a bastion host within your disconnected environment.
+
+. From the bastion host in your disconnected environment, which has access to the mirror registry, mirror the images from the archive file to your target registry. For example:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+oc-mirror --v2 --from <mirror-archive-file> docker://<target-registry-url:port> --workspace file://<workspace folder> --authfile /path/to/authfile
+----
++
+where:
+
+`<mirror-archive-file>`:: Enter the name of the transferred `tar` file.
+
+`<target-registry-url:port>`:: Enter your local registry, for example, `registry.localhost:5000`.
++
+include::snip-installing-the-orchestrator-common-steps.adoc[]
+
+. Apply the `redhat-developer-hub-orchestrator-infra` Helm chart and approve the install plans. See {installing-in-air-gap-book-link}#assembly-install-rhdh-airgapped-environment-ocp-helm_title-install-rhdh-air-grapped[Air-gapped installation with Helm chart instructions] for details.
+
+. Apply the {product-very-short} {product-version} Helm chart. Include the version {product-bundle-version} and enable the Orchestrator plugin, as shown in the following example:
++
+[source,yaml]
+----
+orchestrator.enabled=true
+----
+
+. The {product-very-short} {product-version} Helm chart defaults to pulling Orchestrator plugins from the official {company-name} NPM registry using full URL references. You must override this behavior to point to your local registry.
++
+To configure the Orchestrator plugins to use a custom registry, complete the following steps:
++
+* Open your `values.yaml` file.
++
+* Explicitly list the Orchestrator plugin packages under the `orchestrator.plugins`  section.
+You must replace the simplified package references with the full URLs that point to your custom NPM registry, as shown in the following example:
++
+[source,yaml]
+----
+orchestrator:
+  plugins:
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-orchestrator-backend-dynamic/-/backstage-plugin-orchestrator-backend-dynamic-{product-bundle-version}.tgz
+      integrity: sha512-xxxxxx
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-orchestrator/-/backstage-plugin-orchestrator-{product-bundle-version}.tgz
+      integrity: sha512-xxxxxy
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-orchestrator-form-widgets/-/backstage-plugin-orchestrator-form-widgets-{product-bundle-version}.tgz
+      integrity: sha512-xxxxxz
+    - disabled: false
+      package: <custom_NPM_registry_URL>[:<port>]/@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic/-/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic-{product-bundle-version}.tgz
+      integrity: sha512-xxxx1
+----
++
+where:
+
+`<custom_NPM_registry_URL>`::
+Enter the address of your custom registry and make sure the integrity checksum, such as sha512-xxxxxx, matches the files in your registry.
+
+.Verification
+
+* Restart the {product-very-short} Pod and wait for the components to deploy properly.
+
+* After deployment is complete, go to the **{product-very-short}** UI and confirm that the Orchestrator UI is accessible and functioning correctly.
+
+[NOTE]
+====
+The successful accessibility of the Orchestrator UI confirms that the underlying components are running and the cluster recognizes the plugin.
+====
