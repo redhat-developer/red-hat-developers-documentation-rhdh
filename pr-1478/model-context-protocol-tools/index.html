@@ -1,0 +1,578 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Interacting with Model Context Protocol tools for Red Hat Developer Hub</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="Leverage the Model Context Protocol (MCP) server to integrate Red Hat Developer Hub (RHDH) with AI clients. This connection provides a standardized method for AI applications to access RHDH information and workflows through defined MCP tools."/><link rel="next" href="#assembly-model-context-protocol-tools" title="1. Interacting with Model Context Protocol tools for Red Hat Developer Hub"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45847716878384"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.8</span></div><div><h1 class="title">Interacting with Model Context Protocol tools for Red Hat Developer Hub</h1></div><div><h3 class="subtitle"><em>Leveraging the Model Context Protocol (MCP) server to integrate Red Hat Developer Hub (RHDH) with AI clients</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45847700236320">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				Leverage the Model Context Protocol (MCP) server to integrate Red Hat Developer Hub (RHDH) with AI clients. This connection provides a standardized method for AI applications to access RHDH information and workflows through defined MCP tools.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#assembly-model-context-protocol-tools">1. Interacting with Model Context Protocol tools for Red Hat Developer Hub</a></span><ul><li><span class="section"><a href="#understanding-model-context-protocol">1.1. Understanding Model Context Protocol</a></span></li><li><span class="section"><a href="#proc-installing-the-mcp-server-and-tool-plugins_assembly-model-context-protocol-tools">1.2. Installing the MCP server and tool plugins in Red Hat Developer Hub</a></span></li><li><span class="section"><a href="#proc-configuring-model-context-protocol_assembly-model-context-protocol-tools">1.3. Configuring Model Context Protocol in Red Hat Developer Hub</a></span></li><li><span class="section"><a href="#proc-configure-mcp-tools-for-developer-lightspeed_assembly-model-context-protocol-tools">1.4. Configuring the RHDH Model Context Protocol (MCP) tools for Developer Lightspeed for RHDH (Optional)</a></span></li><li><span class="section"><a href="#assembly-using-the-mcp-tools-to-access-data">1.5. Using the MCP tools to access data from Red Hat Developer Hub</a></span></li><li><span class="section"><a href="#assembly-troubleshooting-mcp-server-and-client-problems">1.6. Troubleshooting MCP server and client problems</a></span></li></ul></li></ul></div><section class="section" id="assembly-model-context-protocol-tools"><div class="titlepage"><div><div><h2 class="title">1. Interacting with Model Context Protocol tools for Red Hat Developer Hub</h2></div></div></div><section class="section" id="understanding-model-context-protocol"><div class="titlepage"><div><div><h3 class="title">1.1. Understanding Model Context Protocol</h3></div></div></div><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+					This section describes Developer Preview features in the Model Context Protocol plugin. Developer Preview features are not supported by Red Hat in any way and are not functionally complete or production-ready. Do not use Developer Preview features for production or business-critical workloads. Developer Preview features provide early access to functionality in advance of possible inclusion in a Red Hat product offering. Customers can use these features to test functionality and provide feedback during the development process. Developer Preview features might not have any documentation, are subject to change or removal at any time, and have received limited testing. Red Hat might provide ways to submit feedback on Developer Preview features without an associated SLA.
+				</p><p>
+					For more information about the support scope of Red Hat Developer Preview features, see <a class="link" href="https://access.redhat.com/support/offerings/devpreview/">Developer Preview Support Scope</a>.
+				</p></div></div><p>
+				<span class="strong strong"><strong>Model Context Protocol</strong></span> (<span class="strong strong"><strong>MCP</strong></span>) offers a standardized method for linking AI models and applications (<span class="strong strong"><strong>MCP clients</strong></span>) with external systems (<span class="strong strong"><strong>MCP servers</strong></span>). This connection facilitates access to information and workflows residing on those systems. <span class="strong strong"><strong>MCP servers</strong></span> are responsible for defining the tools that MCP clients can interact with.
+			</p><p>
+				Red Hat Developer Hub supports running MCP tools through the <code class="literal">mcp-actions-backend</code> plugin available in Backstage 1.40 or later.
+			</p></section><section class="section" id="proc-installing-the-mcp-server-and-tool-plugins_assembly-model-context-protocol-tools"><div class="titlepage"><div><div><h3 class="title">1.2. Installing the MCP server and tool plugins in Red Hat Developer Hub</h3></div></div></div><p>
+				To enable MCP support in Red Hat Developer Hub, you need to install the following components:
+			</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">Backend MCP server plugin</span></dt><dd>
+							Responsible for running MCP tools.
+						</dd><dt><span class="term">MCP tool plugins</span></dt><dd>
+							Individual MCP plugins that expose capabilities relating to the Software Catalog and TechDocs features in RHDH.
+						</dd></dl></div><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						Your RHDH instance is installed and running.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Install the backend MCP server plugin: In your dynamic plugins ConfigMap (for example, <code class="literal">dynamic-plugins-rhdh.yaml</code>), add the MCP server plugin as shown in the following example:
+					</p><pre class="programlisting language-yaml">plugins:
+    - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-mcp-actions-backend:bs_1.42.5__0.1.2!backstage-plugin-mcp-actions-backend
+      disabled: false</pre></li><li class="listitem"><p class="simpara">
+						Install any of the following MCP tools that you would like to use:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+								To install the Software Catalog MCP tool, in your dynamic plugins ConfigMap (for example, <code class="literal">dynamic-plugins-rhdh.yaml</code>), add the Software Catalog MCP tool plugin as shown in the following example:
+							</p><pre class="programlisting language-yaml">  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool:bs_1.42.5__0.2.3!red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool
+    disabled: false</pre></li><li class="listitem"><p class="simpara">
+								To install the TechDocs MCP tool, in your dynamic plugins ConfigMap (for example, <code class="literal">dynamic-plugins-rhdh.yaml</code>), add the TechDocs MCP tool plugin as shown in the following example:
+							</p><pre class="programlisting language-yaml">- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-techdocs-mcp-tool:bs_1.42.5__0.3.0!red-hat-developer-hub-backstage-plugin-techdocs-mcp-tool
+  disabled: false</pre></li></ul></div></li></ol></div></section><section class="section" id="proc-configuring-model-context-protocol_assembly-model-context-protocol-tools"><div class="titlepage"><div><div><h3 class="title">1.3. Configuring Model Context Protocol in Red Hat Developer Hub</h3></div></div></div><p>
+				You can enable your MCP client applications to use the MCP protocol to access RHDH information and workflows. This configuration is a prerequisite for MCP clients to use the defined MCP tools and access the exposed capabilities of RHDH.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisite</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html-single/interacting_with_model_context_protocol_tools_for_red_hat_developer_hub/index#proc-installing-the-mcp-server-and-tool-plugins">installed the MCP server and tool plugins in Red Hat Developer Hub</a>.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						In your Red Hat Developer Hub app-config.yaml` file, configure a static token for authentication against the MCP server endpoint. MCP clients (such as <code class="literal">Cursor</code>, <code class="literal">Continue</code>, or <code class="literal">Lightspeed Core</code>) use these tokens to authenticate against the Backstage MCP server. For example:
+					</p><pre class="programlisting language-yaml">backend:
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${MCP_TOKEN}
+          subject: mcp-clients</pre><p class="simpara">
+						where:
+					</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">${MCP_TOKEN}</code></span></dt><dd><p class="simpara">
+									Set the token value that you generate manually and share with your MCP clients
+								</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+										Tokens must be long and complex strings without whitespace to prevent brute-force guessing.
+									</p><p>
+										To generate a sample token, use the following command:
+									</p><pre class="programlisting language-bash">node -p `require("crypto").randomBytes(24).toString("base64")`</pre></div></div></dd></dl></div></li><li class="listitem"><p class="simpara">
+						Register the MCP tools that you install as a plugin source, as shown in the following example:
+					</p><pre class="programlisting language-yaml">backend:
+  actions:
+    pluginSources:
+      - software-catalog-mcp-tool
+      - techdocs-mcp-tool</pre><div class="formalpara"><p class="title"><strong>Full <code class="literal">app-config.yaml</code> file example with MCP configuration</strong></p><p>
+							
+<pre class="programlisting language-yaml">app:
+  title: AI Dev Developer Hub
+  baseUrl: "${RHDH_BASE_URL}"
+auth:
+  environment: development
+  session:
+    secret: "${BACKEND_SECRET}"
+  providers:
+    guest:
+      dangerouslyAllowOutsideDevelopment: true
+backend:
+  actions:
+    pluginSources:
+      - 'software-catalog-mcp-tool'
+      - 'techdocs-mcp-tool'
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${MCP_TOKEN}
+          subject: mcp-clients
+    keys:
+      - secret: "${BACKEND_SECRET}"
+  baseUrl: "${RHDH_BASE_URL}"
+  cors:
+    origin: "${RHDH_BASE_URL}"
+signInPage: oidc</pre>
+						</p></div></li></ol></div><section class="section" id="proc-configuring-mpc-clients-to-access-the-rhdh-server_assembly-model-context-protocol-tools"><div class="titlepage"><div><div><h4 class="title">1.3.1. Configuring MCP clients to access the RHDH server</h4></div></div></div><p>
+					You must configure an MCP client before it can interact with the MCP server. For more information on the list of clients and their respective configurations, see <a class="link" href="https://modelcontextprotocol.io/clients">Example Clients</a>.
+				</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+							You have configured one of the following endpoints as the server URL, where <code class="literal">&lt;RHDH_HOST&gt;</code> is the hostname of your RHDH instance.
+						</p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem">
+									Streamable: <a class="link" href="https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1">https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1</a>
+								</li><li class="listitem"><p class="simpara">
+									SSE (Legacy): <a class="link" href="https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1/sse">https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1/sse</a>
+								</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+										Some clients do not yet support the Streamable endpoint, and you might need to use the SSE endpoint instead.
+									</p></div></div></li></ul></div></li><li class="listitem">
+							You have set the ${MCP_TOKEN} in your MCP server configuration as the bearer token when authenticating with the MCP server.
+						</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+							Configure the <span class="strong strong"><strong>Cursor</strong></span> client.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+									From your Desktop app, navigate to <span class="strong strong"><strong>Cursor Settings</strong></span> and select <span class="strong strong"><strong>MCP Tools &gt; New MCP Server</strong></span>.
+								</li><li class="listitem"><p class="simpara">
+									Add the following configuration:
+								</p><pre class="programlisting language-yaml">{
+  "mcpServers": {
+    "backstage-actions": {
+      "url": "https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1",
+      "headers": {
+        "Authorization": "Bearer &lt;MCP_TOKEN&gt;"
+      }
+    }
+  }
+}</pre><p class="simpara">
+									where:
+								</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;MCP_TOKEN&gt;</code></span></dt><dd>
+												Enter the previously configured static token
+											</dd><dt><span class="term"><code class="literal">&lt;RHDH_HOST&gt;</code></span></dt><dd>
+												Enter the hostname of your RHDH instance
+											</dd></dl></div></li></ol></div></li><li class="listitem"><p class="simpara">
+							Configure the <span class="strong strong"><strong>Continue</strong></span> client.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+									In your agent yaml configuration file, add the following configuration:
+								</p><pre class="programlisting language-yaml">mcpServers:
+  - name: backstage-actions
+    type: sse
+    url: https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1/sse
+    requestOptions:
+      headers:
+        Authorization: "Bearer &lt;MCP_TOKEN&gt;"</pre><p class="simpara">
+									where:
+								</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;MCP_TOKEN&gt;</code></span></dt><dd>
+												Enter the previously configured static token
+											</dd><dt><span class="term"><code class="literal">&lt;RHDH_HOST&gt;</code></span></dt><dd>
+												Enter the hostname of your RHDH instance
+											</dd></dl></div></li></ol></div></li><li class="listitem"><p class="simpara">
+							Configure the <span class="strong strong"><strong>Lightspeed Plugin/Lightspeed Core (LCS)</strong></span> client.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p class="simpara">
+									In the <code class="literal">lightspeed-stack.yaml</code> configuration, add the following configuration for <code class="literal">mcp_servers</code>:
+								</p><pre class="programlisting language-yaml">mcp_servers:
+  - name: mcp::backstage
+    provider_id: model-context-protocol
+    url: https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1</pre><p class="simpara">
+									where:
+								</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">model-context-protocol</code></span></dt><dd>
+												This is the tool runtime provider defined and configured in the llama-stack <code class="literal">run.yaml</code> configuration for use in LCS.
+											</dd></dl></div></li><li class="listitem"><p class="simpara">
+									Optional: If you want to use your own Llama Stack configuration, add the following code to your Llama Stack configuration file (<code class="literal">run.yaml</code>).
+								</p><pre class="programlisting language-yaml">providers:
+  tool_runtime:
+  - provider_id: model-context-protocol
+    provider_type: remote::model-context-protocol
+    config: {}</pre></li><li class="listitem"><p class="simpara">
+									To authorize requests to the MCP endpoint using <code class="literal">&lt;MCP_TOKEN&gt;</code>, add it in the Developer Lightspeed for RHDH app-config.yaml` file, to make POST requests to the LCS <code class="literal">/v1/streaming_query</code> endpoint, as shown in the following code:
+								</p><pre class="programlisting language-yaml">lightspeed:
+  mcpServers:
+  - name: mcp::backstage
+    token: ${MCP_TOKEN}</pre></li><li class="listitem"><p class="simpara">
+									Optional: You can query the LCS <code class="literal">/v1/streaming_query</code> endpoint directly by providing the <code class="literal">MCP_TOKEN</code> in the header, as shown in the following code:
+								</p><pre class="programlisting language-yaml">curl -X POST \
+  -H `Content-Type: application/json` \
+  -H `MCP-HEADERS: {"mcp::backstage": {"Authorization": "Bearer &lt;MCP_TOKEN&gt;"}}` \
+  -d `{"query": "Can you give me all catalog templates of type 'service', "model": "gpt-4o-mini", "provider": "openai"}` \
+  _&lt;url&gt;_/v1/streaming_query</pre></li></ol></div></li></ol></div><p>
+					where:
+				</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;url&gt;</code></span></dt><dd>
+								Enter the LCS endpoint. You can use localhost(&lt;RHDH_servicename&gt;.&lt;RHDH-namespace&gt;.svc.cluster.local:8080) or the service name for this field if you are inside the Backstage container.
+							</dd></dl></div></section></section><section class="section" id="proc-configure-mcp-tools-for-developer-lightspeed_assembly-model-context-protocol-tools"><div class="titlepage"><div><div><h3 class="title">1.4. Configuring the RHDH Model Context Protocol (MCP) tools for Developer Lightspeed for RHDH (Optional)</h3></div></div></div><p>
+				To leverage Model Context Protocol (MCP) servers like, the <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html-single/interacting_with_model_context_protocol_tools_for_red_hat_developer_hub/index">server in RHDH with Developer Lightspeed for RHDH</a>, you must first integrate them into the Llama Stack service. Configuring MCP in {lcs-short} enables the deployed {lcs-short} and Llama Stack to use external tools and retrieve real-time data. This integration allows the virtual assistant to execute complex actions and incorporate current operational context into its responses.
+			</p><p>
+				Configuration requires synchronizing settings across three components: the Llama Stack tool definition, the {lcs-short} MCP server endpoint definition, and the Red Hat Developer Lightspeed for Red Hat Developer Hub plugin MCP authorization token.
+			</p><p>
+				For more information on configuring Developer Lightspeed for RHDH, see <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html-single/interacting_with_red_hat_developer_lightspeed_for_red_hat_developer_hub/index#proc-installing-and-configuring-lightspeed_developer-lightspeed">Installing and configuring Red Hat Developer Lightspeed for Red Hat Developer Hub</a>.
+			</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+						You have configured <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html-single/interacting_with_model_context_protocol_tools_for_red_hat_developer_hub/index">MCP tools in your Red Hat Developer Hub instance</a>.
+					</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						Configure the Llama Stack tool definition by defining the MCP provider in the <code class="literal">tool_runtime</code> section of the Llama Stack configuration file (<code class="literal">run.yaml</code>), as shown in the following code:
+					</p><pre class="programlisting language-yaml">providers:
+  tool_runtime:
+    - provider_id: model-context-protocol
+      provider_type: remote::model-context-protocol
+      config: {}</pre></li><li class="listitem"><p class="simpara">
+						Configure the {lcs-short} MCP server endpoint by defining the MCP server endpoints in the {lcs-short} configuration file (<code class="literal">lightspeed-stack.yaml</code>), as shown in the following code:
+					</p><pre class="programlisting language-yaml">mcp_servers:
+  - name: mcp::backstage
+    provider_id: model-context-protocol
+    url: https://&lt;RHDH_HOST&gt;/api/mcp-actions/v1</pre></li></ol></div><p>
+				where:
+			</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">&lt;RHDH_HOST&gt;</code></span></dt><dd><p class="simpara">
+							Hostname of your RHDH instance
+						</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+								<code class="literal">provider_id</code> must match the Llama Stack definition (<code class="literal">model-context-protocol</code>).
+							</p></div></div><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+									Configure the Red Hat Developer Lightspeed for Red Hat Developer Hub plugin authorization token by specifying the MCP servers and providing the token for authentication in the Red Hat Developer Lightspeed for Red Hat Developer Hub plugin configuration file (<code class="literal">lightspeed-app-config.yaml</code>), as shown in the following code:
+								</p><pre class="programlisting language-yaml">lightspeed:
+  mcpServers:
+  - name: mcp::backstage
+    token: ${MCP_TOKEN}</pre><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+										<code class="literal">name</code> must match the {lcs-name} definition (<code class="literal">mcp::backstage</code>).
+									</p></div></div></li></ol></div></dd></dl></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+					Self-hosted models might provide inconsistent or poor performance when using tool calling features, such as the Model Context Protocol (MCP). It is recommended to use the latest foundation models from providers like <code class="literal">OpenAI`</code> when experimenting with this integration to ensure the most reliable functionality.
+				</p></div></div></section><section class="section" id="assembly-using-the-mcp-tools-to-access-data"><div class="titlepage"><div><div><h3 class="title">1.5. Using the MCP tools to access data from Red Hat Developer Hub</h3></div></div></div><p>
+				MCP tool plugins enable seamless integration with the Software Catalog and TechDocs.
+			</p><section class="section" id="proc-retrieving-software-catalog-data-through-mcp-tool_assembly-using-the-mcp-tools-to-access-data"><div class="titlepage"><div><div><h4 class="title">1.5.1. Retrieving Software Catalog data through the MCP tool</h4></div></div></div><p>
+					The Software Catalog MCP lists Backstage entities, such as <span class="strong strong"><strong>Components</strong></span>, <span class="strong strong"><strong>Systems</strong></span>, <span class="strong strong"><strong>Resources</strong></span>, <span class="strong strong"><strong>APIs</strong></span>, <span class="strong strong"><strong>Locations</strong></span>, <span class="strong strong"><strong>Users</strong></span>, and <span class="strong strong"><strong>Groups</strong></span>.
+				</p><p>
+					By default, the tool returns results in a JSON array format. Each entry in the JSON array contains an entity with the following fields: <code class="literal">name</code>, <code class="literal">description</code>,<code class="literal">type</code>, <code class="literal">owner</code>, <code class="literal">tags</code>, <code class="literal">dependsOn</code>, and <code class="literal">kind</code>.
+				</p><p>
+					The optional <code class="literal">verbose</code> parameter returns the entire Backstage entity object(s).
+				</p><p>
+					The following examples show common queries:
+				</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+							“Fetch all ai-model resources in the Backstage catalog”
+						</li><li class="listitem">
+							“Fetch the API definition for the beneficiary-management-api API”
+						</li><li class="listitem">
+							“Construct a curl command based on the API definition for the “insert beneficiary” endpoint in the beneficiary-management-api”
+						</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem"><p class="simpara">
+							Use the parameters as shown in the following table to configure your Software Catalog MCP tool plugin.
+						</p><div class="informaltable"><table class="lt-4-cols lt-7-rows"><colgroup><col style="width: 33%; " class="col_1"/><col style="width: 33%; " class="col_2"/><col style="width: 33%; " class="col_3"/></colgroup><thead><tr><th align="left" valign="top" id="idm45847715707504" scope="col">Name</th><th align="left" valign="top" id="idm45847715527360" scope="col">Description</th><th align="left" valign="top" id="idm45847718373904" scope="col">Example</th></tr></thead><tbody><tr><td align="left" valign="top" headers="idm45847715707504">
+										<p>
+											<code class="literal">kind</code>
+										</p>
+										</td><td align="left" valign="top" headers="idm45847715527360">
+										<p>
+											Filters entities by their Backstage kind.
+										</p>
+										</td><td align="left" valign="top" headers="idm45847718373904">
+										<p>
+											"Component"
+										</p>
+										</td></tr><tr><td align="left" valign="top" headers="idm45847715707504">
+										<p>
+											<code class="literal">type</code>
+										</p>
+										</td><td align="left" valign="top" headers="idm45847715527360">
+										<p>
+											Filter entities by their Backstage type. (Requires the <code class="literal">kind</code> parameter)
+										</p>
+										</td><td align="left" valign="top" headers="idm45847718373904">
+										<p>
+											"model-server"
+										</p>
+										</td></tr><tr><td align="left" valign="top" headers="idm45847715707504">
+										<p>
+											<code class="literal">name</code>
+										</p>
+										</td><td align="left" valign="top" headers="idm45847715527360">
+										<p>
+											Specifies the name of the Backstage entity to retrieve.
+										</p>
+										</td><td align="left" valign="top" headers="idm45847718373904">
+										<p>
+											"vllm-model-server"
+										</p>
+										</td></tr><tr><td align="left" valign="top" headers="idm45847715707504">
+										<p>
+											<code class="literal">owner</code>
+										</p>
+										</td><td align="left" valign="top" headers="idm45847715527360">
+										<p>
+											Filters entities by their owner.
+										</p>
+										</td><td align="left" valign="top" headers="idm45847718373904">
+										<p>
+											"test-platform"
+										</p>
+										</td></tr><tr><td align="left" valign="top" headers="idm45847715707504">
+										<p>
+											<code class="literal">lifecycle</code>
+										</p>
+										</td><td align="left" valign="top" headers="idm45847715527360">
+										<p>
+											Filters entities by their lifecycle.
+										</p>
+										</td><td align="left" valign="top" headers="idm45847718373904">
+										<p>
+											"development"
+										</p>
+										</td></tr><tr><td align="left" valign="top" headers="idm45847715707504">
+										<p>
+											<code class="literal">tags</code>
+										</p>
+										</td><td align="left" valign="top" headers="idm45847715527360">
+										<p>
+											Filters entities by their tags.
+										</p>
+										</td><td align="left" valign="top" headers="idm45847718373904">
+										<p>
+											["genai, "ibm", "llm", …​]
+										</p>
+										</td></tr><tr><td align="left" valign="top" headers="idm45847715707504">
+										<p>
+											<code class="literal">verbose</code>
+										</p>
+										</td><td align="left" valign="top" headers="idm45847715527360">
+										<p>
+											If set to <code class="literal">true</code>, the system returns the full Backstage entity object instead of the shortened output.
+										</p>
+										</td><td align="left" valign="top" headers="idm45847718373904">
+										<p>
+											<code class="literal">true</code>
+										</p>
+										</td></tr></tbody></table></div></li></ul></div></section><section class="section" id="proc-accessing-and-analyzing-doc-using-techdocs-mcp-tools_assembly-using-the-mcp-tools-to-access-data"><div class="titlepage"><div><div><h4 class="title">1.5.2. Accessing and analyzing documentation using the TechDocs MCP tools</h4></div></div></div><p>
+					The TechDocs MCP tool enables MCP clients to search and retrieve documentation directly from TechDocs registered in your RHDH instance. Use this tool to query documentation content and integrate it as context into your AI applications.
+				</p><p>
+					The following TechDocs MCP tools are supported: * <code class="literal">fetch-techdocs</code> * <code class="literal">analyze-techdocs-coverage</code> * <code class="literal">retrieve-techdocs-content</code>
+				</p><section class="section" id="proc-retrieving-techdocs-urls-and-metadata-using-fetch-techdocs_assembly-using-the-mcp-tools-to-access-data"><div class="titlepage"><div><div><h5 class="title">1.5.2.1. Retrieving TechDocs URLs and metadata using <code class="literal">fetch-techdocs</code></h5></div></div></div><p>
+						The <code class="literal">fetch-techdocs</code> TechDocs MCP tool lists all Backstage entities with TechDocs. By default, the tool returns results in a JSON array format. Each entry includes entity details and TechDocs metadata, like last update timestamp and build information.
+					</p><p>
+						By default, each entry in the JSON array is an entity with the following fields: <code class="literal">name</code>, <code class="literal">title</code>, <code class="literal">tags</code>, <code class="literal">description</code>, <code class="literal">owner</code>, <code class="literal">lifecycle</code>, <code class="literal">namespace</code>, <code class="literal">kind</code>, <code class="literal">techDocsUrl</code>, <code class="literal">matadataUrl</code> and <code class="literal">metadata</code>.
+					</p><p>
+						The following examples show common queries:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								“Fetch all techdocs from the Backstage server”
+							</li><li class="listitem">
+								“Fetch all techdocs of the default namespace”
+							</li><li class="listitem">
+								“Fetch all techdocs created by user:john.doe”
+							</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+								Use the parameters as shown in the following table to configure your <code class="literal">fetch-techdocs</code> TechDocs MCP tool.
+							</li></ul></div><div class="informaltable"><table class="lt-4-cols lt-7-rows"><colgroup><col style="width: 33%; " class="col_1"/><col style="width: 33%; " class="col_2"/><col style="width: 33%; " class="col_3"/></colgroup><thead><tr><th align="left" valign="top" id="idm45847697092720" scope="col">Name</th><th align="left" valign="top" id="idm45847695112864" scope="col">Description</th><th align="left" valign="top" id="idm45847695112000" scope="col">Example</th></tr></thead><tbody><tr><td align="left" valign="top" headers="idm45847697092720">
+									<p>
+										<code class="literal">entityType</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112864">
+									<p>
+										Filters entities by their type.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112000">
+									<p>
+										"Component"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847697092720">
+									<p>
+										<code class="literal">namespace</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112864">
+									<p>
+										Filter entities by their namespace.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112000">
+									<p>
+										"default"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847697092720">
+									<p>
+										<code class="literal">owner</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112864">
+									<p>
+										Filters entities by owner.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112000">
+									<p>
+										"user:john.doe"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847697092720">
+									<p>
+										<code class="literal">lifecycle</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112864">
+									<p>
+										Filters entities by their lifecycle.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112000">
+									<p>
+										"development"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847697092720">
+									<p>
+										<code class="literal">tags</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112864">
+									<p>
+										Filters entities by their tags.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847695112000">
+									<p>
+										["genai, "ibm", "llm", "granite", "conversational", "task-text-generation"]
+									</p>
+									</td></tr></tbody></table></div></section><section class="section" id="proc-measuring-doc-gaps-using-analyze-techdocs-coverage_assembly-using-the-mcp-tools-to-access-data"><div class="titlepage"><div><div><h5 class="title">1.5.2.2. Measuring documentation gaps using <code class="literal">analyze-techdocs-coverage</code></h5></div></div></div><p>
+						The <code class="literal">analyze-techdocs-coverage</code> TechDocs MCP tool calculates the percentage of entities that have TechDocs configured. This tool identifies documentation gaps and improve overall documentation coverage. This tool supports filtering by entity type, namespace, owner, lifecycle, and tags to analyze coverage for specific subsets of entities. By default, it returns a JSON entity that includes the fields <code class="literal">totalEntities</code>, <code class="literal">entitiesWithDocs</code>, and <code class="literal">coveragePercentage</code>.
+					</p><p>
+						The following examples show common queries:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								“What is the coverage of techdocs in the backstage server”
+							</li><li class="listitem">
+								“What is the coverage of techdocs in the default namespace”
+							</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+								Use the parameters as shown in the following table to configure your <code class="literal">analyze-techdocs-coverage</code> TechDocs MCP tool.
+							</li></ul></div><div class="informaltable"><table class="lt-4-cols lt-7-rows"><colgroup><col style="width: 33%; " class="col_1"/><col style="width: 33%; " class="col_2"/><col style="width: 33%; " class="col_3"/></colgroup><thead><tr><th align="left" valign="top" id="idm45847696791296" scope="col">Name</th><th align="left" valign="top" id="idm45847696790432" scope="col">Description</th><th align="left" valign="top" id="idm45847701062640" scope="col">Example</th></tr></thead><tbody><tr><td align="left" valign="top" headers="idm45847696791296">
+									<p>
+										<code class="literal">entityType</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847696790432">
+									<p>
+										Filters entities by their type.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847701062640">
+									<p>
+										"Component"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847696791296">
+									<p>
+										<code class="literal">namespace</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847696790432">
+									<p>
+										Filter entities by their namespace.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847701062640">
+									<p>
+										"default"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847696791296">
+									<p>
+										<code class="literal">owner</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847696790432">
+									<p>
+										Filters entities by owner.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847701062640">
+									<p>
+										"user:john.doe"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847696791296">
+									<p>
+										<code class="literal">lifecycle</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847696790432">
+									<p>
+										Filters entities by their lifecycle.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847701062640">
+									<p>
+										"development"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847696791296">
+									<p>
+										<code class="literal">tags</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847696790432">
+									<p>
+										Filters entities by their tags.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847701062640">
+									<p>
+										["genai, "ibm", "llm", "granite", "conversational", "task-text-generation"]
+									</p>
+									</td></tr></tbody></table></div></section><section class="section" id="proc-finding-a-specific-techdoc-using-retrieve-techdocs-content_assembly-using-the-mcp-tools-to-access-data"><div class="titlepage"><div><div><h5 class="title">1.5.2.3. Finding a specific TechDoc using <code class="literal">retrieve-techdocs-content</code></h5></div></div></div><p>
+						The <code class="literal">retrieve-techdocs-content</code> TechDocs MCP tool retrieves the content of a TechDocs resource, enabling AI clients to access documentation content for specific Software Catalog entities. By default, the tool returns a JSON entity with the following fields: <code class="literal">entityRef</code>, <code class="literal">name</code>, <code class="literal">title</code>, <code class="literal">kind</code>, <code class="literal">namespace</code>, <code class="literal">content</code>, <code class="literal">path</code>, <code class="literal">contentType</code>, <code class="literal">lastModified</code>, and <code class="literal">metadata</code>.
+					</p><p>
+						The following examples show common queries:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								“Fetch techdoc with reference component:default/my-service”
+							</li><li class="listitem">
+								“Fetch page about.html from techdoc with reference component:default/my-service”
+							</li></ul></div><div class="itemizedlist"><p class="title"><strong>Procedure</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
+								Use the parameters as shown in the following table to configure your <code class="literal">retrieve-techdocs-content</code> TechDocs MCP tool.
+							</li></ul></div><div class="informaltable"><table class="lt-4-cols lt-7-rows"><colgroup><col style="width: 33%; " class="col_1"/><col style="width: 33%; " class="col_2"/><col style="width: 33%; " class="col_3"/></colgroup><thead><tr><th align="left" valign="top" id="idm45847696461824" scope="col">Name</th><th align="left" valign="top" id="idm45847696460960" scope="col">Description</th><th align="left" valign="top" id="idm45847700272256" scope="col">Example</th></tr></thead><tbody><tr><td align="left" valign="top" headers="idm45847696461824">
+									<p>
+										<code class="literal">entityRef</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847696460960">
+									<p>
+										Specifies the entity to retrieve using the <code class="literal">kind:namespace/name</code> format.
+									</p>
+									</td><td align="left" valign="top" headers="idm45847700272256">
+									<p>
+										"component:default/my-service"
+									</p>
+									</td></tr><tr><td align="left" valign="top" headers="idm45847696461824">
+									<p>
+										<code class="literal">pagePath</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847696460960">
+									<p>
+										Specifies the path to a specific documentation page. Defaults to <code class="literal">index.html</code>
+									</p>
+									</td><td align="left" valign="top" headers="idm45847700272256">
+									<p>
+										"index.html"
+									</p>
+									</td></tr></tbody></table></div></section></section></section><section class="section" id="assembly-troubleshooting-mcp-server-and-client-problems"><div class="titlepage"><div><div><h3 class="title">1.6. Troubleshooting MCP server and client problems</h3></div></div></div><p>
+				The following procedures guide you through resolving common issues when using a Model Communication Protocol (MCP) server and tool.
+			</p><section class="section" id="proc-verifying-successful-installation-of-mcp-plugins.adoc_assembly-troubleshooting-mcp-server-and-client-problems"><div class="titlepage"><div><div><h4 class="title">1.6.1. Verifying successful installation of MCP plugins</h4></div></div></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+							Log in to the OCP cluster running RHDH and go to your RHDH project using the following code:
+						</p><pre class="screen">oc project {my-product-namespace}</pre></li><li class="listitem"><p class="simpara">
+							Inspect the logs for the installation of the RHDH dynamic plugins using the following code:
+						</p><pre class="screen">oc logs -c install-dynamic-plugins deployment/&lt;my-product-deployment&gt;</pre></li></ol></div><div class="orderedlist"><p class="title"><strong>Verification</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+							You must see an entry for the MCP backend server plugin as shown in the following code:
+						</p><pre class="screen">..... prior logs ....
+======= Installing dynamic plugin oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-mcp-actions-backend:bs_1.42.5__0.1.2!backstage-plugin-mcp-actions-backend
+	==&gt; Copying image oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-mcp-actions-backend:next__0.2.0 to local filesystem
+	==&gt; Successfully installed dynamic plugin oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-mcp-actions-backend:bs_1.42.5__0.1.2!backstage-plugin-mcp-actions-backend</pre></li><li class="listitem"><p class="simpara">
+							You must see entries for any of the MCP tool plugins you installed as shown in the following code:
+						</p><pre class="screen">..... prior logs ....
+======= Installing dynamic plugin oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool:bs_1.42.5__0.2.3!red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool
+	==&gt; Copying image oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool:bs_1.42.5__0.2.3!red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool to local filesystem
+	==&gt; Successfully installed dynamic plugin oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool:bs_1.42.5__0.2.3!red-hat-developer-hub-backstage-plugin-software-catalog-mcp-tool</pre></li></ol></div></section><section class="section" id="proc-checking-logs-for-mcp-tool-execution-and-errors.adoc_assembly-troubleshooting-mcp-server-and-client-problems"><div class="titlepage"><div><div><h4 class="title">1.6.2. Checking MCP tool logs for status and errors</h4></div></div></div><p>
+					The Backstage <code class="literal">LoggerService</code> target name starts with the name of the MCP tool (either <code class="literal">software-catalog-mcp-tool</code> or <code class="literal">techdocs-mcp-tool</code>). The MCP tools generate a log by default. For example:
+				</p><pre class="programlisting language-terminal">`[backend]: 2025-09-25T16:24:22.660Z software-catalog-mcp-tool info fetch-catalog-entities: Fetching catalog entities with options: kind="Component"`</pre><p>
+					If any errors occur in the MCP tools, check the logs.
+				</p></section><section class="section" id="con-understand-and-respond-to-mcp-tool-error-messages.adoc_assembly-troubleshooting-mcp-server-and-client-problems"><div class="titlepage"><div><div><h4 class="title">1.6.3. Understand and respond to MCP tool error messages</h4></div></div></div><p>
+					The MCP tools response provides an optional error message that communicates any issues encountered during the use of the tool, including potential input validation errors.
+				</p></section><section class="section" id="proc-resolving-the-model-does-not-support-tool-calling-error.adoc_assembly-troubleshooting-mcp-server-and-client-problems"><div class="titlepage"><div><div><h4 class="title">1.6.4. Resolving the <code class="literal">Model does not support tool calling</code> error</h4></div></div></div><p>
+					This error indicates that the model configured in your MCP client lacks the required functionality to handle tool calls. The error message appears similar to: <code class="literal">Invalid request: model gemma3:27b does not support tool calls</code>.
+				</p><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem">
+							Consult your model documentation to confirm its support for tool calling.
+						</li><li class="listitem">
+							If the current model does not support tool calling, change the model that your MCP client uses to a tool-calling compatible model.
+						</li></ol></div></section><section class="section" id="proc-resolving-authentication-issues-when-tool-are-not-found.adoc_assembly-troubleshooting-mcp-server-and-client-problems"><div class="titlepage"><div><div><h4 class="title">1.6.5. Resolving authentication issues when tools are not found</h4></div></div></div><p>
+					If your MCP client connects to the server but cannot find deployed tools, an authentication or configuration issue is likely.
+				</p><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+							Verify the authentication token.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+									Configure a static token for the RHDH MCP server.
+								</li><li class="listitem">
+									Set this token as the bearer token in your MCP client and make sure the authorization header is the configuration that specifies <code class="literal">Bearer</code> before the token, for example, <code class="literal">Bearer &lt;mcp_token&gt;</code>.
+								</li></ol></div></li><li class="listitem"><p class="simpara">
+							Check the MCP endpoint configuration.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+									Confirm that the MCP server URL properly resolves, particularly if you are using a desktop client.
+								</li><li class="listitem">
+									Use <span class="strong strong"><strong>legacy SSE endpoint</strong></span> if your MCP client requires it instead of the Streamable endpoint. (For more details, see the <span class="strong strong"><strong>Configuration</strong></span> topic).
+								</li></ol></div></li><li class="listitem"><p class="simpara">
+							Verify your RHDH <code class="literal">app-config.yaml</code> file for duplicate backend entries and make sure that the indentation is accurate.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+									Make sure that the configuration for the static token and MCP plugin sources go under an existing backend field, if one is present.
+								</li><li class="listitem">
+									If you are unsure, see <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html-single/interacting_with_model_context_protocol_tools_for_red_hat_developer_hub/index#proc-configuring-model-context-protocol">the sample app configuration provided in the reference procedure</a>.
+								</li></ol></div></li></ol></div></section><section class="section" id="proc-nonsensical-mcp-tool-output.adoc_assembly-troubleshooting-mcp-server-and-client-problems"><div class="titlepage"><div><div><h4 class="title">1.6.6. Resolve nonsensical MCP tool output</h4></div></div></div><p>
+					Nonsensical output often occurs when smaller models or models with smaller context sizes cannot effectively manage repeated tool calls within the same context window.
+				</p><div class="formalpara"><p class="title"><strong>Procedure</strong></p><p>
+						To improve the quality of the tool output, take the following actions:
+					</p></div><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+							Select an appropriate model for tool calling.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+									Verify that the model has good support for tool calling.
+								</li><li class="listitem">
+									Make sure your model is not too small. We recommend a model with at least 7 billion parameters and a context window of 32k.
+								</li></ol></div></li><li class="listitem"><p class="simpara">
+							Refine your queries.
+						</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem">
+									Use more well-defined queries that limit the amount of data returned in the response from the tool.
+								</li></ol></div></li><li class="listitem">
+							If possible, increase the context window size of the model. We recommend at least 32k for these MCP tools.
+						</li></ol></div></section></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm45847700236320"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2025 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
