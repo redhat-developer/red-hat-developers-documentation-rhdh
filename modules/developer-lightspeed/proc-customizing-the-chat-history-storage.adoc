@@ -3,23 +3,17 @@
 [id="proc-customizing-the-chat-history-storage_{context}"]
 = Customizing the chat history storage in {ls-short}
 
-By default, the {ls-short} service stores chat history using an in-memory database. This means that if you restart the Pod containing the server, the chat history is lost. You can manually configure {ls-short} to store the chat history persistently as a long-term backup with PostgreSQL by any of the following methods:
-
-* {product-very-short} Operator
-* {product-very-short} Helm chart
+By default, the {ls-short} service stores chat history in a non-persistent local SQL database within in the {lcs-short} container. This means that chat history is lost if you create and use a new {lcs-short} sidecar. You can manually configure {ls-short} to store the chat history persistently as a long-term backup with PostgreSQL by updating your {lcs-short} service configuration.
 
 +
 [WARNING]
 ====
-If you configure {ls-short} to store chat history using PostgreSQL, prompts and responses are recorded and can be reviewed by your platform administrators. If any of your user's chat history contains any private, sensitive, or confidential information, this might have data privacy and security implications that you need to assess. For users that wish to have their chat data removed, they must request their respective platform administrator to perform this action. {company-name} does not collect (or have access to) any of this chat history data.
+Configuring {ls-short} to use PostgreSQL records prompts and responses, which platform administrators can review. You must assess any data privacy and security implications if user chat history contains private, sensitive, or confidential information. For users that wish to have their chat data removed, they must request their respective platform administrator to perform this action. {company-name} does not collect or access this chat history data.
 ====
 
 .Procedure
-Customize the chat history storage using any of the following methods:
-
-* Update your {product-very-short} config file.
-** If you are using {ls-short} on an Operator-installed {product-very-short} instance, update `conversation_cache` in your {product-very-short} ConfigMap.
-** If you are using {ls-short} on a Helm-installed {product-very-short} instance, update `conversation_cache` in your `values.yaml` file.
+. Configure the chat history storage type in the {lcs-short} configuration file (`lightspeed-stack.yaml`) using any of the relevant options:
+** To enable persistent storage with PostgreSQL, add the following configuration:
 + 
 [source,yaml]
 ----
@@ -29,18 +23,17 @@ Customize the chat history storage using any of the following methods:
       host: _<your_database_host>_
       port: _<your_database_port>_
       db: _<your_database_name>_
-   	  user: _<your_user_name>_
-	    password: _<postgres_password>_
-	    ca_cert_path: postgres_cert.crt
-      ssl_mode: "require"
+      user: _<your_user_name>_
+      password: _<postgres_password>_
 ----
-
-* Update `conversation_cache` in your {lcs-short} config file:
+* To retain the default, non-persistent SQLite storage, make sure the configuration is set as shown in the following example:
 +
 [source,yaml]
 ----
- conversation_cache:
-   type: "sqlite"
-   sqlite:
-     db_path: "/tmp/cache.db"
+conversation_cache:
+  type: "sqlite"
+  sqlite:
+    db_path: "/tmp/cache.db"
 ----
+
+. Restart your {lcs-short} service to apply the new configuration.
