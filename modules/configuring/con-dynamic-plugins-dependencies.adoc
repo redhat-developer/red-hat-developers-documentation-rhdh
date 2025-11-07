@@ -1,0 +1,74 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="dynamic-plugins-dependencies_{context}"]
+= Dynamic plugins dependency management
+Dynamic plugins configured for the {backstage} custom resource (CR) may require certain Kubernetes resources to be configured to make the plugin work. These resources are referred to as 'plugin dependencies'. In {product}({product-very-short}), you can automatically create these resources when the {backstage} CR is applied to the cluster.
+
+== Profile Configuration
+For a specific profile, you can configure plugin dependency by including the required Kubernetes resources in the `/config/profile/{PROFILE}/plugin-deps` directory. You must add the required resources as Kubernetes manifests in YAML format in the `plugin-deps` directory.
+
+.Example: Adding example-dep1.yaml and example-dep2.yaml as plugin dependencies
+[source,terminal,subs="+quotes"]
+----
+config/
+  profile/
+    rhdh/
+     kustomization.yaml
+     plugin-deps/
+        example-dep1.yaml
+        example-dep2.yaml
+----
+
+[NOTE]
+====
+* If a resource manifest does not specify a namespace, it will be created in the namespace of the {backstage} CR.
+* Resources may contain *{{backstage-name}}* and *{{backstage-ns}}* placeholders, which will be replaced with the name and namespace of the {backstage} CR, respectively.
+====
+
+The `kustomization.yaml` file must contain the following lines:
+[source,yaml,subs="+quotes"]
+----
+
+configMapGenerator:
+  - files:
+      - plugin-deps/example-dep1.yaml
+      - plugin-deps/example-dep2.yaml
+    name: plugin-deps
+----
+
+== Plugin dependencies infrastructure
+To install infrastructural resources that are required by plugin dependencies, for example, other operators or custom resources (CR), you can include these in the `/config/profile/{PROFILE}/plugin-infra` directory.
+
+To create these infrastructural resources (along with the operator deployment), use the `make plugin-infra` command. 
+
+[NOTE]
+====
+On a production cluster, use this command with caution as it may reconfigure cluster-scoped resources.
+====
+
+== Plugin configuration
+You must reference the plugin dependenciesin the `dependencies` field of the plugin configuration when the  {backstage} CR is applied. 
+
+The Operator creates the resources described in the files located in the `plugin-deps` directory. 
+
+You can reference plugin dependencies in the `dynamic-plugins` ConfigMap which can either be part of the default profile configuration for all {backstage} custom resources or part of the ConfigMap referenced in the {backstage} CR. In {product}, you can include plugin dependencies in the dynamic plugin configuration. 
+
+Each `dependencies.ref` value can either match the full file name or serve as a prefix for the file name. The operator will create the resources described in the files contained in the `plugin-deps` that start with the specified `ref` value or exactly match it 
+
+.Example: Adding example-dep plugin dependency 
+[source,yaml,subs="+quotes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: default-dynamic-plugins
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - disabled: false
+        package: "path-or-url-to-example-plugin"
+        dependencies:
+          - ref: example-dep
+----
