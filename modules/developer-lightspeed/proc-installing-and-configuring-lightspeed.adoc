@@ -36,37 +36,40 @@ You must manually install and configure the {ls-short} plugin, the {lcs-name} ({
 .. Click *Create ConfigMaps*.
 .. From the *Create ConfigMap* page, select the *YAML view* option and edit the file using the following structure. This example demonstrates the configuration for the LCS ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
 +
-[source,yaml,subs=+attributes]
+[source,yaml]
 ----
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: {lcs-name} ({lcs-short})
-service:
-  host: 0.0.0.0
-  port: 8080
-  auth_enabled: false
-  workers: 1
-  color_log: true
-  access_log: true
-llama_stack:
-  use_as_library_client: false
-  url: http://localhost:8321
-user_data_collection:
-  feedback_enabled: true
-  feedback_storage: "/tmp/data/feedback"
-  transcripts_enabled: true
-  transcripts_storage: "/tmp/data/transcripts"
-authentication:
-  module: "noop"
-conversation_cache:
-  type: "sqlite"
-  sqlite:
-    db_path: "./lcs_cache.db"
-mcp_servers:
-  - name: mcp::backstage
-    provider_id: model-context-protocol
-    url: https://<{product-very-short}_HOST>/api/mcp-actions/v1
+  name: lightspeed-stack
+data:
+  lightspeed-stack.yaml: |
+    name: Lightspeed Core Service (LCS)
+    service:
+      host: 0.0.0.0
+      port: 8080
+      auth_enabled: false
+      workers: 1
+      color_log: true
+      access_log: true
+    llama_stack:
+      use_as_library_client: false
+      url: http://localhost:8321
+    user_data_collection:
+      feedback_enabled: true
+      feedback_storage: "/tmp/data/feedback"
+      transcripts_enabled: true
+      transcripts_storage: "/tmp/data/transcripts"
+    authentication:
+      module: "noop"
+    conversation_cache:
+      type: "sqlite"
+      sqlite:
+        db_path: "./lcs_cache.db"
+    mcp_servers:
+      - name: mcp::backstage
+        provider_id: model-context-protocol
+        url: https://<RHDH_HOST>/api/mcp-actions/v1
 ----
 +
 where:
@@ -80,8 +83,24 @@ The {lcs-short} ConfigMap can optionally include configuration for `mcp_servers`
 
 .. Click *Create*.
 
-. Create the {ls-short} ConfigMap: Create a dedicated {ls-short} ConfigMap (`lightspeed-app-config`) to hold specific plugin configurations.
+. Create an MCP_TOKEN.
+.. https://backstage.io/docs/auth/service-to-service-auth/#static-tokens[Generate the external static token].
+.. Create a secret file as shown in the following example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lightspeed-secrets
+  namespace: <_your_namespace_>
+type: Opaque
+stringData:
+  MCP_TOKEN: <_your_static_token>
+----
 
+. Create the {ls-short} ConfigMap: Create a dedicated {ls-short} ConfigMap (`lightspeed-app-config`) to hold specific plugin configurations.
+.. Create a 
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMap*.
 .. From the *Create ConfigMap* page, select the *YAML view* option and add the following example:
@@ -92,7 +111,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: lightspeed-app-config
-  namespace: <__namespace__> # Enter your {product-very-short} instance namespace
+  namespace: <__namespace__> # Enter your RHDH instance namespace
 data:
   app-config.yaml: |-
     backend:
@@ -116,14 +135,14 @@ data:
       # OPTIONAL: Custom users prompts displayed to users
       # If not provided, the plugin uses built-in default prompts
       prompts:
-        - title: 'Getting Started with {product}'
+        - title: `Getting Started with Red Hat Developer Hub`
           message: Can you guide me through the first steps to start using {product-short} as a developer, like exploring the Software Catalog and adding my service?
 
       # OPTIONAL: Port for lightspeed service (default: 8080)
       # servicePort: ${LIGHTSPEED_SERVICE_PORT}
 
-      # OPTIONAL: Override default {product-very-short} system prompt
-      # systemPrompt: "You are a helpful assistant focused on {product} development."
+      # OPTIONAL: Override default RHDH system prompt
+      # systemPrompt: "You are a helpful assistant focused on Red Hat Developer Hub development."
 ----
 
 .. Click *Create*.
@@ -165,7 +184,7 @@ where:
 
 .. Click *Create*.
 
-. Update the dynamic plugins ConfigMap: Add the {ls-short} plugin image to your existing dynamic plugins ConfigMap (`dynamic-plugins-rhdh.yaml`).
+. Update the dynamic plugins ConfigMap: Add the {ls-short} plugin image to your existing dynamic plugins ConfigMap (`dynamic-plugins-rhdh`).
 +
 [source,yaml]
 ----
@@ -196,10 +215,6 @@ plugins:
               text: Lightspeed
 - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:next__1.0.1!red-hat-developer-hub-backstage-plugin-lightspeed-backend
   disabled: false
-  pluginConfig:
-    lightspeed:
-      # OPTIONAL: Port for lightspeed service (default: 8080)
-      # servicePort: ${LIGHTSPEED_SERVICE_PORT}
 ----
 
 . Update your deployment configuration: Update the deployment configuration based on how your {product-very-short} instance was installed. You must add two sidecar containers: `llama-stack` and `lightspeed-core`.
@@ -213,7 +228,6 @@ plugins:
     appConfig:
       configMaps:
         - name: lightspeed-app-config
-          mountPath: /opt/app-root/src
 ----
 ... Update the `spec.deployment.patch.spec.template.spec.volumes` specification to include volumes for {lcs-short} configuration (`lightspeed-stack`), shared storage for feedback (`shared-storage`), and RAG data (`rag-data-volume`):
 +
@@ -243,12 +257,17 @@ plugins:
           - mountPath: /data
             name: rag-data-volume
 ----
-... Add the Llama Stack and {lcs-short} containers to the `spec.deployment.patch.spec.template.spec.containers` section:
+... Add the Llama Stack, {lcs-short} containers, and the MCP_TOKEN secret file to the `spec.deployment.patch.spec.template.spec.containers` section:
 +
 [source,yaml]
 ----
+  spec:
+    application:
+      - extraEnvs:
+          secrets:
+            - name: lightspeed-secrets
     containers:
-      # ... Your existing {product-very-short} container definition ...
+      # ... Your existing RHDH container definition ...
       - envFrom:
           - secretRef:
               name: llama-stack-secrets
