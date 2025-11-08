@@ -340,7 +340,7 @@ for y in $yamls; do
         # TODO include missing data fields for Provider and Description - see https://issues.redhat.com/browse/RHIDP-3496 and https://issues.redhat.com/browse/RHIDP-3440
 
         # Use temporary files to allow sorting later
-        key="$Name-$RoleSort-$Role-$Plugin"
+        key="$PrettyName-$RoleSort-$Role-$Plugin"
         adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
         csv_content="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Lifecycle\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
         
