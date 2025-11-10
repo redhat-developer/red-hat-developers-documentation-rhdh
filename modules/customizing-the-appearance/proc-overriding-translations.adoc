@@ -1,0 +1,120 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="prov-overriding-translations_{context}"]
+= Overriding translations
+In {product-very-short} 1.8, you can override plugin translation strings without modifying the plugin source code.
+
+.Prerequisites
+* You have enabled localization in your {product-very-short} application.
+* For an Operator-installed {product-very-short} instance, you have installed the {openshift-cli}. For more information about installing `oc`, see {ocp-docs-link}/html/cli_tools/openshift-cli-oc#installing-openshift-cli[Installing the OpenShift CLI].
+
+.Procedure
+// This feature is not being included in 1.8
+// . In the top user menu, go to *Settings* > *General*.
+// . Click on the download link in the *Translations* panel to download the default English translation strings.
+. Create a JSON file containing the translation strings that you want to override, as shown in the following example:
++
+[id=i18n-enable]
+.`allTranslations.json` fragment with translation string overrides
+[source,json]
+----
+{
+  "plugin.global-floating-action-button": {
+    "en": {
+      "fab.quay.label": "QUAY EN JSON",
+      "fab.rbac.label": "RBAC EN JSON",
+      "fab.rbac.tooltip": "RBAC EN tooltip JSON"
+    },
+    "fr": {
+      "fab.quay.label": "QUAY French JSON",
+      "fab.quay.tooltip": "QUAY french tooltip JSON",
+      "fab.rbac.label": "RBAC French JSON",
+      "fab.rbac.tooltip": "RBAC french tooltip JSON"
+    }
+  },
+  "plugin.global-header": {
+    "en": {
+      "applicationLauncher.developerHub": "Developer Hub EN JSON"
+    },
+    "fr": {
+      "applicationLauncher.developerHub": "Developer Hub French JSON"
+    }
+  }
+}
+----
+. Log in to your cluster and create a config map for your translations override strings:
++
+[source,bash]
+----
+oc create configmap all-translations \
+    --from-file=/<path-to>/allTranslations.json
+----
+
+. Update your deployment configuration based on your installation method:
+
+.. For an Operator-installed {product-very-short} instance, update your `{product-custom-resource-type}` custom resource (CR). For more information about configuring a CR, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html/configuring_red_hat_developer_hub/provisioning-and-using-your-custom-configuration#using-the-operator-to-run-rhdh-with-your-custom-configuration[Using the Red Hat Developer Hub Operator to run Developer Hub with your custom configuration].
+... In the `spec.application.extraFiles` section, add the translations custom app configuration as shown in the following example:
++
+.{product-custom-resource-type} custom resource fragment
+[source,yaml,subs="+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+spec:
+  application:
+    extraFiles:
+      mountPath: /opt/app-root/src/translations
+      configMaps:
+        - name: all-translations
+----
+
+.. For a Helm-installed {product-very-short} instance, update your {product-short} `{backstage}` Helm chart to mount in the {product-short} filesystem your files from the `all-translations` config map:
+
+... In the {product-short} Helm chart, go to *Root Schema* → *Backstage chart schema* → *Backstage parameters* → *Backstage container additional volume mounts*.
+
+... Select *Add {backstage} container additional volume mounts* and add the following values:
+
+mountPath::
+`/opt/app-root/src/translations`
+name::
+`all-translations`
+
+... Add the translations to the *{backstage} container additional volumes* in the {product-short} Helm chart:
+
+name::
+`all-translations`
+configMap::
+defaultMode:::
+  `420`
+name:::
+`all-translations`
+
+. Update the `i18n` section to your custom {product-short} `{my-app-config-file}` configuration file to include the following translation override file:
++
+[id=i18n-override]
+.`{my-app-config-file}` fragment with localization `i18n` fields
+[source,yaml,subs="+quotes"]
+----
+i18n:
+  locales: # List of supported locales. Must include `en`, otherwise the translation framework will fail to load.
+    - en
+    - fr
+  defaultLocale: en # Optional. Defaults to `en` if not specified.
+  overrides: # List of JSON translation files applied in order (last file wins).  Each file may override/add translations for one or more plugins/locales
+    - /opt/app-root/src/translations/all-translations.json
+----
+
+.Additional resources
+// * link:{customizing-book-link}#configuring-templates[Enabling floating button localization in {product-short}]
+// * link:{customizing-book-link}#configuring-templates[Enabling Quickstart localization in {product-short}]
+// * link:{customizing-book-link}#configuring-templates[Enabling sidebar menu items localization in {product-short}]
+
+{context}
+
+* xref:proc-enabling-localization-in-floating-action-button_configuring-a-floating-action-button[Enabling floating button localization in {product-short}]
+* xref:proc-enabling-localization-in-quickstarts_customizing-the-quickstarts[Enabling Quickstart localization in {product-short}]
+* xref:proc-enabling-localization-in-sidebar-menu-items_customizing-appearance[Enabling sidebar menu items localization in {product-short}]
+
+// * xref:proc-enabling-localization-in-floating-action-button_{context}[fggdsg]
+// * xref:proc-enabling-localization-in-quickstarts_{context}[fggdsg]
+// * xref:proc-enabling-localization-in-sidebar-menu-items_{context}[fggdsg]
