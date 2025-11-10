@@ -8,7 +8,19 @@ available at http://www.apache.org/licenses/
 SPDX-License-Identifier: Apache-2.0
 
 Prerequisites:
-$ pip3 install --requirement requirements.txt
+
+1. create a JIRA token from https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens
+2. export the token
+
+export JIRA_TOKEN=NDA4NDY4....
+
+3. install requirements
+
+pip3 install --requirement requirements.txt
+
+4. run this scipt
+
+python ./modules/release-notes/single-source-release-notes.py
 
 Generate the AsciiDoc files for the release notes and known issues from JIRA content.
 """
