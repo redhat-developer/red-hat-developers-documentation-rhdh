@@ -1,0 +1,95 @@
+. Create the `rhdh-operator` namespace to contain the {product} Operator:
++
+[source,terminal]
+----
+$ kubectl create namespace rhdh-operator
+----
+
+. Create a pull secret using your {company-name} credentials to pull the container images from the protected {company-name} Ecosystem:
++
+[source,terminal]
+----
+$ kubectl -n rhdh-operator create secret docker-registry rhdh-pull-secret \
+    --docker-server=registry.redhat.io \
+    --docker-username=<redhat_user_name> \
+    --docker-password=<redhat_password> \
+    --docker-email=<email>
+----
+
+. Create a catalog source that contains the {company-name} Ecosystem Operators:
++
+[source,terminal,subs="attributes+"]
+----
+$ cat <<EOF | kubectl -n rhdh-operator apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: redhat-catalog
+spec:
+  sourceType: grpc
+  image: registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}
+  secrets:
+  - "rhdh-pull-secret"
+  displayName: {company-name} Operators
+EOF
+----
+
+. Create an operator group to manage your operator subscriptions:
++
+[source,terminal]
+----
+$ cat <<EOF | kubectl apply -n rhdh-operator -f -
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhdh-operator-group
+EOF
+----
+
+. Create a subscription to install the {product} Operator:
++
+[source,terminal,subs="attributes+"]
+----
+$ cat <<EOF | kubectl apply -n rhdh-operator -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: rhdh
+  namespace: rhdh-operator
+spec:
+  channel: fast
+  installPlanApproval: Automatic
+  name: rhdh
+  source: redhat-catalog
+  sourceNamespace: rhdh-operator
+  startingCSV: rhdh-operator.v{product-bundle-version}
+EOF
+----
+
+. To wait until the Operator deployment finishes to be able to run the next step, run:
++
+[source,terminal]
+----
+until kubectl -n rhdh-operator get deployment rhdh-operator &>/dev/null; do
+  echo -n .
+  sleep 3
+done
+echo "RHDH Operator Deployment created"
+----
+
+. Include your pull secret name in the Operator deployment manifest, to avoid `ImagePullBackOff` errors:
++
+[source,terminal]
+----
+$ kubectl -n rhdh-operator patch deployment \
+    rhdh-operator --patch '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"rhdh-pull-secret"}]}}}}' \
+    --type=merge
+----
+
+.Verification
+* Verify the deployment name:
++
+[source,terminal]
+----
+$ kubectl get deployment -n rhdh-operator
+----

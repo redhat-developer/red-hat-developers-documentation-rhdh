@@ -1,0 +1,76 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-generated-workflow-manifests.adoc_{context}"]
+= Generated workflow manifests
+
+The following example is an illustration of what is generated under the `01_basic/manifests`:
+
+[source,yaml]
+----
+01_basic/manifests
+├── 00-secret_basic-secrets.yaml
+├── 01-configmap_basic-props.yaml
+├── 02-configmap_01-basic-resources-schemas.yaml
+└── 03-sonataflow_basic.yaml
+----
+
+`00-secret_basic-secrets.yaml`::
+Contains secrets from `01_basic/src/main/resources/secret.properties`.
+Values are not required at this stage as you can set them later after applying CRs or when using GitOps.
+
+[Important]
+====
+In OpenShift Serverless Logic `v1.36`, after updating a secret, you must manually restart the workflow Pod for changes to apply.
+====
+
+`01-configmap_basic-props.yaml`::
+Holds application properties from application.properties.
+Any change to this ConfigMap triggers an automatic Pod restart.
+
+`02-configmap_01-basic-resources-schemas.yaml`::
+Contains JSON schemas from src/main/resources/schemas.
++
+[NOTE]
+====
+You do not need to deploy certain configuration resources when using the GitOps profile.
+====
+
+`03-sonataflow_basic.yaml`::
+The SonataFlow custom resource (CR) that defines the workflow.
++
+[source,yaml]
+----
+podTemplate:
+  container:
+    image: quay.io/orchestrator/demo-basic
+    resources: {}
+    envFrom:
+      - secretRef:
+          name: basic-secrets
+----
++
+[source,yaml,subs="+quotes"]
+----
+persistence:
+  postgresql:
+    secretRef:
+      name: `sonataflow-psql-postgresql`
+      userKey: `__<your_postgres_username>__`
+      passwordKey: `__<your_postgres_password>__`
+    serviceRef:
+      name: `sonataflow-psql-postgresql`
+      port: 5432
+      databaseName: sonataflow
+      databaseSchema: basic
+----
++
+where:
+
+`postgresql:secretRef:name`:: Enter the Secret name for your deployment.
+`postgresql:secretRef:userKey`:: Enter the key for your deployment.
+`postgresql:secretRef:passwordKey`:: Enter the password for your deployment.
+`postgresql:serviceRef:name`:: Enter the Service name for your deployment.
++
+If you must connect to an external database, replace `serviceRef` with `jdbcUrl`. See link:https://docs.redhat.com/en/documentation/red_hat_openshift_serverless/1.36/html-single/serverless_logic/index#serverless-logic-managing-persistence[Managing workflow persistence].
+
+By default, the script generates all the manifests without a namespace. You can specify a namespace to the script by using the `--namespace` flag if you know the target namespace in advance. Otherwise, you must provide the namespace when applying the manifests to the cluster. See link:https://docs.redhat.com/en/documentation/red_hat_openshift_serverless/1.36/html-single/serverless_logic/index#serverless-logic-configuring-workflow-services[Configuring workflow services].

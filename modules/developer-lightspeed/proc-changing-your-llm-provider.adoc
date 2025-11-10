@@ -1,0 +1,68 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-changing-your-llm-provider_{context}"]
+= Changing your LLM provider in {ls-short}
+
+{ls-short} operates on a {developer-lightspeed-link}#con-about-bring-your-own-model_appendix-about-user-data-security[_Bring Your Own Model_] approach, meaning you must provide and configure access to your preferred Large Language Model (LLM) provider for the service to function. The Road-Core Service (RCS) acts as an intermediary layer that handles the configuration and setup of these LLM providers.
+
+[IMPORTANT]
+====
+The LLM provider configuration section includes a mandatory dummy provider block. Due to limitations of Road Core, this dummy provider must remain present when working with Lightspeed. This block is typically marked with comments (# Start: Do not remove this block and # End: Do not remove this block) and must not be removed from the configuration file.
+====
+
+.Prerequisites
+
+* The path to the file containing your API token must be accessible by the RCS container, requiring the file to be mounted to the RCS container.
+
+.Procedure
+
+You can define additional LLM providers using either of following methods:
+
+* Recommended: In your Developer Lightspeed plugin configuration (the `lightspeed` section within the `lightspeed-app-config.yaml` file), define the new provider or providers under the `lightspeed.servers` key as shown in the following code:
++
+[source,yaml]
+----
+lightspeed:
+  servers:
+    - id: _<my_new_provider>_
+      url: _<my_new_url>_
+      token: _<my_new_token>_
+----
++
+[NOTE]
+====
+In Developer preview, only one LLM server is supported at a time.
+====
+** Optional: You can set the `id`, `url`, and `token` values in a Kubernetes Secret and reference them as environment variables using the `envFrom` section.
+[source,yaml]
+----
+containers:
+    - name: my-container
+      image: my-image
+      envFrom:
+        - secretRef:
+            name: my-secret
+----
+
+* You can add new LLM providers by updating the `rcsconfig.yaml` file.
+.. In the `llm_providers` section within your `rcsconfig.yaml` file, add your new provider configuration below the mandatory dummy provider block as shown in the following code:
++
+[source,yaml]
+----
+llm_providers:
+   # Start: Do not remove this block
+    - name: dummy
+      type: openai
+      url: https://dummy.com
+      models:
+        - name: dummymodel
+   # END: Do not remove this block
+    - name: _<my_new_providers>_
+      type: openai
+      url: _<my_provider_url>_
+      credentials_path: path/to/token
+      disable_model_check: true
+----
+.. If you need to define a new provider in `rcsconfig.yaml`, you must configure the following critical parameters:
+** `credentials_path`: Specifies the path to a `.txt` file that contains your API token. This file must be mounted and accessible by the RCS container.
+** `disable_model_check`: Set this field to `true` to allow the RCS to locate models through the `/v1/models` endpoint of the provider. When you set this field to `true`, you avoid the need to define model names explicitly in the configuration.

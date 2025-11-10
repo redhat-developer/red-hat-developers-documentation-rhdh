@@ -1,0 +1,74 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-an-rhdh-instance-with-tls-in-kubernetes_{context}"]
+[id="using-the-operator-to-run-rhdh-with-your-custom-configuration"]
+= Using the {product} Operator to run {product-short} with your custom configuration
+
+Use the {product-short} Operator to run {product} with your custom configuration by creating your {product-custom-resource-type} custom resource (CR) that can perform the following actions:
+
+* Mount files provisioned in your custom config maps.
+* Inject environment variables provisioned in your custom secrets.
+
+.Prerequisites
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
+* xref:proc-install-operator_setting-up-and-configuring-your-first-rhdh-instance[]
+* xref:provisioning-your-custom-configuration[]
+
+.Procedure
+
+. Author your {product-custom-resource-type} CR in a `{my-product-cr-name}.yaml` file to use your custom config maps and secrets.
++
+.`{my-product-cr-name}.yaml` custom resource example with dynamic plugins and RBAC policies config maps, and external PostgreSQL database secrets.
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: _<{my-product-cr-name}>_
+spec:
+  application:
+    appConfig:
+      mountPath: /opt/app-root/src
+      configMaps:
+         - name: {my-app-config-config-map}
+         - name: rbac-policies
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    extraEnvs:
+      envs:
+        - name: HTTP_PROXY
+          value: 'http://10.10.10.105:3128'
+        - name: HTTPS_PROXY
+          value: 'http://10.10.10.106:3128'
+        - name: NO_PROXY
+          value: 'localhost,example.org'
+      secrets:
+         - name: {my-product-secrets}
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: {my-product-database-certificates-secrets}
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
+    replicas: 2
+  database:
+    enableLocalDb: false
+----
+
+`application`::
+`appConfig`::: Register your `{my-app-config-config-map}` and `rbac-policies` config maps.
+`dynamicPluginsConfigMapName`::: Register your `dynamic-plugins-rhdh` config map.
+`extraEnvs`:::
+`env`:::: Enter your proxy environment variables.
+`secrets`:::: Register your `<my_product_secrets>` and `{my-product-database-secrets}` secrets.
+`extraFiles`:::
+`secrets`::::
+Register the `postgres-crt.pem`, `postgres-ca.pem`, and `postgres-key.key` files contained in the `{my-product-database-certificates-secrets}` secret.
+`replicas`::: Enable high availability (HA) by increasing the replicas count to a value higher or equal to 2.
+`database`::
+`enableLocalDb`::: Use your external PostgreSQL database rather than the internal PostgreSQL database.
+
+. Apply your {product-custom-resource-type} CR to start or update your {product-short} instance.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc apply --filename={my-product-cr-name}.yaml --namespace={my-product-namespace}
+----
