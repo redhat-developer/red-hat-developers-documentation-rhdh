@@ -5,21 +5,61 @@
 
 This section lists known issues in {product} {product-version}.
 
-[id="known-issue-rhdhbugs-1979"]
-== Latest Orchestrator feature set is unavailable
+[id="known-issue-rhdhbugs-986"]
+== MUI v5 components might render with broken styles in non-bundled plugins
 
-This release includes the Orchestrator plugin version from `1.6`. As a result, the latest feature set is not yet available. The Orchestrator plugin will be updated to the latest feature set in a future release.
+Plugins that are not bundled with {product}, meaning not part of the {product} wrappers, might experience styling issues or broken visuals when using Material UI v5 components. 
 
+. Workaround
+* Add the following code to the plugin’s entry file, such as `workspaces/&lt;pluginId&gt;/plugins/&lt;pluginId&gt;/src/index.ts`:
++
+[source,javascript]
+----
+import { unstable_ClassNameGenerator as ClassNameGenerator } from &#39;@mui/material/className&#39;;
 
+ClassNameGenerator.configure(componentName =&gt; {
+  return componentName.startsWith(&#39;v5-&#39;)
+    ? componentName
+    : `v5-${componentName}`;
+});
+----
 
-
-
-
-
+// Source: https://docs.google.com/document/d/1cF-pRNY7duwD5JP8ACQVP24oJJw8ffphCzIgmyICcAM/edit?usp=sharing
 
 
 .Additional resources
-* link:https://issues.redhat.com/browse/RHDHBUGS-1979[RHDHBUGS-1979]
+* link:https://issues.redhat.com/browse/RHDHBUGS-986[RHDHBUGS-986]
+
+[id="known-issue-rhdhbugs-664"]
+== Out-Of-Memory errors in the {product} Operator
+
+To resolve Out-Of-Memory errors in the {product} Operator, adjust memory settings manually:
+
+. Edit the deployment:
++
+---- 
+kubectl edit deployment rhdh-operator -n &lt;namespace&gt;
+----
+
+. In the editor, set the memory request to 1 GiB and the limit to 2 GiB:
++
+[source,yaml]
+----
+spec:
+  containers:
+  - name: rhdh-operator
+    resources:
+      requests:
+        memory: &#34;1G&#34;
+      limits:
+        memory: &#34;2G&#34;
+----
+
+. Reapply this change whenever the Operator is actively reconciled. The pod should become healthy, using about 1.07 GiB of memory.
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-664[RHDHBUGS-664]
 
 
 
