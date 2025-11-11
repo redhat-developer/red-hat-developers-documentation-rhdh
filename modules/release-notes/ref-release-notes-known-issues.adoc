@@ -39,10 +39,137 @@ data:
 .Additional resources
 * link:https://issues.redhat.com/browse/RHDHBUGS-2240[RHDHBUGS-2240]
 
+[id="known-issue-rhdhbugs-2227"]
+== Deployment update error with dynamic plugin configuration
+
+Updating the deployment configuration using the `values.yaml` to include specific dynamic plugin configurations might cause an error during the deployment process.
+
+When configuring the `dynamicRoutes` for the `red-hat-developer-hub.backstage-plugin-dynamic-home-page` plugin, the use of the placeholder {{firstName}} in a configuration property, for example title, can result in the following fatal deployment error:
+
+"function `firstName` not defined".
+
+This error prevents the cluster from spinning up correctly.
+
+.Configuration example
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    red-hat-developer-hub.backstage-plugin-dynamic-home-page:
+      dynamicRoutes:
+        - path: /
+          importName: DynamicHomePage
+          config:
+            props:
+              title: 'Howdy {{firstName}} or {{displayName}}'
+----
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2227[RHDHBUGS-2227]
+
+[id="known-issue-rhdhbugs-2220"]
+== Starting time is not displayed correctly in Results pane when workflows are started
+
+There is an known issue with the displayed starting time in the Orchestrator 1.8.2 plugins when starting a workflow. When a workflow starts executing, the starting time is not displayed correctly in the Results window of the workflow instance. It remains this way until the workflow changes state. This will be fixed in a future release.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2220[RHDHBUGS-2220]
+
+[id="known-issue-rhdhbugs-2132"]
+== Clicking on the dedicated {product-very-short} local guide link in the UI sidebar also highlights the Catalog item
+
+In this update, the {product-very-short} Local default configuration includes built-in TechDocs. However, when selecting the new "{product-very-short} Local Guide" link in the {product-very-short} Local UI sidebar, the `Catalog` link is also highlighted.
+There is currently no known workaround.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2132[RHDHBUGS-2132]
+
+[id="known-issue-rhdhbugs-2126"]
+== Handle installation disabled scenario in the installed packages page
+
+When installation is disabled, the actions on the Installed Packages page are still shown. Similarly, if the YAML file is misconfigured, the actions appear, but the API call fails with an error. This doesn't break the UI, the API failure is handled gracefully, and the correct reason for the failure is displayed in the UI.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2126[RHDHBUGS-2126]
+
+[id="known-issue-rhdhbugs-2102"]
+== Changes to the Operator default configuration do not persist across operator upgrades
+
+Changes to the {product-short} Operator default configuration do not persist across operator upgrades. There is no known workaround.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2102[RHDHBUGS-2102]
+
+[id="known-issue-rhdhbugs-2059"]
+== Error message when manually accessing accessing plugins without associated entity YAML
+
+This error occurs when a user tries to access a package or plugin that does not have an associated entity YAML. Users will not encounter this error under normal usage; it only appears if they manually modify the plugin or package name in the URL. This ticket will handle this scenario more gracefully by indicating why access to a particular plugin is not allowed.
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2059[RHDHBUGS-2059]
+
+[id="known-issue-rhdhbugs-2058"]
+== Hide package for entities missing `dynamicArtifact` value in code editor
+
+For packages with missing `spec.dynamicArtifact` value in their catalog entity, we currently show `- package: ./dynamic-plugins/dis/...`
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2058[RHDHBUGS-2058]
+
+[id="known-issue-rhdhbugs-2038"]
+== Quay and Argo CD require their respective backend plugins to correctly display permissions in the UI.
+.Example configuration for Quay plugin:
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-quay
+    disabled: false
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay-backend:bs_1.42.5__1.6.0!backstage-community-plugin-quay-backend
+    disabled: false
+    pluginConfig:
+      quay:
+        apiUrl: ${QUAY_API_URL}
+        apiKey: ${QUAY_API_KEY}
+----
+
+.Example configuration for Argo CD plugin:
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic
+    disabled: true
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-redhat-argocd
+    disabled: false
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-redhat-argocd-backend:bs_1.42.5__0.10.0!backstage-community-plugin-redhat-argocd-backend
+    disabled: false
+    pluginConfig:
+      argocd:
+        username: "${ARGOCD_USERNAME}"
+        password: "${ARGOCD_PASSWORD}"
+        appLocatorMethods:
+          - type: 'config'
+            instances:
+              - name: argoInstance1
+                url: "${ARGOCD_INSTANCE1_URL}"
+----
+
+For ArgoCD, you will need to update your `app-config.yaml` to add its id to `permission.rbac.pluginsWithPermission`:
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    pluginsWithPermission:
+      - argocd
+----
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2038[RHDHBUGS-2038]
+
 [id="known-issue-rhdhbugs-986"]
 == MUI v5 components might render with broken styles in non-bundled plugins
 
-Plugins that are not bundled with {product}, meaning not part of the {product} wrappers, might experience styling issues or broken visuals when using Material UI v5 components. 
+Plugins that are not bundled with {product}, meaning not part of the {product} wrappers, might experience styling issues or broken visuals when using Material UI v5 components.
 
 . Workaround
 * Add the following code to the plugin’s entry file, such as `workspaces/&lt;pluginId&gt;/plugins/&lt;pluginId&gt;/src/index.ts`:
@@ -94,60 +221,3 @@ spec:
 
 .Additional resources
 * link:https://issues.redhat.com/browse/RHDHBUGS-664[RHDHBUGS-664]
-
-[id="known-issue-rhdhbugs-2220"]
-== Starting time is not displayed correctly in Results pane when workflows are started
-There is an known issue with the displayed starting time in the Orchestrator 1.8.2 plugins when starting a workflow. When a workflow starts executing, the starting time is not displayed correctly in the Results window of the workflow instance. It remains this way until the workflow changes state. This will be fixed in a future release.
-
-.Additional resources
-* link:https://issues.redhat.com/browse/RHDHBUGS-2220[RHDHBUGS-2220]
-
-[id="known-issue-rhdhbugs-2038"]
-== Quay and Argo CD require their respective backend plugins to correctly display permissions in the UI.
-.Example configuration for Quay plugin:
-[source,yaml]
-----
-plugins:
-  - package: ./dynamic-plugins/dist/backstage-community-plugin-quay
-    disabled: false
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay-backend:bs_1.42.5__1.6.0!backstage-community-plugin-quay-backend
-    disabled: false
-    pluginConfig:
-      quay:
-        apiUrl: ${QUAY_API_URL}
-        apiKey: ${QUAY_API_KEY}
-----
-
-.Example configuration for Argo CD plugin:
-[source,yaml]
-----
-plugins:
-  - package: ./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic
-    disabled: true
-  - package: ./dynamic-plugins/dist/backstage-community-plugin-redhat-argocd
-    disabled: false
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-redhat-argocd-backend:bs_1.42.5__0.10.0!backstage-community-plugin-redhat-argocd-backend
-    disabled: false
-    pluginConfig:
-      argocd:
-        username: "${ARGOCD_USERNAME}"
-        password: "${ARGOCD_PASSWORD}"
-        appLocatorMethods:
-          - type: 'config'
-            instances:
-              - name: argoInstance1
-                url: "${ARGOCD_INSTANCE1_URL}"
-----
-
-For ArgoCD, you will need to update your `app-config.yaml` to add its id to `permission.rbac.pluginsWithPermission`:
-[source,yaml]
-----
-permission:
-  enabled: true
-  rbac:
-    pluginsWithPermission:
-      - argocd
-----
-
-.Additional resources
-* link:https://issues.redhat.com/browse/RHDHBUGS-2038[RHDHBUGS-2038]
