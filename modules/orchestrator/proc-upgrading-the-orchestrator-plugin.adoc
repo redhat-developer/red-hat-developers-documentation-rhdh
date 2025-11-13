@@ -1,0 +1,57 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-upgrading-the-orchestrator-plugin_{context}"]
+= Upgrading the Orchestrator plugin
+
+You can upgrade an existing `1.7` Operator-backed instance with Orchestrator enabled by upgrading the {product} Operator to {product-version}. After upgrading the Operator to {product-version}, manually update the `dynamic-plugins` ConfigMap to set the Orchestrator plugin versions to `1.8.2`.
+
+.Prerequisites
+* You have have a running instance of {product} with Orchestrator 1.7 backed by the Operator.
+* You have upgraded the {product} Operator to {product-version}.
+
+.Procedure
+
+. Update your `dynamic-plugins` ConfigMap to set the version of the Orchestrator plugin to `1.8.2`.
++
+The following YAML configuration is an example of a `dynamic-plugins` ConfigMap enabling the Orchestrator plugins in {product-very-short} for Operator-backed instances:
++
+[source,yaml,subs='+attributes,+quotes']
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@1.8.2"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.8.2"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.8.2"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.8.2"
+        disabled: false
+----
+
+.Verification
+. Navigate to your {product} instance.
++
+[NOTE]
+====
+The upgrade takes a few minutes to complete. The {product} version does not update in the UI until all running {product-custom-resource-type} pods are successfully recreated.
+====
+. In the top-level header, click on the *Settings* page and locate the {product-very-short} metadata card.
+. Confirm that the value displayed for {product-very-short} version is {product-version}.
+. Alternatively, run the following command in your terminal to wait for all pods in the current project to be in the `running` state:
++
+[source,terminal]
+----
+oc get pods -w
+----
++
+The upgrade is successful when all {product-custom-resource-type}-related pods show a stable *Running* status.
