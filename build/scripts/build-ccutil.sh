@@ -72,4 +72,4 @@ else
 fi
 
 # Test the links with htmltest
-podman run --interactive --rm --tty --volume "$(pwd)":/test:Z docker.io/wjdp/htmltest:latest -c .htmltest.yml
+podman run --rm --tty --volume "$(pwd)":/test:Z docker.io/wjdp/htmltest:latest -c .htmltest.yml
