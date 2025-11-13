@@ -5,19 +5,25 @@
 
 {ls-short} consists of several components which work together to deliver virtual assistant (chat) functionality to your developers. The following list main components:
 
-* *Llama stack server (container sidecar):* This service (based on open source https://github.com/llamastack/llama-stack[Llama Stack]) operates as the main gateway to your LLM inferencing provider for chat services. It also allows you to integrate other services such as Model Context Protocol (MCP) thanks to its modular nature. You must integrate your LLM provider with the Llama Stack server in order to support the chat functionality of {ls-short}. We call this dependency on external LLM providers _Bring Your Own Model_ or BYOM.
+* *Llama stack server (container sidecar)*: Based on open source https://github.com/llamastack/llama-stack[Llama Stack], this service operates as the main gateway to your LLM inferencing provider for chat services. Its modular architecture supports the integration of other services, such as Model Context Protocol (MCP). To support the chat functionality of {ls-short}, you must integrate your LLM provider with the Llama Stack server. This dependency on external LLM providers is called _Bring Your Own Model_ or BYOM.
 
-* *{lcs-name} ({lcs-short}) (container sidecar):* This service (based on the open source https://github.com/lightspeed-core[Lightspeed Core]) enables additional features in addition to those that the Llama Stack server provides, such as maintaining your chat history and gathering user feedback.
+* *{lcs-name} ({lcs-short}) (container sidecar)*: Based on the open source https://github.com/lightspeed-core[Lightspeed Core], this service extends the Llama Stack server by providing features such as chat history maintenance and user feedback gathering.
 
-* *{ls-brand-name} (dynamic plugins):* These plugins are required to enable the {ls-short} user interface within your {product-very-short} instance.
+* *{ls-brand-name} (dynamic plugins)*: These plugins are required to enable the {ls-short} user interface within your {product-very-short} instance.
 
 Configuring these components to initialise correctly and communicate with each other is essential in order to provide {ls-short} to your users.
 
-[NOTE]
+[TIP]
 ====
-If you have already installed the previous {ls-short} Developer Preview with Road-Core Service, you must remove the previous {ls-short} configurations and settings and reinstall.
+If you are upgrading from the previous {ls-short} Developer Preview with Road-Core Service, you must remove all existing {ls-short} configurations and settings before you reinstall.
 
-This step is necessary as {ls-short} has a new architecture. In the previous release, {ls-short} required the use of the Road-Core Service as a sidecar container for interfacing with LLM providers. The updated architecture removes and replaces {rcs-short} with the new {lcs-name} and Llama Stack server, and requires new configurations for the plugins, volumes, containers, and secrets.
+To prevent or resolve upgrade inconsistencies, first drop and recreate the dynamic plugins volume.
+
+This reinstallation is required due to a fundamental architectural change:
+
+* The previous release used Road-Core Service as a sidecar container for interfacing with LLM providers.
+
+* The updated architecture replaces {rcs-short} with the new {lcs-name} and Llama Stack server, which necessitates new configurations for the plugins, volumes, containers, and secrets.
 ====
 
 .Prerequisites
@@ -66,10 +72,11 @@ data:
       type: "sqlite"
       sqlite:
         db_path: "./lcs_cache.db"
-    mcp_servers:
-      - name: mcp::backstage
-        provider_id: model-context-protocol
-        url: https://<RHDH_HOST>/api/mcp-actions/v1
+# # OPTIONAL: Use to enable MCP integration
+#    mcp_servers:
+#      - name: mcp::backstage
+#        provider_id: model-context-protocol
+#        url: https://<RHDH_HOST>/api/mcp-actions/v1
 ----
 +
 where:
@@ -83,7 +90,7 @@ The {lcs-short} ConfigMap can optionally include configuration for `mcp_servers`
 
 .. Click *Create*.
 
-. Create an MCP_TOKEN.
+. Optional: Create an MCP_TOKEN.
 .. https://backstage.io/docs/auth/service-to-service-auth/#static-tokens[Generate the external static token].
 .. Create a secret file as shown in the following example:
 +
@@ -127,9 +134,10 @@ data:
           - https://cdn.jsdelivr.net
 
     lightspeed:
-      mcpServers:
-      - name: mcp::backstage
-        token: ${MCP_TOKEN}
+    # OPTIONAL: Use to enable MCP integration
+    # mcpServers:
+    # - name: mcp::backstage
+    #   token: ${MCP_TOKEN}
 
       # OPTIONAL: Custom users prompts displayed to users
       # If not provided, the plugin uses built-in default prompts
@@ -146,7 +154,12 @@ data:
 
 .. Click *Create*.
 
-. Create Llama Stack Secret file: This Secret file holds sensitive configuration data for your LLM provider and Llama Stack environment variables. This secret is typically named `llama-stack-secrets`.
+. Create Llama Stack Secret file (`llama-stack-secrets`): This file holds sensitive configuration data for your LLM provider and Llama Stack environment variables.
++
+[NOTE]
+====
+You must provide an LLM provider that conforms to the OpenAI API specification. For more information, see {developer-lightspeed-link}#proc-changing-your-llm-provider_customizing-developer-lightspeed[Changing your LLM provider].
+====
 
 .. In the {ocp-short} web console, go to *Secrets*.
 .. Click *Create* -> *Key/value secret*.
@@ -172,12 +185,12 @@ stringData:
 +
 where:
 
-`VLLM_URL`:: Set this if you are using the `redhat-ai-dev` Llama Stack image
-`VLLM_API_KEY`:: Set this if you are using the `redhat-ai-dev` Llama Stack image
+`VLLM_URL`:: Required for remote services: Set this to the API endpoint URL of your preferred LLM provider, if it is compatible with the OpenAI API specification (Examples: OpenAI, {rhoai-brand-name}, vLLM)
+`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification
 `VLLM_MAX_TOKENS`:: Optional
 `VLLM_TLS_VERIFY`:: Optional
-`OLLAMA_URL`:: Set this if you altered the `run.yaml` file
-`OPENAI_API_KEY`:: Set this if you altered the `run.yaml` file
+`OLLAMA_URL`:: Set this if you altered the `run.yaml` file to use Ollama
+`OPENAI_API_KEY`:: Set this if you altered the `run.yaml` file. If using `OpenAI` through the generic `VLLM` provider configuration, you must map the API key to `VLLM_API_KEY` instead
 `VALIDATION_PROVIDER`:: Set this as `vllm`, `ollama`, `openai`, depending on the key you have set in this configuration file
 `VALIDATION_MODEL_NAME`:: Set the name of the model you want to use for validation
 
@@ -201,6 +214,10 @@ plugins:
   dynamicPlugins:
     frontend:
       red-hat-developer-hub.backstage-plugin-lightspeed:
+        translationResources:
+          - importName: lightspeedTranslations
+            module: Alpha
+            ref: lightspeedTranslationRef
         appIcons:
           - name: LightspeedIcon
             module: LightspeedPlugin
@@ -247,7 +264,7 @@ plugins:
 ----
     initContainers:
       - name: init-rag-data
-        image: 'quay.io/redhat-ai-dev/rag-content:release-1.7-lcs'
+        image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
         command:
           - "sh"
           - "-c"
@@ -256,7 +273,7 @@ plugins:
           - mountPath: /data
             name: rag-data-volume
 ----
-... Add the Llama Stack, {lcs-short} containers, and the MCP_TOKEN secret file to the `spec.deployment.patch.spec.template.spec.containers` section:
+... Add the Llama Stack, {lcs-short} containers, and the (optional) MCP_TOKEN secret file to the `spec.deployment.patch.spec.template.spec.containers` section:
 +
 [source,yaml]
 ----
@@ -270,7 +287,7 @@ plugins:
       - envFrom:
           - secretRef:
               name: llama-stack-secrets
-        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.0' # Llama Stack image
+        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1' # Llama Stack image
         name: llama-stack
         volumeMounts:
           - mountPath: /app-root/.llama
@@ -289,10 +306,14 @@ plugins:
             subPath: lightspeed-stack.yaml
           - mountPath: /tmp/data/feedback
             name: shared-storage
+          - mountPath: /tmp/data/transcripts
+            name: shared-storage
+          - mountPath: /tmp/data/conversations
+            name: shared-storage
 ----
 ... Click *Save*. The Pods are automatically restarted.
 
-** For a Helm-installed {product-very-short} instance (Update Helm Chart):
+** For a Helm-installed {product-very-short} instance (Update the Helm chart):
 
 ... Add your dynamic plugins configuration in the `global.dynamic` property.
 ... Add your {ls-short} custom app config file to `extraAppConfig`:
@@ -329,7 +350,7 @@ plugins:
 ----
   initContainers:
       - name: init-rag-data
-        image: 'quay.io/redhat-ai-dev/rag-content:release-1.7-lcs'
+        image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
         command:
           - "sh"
           - "-c"
@@ -352,7 +373,7 @@ If you have Road-Core Service installed from the previous {ls-brand-name} config
       - envFrom:
           - secretRef:
               name: llama-stack-secrets
-        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.0'
+        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1'
         name: llama-stack
         volumeMounts:
           - mountPath: /app-root/.llama
@@ -371,6 +392,10 @@ If you have Road-Core Service installed from the previous {ls-brand-name} config
             name: lightspeed-stack
             subPath: lightspeed-stack.yaml
           - mountPath: /tmp/data/feedback
+            name: shared-storage
+          - mountPath: /tmp/data/transcripts
+            name: shared-storage
+          - mountPath: /tmp/data/conversations
             name: shared-storage
 ----
 ... Click *Save* and then Helm upgrade.
