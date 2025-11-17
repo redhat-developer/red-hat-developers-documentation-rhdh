@@ -70,3 +70,6 @@ else
       echo "<li><a href=./${BRANCH}/index.html>${BRANCH}</a></li>" >> titles-generated/index.html
   fi
 fi
+
+# Test the links with htmltest
+podman run --rm --tty --volume "$(pwd)":/test:Z docker.io/wjdp/htmltest:latest -c .htmltest.yml
