@@ -5,8 +5,8 @@
 
 To achieve enhanced visibility and control over your software components, you must configure the GitHub Scorecards plugin to integrate GitHub metrics directly into your {product-very-short} catalog. This allows engineering teams to centralize development data, quickly identify risks, and accelerate decision-making related to component health and security.
 
-To enable the GitHub metrics integration, you must create and configure a GitHub App to grant {product-very-short} access to the GitHub API using either a https://docs.github.com/en/apps/overview[GitHub App] or a https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens[GitHub token].
-+
+To enable the GitHub metrics integration, you must create and configure an integration to grant {product-very-short} access to the GitHub API using either a https://docs.github.com/en/apps/overview[GitHub App] or a https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens[GitHub token].
+
 [IMPORTANT]
 ====
 For long-lived integrations or when accessing resources on behalf of an organization, you must use a GitHub App.
@@ -22,31 +22,30 @@ For long-lived integrations or when accessing resources on behalf of an organiza
 .Procedure
 To install and configure GitHub Scorecards in your {product-very-short} instance, complete the following steps:
 
-. To allow {product-very-short} to access the GitHub API, create and configure a GitHub App or generating a GitHub token, and add the necessary integration to your configuration file:
+. Establish GitHub API Access: Choose one of the following methods to grant {product-very-short} access to the GitHub API, and then complete the required configuration procedure:
+** Configure using a GitHub App.
+... Create and configure the GitHub App to allow {product-very-short} access to the GitHub API:
 +
 [NOTE]
 ====
 You must install the GitHub App on the organization (or user account) that owns repositories, granting it the necessary repository access permissions.
 ====
-.. Create a https://docs.github.com/en/apps/overview[GitHub App] with the required permissions (Read-only for Contents to allow reading repositories).
-.. In the *General > Clients secrets* section, click *Generate a new client secret*.
-.. In the *General > Private keys* section, click *Generate a private key*.
-.. In the *Install App* tab, choose an account to install your GitHub App on.
-.. Enter the following values and click *Save*:
-*** *App ID*
-*** *Client ID*
-*** *Client Secret*
-*** *Private key*
-.. To add your GitHub credentials to {product-very-short}, add the following key/value pairs to {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets]. You can use these secrets in the {product-very-short} configuration files by using their respective environment variable names.
-+
-`GITHUB_INTEGRATION_APP_ID`:: Enter the saved *App ID*.
-`GITHUB_INTEGRATION_CLIENT_ID`:: Enter the saved *Client ID*.
-`GITHUB_INTEGRATION_CLIENT_SECRET`:: Enter the saved *Client Secret*.
-`GITHUB_INTEGRATION_HOST_DOMAIN`:: Enter the GitHub host doman: `github.com`
-`GITHUB_INTEGRATION_ORGANIZATION`:: Enter your GitHub organization name, such as, `_<your_github_organization_name>_`
-`GITHUB_INTEGRATION_PRIVATE_KEY_FILE`:: Enter the saved *Private key*.
+.... In the *General > Clients secrets* section, click *Generate a new client secret*.
+.... In the *General > Private keys* section, click *Generate a private key*.
+.... In the *Install App* tab, choose an account to install your GitHub App on.
+.... Record the *App ID*, *Client ID*, *Client Secret*, and *Private key* values.
 
-. Configure the GitHub integration in your {product-very-short} `{my-app-config-file}` file by adding the `integrations.github` section:
+... Add secrets to {product-very-short} by adding the following key/value pairs to your 
+{configuring-book-link}#provisioning-your-custom-configuration[{product-very-short} secrets]. You can use these secrets in the {product-very-short} configuration files by using their respective environment variable names.
++
+* `GITHUB_INTEGRATION_APP_ID`:: The saved *App ID*.
+* `GITHUB_INTEGRATION_CLIENT_ID`:: The saved *Client ID*.
+* `GITHUB_INTEGRATION_CLIENT_SECRET`:: The saved *Client Secret*.
+* `GITHUB_INTEGRATION_HOST_DOMAIN`:: The GitHub host domain: `github.com`.
+* `GITHUB_INTEGRATION_ORGANIZATION`:: Your GitHub organization name, such as `_<your_github_organization_name>_`.
+* `GITHUB_INTEGRATION_PRIVATE_KEY_FILE`:: The saved *Private key* content.
+
+... Configure the GitHub integration in your {product-very-short} `{my-app-config-file}` file by adding the `integrations.github` section:
 +
 [source,yaml]
 ----
@@ -61,6 +60,25 @@ integrations:
             ${GITHUB_INTEGRATION_PRIVATE_KEY_FILE}
 ----
 
+** Configure using a GitHub token.
+... Create a GitHub token with the necessary scope (Example: `repo` for read/write access to private repositories) to allow {product-very-short} access to the GitHub API.
+
+... Add the token to {product-very-short} secrets by adding the following key/value pair to your {configuring-book-link}#provisioning-your-custom-configuration[{product-very-short} secrets].
++
+where:
+
+`GITHUB_TOKEN`:: The generated GitHub token.
+
+... Configure the GitHub integration in your {product-very-short} `{my-app-config-file}` file by adding the streamlined `integrations.github` section:
++
+[source,yaml]
+----
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+----
+
 . Install the GitHub Scorecard plugin by adding the following code to your {product-very-short} `dynamic-plugins-config.yaml` file:
 +
 [source,yaml]
@@ -70,7 +88,7 @@ plugins:
     disabled: false
 ----
 
-. To link a component to the GitHub data source, edit the `catalog-info.yaml` file for your {product-very-short} entity and add the required annotations as shown in the following code.
+. Link a component to the GitHub data source by editing the `catalog-info.yaml` file for your {product-very-short} entity and adding the required annotations as shown in the following code:
 +
 [source,yaml]
 ----
@@ -100,7 +118,7 @@ where:
 You must add the team entity to the Catalog to ensure the provided permissions are applicable.
 ====
 
-. Statically ingest the catalog entity by adding the `catalog.locations` section in your {product-very-short} `{my-app-config-file}` file that links to the `catalog-info.yaml` file:
+. **Statically ingest the catalog entity** by adding the `catalog.locations` section in your {product-very-short} `{my-app-config-file}` file that links to the `catalog-info.yaml` file:
 +
 [source,yaml]
 ----
@@ -110,7 +128,7 @@ catalog:
       target: https://github.com/owner/repo/catalog-info.yaml
 ----
 
-. (Optional) To customize the thresholds for the **GitHub Open Pull Requests** (`github.open_prs`) metric, add the following section to your {product-very-short} `{my-app-config-file}` file:
+. (Optional) Customize the thresholds for the *GitHub Open Pull Requests* (`github.open_prs`) metric by adding the following section to your {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
 ----
@@ -131,6 +149,3 @@ scorecard:
 where:
 
 `scorecard:plugins:github:open_prs:thresholds`:: Lists the default threshold values for the GitHub open PRs metric.
-
-.Additional resources
-* {scorecard-plugin-book-link}#con-manage-metric-thresholds-in-scorecard-plugin_assembly-configuring-scorecards-in-rhdh[Managing metric thresholds in your Scorecard plugin]
