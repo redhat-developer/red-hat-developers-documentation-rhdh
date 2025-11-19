@@ -11,7 +11,7 @@ If your network has access to the registry through a bastion host, you can use t
 ** You have an account in https://developers.redhat.com/[{rhdeveloper-name}] portal.
 ** You have access to the charts.openshift.io Helm chart repository.
 ** You have installed the {openshift-cli} on your workstation.
-** You have installed the {ocp-docs-link}/html-single/disconnected_environments/index#installation-oc-mirror-installing-plugin_about-installing-oc-mirror-v2[`oc-mirror`] tool, with a version corresponding to the version of your {ocp-short} cluster.
+** You have installed the `oc-mirror` OpenShift CLI (oc) plugin *v2*. For more information, see {ocp-docs-link}/html-single/disconnected_environments/index#installation-oc-mirror-installing-plugin_about-installing-oc-mirror-v2[Installing the oc-mirror OpenShift CLI plugin].
 * You have set up your intermediary host.
 ** Your host has access to the {rhcr-long}.
 ** Your host has access to image registry on the destination host.
@@ -25,7 +25,7 @@ See {ocp-docs-link}/html-single/registry/index#securing-exposing-registry[Exposi
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
-apiVersion: mirror.openshift.io/v1alpha2
+apiVersion: mirror.openshift.io/v1alpha1
 kind: ImageSetConfiguration
 mirror:
   helm:
@@ -43,7 +43,7 @@ where:
 +
 [source,terminal,subs="+quotes"]
 ----
-oc-mirror --config=_<mirror_config_directory>_/ImageSetConfiguration.yaml _<mirror_archive_directory>_/
+oc mirror -c <mirror_config_directory>/ImageSetConfiguration.yaml file://<mirror_archive_directory> --v2
 ----
 +
 --
@@ -56,7 +56,7 @@ where:
 +
 [NOTE]
 ====
-Running the `oc-mirror` command generates a local workspace containing the mirror archive file, the Helm chart, and a `ImageContentSourcePolicy` (ICSP) manifest. The ICSP manifest contains an `imageContentSourcePolicy.yaml` file that you must apply against the cluster in a later step.
+Running the `oc-mirror` command generates a local workspace containing the mirror archive file, the Helm chart, `ImageDigestMirrorSet` (IDMS) and `ImageTagMirrorSet` (ITMS) manifests. The IDMS and ITMS manifests contain files that you must apply against the cluster in a later step.
 ====
 +
 Example output:
@@ -76,7 +76,8 @@ Creating archive /path/to/mirror-archive/mirror_seq1_000000.tar
 +
 [source,terminal,subs="+quotes"]
 ----
-oc-mirror --from _<mirror-archive-file>_ _<target-registry>_
+oc mirror -c <image-set-config> --from file://<mirrror-archive-directory>
+docker://<mirror_registry_url> --v2
 ----
 +
 --
@@ -87,19 +88,11 @@ where:
 `<target_registry>` :: Enter the name of the target registry that you want to push the mirrored images to, for example, `docker://registry.localhost:5000`.
 --
 +
-.Example output
-[source,terminal,subs="+quotes"]
-----
-Wrote release signatures to oc-mirror-workspace/results-1738075410
-Writing image mapping to oc-mirror-workspace/results-1738075410/mapping.txt
-Writing ICSP manifests to oc-mirror-workspace/results-1738075410
-----
-+
-. In your workspace, locate the `imageContentSourcePolicy.yaml` file by running the `ls` command. For example:
+. In your workspace, locate the IDMS and ITMS files by running the following command. For example:
 +
 [source,terminal,subs="+quotes"]
 ----
-ls _<workspace_directory>_/_<results_directory>_
+ls _<workspace_directory>/working-dir/cluster-resources/_
 ----
 +
 --
@@ -110,11 +103,15 @@ where:
 `<results_directory>` :: Specifies the name of your results directory, for example, `results-1738070846`.
 --
 +
-. To mirror the Helm chart, deploy the `imageContentSourcePolicy.yaml` file in the disconnected cluster by running the `oc apply` command. For example:
+. To mirror the Helm chart, deploy the `IDMS` and `ITMS` files in the disconnected cluster by running the `oc apply` command. For example:
 +
 [source,terminal,subs="+quotes"]
 ----
-oc apply -f _<workspace_directory>_/_<results_directory>_/ImageContentSourcePolicy.yaml
+oc apply -f
+<workspace_directory>/working-dir/cluster-resources/idms-oc-mirror.yaml
+oc apply -f
+<workspace_directory>/working-dir/cluster-resources/itms-oc-mirror.yaml
+
 ----
 +
 --
@@ -128,10 +125,7 @@ where:
 +
 [source,terminal,subs="+quotes"]
 ----
-CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
-
-helm install _<rhdh_instance>_ _<workspace_directory>_/_<results_directory>_/charts/_<archive_file>_ --namespace _<your_namespace>_ --create-namespace \
-  --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE"
+CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/[.]*\.//') helm install <rhdh_instance> <workspace_directory>/working-dir/helm/charts/<archive_file> --namespace <your_namespace> --create-namespace \ --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE"
 ----
 +
 --
