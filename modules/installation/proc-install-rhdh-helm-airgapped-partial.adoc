@@ -11,7 +11,7 @@ If your network has access to the `registry.redhat.io` registry and the `charts.
 * You have access to a mirror registry that can be reached from the disconnected cluster, for example, the {ocp-short} image registry. For more information about exposing the {ocp-short} image registry, see {ocp-docs-link}/html-single/registry/index#securing-exposing-registry[Exposing the registry].
 * You are logged in to your target mirror registry and have permissions to push images to it. For more information, see {ocp-docs-link}/html-single/disconnected_environments/index#installation-adding-registry-pull-secret_about-installing-oc-mirror-v2[Configuring credentials that allow images to be mirrored].
 * You have installed the {openshift-cli} on your workstation.
-* Recommended on {ocp-short}: You have installed the {ocp-docs-link}/html-single/disconnected_environments/index#installation-oc-mirror-installing-plugin_about-installing-oc-mirror-v2[`oc-mirror`] tool, with a version corresponding to the version of your {ocp-short} cluster.
+* Recommended on {ocp-short}: You have installed the `oc-mirror` OpenShift CLI (oc) plugin *v2*. For more information, see {ocp-docs-link}/html-single/disconnected_environments/index#installation-oc-mirror-installing-plugin_about-installing-oc-mirror-v2[Installing the oc-mirror OpenShift CLI plugin].
 * You have an account in https://developers.redhat.com/[{rhdeveloper-name}] portal.
 * Make sure that your system meets the minimum sizing requirements. See {about-book-link}#rhdh-sizing_about-rhdh[Sizing requirements for {product}].
 
@@ -24,12 +24,11 @@ oc login -u <user> -p <password> https://api.<hostname>:6443
 ----
 
 . From your disconnected cluster, log in to the image registry that you want to mirror, for example, the {ocp-short} image registry.
-. Create an `ImageSetConfiguration.yaml` file.
-. In your `ImageSetConfiguration.yaml` file, specify the resources that you want to mirror. For example:
+. Create an `ImageSetConfiguration.yaml` file to specify the resources that you want to mirror. For example:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
-apiVersion: mirror.openshift.io/v1alpha2
+apiVersion: mirror.openshift.io/v2alpha1
 kind: ImageSetConfiguration
 mirror:
   helm:
@@ -62,18 +61,11 @@ where:
 Running the `oc-mirror` command creates a local workspace containing the Helm chart and a `ImageContentSourcePolicy` (ICSP) manifest. The ICSP manifest contains an automatically-generated `imageContentSourcePolicy.yaml` file that you must apply against the cluster in a later step.
 ====
 +
-.Example output
-[source,terminal,subs="+quotes"]
-----
-Writing image mapping to oc-mirror-workspace/results-1738070846/mapping.txt
-Writing ICSP manifests to oc-mirror-workspace/results-1738070846
-----
-+
-. In your workspace, locate the `imageContentSourcePolicy.yaml` file by running the `ls` command. For example:
+. In your workspace, locate the `ImageDigestMirrorSet` (IDMS) and `ImageTagMirrorSet` (ITMS) files by running the `ls` command. For example:
 +
 [source,terminal,subs="+quotes"]
 ----
-ls _<workspace_directory>_/_<results_directory>_
+ls _<workspace_directory>/working-dir/cluster-resources/_
 ----
 +
 --
@@ -84,19 +76,19 @@ where:
 `<results_directory>` :: Specifies the name of your results directory, for example, `results-1738070846`.
 --
 +
-. To mirror the Helm chart, deploy the `imageContentSourcePolicy.yaml` file in the disconnected cluster by running the `oc apply` command. For example:
+. To configure image mirroring, deploy the IDMS and ITMS files in the disconnected cluster by running the `oc` apply command. For example:
 +
 [source,terminal,subs="+quotes"]
 ----
-oc apply -f _<workspace_directory>_/_<results_directory>_/`ImageContentSourcePolicy.yaml`
+oc apply -f <workspace_directory>/working-dir/cluster-resources
 ----
 +
 --
 where:
 
-`<workspace_directory>` :: Specifies the name of your workspace directory, for example, `oc-mirror-workspace`.
+`<workspace_directory>` :: Enter the name of your workspace directory, for example, `oc-mirror-workspace`.
 
-`<results_directory>` :: Specifies the name of your results directory, for example, `results-1738070846`.
+`<results_directory>` :: Enter the name of your results directory, for example, `results-1738070846`.
 --
 . In your air-gapped environment, deploy the Helm chart to the namespace that you want to use by running the `helm install` command with `namespace` and `set` options. For example:
 +
