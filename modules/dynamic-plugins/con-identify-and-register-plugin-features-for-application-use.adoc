@@ -1,0 +1,90 @@
+:_mod-docs-content-type: CONCEPT
+[id="con-identify-and-register-plugin-features-for-application-use_{context}"]
+
+= Identify and register plugin features for application use
+
+Frontend wiring must be performed whenever a dynamic frontend plugin exports a feature that needs to be integrated into the main {product-custom-resource-type} application UI.
+
+Wiring is specifically required for, but not limited to, the following scenarios:
+
+[cols="1,1,2"]
+|===
+|Scenario|Wiring configuration|Description
+
+|Enabling new pages/Routes
+|`dynamicRoutes`
+|When adding a full new page and route to the application (for example, `/my-plugin`).
+
+|Extending existing pages/UI
+|`mountPoints`
+|When injecting custom widgets, cards, listeners, or providers into existing pages (for example, the Catalog entity page).
+
+|Customizing sidebar navigation
+|`dynamicRoutes.menuItem`, `menuItems`
+|When adding a new entry to the main sidebar or customizing its order/nesting.
+
+|Integrating custom APIs
+|`apiFactories`
+|When a plugin provides a custom utility API implementation or overrides an existing one.
+
+|Extending entity tabs
+|`entityTabs`
+|When adding a new tab to the Catalog entity view or customizing an existing one.
+
+|Binding routes
+|`routeBindings`
+|When linking a route in one plugin to an external route defined by another plugin.
+
+|Adding icons/Theming
+|`appIcons`, `themes`
+|When adding custom icons to the application catalog or defining a new {product-custom-resource-type} theme.
+
+|Scaffolder/TechDocs extensions
+|`scaffolderFieldExtensions`, `techdocsAddons`
+|When exposing custom field extensions for the Scaffolder or new Addons for TechDocs.
+
+|Translation resources
+|`translationResources`
+|When providing new translation files or overriding default translations of a plugin.
+|===
+
+.Example of Frontend wiring workflow
+
+The fundamental process for frontend wiring involves configuring the plugin exports in the `{my-app-config-file}` or a dedicated `dynamic-plugins-config.yaml` file.
+
+The dynamic plugin is built to expose components, routes, or APIs. A plugin component (`FooPluginPage`) is exported as an export from a module (for example, `PluginRoot`).
+
+The application administrator defines the wiring in the configuration file, using the plugin package name to register the exports. This step adds a new full page with a sidebar link.
+
+[source,yaml]
+.dynamic-plugins-config.yaml
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          my-plugin-package-name: # The plugin's unique package name
+            dynamicRoutes: # Wiring for a new page/route
+              - path: /my-new-page # The desired URL path
+                importName: FooPluginPage # The exported component name
+                menuItem: # Wiring for the sidebar entry
+                  icon: favorite # A registered icon name
+                  text: My Custom Page
+----
+
+The application follows these steps when it loads:
+
+. It parses the `dynamic-plugins-config.yaml`.
+. It uses the `<plugin_path_or_url>` to download the plugin bundle using the dynamic loading mechanism.
+. If the plugin exports the plugin object, the application adds this to the list of plugins provided to the Backstage `createApp` API, registering the plugin properly with the Backstage frontend application.
+. It uses the configuration block (`dynamicRoutes`, `menuItem`) to:
+* Add an entry to the internal router mapping `/my-new-page` to the `FooPluginPage` component.
+* Construct and render a new sidebar item labeled _My Custom Page_, pointing to the `/my-new-page` route.
+
+[NOTE]
+====
+If the configuration is missing, steps 1 and 2 might still happen, but the final wiring in step 3 is skipped, and you do not see any change.
+====
