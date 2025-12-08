@@ -1,0 +1,49 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-workflow-execution-errors_{context}"]
+= Troubleshoot common workflow deployment errors
+
+Refer to the following checks when diagnosing workflow execution, connectivity, or configuration failures.
+
+.Inspect initial workflow failure
+|===
+|Error Symptom|Diagnosis|Solution
+
+|Workflow execution fails immediately
+|Workflow fails to connect to external services.
+|Retrieve logs from the workflow container to identify the error:
++
+`oc logs <workflow_pod_name>`
+
+|HTTPS endpoint verification failure
+|The logs display: `sun.security.provider.certpath.SunCertPathBuilderException - unable to find valid certification path to requested target`. The target endpoint is signed with a Certificate Authority (CA) that is unavailable in the workflow's truststore.
+|Load the custom CA certificate into the running workflow container. [PLACEHOLDER for link to adding custom CA procedure].
+
+|Maven mirror configuration in proxy environment
+|The workflow image build fails because a proxy blocks access to public Maven repositories.
+|Configure the `MAVEN_MIRROR_URL` environment variable in the Dockerfile to point to an accessible internal repository.
++
+.In the Dockerfile:
+----
+ARG BUILDER_IMAGE
+ARG RUNTIME_IMAGE
+
+FROM ${BUILDER_IMAGE} AS builder
+# ... existing configuration ...
+# Setting maven mirror
+ENV MAVEN_MIRROR_URL=<your_maven_mirror_url>
+
+RUN /home/kogito/launch/build-app.sh ./resources
+
+# ... remaining configuration ...
+----
+
+|Workflow fails to start in a different namespace
+|Namespace isolation prevents the workflow from reaching the `sonataflow-platform-data-index-service`.
+|Configure specific network policies and persistence settings to ensure the workflow reaches the `sonataflow-platform-data-index-service`.
+
+|Data Index cannot connect to the database
+|The `sonataflow-platform-data-index-service` pods fail to connect to the database on startup.
+|* **Check Pod Status:** Ensure the PostgreSQL pod has fully initialized.
+* **Check Network Policies:** Verify that network policies allow ingress traffic from the SonataFlow services namespace (for example, `sonataflow-infra`).
+|===
