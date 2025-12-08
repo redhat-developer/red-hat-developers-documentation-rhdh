@@ -1,0 +1,85 @@
+:_mod-docs-content-type: CONCEPT
+[id="con-dynamic-front-end-plugins-for-application-use_{context}"]
+
+= Dynamic front-end plugins for application use
+
+A dynamic front-end plugin requires front-end wiring when it exports a feature for integration into the main {product-custom-resource-type} application UI. Wiring is required for the following scenarios:
+
+[cols="1,1,2"]
+|===
+|Scenario|Wiring configuration|Description
+
+|{installing-and-viewing-plugins-book-link}#proc-customizing-and-extending-entity-tabs.adoc_assembly-front-end-plugin-wiring[Extending entity tabs]
+|`entityTabs`
+|Add or customize a tab on the *Catalog entity* view.
+
+|{installing-and-viewing-plugins-book-link}#proc-binding-to-existing-plugins.adoc_assembly-front-end-plugin-wiring[Binding routes]
+|`routeBindings`
+|Link a route in one plugin to an external route defined by another plugin.
+
+|{installing-and-viewing-plugins-book-link}#proc-provide-additional-utility-apis.adoc_assembly-front-end-plugin-wiring[Integrating custom APIs]
+|`apiFactories`
+|Provide a custom utility API implementation or override an existing one.
+
+|{installing-and-viewing-plugins-book-link}#proc-defining-dynamic-routes-for-new-plugin-pages.adoc_assembly-front-end-plugin-wiring[Enabling new pages/Routes]
+|`dynamicRoutes`
+|Add a new page and route to the application  (for example, `/my-plugin`).
+
+|{installing-and-viewing-plugins-book-link}#proc-using-mount-points.adoc_assembly-front-end-plugin-wiring[Extending existing pages/UI]
+|`mountPoints`
+|Inject custom widgets, cards, listeners, or providers into existing pages (for example, the *Catalog entity* page).
+
+|{installing-and-viewing-plugins-book-link}#proc-defining-dynamic-routes-for-new-plugin-pages.adoc_assembly-front-end-plugin-wiring[Customizing sidebar navigation]
+|`dynamicRoutes.menuItem`, `menuItems`
+|Add a new entry to the main sidebar or customize its order and nesting.
+
+|{installing-and-viewing-plugins-book-link}#proc-extending-internal-icon-catalog.adoc_assembly-front-end-plugin-wiring[Adding icons/Theming]
+|`appIcons`, `themes`
+|Add custom icons to the application catalog or define a new {product-custom-resource-type} theme.
+
+|{installing-and-viewing-plugins-book-link}#con-providing-custom-scaffolder-field-extensions.adoc_assembly-front-end-plugin-wiring[Scaffolder/TechDocs extensions]
+|`scaffolderFieldExtensions`, `techdocsAddons`
+|Expose custom field extensions for the Scaffolder or new Addons for TechDocs.
+
+|{installing-and-viewing-plugins-book-link}#proc-extensions-enabling-plugins-installation_rhdh-extensions-plugins[Translation resources]
+|`translationResources`
+|Provide new translation files or override default plugin translations.
+|===
+
+.Example of Front-end wiring workflow
+
+Front-end wiring is configured in the `{my-app-config-file}` or a dedicated `dynamic-plugins-config.yaml` file. The dynamic plugin exposes components, routes, or APIs. For example, a plugin component (`FooPluginPage`) is exported from a module (for example, `PluginRoot`).
+
+The application administrator defines the wiring in the configuration file, using the plugin package name to register the exports, such as adding a new page with a sidebar link.
+
+[source,yaml]
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: <plugin_path_or_url>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          my-plugin-package-name: # The plugin's unique package name
+            dynamicRoutes: # Wiring for a new page/route
+              - path: /my-new-page # The desired URL path
+                importName: FooPluginPage # The exported component name
+                menuItem: # Wiring for the sidebar entry
+                  icon: favorite # A registered icon name
+                  text: My Custom Page
+----
+
+When the application loads, it performs the following steps:
+
+. It parses the `dynamic-plugins-config.yaml`.
+. It uses the `<plugin_path_or_url>` to download the plugin bundle using the dynamic loading mechanism.
+. If the package exports the plugin object, the application adds it to the list provided to the {product-custom-resource-type} `createApp` API, registering the plugin properly with the front-end application.
+. It uses the configuration block (`dynamicRoutes`, `menuItem`) to:
+* Add an entry to the internal router mapping `/my-new-page` to the `FooPluginPage` component.
+* Construct and render a new sidebar item labeled _My Custom Page_, pointing to the `/my-new-page` route.
+
+[NOTE]
+====
+If the configuration is missing, steps 1 and 2 might still occur, but the final registration in step 3 and the wiring/rendering in step 4 are skipped, and no UI changes occur.
+====
