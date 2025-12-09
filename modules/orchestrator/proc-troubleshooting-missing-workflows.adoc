@@ -3,69 +3,99 @@
 [id="proc-troubleshooting-missing-workflows_{context}"]
 = Troubleshooting workflows missing from the {product-very-short} UI
 
-As an administrator, perform the following checks to verify the workflow status and connectivity if a deployed workflow does not appear in the Orchestrator plugin interface.
+You can perform the following checks to verify the workflow status and connectivity if a deployed workflow does not appear in the {product-very-short} Orchestrator UI.
 
 .Prerequisites
-* You have access to the OpenShift cluster where {product-very-short} and SonataFlow services are running.
-* You have verified the GitOps profile: Make sure the workflow definition and SonataFlow manifests use the `gitops` profile. The {product-very-short} Orchestrator UI displays only workflows that use this profile.
+
+* You have administrator privileges to access to the OpenShift cluster where {product-very-short} and SonataFlow services are running.
 
 .Procedure
 
-. **Check workflow pod readiness:** Verify the workflow successfully registers with the Data Index service before it becomes ready.
-+
-----
-oc get pods <workflow_pod_name>
-----
-. **If the pod is not ready, check for connection errors:**
-+
-----
-oc logs <workflow_pod_name>
-----
-. **If the log shows `Connection refused: sonataflow-platform-data-index-service`, ensure the Data Index service is running:**
-+
-.If you use a cluster-wide platform, check the `sonataflow-infra` namespace:
-+
-----
-oc get pods -l sonataflow.org/service=sonataflow-platform-data-index-service -n sonataflow-infra
-----
-+
-.If the Data Index is running, restart the workflow:
-+
-----
-oc rollout restart deployment <workflow_name>
-----
-. **Verify connectivity from the workflow to the Data Index:** Access the workflow pod and attempt to query the Data Index GraphQL endpoint.
-+
-----
-curl -g -k -X POST -H "Content-Type: application/json" \
--d '{"query":"query{ ProcessDefinitions { id, serviceUrl, endpoint } }"}' \
-http://sonataflow-platform-data-index-service.sonataflow-infra/graphql
-----
-+
-[NOTE]
-====
-Adjust the service name and namespace (`sonataflow-infra`) to match your deployment.
-====
+. Check if the workflow uses GitOps profile. The {product-very-short} Orchestrator UI displays only the workflows that use GitOps profile. Make sure the workflow definition and the sonataflow manifests use this profile.
 
-.Verification
+. Verify that the workflow pod has started and is ready. The readiness of a workflow pod depends on its successful registration with the Data Index. When a workflow initializes, it performs the following actions:
+.. It attempts to create its schema in the database (if persistence is active).
+.. It attempts to register itself to the Data Index. The workflow pod remains in an unready state until it successfully registers to the Data Index.
 
-. Access the {product-very-short} pod and verify it reaches the workflow management endpoint.
+. Check if the workflow pod can reach the Data Index service. Connect to the workflows pod. Send the following GraphQL request to the Data Index:
 +
+[source,bash]
 ----
-curl http://<workflow_host>/management/processes
+curl -g -k  -X POST  -H "Content-Type: application/json" \
+                    -d '{"query":"query{ ProcessDefinitions  { id, serviceUrl, endpoint } }"}' \
+                    http://sonataflow-platform-data-index-service.sonataflow-infra/graphql
 ----
-. Check the {product-very-short} logs for the orchestrator plugin activity.
 +
+Use the Data Index service and namespace as defined in your environment, (for example, `sonataflow-platform-data-index-service` and `sonataflow-infra`). Check if the {product-very-short} pod can reach the workflow service as shown below:
++
+[source,bash]
 ----
-{"level":"info","message":"fetchWorkflowInfos() called...","plugin":"orchestrator"...}
+curl http://<workflow-service>.<workflow-namespace>/management/processes
 ----
-. Check the `<workflow_name>-managed-props` ConfigMap to ensure the Data Index URLs are correct.
 
-. Check the database registration. Access the PostgreSQL pod used by the Data Index and verify the workflow is registered in the `definitions` table.
+. Check if the {product-very-short} pod can reach the Data Index service. Inspect the logs of the {product-very-short} pod for messages from the Orchestrator plugin. You should see messages indicating that it is attempting to fetch workflow information from the Data Index, similar to:
 +
+[source,yaml]
 ----
-PGPASSWORD=<password> psql -h localhost -p 5432 -U <user> -d sonataflow
+{"level":"\u001b[32minfo\u001b[39m","message":"fetchWorkflowInfos() called: http://sonataflow-platform-data-index-service.sonataflow-infra","plugin":"orchestrator","service":"backstage","span_id":"fca4ab29f0a7aef9","timestamp":"2025-08-04 17:58:26","trace_flags":"01","trace_id":"5408d4b06373ff8fb34769083ef771dd"}
+----
++
+Notice the _"plugin":"orchestrator"_ that can help to filter the messages.
+
+. Verify that Data Index properties are correctly set in the `-managed-props` ConfigMap of the workflow.
++
+[source,yaml]
+----
+kogito.data-index.health-enabled = true
+kogito.data-index.url = http://sonataflow-platform-data-index-service.sonataflow-infra
+...
+mp.messaging.outgoing.kogito-processdefinitions-events.url = http://sonataflow-platform-data-index-service.sonataflow-infra/definitions
+mp.messaging.outgoing.kogito-processinstances-events.url = http://sonataflow-platform-data-index-service.sonataflow-infra/processes
+----
++
+These properties, along with similar settings for the Job Services, typically indicate that the OSL Operator successfully registered the Data Index service.
+
+. Confirm the workflow is registered in the Data Index database. Connect to the database used by the Data Index and run the following command from the PSQL instance pod:
++
+[source,bash]
+----
+PGPASSWORD=<psql password> psql -h localhost -p 5432 -U < user> -d sonataflow
+----
++
+Replace `<psql password>` and `<user>` with your database credentials.
++
+Run the following SQL commands to query the registered workflow definitions:
++
+[source,yaml]
+----
 sonataflow=# SET search_path TO "sonataflow-platform-data-index-service";
 sonataflow=# select id, name from definitions;
 ----
-. Verify Role-Based Access Control (RBAC) permissions. If the workflow is registered but remains hidden, set the {product-very-short} log level to `DEBUG` to identify RBAC denials.
++
+You should see your workflows listed in the query results.
+
+. Make sure you have enabled Data Index and Job Service in the `-managed-props` ConfigMap as shown in the following example:
++
+[source,yaml]
+----
+services:
+    dataIndex:
+      enabled: true
+    jobService:
+      enabled: true
+----
++
+If you fail to enable the Data Index and the Job Services in the SonataFlowPlatform, the Orchestrator plugin fails to fetch the available workflows.
++
+[NOTE]
+====
+You can also manually edit the SonataFlowPlatform instance to trigger the re-creation of workflow-related manifests.
+====
+
+. Set the RBAC permissions correctly.
+
+[role="_additional-resources"]
+.Additional resources
+
+* {monitoring-and-logging-book-link}#configuring-the-application-log-level-by-using-the-operator_assembly-rhdh-observability[Configuring the application log level by using the {product} Operator]
+* {authorization-book-link}#managing-authorizations-by-using-the-web-ui[RBAC documentation]
