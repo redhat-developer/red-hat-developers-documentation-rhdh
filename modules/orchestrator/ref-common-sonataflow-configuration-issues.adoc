@@ -1,0 +1,41 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-common-sonataflow-configuration-issues_{context}"]
+= Common SonataFlow configuration issues
+
+The following are common configuration problems encountered during SonataFlow deployment and direct solutions for verifying persistence and connectivity:
+
+. Workflow installed in a separate namespace than Sonataflow services fails to start.
++
+When deploying a workflow to a namespace other than where core SonataFlow services are running (for example, `sonataflow-infra`), follow the following steps to enable persistence and connectivity for the workflow:
+
+Configure network policies for inter-namespace traffic::
+
+* Allow core SonataFlow services to receive traffic from the workflow namespace by creating a new `NetworkPolicy` or updating the existing one to include the new namespace.
+
+* Set up a separate `NetworkPolicy` in the workflow namespace to control communication, allowing traffic only between {product-very-short}, Knative, SonataFlow services, and workflows.
+
+* Optionally, create an `allow-intra-namespace` policy in the workflow namespace to enable unrestricted communication among all pods within that namespace.
+
+Ensure workflow persistence (If Required)::
+
+* Create a dedicated PostgreSQL Secret containing database credentials within the workflow's namespace.
+
+* Configure the workflow `serviceRef` property to correctly reference the PostgreSQL service namespace using the `namespace: $POSTGRESQL_NAMESPACE` attribute.
+
+Identify required namespaces::
+
+* Retrieve the namespace value where {product-very-short} is running using `oc get backstage -A`.
+
+* Identify the SonataFlow Services Namespace by checking for either a `sonataflowclusterplatform` or `sonataflowplatform` instance.
+
+
+. `sonataflow-platform-data-index-service` cannot connect to PostgreSQL database on startup.
++
+Diagnose database connection failures by performing the following checks:
+
+.. Make sure the PostgreSQL Pod has fully transitioned to a `running` and operational status.
++
+Allow additional time for the database initialization before expecting related service pods (`DataIndex`, `JobService`) to establish a connection.
+
+.. If the PostgreSQL Server operates in a dedicated namespace (for example, outside `sonataflow-infra` namespace), make sure that network policies permit ingress from the SonataFlow services namespace. Network policies might prevent the DataIndex and JobService pods from connecting to the database.
