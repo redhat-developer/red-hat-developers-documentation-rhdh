@@ -57,12 +57,19 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout
+      - name: Checkout base branch to get trusted build script
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: trusted-scripts
+
+      - name: Checkout PR branch for content to build
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
+          path: pr-content
 
       - name: Setup environment
         run: |
@@ -75,10 +82,13 @@ jobs:
       - name: Build guides and indexes
         run: |
           echo "Building PR ${{ github.event.pull_request.number }}"
+          cp trusted-scripts/build/scripts/build-ccutil.sh pr-content/build/scripts/build-ccutil.sh
+          cd pr-content
           build/scripts/build-ccutil.sh -b "pr-${{ github.event.number }}"
 
       - name: Pull from origin before pushing (if possible)
         run: |
+          cd pr-content
           /usr/bin/git pull origin gh-pages || true
 
       # repo must be public for this to work
@@ -89,7 +99,7 @@ jobs:
           github_token: ${{ secrets.RHDH_BOT_TOKEN }}
           publish_branch: gh-pages
           keep_files: true
-          publish_dir: ./titles-generated
+          publish_dir: ./pr-content/titles-generated
 
       - name: PR comment with doc preview, replacing existing comments with a new one each time
         shell: bash
