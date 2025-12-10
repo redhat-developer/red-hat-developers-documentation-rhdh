@@ -14,50 +14,6 @@ To understand why your workflow operation fails, examine the container log of th
 $ oc logs my-workflow-xy73lj
 ----
 
-Workflow is not listed by the Orchestrator plugin::
-+
-To address a workflow that is not listed by the orchestrator plugin, complete the following steps:
-
-.. Examine the container status and logs using the following commands:
-+
-[source,terminal]
-----
-$ oc get pods my-workflow-xy73lj
-$ oc logs my-workflow-xy73lj
-----
-+
-Often the Data index service was unready when the workflow started. This is what the log shows:
-+
-[source,yaml]
-----
-2024-07-24 21:10:20,837 ERROR [org.kie.kog.eve.pro.ReactiveMessagingEventPublisher] (main) Error while creating event to topic kogito-processdefinitions-events for event ProcessDefinitionDataEvent {specVersion=1.0, id='586e5273-33b9-4e90-8df6-76b972575b57', source=http://mtaanalysis.default/MTAAnalysis, type='ProcessDefinitionEvent', time=2024-07-24T21:10:20.658694165Z, subject='null', dataContentType='application/json', dataSchema=null, data=org.kie.kogito.event.process.ProcessDefinitionEventBody@7de147e9, kogitoProcessInstanceId='null', kogitoRootProcessInstanceId='null', kogitoProcessId='MTAAnalysis', kogitoRootProcessId='null', kogitoAddons='null', kogitoIdentity='null', extensionAttributes={kogitoprocid=MTAAnalysis}}: java.util.concurrent.CompletionException: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: sonataflow-platform-data-index-service.default/10.96.15.153:80
-----
-
-.. Check if a cluster-wide platform is in use by running the following command:
-+
-[source,terminal]
-----
-$ oc get sonataflowclusterplatforms.sonataflow.org cluster-platform
-----
-
-.. If the output shows a platform (for example, `cluster-platform`), use the namespace `sonataflow-infra` namespace when looking for sonataflow services.
-
-.. Confirm the Data Index is ready using the correct namespace:
-+
-[source,terminal]
-----
-$ oc get pods -l sonataflow.org/service=sonataflow-platform-data-index-service -n sonataflow-infra
-NAME                                                      READY  STATUS    RESTARTS   AGE
-sonataflow-platform-data-index-service-546f59f89f-b7548   1/1     Running   0          11kh
-----
-
-.. Restart the workflow once the Data Index service is running by running the following command:
-+
-[source,terminal]
-----
-$ oc rollout restart deployment my-workflow
-----
-
 Workflow fails to reach an HTTPS endpoint because it cannot verify it::
 +
 When your workflow attempts a REST action that fails the SSL certificate check, it might be because the target endpoint uses a Certificate Authority (CA) that the workflow cannot verify.

@@ -14,6 +14,34 @@ Configure network policies for inter-namespace traffic::
 * Allow core SonataFlow services to receive traffic from the workflow namespace by creating a new `NetworkPolicy` or updating the existing one to include the new namespace.
 
 * Set up a separate `NetworkPolicy` in the workflow namespace to control communication, allowing traffic only between {product-very-short}, Knative, SonataFlow services, and workflows.
++
+The following is an example of this `NetworkPolicy`:
++
+[source,subs="+attributes,+quotes"]
+----
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-infra-ns-to-workflow-ns
+  # Sonataflow and Workflows are using the RHDH target namespace.
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            # Allow knative events to be delivered to workflows.
+            kubernetes.io/metadata.name: knative-eventing
+      - namespaceSelector:
+          matchLabels:
+            # Allow auxiliary knative function for workflow (such as m2k-save-transformation)
+            kubernetes.io/metadata.name: knative-serving
+      - namespaceSelector:
+          matchLabels:
+            # Allow communication between the serverless logic operator and the workflow namespace.
+            kubernetes.io/metadata.name: openshift-serverless-logic
+----
 
 * Optionally, create an `allow-intra-namespace` policy in the workflow namespace to enable unrestricted communication among all pods within that namespace.
 
@@ -28,6 +56,11 @@ Identify required namespaces::
 * Retrieve the namespace value where {product-very-short} is running using `oc get backstage -A`.
 
 * Identify the SonataFlow Services Namespace by checking for either a `sonataflowclusterplatform` or `sonataflowplatform` instance.
++
+[NOTE]
+====
+By default, the SonataFlow namespace must be the same as the {product-very-short} namespace.
+====
 
 . `sonataflow-platform-data-index-service` cannot connect to PostgreSQL database on startup.
 +
