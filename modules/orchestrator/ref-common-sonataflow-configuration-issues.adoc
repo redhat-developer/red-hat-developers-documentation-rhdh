@@ -11,11 +11,9 @@ You can deploy a workflow to a namespace outside the core SonataFlow services (f
 
 Configure network policies for inter-namespace traffic::
 
-* Allow core SonataFlow services to receive traffic from the workflow namespace by creating a new `NetworkPolicy` or updating the existing one to include the new namespace.
-
-* Set up a separate `NetworkPolicy` in the workflow namespace to control communication, allowing traffic only between {product-very-short}, Knative, SonataFlow services, and workflows.
+* When deploying a workflow to a namespace outside the core SonataFlow services, you must configure network policies to permit the necessary inter-namespace traffic.
 +
-The following is an example of this `NetworkPolicy`:
+The following example shows a `NetworkPolicy` configured to ingress traffic into the workflow namespace:
 +
 [source,subs="+attributes,+quotes"]
 ----
@@ -23,7 +21,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: {{ .Release.Name }}-allow-infra-ns-to-workflow-ns
-  # Sonataflow and Workflows are using the RHDH target namespace.
+  # Sonataflow and Workflows are using the {product-very-short} target namespace.
   namespace: {{ .Release.Namespace | quote }}
 spec:
   podSelector: {}
@@ -47,9 +45,40 @@ spec:
 
 Ensure workflow persistence (If required)::
 
-* Create a dedicated PostgreSQL Secret containing database credentials within the workflow namespace.
+* Create a dedicated PostgreSQL Secret containing database credentials within the workflow namespace as shown in the following configuration:
++
+[source,yaml]
+----
+oc get secret sonataflow-psql-postgresql -n sonataflow-infra -o yaml > secret.yaml
+sed -i '/namespace: sonataflow-infra/d' secret.yaml
+oc apply -f secret.yaml -n $ADDITIONAL_NAMESPACE
+----
 
-* Configure the workflow `serviceRef` property to correctly reference the PostgreSQL service namespace using the `namespace: $POSTGRESQL_NAMESPACE` attribute.
+* Configure the workflow `serviceRef` property to correctly reference the PostgreSQL service namespace using the `namespace: $POSTGRESQL_NAMESPACE` attribute as shown in the following configuration:
++
+[source,yaml]
+----
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+  ...
+spec:
+  ...
+  persistence:
+    postgresql:
+      secretRef:
+        name: sonataflow-psql-postgresql
+        passwordKey: postgres-password
+        userKey: postgres-username
+      serviceRef:
+        databaseName: sonataflow
+        databaseSchema: greeting
+        name: sonataflow-psql-postgresql
+        namespace: $POSTGRESQL_NAMESPACE
+        port: 5432
+----
++
+`namespace`::
+Enter the namespace where the PostgreSQL server is deployed.
 
 Identify required namespaces::
 
@@ -70,4 +99,4 @@ Diagnose database connection failures by performing the following checks:
 +
 Allow additional time for the database initialization before expecting related service pods (`DataIndex`, `JobService`) to establish a connection.
 
-.. If the PostgreSQL Server operates in a dedicated namespace (for example, outside `sonataflow-infra`), configure network policies to ingress from the SonataFlow services namespace. Network policies might prevent the DataIndex and JobService pods from connecting to the database.
+.. If the PostgreSQL Server operates in a dedicated namespace (for example, outside {product-very-short}), configure network policies to ingress from the SonataFlow services namespace. Network policies might prevent the DataIndex and JobService pods from connecting to the database.
