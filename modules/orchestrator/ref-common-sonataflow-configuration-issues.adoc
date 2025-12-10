@@ -5,9 +5,9 @@
 
 The following are common configuration problems encountered during SonataFlow deployment and direct solutions for verifying persistence and connectivity:
 
-. Workflow installed in a separate namespace than Sonataflow services fails to start.
+. Workflow installed in a different namespace other than where {product-very-short} Orchestartor infrastructure are deployed and configured fails to start.
 +
-You can deploy a workflow to a namespace outside the core SonataFlow services (for example, `sonataflow-infra`). Use the following steps to enable persistence and connectivity for the workflow:
+You can deploy a workflow to a namespace outside the core SonataFlow services. Use the following steps to enable persistence and connectivity for the workflow:
 
 Configure network policies for inter-namespace traffic::
 
@@ -41,7 +41,73 @@ spec:
             kubernetes.io/metadata.name: openshift-serverless-logic
 ----
 
-* Optionally, create an `allow-intra-namespace` policy in the workflow namespace to enable unrestricted communication among all pods within that namespace.
+* Add SonataFlowClusterPlatform Custom Resource as shown in the following configuration:
++
+[source,yaml]
+----
+oc create -f - <<EOF
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowClusterPlatform
+metadata:
+  name: cluster-platform
+spec:
+  platformRef:
+    name: sonataflow-platform
+    namespace: $RHDH_NAMESPACE
+----
+
+* To allow communication between {product-very-short} namespace and the workflow namespace, add the following network policies:
+
+.. To allow {product-very-short} services to accept traffic from workflows, create an additional network policy within the {product-very-short} instance namespace.
++
+[source,yaml]
+----
+oc create -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-workflows-to-rhdh
+  # Namespace where network policies are deployed
+  namespace: $RHDH_NAMESPACE
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            # Allow SonataFlow services to communicate with new/additional workflow namespace.
+            kubernetes.io/metadata.name: $ADDITIONAL_WORKFLOW_NAMESPACE
+----
+
+.. To allow traffic from {product-very-short}, SonataFlow and Knative, create a network policy within the additional workflow namespace.
++
+[source,yaml]
+----
+oc create -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rhdh-and-knative-to-workflows
+  namespace: $ADDITIONAL_WORKFLOW_NAMESPACE
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            # Allows traffic from pods in the {product-very-short} namespace.
+            kubernetes.io/metadata.name: $RHDH_NAMESPACE
+      - namespaceSelector:
+          matchLabels:
+            # Allows traffic from pods in the Knative Eventing namespace.
+            kubernetes.io/metadata.name: knative-eventing
+      - namespaceSelector:
+          matchLabels:
+            # Allows traffic from pods in the Knative Serving namespace.
+            kubernetes.io/metadata.name: knative-serving
+----
+
+* (Optional) Create an `allow-intra-namespace` policy in the workflow namespace to enable unrestricted communication among all pods within that namespace.
 
 Ensure workflow persistence (If required)::
 
