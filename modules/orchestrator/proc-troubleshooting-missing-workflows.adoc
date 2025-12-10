@@ -3,7 +3,7 @@
 [id="proc-troubleshooting-missing-workflows_{context}"]
 = Troubleshooting workflows missing from the {product-very-short} UI
 
-You can perform the following checks to verify the workflow status and connectivity if a deployed workflow does not appear in the {product-very-short} Orchestrator UI.
+You can perform the following checks to verify the workflow status and connectivity when the deployed workflow is missing from the {product-very-short} Orchestrator UI.
 
 .Prerequisites
 
@@ -26,14 +26,15 @@ curl -g -k  -X POST  -H "Content-Type: application/json" \
                     http://sonataflow-platform-data-index-service.sonataflow-infra/graphql
 ----
 +
-Use the Data Index service and namespace as defined in your environment, (for example, `sonataflow-platform-data-index-service` and `sonataflow-infra`). Check if the {product-very-short} pod can reach the workflow service as shown below:
+Use the Data Index service and namespace as defined in your environment, (for example, `sonataflow-platform-data-index-service` and `sonataflow-infra`). Check if the {product-very-short} pod can reach the workflow service by running the following command:
 +
 [source,bash]
 ----
 curl http://<workflow-service>.<workflow-namespace>/management/processes
 ----
 
-. Check if the {product-very-short} pod can reach the Data Index service. Inspect the logs of the {product-very-short} pod for messages from the Orchestrator plugin. You should see messages indicating that it is attempting to fetch workflow information from the Data Index, similar to:
+. Check the {product-very-short} pod connection to the Data Index service. Inspect the logs of the {product-very-short} pod for messages from the Orchestrator plugin.
+You must find messages indicating it is attempting to fetch workflow information from the Data Index, similar to the following:
 +
 [source,yaml]
 ----
@@ -42,7 +43,7 @@ curl http://<workflow-service>.<workflow-namespace>/management/processes
 +
 Notice the _"plugin":"orchestrator"_ that can help to filter the messages.
 
-. Verify that Data Index properties are correctly set in the `-managed-props` ConfigMap of the workflow.
+. Verify that the Data Index properties file contains the correct settings:
 +
 [source,yaml]
 ----
@@ -53,9 +54,9 @@ mp.messaging.outgoing.kogito-processdefinitions-events.url = http://sonataflow-p
 mp.messaging.outgoing.kogito-processinstances-events.url = http://sonataflow-platform-data-index-service.sonataflow-infra/processes
 ----
 +
-These properties, along with similar settings for the Job Services, typically indicate that the OSL Operator successfully registered the Data Index service.
+These properties, along with similar settings for the Job Services, typically indicate that the Openshift Serverless Logic (OSL) Operator successfully registered the Data Index service.
 
-. Confirm the workflow is registered in the Data Index database. Connect to the database used by the Data Index and run the following command from the PSQL instance pod:
+. Confirm that the workflow is registered in the Data Index database. Connect to the database used by the Data Index and run the following command from the PSQL instance pod:
 +
 [source,bash]
 ----
@@ -72,7 +73,7 @@ sonataflow=# SET search_path TO "sonataflow-platform-data-index-service";
 sonataflow=# select id, name from definitions;
 ----
 +
-You should see your workflows listed in the query results.
+You must see your workflows listed in the query results.
 
 . Make sure you have enabled Data Index and Job Service in the `-managed-props` ConfigMap as shown in the following example:
 +
