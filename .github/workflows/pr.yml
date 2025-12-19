@@ -33,19 +33,42 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.event.pull_request.head.ref }}
   cancel-in-progress: true
 
+env: 
+  GH_TEAM: rhdh
+  GH_ORGANIZATION: redhat-developer
 jobs:
+  check-commit-author:
+    runs-on: ubuntu-latest
+    outputs:
+      is_authorized: ${{ steps.check-team-membership.outputs.is_active_member }}
+    steps:
+      - name: Check team membership
+        uses: redhat-developer/rhdh/.github/actions/check-author@main
+        id: check-team-membership
+        with:
+          team: ${{ env.GH_TEAM }}
+          organization: ${{ env.GH_ORGANIZATION }}
+          gh_token: ${{ secrets.RHDH_BOT_TOKEN }}
+          author: ${{ github.event.pull_request.user.login }}
+
   authorize:
-    # The 'external' environment is configured with the odo-maintainers team as required reviewers.
-    # All the subsequent jobs in this workflow 'need' this job, which will require manual approval for PRs coming from external forks.
-    # see list of approvers in OWNERS file
+    # The 'external' environment is configured with the rhdh-content team as required reviewers.
+    # All the subsequent jobs in this workflow 'need' this job, which will require manual approval for PRs coming from external forks outside of the rhdh team
+    needs: check-commit-author
     environment:
-      ${{ (github.event.pull_request.head.repo.full_name == github.repository ||
-        contains(fromJSON('["gazarenkov","jianrongzhang89","kadel","nickboldt","rm3l"]'), github.actor)) && 'internal' || 'external' }}
+      ${{ (needs.check-commit-author.outputs.is_authorized == 'true' || github.event.pull_request.head.repo.full_name == github.repository) && 'internal' || 'external' }}
     runs-on: ubuntu-latest
     steps:
-      - name: approved
+      - name: Check if internal PR
+        id: check
         run: |
-          echo "✓"
+          if [[ "${{ needs.check-commit-author.outputs.is_authorized }}" == "true" ]]; then
+            echo "✓ Commit author is in rhdh team - using internal environment"
+          elif [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
+            echo "✓ Internal PR (not from fork) - using internal environment"
+          else
+            echo "✓ External PR from fork from non-rhdh team member - using external environment for security"
+          fi
 
   adoc_build:
     name: Ccutil Build For PR branch preview
