@@ -42,13 +42,19 @@ jobs:
     outputs:
       is_authorized: ${{ steps.check-team-membership.outputs.is_active_member }}
     steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.RHDH_GITHUB_APP_ID }}
+          private-key: ${{ secrets.RHDH_GITHUB_APP_PRIVATE_KEY }} 
       - name: Check team membership
         uses: redhat-developer/rhdh/.github/actions/check-author@main
         id: check-team-membership
         with:
           team: ${{ env.GH_TEAM }}
           organization: ${{ env.GH_ORGANIZATION }}
-          gh_token: ${{ secrets.RHDH_BOT_TOKEN }}
+          gh_token: ${{ steps.app-token.outputs.token }}
           author: ${{ github.event.pull_request.user.login }}
 
   authorize:
