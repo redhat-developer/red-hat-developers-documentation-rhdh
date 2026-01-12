@@ -1,0 +1,27 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-template-sync_{context}"]
+= Template sync considerations and limitations
+
+Review the following details to troubleshoot or refine the synchronization process.
+
+.Reviewer assignment
+The plugin automatically assigns a reviewer if the entity owner is a *User* entity with a defined VCS login.
+
+* *GitHub*: Requires the `github.com/user-login` annotation.
+* *GitLab*: Requires the `gitlab.com/user-login` annotation.
+If the owner is a *Group*, the plugin creates the PR without an assigned reviewer.
+
+.Variable resolution limitations
+The synchronization engine uses regex matching to resolve template variables like `${{ values.name }}`. You must manually review PRs because:
+
+* Variables that do not match keys in the scaffolded repository remain in raw template syntax.
+* Conditional Jinja2 blocks (`{% if %}`) are stripped, which might cause unexpected formatting.
+* Complex nested structures might not resolve correctly.
+
+.Error handling
+If a PR fails to create due to credential issues or network errors, the plugin:
+
+* Logs the error in the backend.
+* Sends a failure notification to the entity owner (if notifications are enabled).
+* Skips the sync if no file differences are detected between the template and the repository.
