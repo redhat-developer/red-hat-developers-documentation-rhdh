@@ -31,7 +31,6 @@ import re
 import jinja2
 import yaml
 from jira import JIRA
-from setuptools.dist import sequence
 
 # Define location for product attributes, templates, and generated files.
 script_dir = os.path.normpath(
