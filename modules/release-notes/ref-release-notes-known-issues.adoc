@@ -127,6 +127,59 @@ For packages with missing `spec.dynamicArtifact` value in their catalog entity, 
 * link:https://issues.redhat.com/browse/RHDHBUGS-2058[RHDHBUGS-2058]
 
 // Link in comment to facilitate reviews: https://issues.redhat.com/browse/RHDHBUGS-2058
+[id="known-issue-rhdhbugs-2038"]
+== Quay and Argo CD require their respective backend plugins to correctly display permissions in the UI
+
+Example configuration for Quay plugin:
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-quay
+    disabled: false  
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay-backend:bs_1.42.5__1.6.0!backstage-community-plugin-quay-backend
+    disabled: false
+    pluginConfig:
+      quay:
+        apiUrl: ${QUAY_API_URL}
+        apiKey: ${QUAY_API_KEY}
+----
+
+Example configuration for Argo CD plugin:
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic
+    disabled: true
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-redhat-argocd
+    disabled: false
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-redhat-argocd-backend:bs_1.42.5__0.10.0!backstage-community-plugin-redhat-argocd-backend
+    disabled: false
+    pluginConfig:
+      argocd:
+        username: &#34;${ARGOCD_USERNAME}&#34;
+        password: &#34;${ARGOCD_PASSWORD}&#34;
+        appLocatorMethods:
+          - type: &#39;config&#39;
+            instances:
+              - name: argoInstance1
+                url: &#34;${ARGOCD_INSTANCE1_URL}&#34;
+----
+For ArgoCD, you will need to update your `app-config.yaml` to add its id to `permission.rbac.pluginsWithPermission`:
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    pluginsWithPermission:
+      - argocd
+----
+
+
+
+.Additional resources
+* link:https://issues.redhat.com/browse/RHDHBUGS-2038[RHDHBUGS-2038]
+
+// Link in comment to facilitate reviews: https://issues.redhat.com/browse/RHDHBUGS-2038
 [id="known-issue-rhdhbugs-986"]
 == MUI v5 components might render with broken styles in non-bundled plugins
 
