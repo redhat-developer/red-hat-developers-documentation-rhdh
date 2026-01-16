@@ -1,0 +1,71 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-orchestrator-plugin-permissions_{context}"]
+= Orchestrator plugin permissions
+
+The Orchestrator plugin uses the {product} permission mechanism and the Role-Based Access Control (RBAC) plugin to restrict access to backend endpoints.
+Orchestrator supports decoupling visibility (read) from running (update) using specific workflow IDs instead of generic permissions as shown in the following table:
+
+[cols="15%,15%,15,55%", frame="all", options="header"]
+|===
+|Permission name|Resource Type|Policy|Description
+
+|orchestrator.workflow
+|named resource
+|read
+|List and read _all_ workflow definitions
+
+List and read their instances
+
+|orchestrator.workflow.[`workflowId`]
+|named resource
+|read
+|List and read a _single_ workflow definition
+
+List and read instances created for this particular workflow.
+
+|orchestrator.workflow.use
+|named resource
+|update
+|Run or abort _any_ workflow
+
+|orchestrator.workflow.use.[`workflowId`]
+|named resource
+|update
+|Run or abort a _specific_ workflow
+
+|orchestrator.workflowAdminView
+|named resource
+|read
+|View instance variables and workflow definition editor
+
+|orchestrator.instanceAdminView
+|named resource
+|read
+|View _all_ workflow instances, including those created by other users.
+|===
+
+[WARNING]
+====
+Avoid generic permissions for specific control. The system grants access if either a generic permission or a specific one provides it. Granting generic permissions overrides specific denial policies within the same action type:
+- Granting orchestrator.workflow (read) prevents you from denying access to orchestrator.workflow.[workflowId] (read).
+- Granting orchestrator.workflow.use (update) prevents you from denying access to orchestrator.workflow.use.[workflowId] (update).
+====
+
+The [`workflowId`] must match the unique identifier in your workflow definition file. For example,
+in the workflow definition below, the identifier is `greeting`:
+
+[source,subs="+attributes,+quotes"]
+----
+id: greeting
+version: '1.0'
+specVersion: '0.8'
+name: Greeting workflow
+description: YAML based greeting workflow
+annotations:
+  - 'workflow-type/infrastructure'
+dataInputSchema: 'schemas/greeting.sw.input-schema.json'
+extensions:
+  - extensionid: workflow-output-schema
+    outputSchema: schemas/workflow-output-schema.json
+----
