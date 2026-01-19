@@ -1,7 +1,26 @@
 :_mod-docs-content-type: CONCEPT
 
 [id="con-policy-effect_{context}"]
-= Policy effect
+= Policy effect for conflicting permission rules
 
-The policy effect determines whether the access request must be approved if multiple policy rules match the request.
-In {product}, when one rule permits and the other denies, the deny rule takes precedence, and the policy effect is to deny.
+If conflicting rules exist for the same access request type and the same user role, a _policy effect_ determines the outcome. The {product} policy effect helps ensure high security in two ways:
+
+* The policy effect defaults to `deny` rules when they conflict with `allow` rules. Consider this scenario:
++
+.Rule for group_a
+[source, Casbin]
+---
+p, role:default/allow-role, catalog-entity, read, allow
+g, group:default/group_a, role:default/allow-role
+---
++
+.Rule for group_b
+[source, Casbin]
+---
+p, role:default/deny-role, catalog-entity, read, deny
+g, group:default/group_b, role:default/deny-role
+---
++
+If a user belongs to both group_a and group_b, the policy effect denies them access.
+
+* When a basic rule that permits an action conflicts with a conditional rule, the policy effect defaults to the conditional rule.
