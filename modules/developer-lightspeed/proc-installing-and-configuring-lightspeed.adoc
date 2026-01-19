@@ -207,75 +207,70 @@ plugins:
 +
 [source,yaml]
 ----
-    appConfig:
-      configMaps:
-        - name: lightspeed-app-config
+appConfig:
+  configMaps:
+    - name: lightspeed-app-config
 ----
 ... Update the `spec.deployment.patch.spec.template.spec.volumes` specification to include volumes for {lcs-short} configuration (`lightspeed-stack`), shared storage for feedback (`shared-storage`), and RAG data (`rag-data-volume`):
 +
 [source,yaml]
 ----
-    volumes:
-      - configMap:
-          name: lightspeed-stack
-        name: lightspeed-stack
-      - emptyDir: {}
-        name: shared-storage
-      - emptyDir: {}
-        name: rag-data-volume
+volumes:
+  - configMap:
+      name: lightspeed-stack
+    name: lightspeed-stack
+  - emptyDir: {}
+    name: shared-storage
+  - emptyDir: {}
+    name: rag-data-volume
 ----
 ... Add the `initContainers` section to initialize RAG data:
 [source,yaml]
 +
 ----
-    initContainers:
-      - name: init-rag-data
-        image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
-        command:
-          - "sh"
-          - "-c"
-          - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /data/ && cp -r /rag/embeddings_model /data/ && echo 'Copy complete.'"
-        volumeMounts:
-          - mountPath: /data
-            name: rag-data-volume
+initContainers:
+  - name: init-rag-data
+    image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
+    command:
+      - "sh"
+      - "-c"
+      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /data/ && cp -r /rag/embeddings_model /data/ && echo 'Copy complete.'"
+    volumeMounts:
+      - mountPath: /data
+        name: rag-data-volume
 ----
 ... Add the Llama Stack and the {lcs-short} containers to the `spec.deployment.patch.spec.template.spec.containers` section:
 +
 [source,yaml]
 ----
-  spec:
-    application:
-      - extraEnvs:
-          secrets:
-            - name: lightspeed-secrets
-    containers:
-      # ... Your existing RHDH container definition ...
-      - envFrom:
-          - secretRef:
-              name: llama-stack-secrets
-        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1' # Llama Stack image
-        name: llama-stack
-        volumeMounts:
-          - mountPath: /app-root/.llama
-            name: shared-storage
-          - mountPath: /app-root/embeddings_model
-            name: rag-data-volume
-            subPath: embeddings_model
-          - mountPath: /app-root/vector_db/rhdh_product_docs
-            name: rag-data-volume
-            subPath: rhdh_product_docs
-      - image: 'quay.io/lightspeed-core/lightspeed-stack:dev-20251021-ee9f08f' # Lightspeed Core Service image
-        name: lightspeed-core
-        volumeMounts:
-          - mountPath: /app-root/lightspeed-stack.yaml
-            name: lightspeed-stack
-            subPath: lightspeed-stack.yaml
-          - mountPath: /tmp/data/feedback
-            name: shared-storage
-          - mountPath: /tmp/data/transcripts
-            name: shared-storage
-          - mountPath: /tmp/data/conversations
-            name: shared-storage
+containers:
+  # ... Your existing RHDH container definition ...
+  - envFrom:
+      - secretRef:
+          name: llama-stack-secrets
+    image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1' # Llama Stack image
+    name: llama-stack
+    volumeMounts:
+      - mountPath: /app-root/.llama
+        name: shared-storage
+      - mountPath: /app-root/embeddings_model
+        name: rag-data-volume
+        subPath: embeddings_model
+      - mountPath: /app-root/vector_db/rhdh_product_docs
+        name: rag-data-volume
+        subPath: rhdh_product_docs
+  - image: 'quay.io/lightspeed-core/lightspeed-stack:dev-20251021-ee9f08f' # Lightspeed Core Service image
+    name: lightspeed-core
+    volumeMounts:
+      - mountPath: /app-root/lightspeed-stack.yaml
+        name: lightspeed-stack
+        subPath: lightspeed-stack.yaml
+      - mountPath: /tmp/data/feedback
+        name: shared-storage
+      - mountPath: /tmp/data/transcripts
+        name: shared-storage
+      - mountPath: /tmp/data/conversations
+        name: shared-storage
 ----
 ... Click *Save*. The Pods are automatically restarted.
 
