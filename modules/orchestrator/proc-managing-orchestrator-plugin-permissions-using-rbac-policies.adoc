@@ -1,0 +1,77 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-managing-orchestrator-plugin-permissions-using-rbac-policies_{context}"]
+= Managing Orchestrator plugin permissions using RBAC policies
+
+You can configure Role-Based Access Control (RBAC) policies so that users can view workflow details without the permission to run those workflows. This configuration restricts user interaction to authorized workflows.
+
+.Prerequisites
+. You have identified the [`workflowId`] for each workflow you want to restrict.
+. You have enabled the RBAC plugin.
+. You have configured the `policies-csv-file` path in your `{my-app-config-file}`.
+
+.Procedure
+. Identify the `workflowId` from your workflow definition file:
++
+[source,yaml]
+----
+id: greeting
+version: '1.0'
+----
+. In your RBAC policy CSV file, define the permissions using the `p, role, permission, action, allow` format.
++
+[NOTE]
+====
+Generic permissions (for example, `orchestrator.workflow`) take precedence over specific permissions targeting a `workflowId`, (for example, `orchestrator.workflow.greeting`). You cannot grant generic access and then selectively deny a specific ID.
+====
+
+. Add the following example policies to your CSV file to establish basic user and administrator roles:
++
+[source,csv]
+----
+# Minimal user role - can only view and run specific workflows
+p, role:default/workflowUser, orchestrator.workflow.greeting, read, allow
+p, role:default/workflowUser, orchestrator.workflow.use.greeting, update, allow
+
+# Support role - can view all workflows and instances, but not execute
+p, role:default/workflowSupport, orchestrator.workflow, read, allow
+p, role:default/workflowSupport, orchestrator.instanceAdminView, read, allow
+
+# Full admin role - complete access to all Orchestrator functions
+p, role:default/workflowAdmin, orchestrator.workflow, read, allow
+p, role:default/workflowAdmin, orchestrator.workflow.use, update, allow
+p, role:default/workflowAdmin, orchestrator.workflowAdminView, read, allow
+p, role:default/workflowAdmin, orchestrator.instanceAdminView, read, allow
+
+# Assign users to the roles
+g, user:default/example_user, role:default/workflowUser
+----
+. In your {product-very-short} `{my-app-config-file}` file, enable permissions by adding the `orchestrator` plugin to the `rbac` section and setting `policyFileReload` to `true`.
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+permission:
+  enabled: true
+  rbac:
+    policies-csv-file: <absolute_path_to_the_policy_file>
+    pluginsWithPermission:
+      - orchestrator
+    policyFileReload: true
+    admin:
+      users:
+        - name: user:default/YOUR_USER
+----
+. Restart the application to apply the changes.
+
+.Verification
+. Log in as a user assigned to the `workflowUser` role.
+. Navigate to the Orchestrator plugin and verify that the workflow appears in the list.
+
+[IMPORTANT]
+====
+You can view dynamic permissions containing a `workflowId` in the RBAC UI, but you cannot modify them in the interface. You must use the policy CSV file or the RBAC API to manage these specific workflow permissions.
+====
+
+[role="_additional-resources"]
+.Additional resources
+* link:https://www.casbin.org/docs/rbac[RBAC documentation].
