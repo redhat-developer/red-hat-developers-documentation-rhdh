@@ -1,0 +1,55 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-enabling-automated-software-template-updates_{context}"]
+= Enabling automated template updates
+
+To automate the synchronization of changes from Software Templates to your repositories, you must configure the plugin in your backend settings and ensure that your entities contain the required metadata.
+
+.Prerequisites
+
+* You have administrator access to the {product} configuration.
+* You have configured GitHub or GitLab integrations in your `{product-very-short} {my-app-config-file}` file.
+* Your scaffolded entities include the `spec.scaffoldedFrom` field referencing the source template.
+* Your entities include the `backstage.io/managed-by-location` annotation pointing to a valid GitHub or GitLab URL.
+
+.Procedure
+
+. Enable the template sync and notification plugins in your `{product-very-short} dynamic-plugins.yaml` file:
++
+[source,yaml]
+----
+plugins:
+# Enables the core template synchronization logic
+  - package: './dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-scaffolder-relation-processor'
+    disabled: false
+# Required only if you want to receive notifications for new pull requests
+  - package: './dynamic-plugins/dist/backstage-plugin-notifications'
+    disabled: false
+----
+
+. Open your `{product-very-short} {my-app-config-file}` file.
+. Configure the pull request (PR) feature by adding the following configuration:
++
+[source,yaml]
+----
+scaffolder:
+  pullRequests:
+    templateUpdate:
+      enabled: true
+----
+. Optional: Enable notifications to alert entity owners when a PR is created:
++
+[source,yaml]
+----
+scaffolder:
+  notifications:
+    templateUpdate:
+      enabled: true
+----
+. Restart the {product} instance to apply the changes.
+
+.Verification
+
+. Update the version of a source template in its repository.
+. Navigate to a repository scaffolded from that template.
+. Confirm that a new pull request named `[component-name]/template-upgrade-v[version]` exists.
