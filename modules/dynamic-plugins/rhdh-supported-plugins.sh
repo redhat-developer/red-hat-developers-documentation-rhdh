@@ -537,7 +537,6 @@ process_overlays_repo() {
     
     MIGRATION_TABLE_FILE="/tmp/migration_table_${BRANCH}.txt"
     BUNDLED_PLUGINS_FILE="/tmp/bundled_plugins_${BRANCH}.txt"
-    EXAMPLE_TAG=""
     
     rm -f "$MIGRATION_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
     touch "$MIGRATION_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
@@ -615,16 +614,6 @@ process_overlays_repo() {
             new_path_base="${artifact_without_hash%:*}"
             new_path="${new_path_base}:<tag>"
             
-            # Extract example tag for the template (between : and !)
-            # Format: oci://ghcr.io/.../plugin-name:bs_1.45.3__0.26.0!plugin-name
-            # We want just: bs_1.45.3__0.26.0
-            if [[ -z "$EXAMPLE_TAG" ]]; then
-                # Remove the ! and everything after it first
-                artifact_for_tag="${dynamic_artifact%%!*}"
-                # Extract only the tag portion after the last :
-                EXAMPLE_TAG="${artifact_for_tag##*:}"
-            fi
-            
             # Format title for display
             display_title="${plugin_title:-$plugin_name}"
             
@@ -646,10 +635,11 @@ process_overlays_repo() {
     
     # Add known bundled plugins - these are hardcoded as they require manual tracking
     # These plugins continue to be bundled in 1.9 while transitioning to ghcr.io
-    echo "* \`@backstage-community/plugin-quay\`" >> "$BUNDLED_PLUGINS_FILE"
-    echo "* \`@backstage-community/plugin-quay-backend\`" >> "$BUNDLED_PLUGINS_FILE"
-    echo "* \`@backstage-community/plugin-tekton\`" >> "$BUNDLED_PLUGINS_FILE"
-    echo "* \`@roadiehq/backstage-plugin-argo-cd-backend\` (Roadie version)" >> "$BUNDLED_PLUGINS_FILE"
+    # Format matches migration table: Plugin Name | Old Path | New Path
+    echo -e "|*Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Quay Backend*\n|\`./dynamic-plugins/dist/backstage-community-plugin-quay-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Tekton*\n|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Argo CD Backend*\n|\`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     
     echo -e "${green}Found $migration_count community plugins to migrate${norm}"
     
@@ -661,22 +651,15 @@ process_overlays_repo() {
         done
     fi
     
-    # Set default example tag if not found
-    [[ -z "$EXAMPLE_TAG" ]] && EXAMPLE_TAG="bs_1.45.3__0.26.0"
-    
     # Generate the migration adoc file from template
     migration_template="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration.template.adoc}"
     migration_output="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration.adoc}"
     
     if [[ -f "$migration_template" ]]; then
-        # Escape special characters in EXAMPLE_TAG for sed replacement
-        EXAMPLE_TAG_ESCAPED=$(printf '%s\n' "$EXAMPLE_TAG" | sed 's/[&/\]/\\&/g')
-        
         # Replace placeholders in template
         sed -e "/%%MIGRATION_TABLE%%/{r $MIGRATION_TABLE_SORTED" -e 'd;}' \
             -e "/%%BUNDLED_PLUGINS%%/{r $BUNDLED_PLUGINS_FILE" -e 'd;}' \
             -e "s/%%MIGRATION_COUNT%%/$migration_count/g" \
-            -e "s/%%EXAMPLE_TAG%%/$EXAMPLE_TAG_ESCAPED/g" \
             "$migration_template" > "$migration_output"
         
         echo -e "${green}Generated $migration_output with $migration_count migrated plugins${norm}"
