@@ -1,0 +1,35 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-troubleshooting-the-pipelines_{context}"]
+= Troubleshooting the CI/CD pipeline
+
+Deployment failures involve plugin visibility, running pipeline, or resource synchronization.
+
+. Visibility issues
+
+Missing Orchestrator plugin:: If Orchestrator features do not appear in {product-very-short}, make sure you have updated the {product-very-short} Helm chart with the required plugins.
+
+Software templates not appearing:: Make sure the `orchestrator-software-templates` chart is installed and the `orchestrator-auth-secret` exists in the correct namespace.
+
+. Pipeline failure (CI)
+
+Build or push issues:: Check the *CI* tab in the {product-very-short} Catalog. If the Tekton pipeline fails during the build or push stages:
+
+* Verify that your `Quay.io` robot account has Write permissions.
+
+* Make sure the `docker-registry-credentials` secret is present in the `sonataflow-infra` namespace.
+
+. Resource visibility and Sync issues (CD)
+
+Pipeline succeeds but workflows are missing:: If the CI pipeline succeeds but the workflow does not appear in the *CD* tab:
+
+* Make sure the target namespace is labeled for ArgoCD:
++
+[source,terminal]
+----
+$ oc label ns sonataflow-infra rhdh.redhat.com/argocd-namespace=true
+----
+
+* Make sure the ArgoCD ServiceAccount has the required permissions to manage resources in the `sonataflow-infra` namespace.
+
+ArgoCD sync failure:: If resources appear but stay in an `OutOfSync` state, click *Refresh* in the ArgoCD UI or make sure the *AppProject* exists in the `orchestrator-gitops` namespace.
