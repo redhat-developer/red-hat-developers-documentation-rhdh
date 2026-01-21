@@ -13,7 +13,7 @@
 
 Starting with {product} 1.9, community-supported plugins are no longer distributed as bundled wrappers in the {product-short} container image. These plugins are now built using GitHub Actions and published exclusively to the GitHub Container Registry (ghcr.io).
 
-If you are using any of the plugins listed in this section, you must update your `dynamic-plugins.yaml` configuration to use the new `oci://ghcr.io/...` paths.
+If you are using any of the plugins listed in this section, you must update your dynamic plugins configuration (in `dynamic-plugins-default.yaml`, your ConfigMap or CustomResource) to use the new `oci://ghcr.io/...` paths.
 ====
 
 == What changed
@@ -33,7 +33,7 @@ Starting with {product-short} 1.9, community plugins are:
 
 To migrate your configuration:
 
-. Identify which plugins in your configmap or customresource use local paths starting with `./dynamic-plugins/dist/`
+. Identify which plugins in your ConfigMap or CustomResource use local paths starting with `./dynamic-plugins/dist/`
 . Find the corresponding new ghcr.io path in the migration table below
 . Update your configuration to use the new OCI registry path
 
@@ -47,7 +47,7 @@ plugins:
 
 # After (RHDH 1.9+)
 plugins:
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:%%EXAMPLE_TAG%%
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
     disabled: false
 ----
 
@@ -84,12 +84,14 @@ Use of tags is not recommended; instead a SHA256 digest is preferred to avoid su
 
 The following plugins were previously bundled as wrappers in {product-short} 1.8 and will continue to be bundled in 1.9 while transitioning to ghcr.io distribution in a future release:
 
-%%BUNDLED_PLUGINS%%
+[cols="1,2,3", options="header"]
+|===
+|Plugin Name
+|Old Path (RHDH 1.9)
+|New Path (RHDH 1.10+)
 
-[NOTE]
-====
-These plugins will migrate to ghcr.io in {product-short} 1.10 or 1.11. Plan your migration accordingly.
-====
+%%BUNDLED_PLUGINS%%
+|===
 
 == Troubleshooting
 
@@ -97,10 +99,10 @@ These plugins will migrate to ghcr.io in {product-short} 1.10 or 1.11. Plan your
 
 If a plugin fails to load after migration:
 
-. Verify the ghcr.io path is correct and the image tag exists
+. Verify the ghcr.io path is correct and the image tag or digest exists
 . Check that your cluster has network access to `ghcr.io`
 . Review the {product-short} logs for OCI pull errors
-. Ensure the integrity checksum (if required) matches the published image
+. To avoid unexpected updates, use a SHA256 digest instead of a tag
 
 === Finding available tags
 
@@ -108,8 +110,8 @@ To find available image tags for a plugin:
 
 [source,bash]
 ----
-# Using skopeo
-skopeo list-tags docker://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<plugin-name>
+# Using skopeo (filter for bs_ tags only, excluding pr_ and next__ tags)
+skopeo list-tags docker://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<plugin-name> | jq -r '.Tags[]' | grep '^bs_'
 ----
 
 == Additional resources
