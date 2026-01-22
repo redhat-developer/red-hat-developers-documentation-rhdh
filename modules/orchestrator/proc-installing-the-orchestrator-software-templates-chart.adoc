@@ -9,14 +9,14 @@ The `orchestrator-software-templates` chart loads the actual software templates 
 
 * You have installed the `orchestrator-software-templates-infra` chart for deploying OpenShift Pipelines (Tekton) operator and OpenShift GitOps (ArgoCD) operator in the same namespace as {product-very-short}.
 
-* You have labeled the {product-very-short} namespace to enable GitOps sync:
+* You have labeled the `rhdh` namespace to enable GitOps sync:
 +
 [source,terminal]
 ----
 $ oc label ns rhdh rhdh.redhat.com/argocd-namespace=true
 ----
 
-* You have created a secret named `orchestrator-auth-secret` in the {product-very-short} namespace containing the following keys:
+* You have created a secret named `orchestrator-auth-secret` in the `rhdh` namespace containing the following keys:
 
 ** `BACKEND_SECRET`: Backend authentication secret
 ** `K8S_CLUSTER_TOKEN`: Kubernetes cluster token
@@ -39,6 +39,40 @@ $ helm repo add redhat-developer https://redhat-developer.github.io/rhdh-chart
 $ helm install my-orchestrator-templates redhat-developer/orchestrator-software-templates --version 0.2.0
 ----
 
-. Follow the post-installation notes to create a custom `values.yaml` file to update your {product-very-short} configuration.
+. Create your environment-specific values file:
 
-. Make sure the templates appear in the {product-very-short} UI under the *Create* sidebar menu.
+.. Retrieve your {product-very-short} route URL:
++
+[source,terminal]
+----
+RHDH_ROUTE="https://$(oc get route -n {{ .Values.orchestratorTemplates.rhdhChartNamespace }} -o jsonpath='{.items[0].spec.host}')"
+----
+.. Copy the template and replace placeholders
++
+[source,yaml]
+----
+cp charts/orchestrator-software-templates/orchestrator-templates-values.yaml.template orchestrator-templates-values.yaml
+sed -i "s|__RHDH_BASE_URL__|$RHDH_ROUTE|g" orchestrator-templates-values.yaml
+----
+
+. Backup your {product-very-short} configuration:
++
+[source,terminal,subs="+quotes"]
+----
+helm show values charts/backstage \
+     -n {{ .Values.orchestratorTemplates.rhdhChartNamespace }} > current-backstage-values.yaml
+----
+
+. Upgrade the {product-very-short} chart with both value files:
++
+[source,terminal,subs="+quotes"]
+----
+ helm upgrade {{ .Values.orchestratorTemplates.rhdhChartReleaseName }} charts/backstage \
+     -n {{ .Values.orchestratorTemplates.rhdhChartNamespace }} \
+     -f current-backstage-values.yaml \
+     -f orchestrator-templates-values.yaml
+----
+
+. Wait for the deployment to finish rollout.
+
+. Open your {product-very-short} instance and verify the new software templates appear in the *Create* menu.
