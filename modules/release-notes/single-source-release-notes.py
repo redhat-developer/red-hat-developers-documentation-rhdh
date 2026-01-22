@@ -31,7 +31,6 @@ import re
 import jinja2
 import yaml
 from jira import JIRA
-from setuptools.dist import sequence
 
 # Define location for product attributes, templates, and generated files.
 script_dir = os.path.normpath(
@@ -60,6 +59,7 @@ with open(attributes_file) as file:
       attributes[items[1]] = items[2].strip()
 
 product_version_minor = attributes["product-version"] + ".0"
+product_version_minor_matchall = attributes["product-version"] + ".*"
 product_version_patch = attributes["product-bundle-version"]
 
 # Load the configuration file to get the sections and their Jira queries.
@@ -85,6 +85,7 @@ for section in config['sections']:
   # Search in Jira for issues to publish defined in jira_query
   query = section["query"].format(
     version_minor=product_version_minor,
+    version_minor_matchall=product_version_minor_matchall,
     version_patch=product_version_patch
   )
   print(query)
