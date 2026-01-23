@@ -3,7 +3,7 @@
 [id="proc-bootstrapping-gitops-resources-and-triggering-pipelines_{context}"]
 = Bootstrapping GitOps resources and triggering pipelines
 
-After running the template and creating the source code repository and the GitOps repository, the CI pipeline does not start immediately. You must manually bootstrap the GitOps resources through the generated repository to trigger the pipeline.
+You must manually bootstrap the GitOps resources to trigger the continuous integration (CI) pipeline.
 
 .Procedure
 
@@ -13,9 +13,14 @@ After running the template and creating the source code repository and the GitOp
 +
 [source,terminal,subs="attributes+"]
 ----
-$ git clone https://<git_host>/<org_name>/<repo_name>.git
+$ git clone https://token:<PAT>@${{ values.gitHost }}/${{ values.orgName }}/${{ values.repoName }}.git
 cd <repo_name>/bootstrap
 ----
++
+[NOTE]
+====
+If you are not authenticated, you must use a personal access token (PAT) in the clone URL. Make sure the PAT has repository access permissions.
+====
 
 . Open `${{values.workflowId}}-argocd-repo.yaml` and replace the `__REPLACE_SSH_PRIVATE_KEY__` string with your SSH private key.
 
@@ -29,14 +34,4 @@ $ kubectl apply -f .
 Applying these manifests triggers the following automated sequence:
 
 .. CI Pipeline (Tekton): Builds the workflow image and pushes it to your `Quay.io` registry.
-.. CD Pipeline (ArgoCD): Deploys the serverless workflow manifests to the cluster.
-+
-[NOTE]
-====
-If you are not logged into the repository, provide a personal access token (PAT) in the clone URL. The token must have the necessary permissions to access the repository.
-
-[source,terminal,subs="attributes+"]
-----
-$ git clone https://token:<PAT>@${{ values.gitHost }}/${{ values.orgName }}/${{ values.repoName }}.git # Replace <PAT> with your personal access token.
-----
-====
+.. CD Pipeline (Argo CD): Deploys the serverless workflow manifests to the cluster.
