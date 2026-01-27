@@ -1,0 +1,37 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-bootstrapping-gitops-resources-and-triggering-pipelines_{context}"]
+= Bootstrapping GitOps resources and triggering pipelines
+
+You must manually bootstrap the GitOps resources to trigger the continuous integration (CI) pipeline.
+
+.Procedure
+
+. Open the generated *GitOps repository*.
+
+. Clone the repository and navigate to the `bootstrap` directory:
++
+[source,terminal,subs="attributes+"]
+----
+$ git clone https://token:<PAT>@${{ values.gitHost }}/${{ values.orgName }}/${{ values.repoName }}.git
+cd <repo_name>/bootstrap
+----
++
+[NOTE]
+====
+If you are not authenticated, you must use a personal access token (PAT) in the clone URL. Make sure the PAT has repository access permissions.
+====
+
+. Open `${{values.workflowId}}-argocd-repo.yaml` and replace the `__REPLACE_SSH_PRIVATE_KEY__` string with your SSH private key.
+
+. Apply the manifests to the cluster:
++
+[source,bash]
+----
+$ kubectl apply -f .
+----
++
+Applying these manifests triggers the following automated sequence:
+
+.. CI Pipeline (Tekton): Builds the workflow image and pushes it to your `Quay.io` registry.
+.. CD Pipeline (Argo CD): Deploys the serverless workflow manifests to the cluster.
