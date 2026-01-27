@@ -1,0 +1,41 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-troubleshooting-the-pipelines_{context}"]
+= Troubleshooting workflow deployments
+
+Identify and resolve issues related to plugin visibility, pipeline execution, or resource synchronization.
+
+. Visibility issues
+
+Missing Orchestrator plugin:: If Orchestrator features do not appear in {product-very-short}, make sure you have updated the {product-very-short} Helm chart with the required plugins.
+
+Software templates not appearing:: Make sure the `orchestrator-software-templates` chart is installed and the `orchestrator-auth-secret` exists in the correct namespace.
+
+. Pipeline failure (CI)
+
+GitHub or GitLab actions failure:: The GitOps automation includes a GitHub Action or GitLab CI step that creates a `PipelineRun` manifest from a `PipelineRun` template. Examine the failed GitHub or GitLab actions logs. Failures often occur due to invalid Git credentials or misconfigured runner permissions. You can also create the `PipelineRun` file manually to bypass automation issues.
+
+Build or push issues:: Check the *CI* tab in the {product-very-short} Catalog.
++
+If {product-very-short} does not display the status, use the {ocp-short} console to monitor pipeline instances and triggered jobs. Navigate to *Pipelines* > *PipelineRuns* for detailed logs.
++
+If the Tekton pipeline fails during the build or push stages:
+
+* Verify that your `Quay.io` robot account has *Write* permissions.
+
+* Ensure the `docker-registry-credentials` secret exists in the `rhdh` namespace.
+
+. Resource visibility and Sync issues (CD)
+
+Pipeline succeeds but workflows are missing:: If the CI pipeline succeeds but the workflow does not appear in the *CD* tab:
+
+* Make sure the target namespace is labeled for Argo CD:
++
+[source,terminal]
+----
+$ oc label ns sonataflow-infra rhdh.redhat.com/argocd-namespace=true
+----
+
+* Make sure the ArgoCD ServiceAccount has the required permissions to manage resources in the `rhdh` namespace.
+
+Argo CD sync failure:: If resources appear but remain in an `OutOfSync` state, click *Refresh* in the Argo CD UI or verify that the *AppProject* exists in the `orchestrator-gitops` namespace.
