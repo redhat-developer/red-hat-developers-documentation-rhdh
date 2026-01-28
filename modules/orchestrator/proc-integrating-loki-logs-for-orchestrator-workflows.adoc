@@ -1,0 +1,67 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-integrating-loki-logs-for-orchestrator-workflows_{context}"]
+= Integrating Loki logs for Orchestrator workflows
+
+To debug failures and troubleshoot executions, integrate Loki logs into the {product} interface. Installing the Loki backend module and configuring the connection details enables the log view.
+
+.Prerequisites
+
+* You have installed and integrated the Orchestrator backend plugin in your {product} instance.
+
+* You have a running Loki instance.
+
+* You have stored your Orchestrator logs in the Loki instance.
+
+.Procedure
+
+. Install the Loki backend module by entering the following command in your root directory:
++
+[source,terminal]
+----
+$ yarn workspace backend add @red-hat-developer-hub/backstage-plugin-orchestrator-backend-module-loki
+----
+
+. Import the new backend module into your `packages/backend/src/index.ts` file:
++
+[source,yaml]
+----
+import { createBackend } from '@backstage/backend-defaults';
+const backend = createBackend();
+
+// orchestrator backend
+backend.add(
+  import('@red-hat-developer-hub/backstage-plugin-orchestrator-backend'),
+);
+
+// orchestrator Log Provider
+backend.add(
+  import('@red-hat-developer-hub/backstage-plugin-orchestrator-backend-module-loki'),
+);
+
+backend.start();
+----
+
+. Add the Loki workflow log provider integration to the *orchestrator* section of your application `{my-app-config-file}` file:
++
+[source,yaml]
+----
+orchestrator:
+  workflowLogProvider:
+    loki:
+      baseUrl: http://localhost:3100
+      # logStreamSelectors:
+      #   - label: 'app'
+      #     value: '=\~".+"'
+----
+where:
+
+`baseUrl`:: Specifies the base URL of your Loki instance. This value is required.
+
+`logStreamSelectors`:: Specifies log stream selectors to filter the logs. By default, the plugin retrieves all logs. For more information about selector syntax, see the link:https://grafana.com/docs/loki/latest/query/log_queries/#log-stream-selector[Grafana Loki documentation].
+
+.Verification
+
+* Navigate to the Orchestrator plugin in the {product-very-short} interface.
+* Select a workflow instance.
+* Click *View Logs* to display the workflow instance logs.
