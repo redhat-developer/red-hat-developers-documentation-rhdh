@@ -1,14 +1,11 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="proc-configuring-jira-scorecards-in-rhdh-instance_{context}"]
-= Configuring Jira Scorecards to view Jira metrics in your {product} instance
+[id="proc-integrating-jira-health-metrics-using-scorecards_{context}"]
+= Integrating Jira health metrics using Scorecards
 
-To bring critical project tracking and workflow data from Atlassian Jira directly into your {product-very-short} instance, you must configure the Jira Scorecards plugin. This integration provides engineering teams with a centralized view of development status and reduces context switching, enabling faster assessment of component readiness and delivery velocity.
+You can configure the Jira Scorecard plugin to display project tracking and delivery velocity data in your {product-very-short} instance. This integration centralizes development status and facilitates the evaluation of component readiness.
 
-The following Jira versions are supported:
-
-* Jira Cloud: API version 3
-* Jira Data Center: API version 2
+The plugin supports Jira Cloud (API v3) and Jira Data Center (API v2).
 
 .Prerequisites
 
@@ -22,24 +19,24 @@ To install and configure Jira Scorecards in your {product-very-short} instance, 
 
 [NOTE]
 ====
-You must use the proxy setup to ensure configuration compatibility if the Roadie Jira Frontend Plugin is also in use.
+You must use the proxy setup to ensure configuration compatibility if you also use the Roadie Jira Frontend Plugin.
 ====
 
-. Create a Jira configuration token using one of the following methods, depending on your Jira product:
-** Jira Cloud: https://id.atlassian.com/manage-profile/security/api-tokens[Create a personal token]. You must then create a `Base64-encoded` string using the following plain text format: `your-atlassian-email:your-jira-api-token`.
+. Generate a Jira configuration token using one of the following methods, depending on your Jira product:
+** Jira Cloud: https://id.atlassian.com/manage-profile/security/api-tokens[Create a personal token]. You must create a `Base64-encoded` string using the following plain text format: `your-atlassian-email:your-jira-api-token`.
 +
 [source,bash]
 ----
 $ echo -n 'your-atlassian-email:your-jira-api-token' | base64
 ----
-** Jira datacenter: Create and use a Personal Access Token (PAT) in your Jira datacenter account. For more information, see the https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html[Atlassian] documentation.
+** Jira datacenter: Create a https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html[Personal Access Token (PAT)] in your Jira datacenter account.
 
-. Add your Jira configuration (${JIRA_TOKEN}) to {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets] using the following key/value pairs:
+. Add Jira secrets: Define the following key/value pairs in {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets]:
 +
-`JIRA_TOKEN`:: Enter your Jira token.
+`JIRA_TOKEN`:: Enter your generated Jira token.
 `JIRA_BASE_URL`:: Enter your Jira base URL.
 
-. Install the Jira Scorecard plugin in your {product-very-short} `dynamic-plugins-config.yaml` file using either a direct setup or a proxy setup.
+. Configure the plugin: In your {product-very-short} `dynamic-plugins-config.yaml` file, enable the plugin using either a direct setup or a proxy setup.
 ** Use a direct setup: 
 ... Add the following code to your {product-very-short} `dynamic-plugins-config.yaml` file:
 +
@@ -99,8 +96,7 @@ where:
 * For *Cloud*: `Basic YourCreatedCloudToken`
 * For *Data Center*: `Bearer YourJiraToken`
 
-. Annotate the component entity in the `catalog-info.yaml` file.
-.. Link the component to the Jira data source by adding the necessary annotations:
+. Annotate catalog entities: Add the Jira project key to the `metadata.annotations` section of the `catalog-info.yaml` file for your component:
 +
 [source,yaml]
 ----
@@ -130,17 +126,17 @@ where:
 `jira/team`:: Optional: Enter the Jira team ID (not the team title).
 `jira/custom-filter`:: Optional: Enter a custom Jira Query Language (JQL) filter.
 
-. Statically ingest the catalog entity by adding the `catalog.locations` section in your {product-very-short} `{my-app-config-file}` file that links to the `catalog-info.yaml` file:
+. Ingest the catalog entity: Add the location of your `catalog-info.yaml` to the `catalog.locations` section in the {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
 ----
 catalog:
   locations:
     - type: url
-      target: https://github.com/owner/repo/catalog-info.yaml
+      target: https://github.com/<owner>/<repository>/catalog-info.yaml
 ----
 
-. (Optional) Configure *Jira Open Issues* metric thresholds by adding the following to your {product-very-short} `{my-app-config-file}` file:
+. Optional: Define metric thresholds and filters: To customize health criteria or filter issues, add the *Jira Open Issues* metric thresholds to your {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
 ----
@@ -162,7 +158,7 @@ where:
 
 `scorecard:plugins:jira:open_issues:thresholds`:: Lists the default threshold values for the *Jira Open Issues* metric.
 
-. (Optional) Define global or custom mandatory filters that entities can override by adding the following code to your {product-very-short} `{my-app-config-file}` file:
+. Optional: Define global or custom mandatory filters that entities can override by adding the following code to your {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
 ----
