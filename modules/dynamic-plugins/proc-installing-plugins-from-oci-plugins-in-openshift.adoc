@@ -5,10 +5,10 @@
 = Installing plugins from OCI plugins in OpenShift
 
 .Prerequisites
-* This requires the cluster administrator to add the trusted corporate CA bundle to the cluster-wide configuration. Refer to the official OpenShift documentation for more information.
+* Your cluster administrator must add the trusted corporate CA bundle to the cluster-wide configuration. Refer to the official OpenShift documentation for more information.
 
 .Procedure
-. Create an empty ConfigMap in the namespace where you are deploying your RHDH instance. The ConfigMap should have the following label on it:
+. Create an empty ConfigMap in the namespace where you are deploying your {product-very-short} instance. You must add the `config.openshift.io/inject-trusted-cabundle` label to your ConfigMap, as follows.:
 +
 [source,yaml]
 ----
@@ -19,14 +19,16 @@ metadata:
   labels:
     config.openshift.io/inject-trusted-cabundle: "true"
 ----
-. After a few seconds, the trusted CA bundle will be injected into the ConfigMap. You can verify with this command. You should see a large block of certificates under the `ca-bundle.crt` key:
+. Wait for the trusted CA bundle to be injected into the ConfigMap. You can verify with the following command:
 +
 [source,terminal,subs="+attributes,+quotes"]
 ----
 oc get cm trusted-ca
 ----
-. Mount the ConfigMap into the /etc/pki/ca-trust/extracted/pem path of the RHDH init container. Depending on the Install Method:
-.. Helm. Update your Helm values file:
++
+You should see a block of certificates under the `ca-bundle.crt` key
+. Mount the ConfigMap into the `/etc/pki/ca-trust/extracted/pem` path of the {product-very-short} init container. 
+.. For a Helm chart installation, update your Helm chart configuration file, as follows:
 +
 [source,yaml]
 ----
@@ -55,7 +57,7 @@ upstream:
           - name: trusted-ca
             mountPath: /etc/pki/ca-trust/extracted/pem
 ----
-.. Operator. Add this to your Backstage Custom Resource (CR):
+.. For operator-based installations, update your Backstage Custom Resource (CR), as follows:
 +
 [source,yaml]
 ----
