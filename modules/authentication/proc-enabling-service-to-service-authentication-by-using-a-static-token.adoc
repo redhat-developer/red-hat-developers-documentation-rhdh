@@ -1,0 +1,125 @@
+:_mod-docs-content-type: procedure
+[id="proc_enabling-service-to-service-authentication-by-using-a-static-token"]
+= Enabling service-to-service authentication by using a static token
+
+You can use a static token to enable service-to-service authentication.
+This method is simpler to set up compared to using JSON Web Key Sets (JWKS) tokens, but it requires careful management of the static token to ensure security.
+While it might not be suitable for all scenarios, particularly for compliance needs, it offers a practical solution for many development and testing use cases.
+
+The key to successful implementation lies in:
+
+* Proper token generation and management.
+* Careful access control and restriction.
+* Regular monitoring and auditing.
+* Following security best practices.
+
+Some security best practices when using static tokens include:
+
+Regular rotation::
+Rotate tokens on a regular schedule to limit the impact of potential leaks.
+Document the rotation process to ensure consistency.
+
+Secure storage::
+Never store tokens in plain text in the `{my-app-config-file}` configuration file. Instead, use the environment variable mechanism available in {product-short}.
+
+Access control::
+
+Implement the principle of least privilege, restricting tokens to specific plugins and operations; regularly review and update access permissions.
+
+Analyze logs::
+Monitor and track token usage to identify unusual patterns and set up alerts for failed authentication attempts if you have a monitoring system integration available.
+
+Documentation::
+Document all authentication methods in use and keep an inventory of all tokens and their purposes, and keep security policies up to date.
+
+Static token authentication might be a good solution for simple, non-critical scenarios, such as:
+
+Development and testing environments::
+These require quick setup and configuration, simple debugging and troubleshooting, and easy integration with development tools. Static token authentication can be an easy option, especially when using ephemeral testing environments.
+
+Simple automation tasks::
+Basic CI/CD pipelines, simple maintenance scripts, and basic monitoring systems.
+
+Internal tools and utilities::
+Development tools, testing frameworks, and internal automation scripts.
+
+However, note that static token authentication might not be suitable for:
+
+* Production environments with high security requirements.
+* Systems handling sensitive data.
+* Large-scale deployments with many external services.
+* Environments requiring frequent token rotation.
+
+.Prerequisites
+
+* You have administrative access to configure {product-short} in your OpenShift cluster.
+
+
+.Procedure
+
+. Generate a secure token.
++
+You can use a tool such as Node.js:
++
+[source,terminal]
+----
+$ node -p'require('crypto').randomBytes(24).toString('base64')'
+----
++
+This command generates a 24-byte random value and encodes it in base64 format.
+The resulting token is sufficiently strong for authentication purposes, and properly encoded for use in HTTP headers.
+
+. Add the generated token in your {product-short} secrets in OpenShift to define the `_<YOUR_SERVICE_TOKEN_ENV_VAR>_` environment variable where your services can access it.
+
+. Add the generated token or JWKS URL to your `{my-app-config-file}` {product-short} configuration file in OpenShift.
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  auth:
+    - type: static
+      options:
+        token: "$_<YOUR_SERVICE_TOKEN_ENV_VAR>_"
+        subject: "_<your_service_name>_"
+      accessRestrictions:
+        - plugin: "_<target_plugin_name>_"
+----
+
+`type`::
+Enter `static` to specify that authentication is using a static token.
+
+`options`::
+Enter the configuration options for static token authentication.
+
+`token`:::
+Enter the environment variable name from the earlier step.
+
+`subject`:::
+(Optional) Enter a unique identifier for the service that will be using this token.
+
+`plugin`:::
+(Optional) Enter the name of the target plugin that the service will communicate with.
+
+. Use the token in the `Authorization` header of your service requests.
++
+When making requests from one service to another, include the static token in the `Authorization` header as follows:
++
+[source,http,subs="+attributes,+quotes"]
+----
+Authorization: Bearer _<your_generated_token>_
+----
++
+Replace `_<your_generated_token>_` with the actual token you generated in step 1.
++
+For instance, to list all available locations in the catalog by using the  `curl` command, you would use:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ curl --location --request GET '{my-product-url}/api/catalog/locations' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer _<your_generated_token>_'
+----
+
+.Verification
+
+* In the Audit Logs of the service receiving the request, verify that {product-short} authenticated the request successfully by using the `subject` value as the actor.

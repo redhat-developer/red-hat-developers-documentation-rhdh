@@ -1,0 +1,73 @@
+:_mod-docs-content-type: procedure
+[id="proc_setting-access-restrictions-to-external-service-tokens"]
+= Setting access restrictions to external service tokens
+
+
+By default, when you configure service-to-service access in {product}, any external service with a valid token has unrestricted access to all backend plugins and actions.
+To control what an external service can do, define access restrictions.
+
+.Procedure
+
+. Restrict access to specific plugins.
++
+--
+For example, to restrict access to the catalog plugin for the static tokens, add the following `accessRestrictions` section to your `{my-app-config-file}` {product-short} configuration file:
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  auth:
+    externalAccess:
+      - type: static
+          accessRestrictions:
+          - plugin: catalog
+----
+
+type::
+Specify whether this is a `jwks` or `static` token.
+
+plugin::
+Specify the allowed plugin, such as `catalog`, `scaffolder`, or `techdocs`.
+
+With this configuration:
+
+* The token is only allowed to make requests to the `catalog` plugin.
+* The token has unrestricted access to all actions within the `catalog` plugin.
+--
+
+. Restrict access by action attributes, to filter permissions based on what kind of action to allow.
++
+List the specific actions defined by the permission, such as `create` and `read`.
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  auth:
+    externalAccess:
+      - type: jwks
+        accessRestrictions:
+          - plugin: catalog
+            permissionAttribute:
+              action:
+                - create
+                - read
+----
+
+. Restrict access by explicit permission IDs, to control access at the permission rule level.
++
+List the exact ID of the permission to allow.
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  auth:
+    externalAccess:
+      - type: jwks
+        accessRestrictions:
+          - plugin: catalog
+            permission:
+              - catalog.entity.create
+              - catalog.entity.read
+----
++
+By choosing between explicit permission IDs and action-based attributes, you can strike the right balance between precision and flexibility depending on your external service needs.
