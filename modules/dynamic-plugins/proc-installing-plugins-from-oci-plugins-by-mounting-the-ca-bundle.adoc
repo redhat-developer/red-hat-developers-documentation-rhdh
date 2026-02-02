@@ -1,4 +1,59 @@
 :_mod-docs-content-type: PROCEDURE
 
-[installing-plugins-from-oci-plugins-by-mounting-the-ca-bundle="proc-installing-plugins-from-oci-plugins-by-mounting-the-ca-bundle_{context}"]
+[id="proc-installing-plugins-from-oci-plugins-by-mounting-the-ca-bundle_{context}"]
+
 = Installing plugins from OCI plugins by mounting the CA bundle
+
+.Procedure
+. Create a ConfigMap from the CA bundle in the namespace where you are deploying your RHDH instance:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+oc create configmap registry-ca-bundle --from-file=ca-bundle.crt
+----
+
+. Mount the CA bundle ConfigMap into your RHDH configuration
+.. Helm. Update your Helm values file:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      # IMPORTANT: Due to a Helm limitation with arrays, you must also
+      # include all the volumes defined in the default Helm Chart
+      # before adding the new one
+      # ...
+      - name: registry-ca-bundle
+        configMap:
+          name: registry-ca-bundle
+
+    initContainers:
+      - name: install-dynamic-plugins
+        # IMPORTANT: Due to a Helm limitation with arrays, you must also
+        # include all the other fields defined in the default Helm Chart
+        # ...
+
+        volumeMounts:
+          # IMPORTANT: Due to a Helm limitation with arrays, you must also
+          # include all the volume mounts defined in the default Helm Chart
+          # before adding the new one
+          # ...
+          - name: registry-ca-bundle
+            mountPath: /etc/pki/tls/certs/
+----
+
+.. Operator. Add this to your Backstage Custom Resource (CR):
++
+[source,yaml]
+----
+spec:
+  application:
+    extraFiles:
+      configMaps:
+        - name: registry-ca-bundle
+          mountPath: /etc/pki/tls/certs/
+          containers:
+            # Note: Set to "*" instead if you want to mount it in all containers
+            - install-dynamic-plugins
+----
