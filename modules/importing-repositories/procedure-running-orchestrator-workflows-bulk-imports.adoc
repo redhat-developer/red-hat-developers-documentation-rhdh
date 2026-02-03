@@ -1,0 +1,81 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-running-orchestrator-workflows-bulk-imports_{context}"]
+= Running Orchestrator workflows for bulk imports
+
+As a platform engineer, you can configure the Bulk Import plugin to run Orchestrator workflows for bulk import operations. This mode uses the Orchestrator engine to provide advanced capabilities, such as creating pull requests or publishing configurations across multiple repositories.
+
+.Prerequisites
+
+* You have installed and configured the Orchestrator plugin in your Backstage instance.
+
+* You have registered a generic custom workflow (for example, `universal-pr`) in the Orchestrator plugin.
+
+* You have Role-Based Access Control (RBAC) permissions to configure the Bulk Import plugin.
+
+.Procedure
+
+. Configure the Bulk Import plugin by editing your `{my-app-config-file}` file to enable Orchestrator mode.
++
+[source,yaml,subs=+attributes,+quotes]
+----
+bulkImport:
+  orchestratorWorkflow: your_workflow_id
+  importAPI: 'orchestrator'
+----
++
+where:
+
+`orchestratorWorkflow`::
+Specifies the ID of the workflow to run for each repository.
+`importAPI`::
+Set to `orchestrator` to enable workflow execution mode.
+
+. Verify that the Orchestrator workflow receives the following input:
++
+[source,yaml,subs=+attributes,+quotes]
+----
+{
+  "inputData": {
+    "owner": "redhat-developer",
+    "repo": "rhdh-plugins",
+    "baseBranch": "main",
+    "targetBranch": "bulk-import-orchestrator"
+  },
+  "authTokens": [
+    {
+      "token": "<github_token>",
+      "provider": "github"
+    }
+  ]
+}
+----
++
+where:
+
+`owner`::
+Specifies the repository owner (organization or user name).
+
+`repo`::
+Specifies the repository name.
+
+`baseBranch`::
+Specifies the default branch of the Git repository (for example, *main*).
+
+`targetBranch`::
+Specifies the target branch for the import operation. By default, this is set to `bulk-import-orchestrator`.
+
+`authTokens`::
+Specifies the authentication tokens for the Git provider:
+* For GitHub: { `token: <github_token>, provider: github` }
+* For GitLab: { `token: <gitlab_token>, provider: gitlab` }
+
+. Navigate to the *Bulk Import* page in the sidebar and complete the following steps:
+.. Select your Git provider (for example, GitHub or GitLab).
+.. Select the projects you want to import.
+
+. Click *import* to run the workflow.
+
+.Verification
+
+* Locate your repository and confirm status is *COMPLETED*.
