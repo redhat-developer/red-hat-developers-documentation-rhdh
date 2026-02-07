@@ -2,3 +2,169 @@
 
 [id="proc-developing-plugins-from-scratch_{context}"]
 = Developing a new plugin
+
+== Creating a new Backstage application
+To develop your own Backstage plugin, your must first create a standalone Backstage installation in your local environment.
+
+[WARNING]
+This is not a production-ready installation, and it does not contain information specific to your organization until you set up integrations with your specific data sources.
+
+General folder structure
+Below is a simplified layout of the files and folders generated when creating an app.
+
+[source, terminal]
+--
+app
+├── app-config.yaml
+├── catalog-info.yaml
+├── package.json
+└── packages
+    ├── app
+    └── backend
+--
+
+app-config.yaml:: Main configuration file for the app. See Configuration for more information.
+catalog-info.yaml:: Catalog Entities descriptors. See Descriptor Format of Catalog Entities to get started.
+package.json:: Root package.json for the project. Note: Be sure that you don't add any npm dependencies here as they probably should be installed in the intended workspace rather than in the root.
+packages/:: Yarn workspaces, everything here is going to be a separate package, managed by Yarn.
+packages/app/:: A fully functioning Backstage frontend app that acts as a good starting point for you to get to know Backstage.
+packages/backend/:: We include a backend that helps power features such as Authentication, Software Catalog, Software Templates and TechDocs amongst other things.
+
+
+
+.Prerequisites
+This guide also assumes a basic understanding of working on a Linux based operating system and have some experience with the terminal, specifically, these commands: npm, yarn.
+
+* A minimum of 20 GB disk space to run the standalone Backstage application with demo data. NOTE: As you add more modules and plugins to an installation, the disk space requirements will increase, accordingly.
+* A minimum of 6 GB memory.
+Access to a Unix-based operating system, such as Linux, macOS or Windows Subsystem for Linux. The Linux version must support the required Node.js version.
+* A GNU-like build environment available at the command line. For example, on Debian/Ubuntu you will want to have the make and build-essential packages installed. On macOS, you will want to run xcode-select --install to get the XCode command line build tooling in place.
+* An account with elevated rights to install the dependencies
+* curl or wget installed
+* Node.js Active LTS Release installed using one of these methods:
+** Using nvm (recommended)
+*** Installing nvm
+*** Install and change Node version with nvm
+*** Node 24 is a good starting point, this can be installed using nvm install lts/krypton
+** Binary Download
+** Package manager
+** Using NodeSource packages
+* Install the isolated-vm module, following their requirements section.
+* yarn Installation
+** Backstage currently uses Yarn 4.4.1, once you've ran corepack enable you'll want to then run yarn set version 4.4.1
+* docker installation
+* git installation
+* If the system is not directly accessible over your network the following ports need to be opened: 3000, 7007. This is quite uncommon, unless you're installing in a container, VM or remote system.
+
+.Procedure
+. Create a Backstage application, as follows:
++
+[source,terminal]
+--
+npx @backstage/create-app@latest
+--
+
+. If this is the first time that you are installing a Backstage application on this device, the following question is displayed. Enter y and select Enter to proceed with the installation.
++
+[terminal,source]
+----
+     Need to install the following packages:
+     @backstage/create-app@0.7.4
+     ok to proceed? (y)
+----
+. Enter the name for your application and select Enter. This is the root directory of your application. In this example, the name is set to my-backstage-app.
+
+.Output from create app
+_To be added_
+
+Your Backstage app is fully installed and ready to be run! Now that the installation is complete, you can go to the application directory and start the app using the yarn start command. The yarn start command will run both the frontend and backend as separate processes (named [0] and [1]) in the same window.
+
+.Verification
+
+. Change to the root directory of your Backstage app. This is the same as the name of your application that you provided during the installation. In this example, it is my-backstage-app.
++
+[source,terminal]
+--
+cd my-backstage-app
+--
+
+. Start the Backstage application.
++
+[source,terminal]
+--
+yarn start
+--
++
+As the frontend and backend are starting, you will see output similar to the following. The output shows that the app and backend are starting up with the configuration coming from app-config.yaml. You will see the plugins being initialized, and authorization and permissions being setup. In addition you will see a series of REST API calls for those plugins that use a service backend, such as the service catalog.
+
+.Output from starting the application
+[source, terminal]
+--
+Starting app, backend
+Loaded config from app-config.yaml
+.
+.
+2025-10-15T12:26:41.564Z backstage info Plugin initialization started: 'app', 'proxy', 'scaffolder', 'techdocs', 'auth', 'catalog', 'permission', 'search', 'kubernetes', 'notifications', 'signals' type="initialization"
+Rspack compiled successfully
+.
+.
+2025-10-15T15:17:21.130Z auth info Created new signing key eec1a9e4-4395-4698-9a9f-f1b5cbcf152b component="token-factory"
+2025-10-15T15:17:21.139Z auth info Issuing token for user:development/guest, with entities user:development/guest component="token-factory"
+2025-10-15T15:17:21.223Z rootHttpRouter info [2025-10-15T15:17:21.223Z] "GET /api/auth/guest/refresh HTTP/1.1" 200 802 "http://localhost:3000/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" type="incomingRequest" date="2025-10-15T15:17:21.223Z" method="GET" url="/api/auth/guest/refresh" status=200 httpVersion="1.1" userAgent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" contentLength=802 referrer="http://localhost:3000/"
+.
+.
+2025-10-15T15:17:24.051Z rootHttpRouter info [2025-10-15T15:17:24.051Z] "GET /api/catalog/entities?fields=metadata,kind,spec.profile&filter=kind%3Dgroup%2Crelations.hasMember%3Duser%3Adevelopment%2Fguest HTTP/1.1" 304 0 "http://localhost:3000/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" type="incomingRequest" date="2025-10-15T15:17:24.051Z" method="GET" url="/api/catalog/entities?fields=metadata,kind,spec.profile&filter=kind%3Dgroup%2Crelations.hasMember%3Duser%3Adevelopment%2Fguest" status=304 httpVersion="1.1" userAgent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" referrer="http://localhost:3000/"
+.
+.
+--
+
+Once the Backstage UI is displayed, you can start exploring the demo immediately.
+
+== Creating a new plugin
+.Procedure
+. Run `yarn install` to install dependencies.
+. Create a new plugin by using the `yarn new` command, as follows:
++
+[source,terminal]
+--
+yarn new
+--
+. Select the type of plugin to create, for example, `frontend-plugin`.
+. Enter the ID of the plugin, for example, `my-plugin`.
+
+This will create a new Backstage Plugin based on the ID that was provided. It will be built and added to the Backstage App automatically.
+
+.Verify
+If the Backstage App is already running (with yarn start) you should be able to see the default page for your new plugin directly by navigating to http://localhost:3000/my-plugin.
+
+Insert screenshot
+
+[NOTE]
+--
+You can also serve the plugin in isolation by running yarn start in the plugin directory. Or by using the yarn workspace command, for example:
+[source, terminal]
+----
+yarn workspace @backstage/plugin-my-plugin start # Also supports --check
+----
+--
+
+
+
+// cd ~
+// mkdir plugins-102
+// cd plugins-102
+// ## Create a Backstage app/instance
+// ## [TBC] Open your root package.json and add (or update) the resolutions block:
+// ## "resolutions": {
+// ##   "isolated-vm": "5.0.0" 
+// ## }
+// npx @backstage/create-app@latest 
+// ## Create a Backstage plugin
+// cd <app-name>
+// yarn new
+// # Select frontend-plugin
+// Enter ID: my-plugin
+// # Your plugin will be served at http://localhost:3000/my-plugin
+// yarn start
+
+
