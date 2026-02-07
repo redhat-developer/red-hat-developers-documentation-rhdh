@@ -5,6 +5,8 @@ export LC_ALL=C
 
 # script to generate rhdh-supported-plugins.adoc from content in
 # https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/marketplace/packages/
+# and optionally generate ref-community-plugins-migration.adoc from
+# https://github.com/redhat-developer/rhdh-plugin-export-overlays
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
@@ -16,13 +18,19 @@ QUIET=0
 DO_CLEAN=0
 
 BRANCH=main
+SKIP_RHDH=0
+SKIP_OVERLAYS=0
 
 rhdhRepo="https://github.com/redhat-developer/rhdh"
+overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 usage() {
   cat <<EOF
 
 Generate an updated table of dynamic plugins from content in the following two repos, for the specified branch:
 * $rhdhRepo
+* $overlaysRepo
+
+By default, both repos are processed. Use --skip-rhdh or --skip-overlays to skip either.
 
 Requires:
 * jq 1.6+
@@ -30,31 +38,36 @@ Requires:
 
 Usage:
 
-$0 -b stable-ref-branch
+$0 -b stable-ref-branch [options]
 
 Options:
   -b, --ref-branch    : Branch against which plugin versions should be incremented, like release-1.y; default: main
+  --skip-rhdh         : Skip rhdh repo processing (only generate migration table from rhdh-plugin-export-overlays)
+  --skip-overlays     : Skip rhdh-plugin-export-overlays repo processing (only generate plugins table from rhdh)
   --clean             : Force a clean GH checkout (do not reuse files on disk)
   -q                  : quieter output
   -h, --help          : Show this help
 
 Examples:
 
-  $0 -b release-1.8 --clean
+  $0 -b release-1.9                    # Process both repos
+  $0 -b release-1.9 --clean            # Process both repos with fresh checkout
+  $0 -b release-1.9 --skip-overlays    # Only process rhdh repo
+  $0 -b main --skip-rhdh               # Only generate migration table from overlays
 
 EOF
 }
-
-tmpdir="/tmp/rhdh_$BRANCH"
 
 if [[ "$#" -lt 1 ]]; then usage; exit 1; fi
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     '--clean') DO_CLEAN=1;;
-    '-b'|'--ref-branch') BRANCH="$2" tmpdir="/tmp/rhdh_$BRANCH"; shift 1;;        # reference branch, eg., 1.1.x
+    '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
+    '--skip-rhdh') SKIP_RHDH=1;;
+    '--skip-overlays') SKIP_OVERLAYS=1;;
     '-q') QUIET=1;;
-    '-h'|'--help') usage;;
+    '-h'|'--help') usage; exit 0;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
   esac
   shift 1
@@ -62,15 +75,34 @@ done
 
 if [[ ! $BRANCH ]]; then usage; exit 1; fi
 
+# Set temp directory paths based on BRANCH
+tmpdir="/tmp/rhdh_$BRANCH"
+overlaystmpdir="/tmp/rhdh-plugin-export-overlays_$BRANCH"
+
 if [[ $DO_CLEAN -eq 1 ]]; then
-    rm -fr /tmp/plugin-versions_"${BRANCH}".txt "${tmpdir}"
+    if [[ $SKIP_RHDH -eq 0 ]]; then
+        rm -fr /tmp/plugin-versions_"${BRANCH}".txt "${tmpdir}"
+    fi
+    if [[ $SKIP_OVERLAYS -eq 0 ]]; then
+        rm -fr "${overlaystmpdir}"
+    fi
 fi
 
-# fetch GH repos
-# TODO use metadata from https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/release-1.7/workspaces
-if [[ ! -d "$tmpdir" ]]; then
+# fetch rhdh repo (skip if --skip-rhdh)
+if [[ $SKIP_RHDH -eq 0 ]]; then
+    if [[ ! -d "$tmpdir" ]]; then
+        echo -e "${green}Cloning $rhdhRepo (branch: $BRANCH)...${norm}"
+        pushd /tmp >/dev/null || exit
+            git clone "$rhdhRepo" --depth 1 -b "$BRANCH" "rhdh_$BRANCH"
+        popd >/dev/null || exit
+    fi
+fi
+
+# fetch overlays repo (skip if --skip-overlays)
+if [[ $SKIP_OVERLAYS -eq 0 && ! -d "$overlaystmpdir" ]]; then
+    echo -e "${green}Cloning $overlaysRepo (branch: $BRANCH)...${norm}"
     pushd /tmp >/dev/null || exit
-        git clone "$rhdhRepo" --depth 1 -b "$BRANCH" "rhdh_$BRANCH"
+        git clone "$overlaysRepo" --depth 1 -b "$BRANCH" "rhdh-plugin-export-overlays_${BRANCH}"
     popd >/dev/null || exit
 fi
 
@@ -102,6 +134,10 @@ titlecase() {
     done; echo;
 }
 
+# ============================================================================
+# Process rhdh repo (skip if --skip-rhdh)
+# ============================================================================
+process_rhdh_repo() {
 # generate a list of plugin:version mapping from the following files
 # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
 # * packages/app/package.json#.dependencies
@@ -478,14 +514,171 @@ for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plug
     (( count = count + 1 ))
 done
 
-# inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
-sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
-    "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.template.adoc}" > "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.adoc}"
+    # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
+    sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
+        "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.template.adoc}" > "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.adoc}"
+}
+
+# Call function if not skipped
+if [[ $SKIP_RHDH -eq 0 ]]; then
+    process_rhdh_repo
+fi
+
+# ============================================================================
+# Generate ref-community-plugins-migration.adoc from rhdh-plugin-export-overlays
+# ============================================================================
+process_overlays_repo() {
+    if [[ ! -d "$overlaystmpdir" ]]; then
+        echo -e "${red}[ERROR] Overlays repo not found: $overlaystmpdir${norm}"
+        return 1
+    fi
+
+    echo -e "${green}Generating community plugins migration table from $overlaystmpdir (branch: $BRANCH)${norm}"
+    
+    MIGRATION_TABLE_FILE="/tmp/migration_table_${BRANCH}.txt"
+    BUNDLED_PLUGINS_FILE="/tmp/bundled_plugins_${BRANCH}.txt"
+    
+    rm -f "$MIGRATION_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
+    touch "$MIGRATION_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
+    
+    # Read the community packages list
+    COMMUNITY_PACKAGES_FILE="$overlaystmpdir/rhdh-community-packages.txt"
+    
+    if [[ ! -f "$COMMUNITY_PACKAGES_FILE" ]]; then
+        echo -e "${red}[ERROR] Community packages file not found: $COMMUNITY_PACKAGES_FILE${norm}"
+        return 1
+    fi
+
+    migration_count=0
+    
+    # Track processed plugins to avoid duplicates using a temp file
+    PROCESSED_PLUGINS_FILE="/tmp/processed_plugins_${BRANCH}.txt"
+    rm -f "$PROCESSED_PLUGINS_FILE"
+    touch "$PROCESSED_PLUGINS_FILE"
+    
+    # Process each line in the community packages file
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip empty lines and comments
+        [[ -z "$line" || "$line" =~ ^# ]] && continue
+        
+        # Parse the workspace path (e.g., "jenkins/plugins/jenkins" or "gitlab/packages/gitlab")
+        workspace_path="$line"
+        
+        # Extract workspace name (first part before /)
+        workspace_name="${workspace_path%%/*}"
+        
+        # Extract the plugin/package name (last part after last /)
+        plugin_subpath="${workspace_path#*/}"  # e.g., "plugins/jenkins" or "packages/gitlab"
+        plugin_folder="${plugin_subpath##*/}"  # e.g., "jenkins" or "gitlab"
+        
+        # Find metadata files in this workspace
+        metadata_dir="$overlaystmpdir/workspaces/$workspace_name/metadata"
+        
+        if [[ ! -d "$metadata_dir" ]]; then
+            if [[ $QUIET -eq 0 ]]; then
+                echo -e "${blue}[WARN] Metadata directory not found for workspace: $workspace_name${norm}"
+            fi
+            continue
+        fi
+        
+        # Process each metadata YAML file in the workspace
+        for metadata_file in "$metadata_dir"/*.yaml; do
+            [[ ! -f "$metadata_file" ]] && continue
+            
+            # Extract data from the metadata file
+            plugin_title=$(yq -r '.metadata.title // ""' "$metadata_file")
+            plugin_name=$(yq -r '.metadata.name // ""' "$metadata_file")
+            dynamic_artifact=$(yq -r '.spec.dynamicArtifact // ""' "$metadata_file")
+            support=$(yq -r '.spec.support // "unknown"' "$metadata_file")
+            package_name=$(yq -r '.spec.packageName // ""' "$metadata_file")
+            
+            # Skip if not a community plugin or no dynamic artifact
+            [[ "$support" != "community" ]] && continue
+            [[ -z "$dynamic_artifact" || "$dynamic_artifact" == "null" ]] && continue
+            [[ "$dynamic_artifact" != "oci://ghcr.io"* ]] && continue
+            
+            # Skip if already processed (avoid duplicates)
+            if grep -qF "$plugin_name" "$PROCESSED_PLUGINS_FILE" 2>/dev/null; then
+                continue
+            fi
+            echo "$plugin_name" >> "$PROCESSED_PLUGINS_FILE"
+            
+            # Construct old path from plugin name
+            old_path="./dynamic-plugins/dist/${plugin_name}"
+            
+            # Extract new path - get the base URL without the version/integrity part
+            # Format: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0!backstage-community-plugin-jenkins
+            # We want: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:<tag>
+            # First remove everything after the ! (integrity hash), then remove the tag to get base
+            artifact_without_hash="${dynamic_artifact%%!*}"
+            new_path_base="${artifact_without_hash%:*}"
+            new_path="${new_path_base}:<tag>"
+            
+            # Format title for display
+            display_title="${plugin_title:-$plugin_name}"
+            
+            if [[ $QUIET -eq 0 ]]; then
+                echo " * Migration: $display_title"
+                echo "   Old: $old_path"
+                echo "   New: $new_path"
+            fi
+            
+            # Add to migration table (sorted by title)
+            echo "${display_title}||*${display_title}*\n|\`${old_path}\`\n|\`${new_path}\`" >> "$MIGRATION_TABLE_FILE"
+            
+            migration_count=$((migration_count + 1))
+        done
+    done < "$COMMUNITY_PACKAGES_FILE"
+    
+    # Cleanup processed plugins tracking file
+    rm -f "$PROCESSED_PLUGINS_FILE"
+    
+    # Add known bundled plugins - these are hardcoded as they require manual tracking
+    # These plugins continue to be bundled in 1.9 while transitioning to ghcr.io
+    # Format matches migration table: Plugin Name | Old Path | New Path
+    echo -e "|*Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Scaffolder Backend Module Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Tekton*\n|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Scaffolder Backend ArgoCD*\n|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "${green}Found $migration_count community plugins to migrate${norm}"
+    
+    # Sort the migration table by plugin title and format for adoc
+    MIGRATION_TABLE_SORTED="/tmp/migration_table_sorted_${BRANCH}.txt"
+    if [[ -f "$MIGRATION_TABLE_FILE" ]]; then
+        sort -t '|' -k1,1 "$MIGRATION_TABLE_FILE" | while IFS='||' read -r key content; do
+            echo -e "$content\n" >> "$MIGRATION_TABLE_SORTED"
+        done
+    fi
+    
+    # Generate the migration adoc file from template
+    migration_template="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration.template.adoc}"
+    migration_output="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration.adoc}"
+    
+    if [[ -f "$migration_template" ]]; then
+        # Replace placeholders in template
+        sed -e "/%%MIGRATION_TABLE%%/{r $MIGRATION_TABLE_SORTED" -e 'd;}' \
+            -e "/%%BUNDLED_PLUGINS%%/{r $BUNDLED_PLUGINS_FILE" -e 'd;}' \
+            -e "s/%%MIGRATION_COUNT%%/$migration_count/g" \
+            "$migration_template" > "$migration_output"
+        
+        echo -e "${green}Generated $migration_output with $migration_count migrated plugins${norm}"
+    else
+        echo -e "${red}[ERROR] Migration template not found: $migration_template${norm}"
+    fi
+    
+    # Cleanup temp files
+    rm -f "$MIGRATION_TABLE_FILE" "$MIGRATION_TABLE_SORTED" "$BUNDLED_PLUGINS_FILE"
+}
+
+# Call function if not skipped
+if [[ $SKIP_OVERLAYS -eq 0 ]]; then
+    process_overlays_repo
+fi
 
 # summary of changes since last time
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 pushd "$SCRIPT_DIR" >/dev/null || exit
-    updates=$(git diff "ref*plugins.adoc"| grep -E -v "\+\+|@@" | grep "+")
+    updates=$(git diff "ref*plugins*.adoc" "con-preinstalled-dynamic-plugins.adoc" | grep -E -v "\+\+|@@" | grep "+")
     if [[ $updates ]]; then
         echo "$(echo "$updates" | wc -l) Changes include:"; echo "$updates"
     fi
