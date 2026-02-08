@@ -40,7 +40,27 @@ $ oc label ns _<target_namespace>_ rhdh.redhat.com/argocd-namespace=true
 
 Argo CD sync failure:: If resources appear but remain in an `OutOfSync` state, click *Refresh* in the Argo CD UI or verify that the *AppProject* exists in the `orchestrator-gitops` namespace.
 
-[IMPORTANT]
-====
-If you use Argo CD to deploy the Orchestrator Helm chart, your deployment might fail. This is because the Orchestrator chart relies on the Helm `lookup` function to retrieve information from the running cluster. Argo CD renders manifests by using the `helm template` command, which cannot query a live cluster. Consequently, the Helm `lookup` function returns empty responses during synchronization. To resolve this issue, ensure that your deployment configurations do not rely on dynamic `lookup` queries when using Argo CD for GitOps synchronization.
-====
+PostgreSQL authentication failures in Argo CD:: If the Orchestrator fails to connect to the PostgreSQL database when you deploy by using Argo CD, the failure is often due to a mismatch in password generation.
++
+The Orchestrator Helm chart uses the Helm `lookup` function to check for an existing PostgreSQL secret. Because Argo CD renders manifests using `helm template`, it cannot query the live cluster. This causes the chart to generate a new, random password instead of retrieving the existing one, resulting in an authentication failure.
++
+Therefore, complete the following steps:
+
+.. Manually create the database secret with the correct credentials:
++
+[source,bash,subs=+attributes]
+----
+$ kubectl create secret generic <backstage-postgresql-svcbind-postgres> --from-literal=password=<your_password>
+----
+
+.. Update your Helm configuration (for example, in `values.yaml`) to disable automatic service binding generation:
++
+[source,yaml]
+----
+global:
+  backstage:
+    serviceBindings:
+      enabled: false
+----
+
+.. Sync the application in Argo CD to apply the changes.
