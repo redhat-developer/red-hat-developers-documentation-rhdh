@@ -14,6 +14,8 @@ norm="\033[0;39m"
 green="\033[1;32m"
 blue="\033[1;34m"
 red="\033[1;31m"
+orange="\033[1;35m"
+
 QUIET=1; # suppress debug output
 DO_CLEAN=0
 
@@ -23,6 +25,13 @@ SKIP_OVERLAYS=0
 
 rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
+
+debug() {
+  if [[ $QUIET -eq 0 ]]; then
+    echo -e "${orange}[DEBUG] $1${norm}"
+  fi
+}
+
 usage() {
   cat <<EOF
 
@@ -134,7 +143,7 @@ titlecase() {
     done; echo;
 }
 
-process_rhdh_repo() {
+generate_dynamic_plugins_table() {
   # generate a list of plugin:version mapping from the following files
   # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
   # * packages/app/package.json#.dependencies
@@ -155,7 +164,7 @@ process_rhdh_repo() {
   rm -f "$TEMP_DIR"/*.tmp
 
   # process YAML files from overlays/workspaces/*/metadata/*.yaml
-  yamls=$(find "${overlaystmpdir}"//workspaces/*/metadata/ -maxdepth 1 -name "*.yaml" | sort)
+  yamls=$(find "${overlaystmpdir}"/workspaces/*/metadata/ -maxdepth 1 -name "*.yaml")
   c=0
   tot=0
   for y in $yamls; do
@@ -171,14 +180,14 @@ process_rhdh_repo() {
       (( c++ )) || true
       echo -e "${green}[$c/$tot] Processing $y${norm}"
       Required_Variables=""
-      Required_Variables_=""
 
       # extract content from YAML
       Name=$(yq -r '.metadata.name' "$y")
-      Plugin_Title=$(yq -r '.metadata.title' "$y")
 
       # Use .spec.packageName, or if not set use .metadata.name
       Plugin=$(yq -r '.spec.packageName // .metadata.name' "$y")
+
+      debug ".spec.packageName | .metadata.name: $Plugin"
 
       # If Plugin is still not a proper npm package name, try to construct it
       if [[ $Plugin != "@"* ]] && [[ $Plugin == "$Name" ]]; then
@@ -203,43 +212,49 @@ process_rhdh_repo() {
           Path="${Path/-dynamic-dynamic/-dynamic}"
       fi
 
-      # Filter 1: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
+      # DEPRECATED :: Filter 0: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
       # Accept both patterns:
       #  - Frontend: ./dynamic-plugins/dist/<name>
       #  - Backend:  ./dynamic-plugins/dist/<name>-dynamic
-      #  - NRRC registry: @redhat/<package>@version
+      #  - NRRC registry: @redhat/<package>@version (applies to Orchestrator plugins from 1.8 and earlier)
       #  this change was made since FE plugins were not being included in the .csv file
-      [[ $Path == ./dynamic-plugins/dist/* ]] || [[ $Path == "@redhat"* ]] || continue
+      [[ $Path == ./dynamic-plugins/dist/* ]] || [[ $Path == "@redhat"* ]] || \
 
-      # Filter 2: Exclude oci:// paths
-      [[ $Path == "oci://"* ]] && continue
+      # Filter 1: Include quay and r.a.r.c references to RHDH dynamic plugins
+      [[ $Path == "oci://quay.io/rhdh/"* ]] || [[ $Path == "oci://registry.access.redhat.com/rhdh/"* ]] || \
+        { debug "Skip[1] Path = $Path\n"; continue; }
 
-      # Filter 3: Handle @redhat packages - exclude unless they have dynamicArtifact from NRRC registry
-      if [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") != "@redhat"* ]]; then
-          continue
+      # Filter 2: Exclude oci://ghcr.io/ community paths;
+      [[ $Path == "oci://ghcr.io/"* ]] && \
+        { debug "Skip[2] Path = $Path\n"; continue; }
+
+      # DEPRECATED :: Filter 3: Handle @redhat packages - exclude unless they have dynamicArtifact from NRRC registry
+      # Plugin = @red-hat-developer-hub/backstage-plugin-orchestrator
+      # .spec.dynamicArtifact = oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend-module-loki@sha256:779f888d47a9b87ad81a13897e171fe4a6a67498a937d7560026dd081361a3b2
+      [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") == "@redhat"* ]] && \
+        { debug "Skip[3] Plugin = $Plugin\n"; continue; }
+
+      # shellcheck disable=SC2016
+      found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
+      # shellcheck disable=SC2016
+      found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
+
+      Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+      if [[ $Path2 ]]; then
+          Path=$Path2
       else
-          # shellcheck disable=SC2016
-          found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-          # shellcheck disable=SC2016
-          found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-
-          Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-          if [[ $Path2 ]]; then
-              Path=$Path2
-          else
-              Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
-          fi
+          Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
       fi
 
       # For extensions YAML files, skip the default config check for inclusion
-      if [[ "$y" == *"catalog-entities/extensions/packages/"* ]]; then
+      if [[ "$y" == *"/metadata/"* ]]; then
           # Process extensions packages regardless of default config
-          if [[ $QUIET -eq 0 ]]; then echo "Processing extensions package: $Name"; fi
+          debug "Processing extensions package: $Name"
       elif [[ ! $Path ]]; then
           continue
       fi
 
-      if [[ $Path ]] || [[ "$y" == *"catalog-entities/extensions/packages/"* ]]; then
+      if [[ $Path ]] || [[ "$y" == *"/metadata/"* ]]; then
           # Extract role and version from YAML - updated paths
           Role=$(yq -r '.spec.backstage.role // "unknown"' "$y")
           VersionJQ=$(yq -r '.spec.version // "0.0.0"' "$y")
@@ -280,7 +295,7 @@ process_rhdh_repo() {
           support=$(yq -r '.spec.support // "unknown"' "$y")
 
           if [[ $author == "Red Hat"* ]]; then
-              if [[ $support == "production"* ]]; then
+              if [[ $support == "production"* ]] || [[ $support == "generally-available"* ]]; then
                   Support_Level="Production"
               elif [[ $support == "tech-preview"* ]]; then
                   Support_Level="Red Hat Tech Preview"
@@ -362,7 +377,7 @@ process_rhdh_repo() {
           # useful console output
           if [[ $QUIET -eq 0 ]]; then
             for col in Name PrettyName Role Plugin Version Support_Level Lifecycle Path Required_Variables Default; do
-                echo " * $col = ${!col}"
+                debug " * $col = ${!col}"
             done
           fi
 
@@ -407,9 +422,7 @@ process_rhdh_repo() {
   done
 
   c=0
-  if [[ $QUIET -eq 0 ]]; then
-    echo "Creating .csv ..."
-  fi
+  debug "Creating .csv ..."
 
   # create .csv file with header
   echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Lifecycle\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
@@ -424,11 +437,12 @@ process_rhdh_repo() {
   if [[ -f "$temp_file" ]]; then
       sort "$temp_file" | while IFS='|' read -r key content; do
           (( count = count + 1 ))
-          if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+          debug " * [$count] $key [ ${out_file##*/} ]"
           echo -e "$content" >> "$out_file"
       done
       count=$(wc -l < "$temp_file")
   fi
+  # shellcheck disable=SC2206
   num_plugins+=($count)
 
   # 2) Tech Preview
@@ -439,11 +453,12 @@ process_rhdh_repo() {
   if [[ -f "$temp_file" ]]; then
       sort "$temp_file" | while IFS='|' read -r key content; do
           (( count = count + 1 ))
-          if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+          debug " * [$count] $key [ ${out_file##*/} ]"
           echo -e "$content" >> "$out_file"
       done
       count=$(wc -l < "$temp_file")
   fi
+  # shellcheck disable=SC2206
   num_plugins+=($count)
 
   # 3) Community
@@ -454,11 +469,12 @@ process_rhdh_repo() {
   if [[ -f "$temp_file" ]]; then
       sort "$temp_file" | while IFS='|' read -r key content; do
           (( count = count + 1 ))
-          if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+          debug " * [$count] $key [ ${out_file##*/} ]"
           echo -e "$content" >> "$out_file"
       done
       count=$(wc -l < "$temp_file")
   fi
+  # shellcheck disable=SC2206
   num_plugins+=($count)
 
   # 3) Deprecated
@@ -469,26 +485,28 @@ process_rhdh_repo() {
   if [[ -f "$temp_file" ]]; then
       sort "$temp_file" | while IFS='|' read -r key content; do
           (( count = count + 1 ))
-          if [[ $QUIET -eq 0 ]]; then echo " * [$count] $key [ ${out_file##*/} ]"; fi
+          debug " * [$count] $key [ ${out_file##*/} ]"
           echo -e "$content" >> "$out_file"
       done
       count=$(wc -l < "$temp_file")
   fi
+  # shellcheck disable=SC2206
   num_plugins+=($count)
 
   # Process CSV: sort by SupportSort (1,2,3,4) then PrettyName, and omit techdocs
   if [[ -f "$TEMP_DIR/csv.tmp" ]]; then
+      debug
       sort -t '|' -k1,1 -k2,2 "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
           # RHIDP-4196 omit techdocs plugins from the .csv
           if [[ $key != *"techdocs"* ]]; then
               echo -e "$content" >> "${0/.sh/.csv}"
           else
-              if [[ $QUIET -eq 0 ]]; then echo -e "${blue}   [WARN] Omit plugin $key from .csv file${norm}"; fi
+              debug "Omit plugin $key from .csv file"
           fi
       done
   fi
 
-  if [[ $QUIET -eq 0 ]]; then echo; fi
+  debug
 
   # merge the content from the 4 .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
   count=1
@@ -525,13 +543,13 @@ process_rhdh_repo() {
 
 # Call function if not skipped
 if [[ $SKIP_RHDH -eq 0 ]]; then
-    process_rhdh_repo
+    generate_dynamic_plugins_table
 fi
 
 # ============================================================================
 # Generate ref-community-plugins-migration.adoc from rhdh-plugin-export-overlays
 # ============================================================================
-process_overlays_repo() {
+generate_migration_table() {
     if [[ ! -d "$overlaystmpdir" ]]; then
         echo -e "${red}[ERROR] Overlays repo not found: $overlaystmpdir${norm}"
         return 1
@@ -571,10 +589,6 @@ process_overlays_repo() {
         # Extract workspace name (first part before /)
         workspace_name="${workspace_path%%/*}"
 
-        # Extract the plugin/package name (last part after last /)
-        plugin_subpath="${workspace_path#*/}"  # e.g., "plugins/jenkins" or "packages/gitlab"
-        plugin_folder="${plugin_subpath##*/}"  # e.g., "jenkins" or "gitlab"
-
         # Find metadata files in this workspace
         metadata_dir="$overlaystmpdir/workspaces/$workspace_name/metadata"
 
@@ -594,7 +608,6 @@ process_overlays_repo() {
             plugin_name=$(yq -r '.metadata.name // ""' "$metadata_file")
             dynamic_artifact=$(yq -r '.spec.dynamicArtifact // ""' "$metadata_file")
             support=$(yq -r '.spec.support // "unknown"' "$metadata_file")
-            package_name=$(yq -r '.spec.packageName // ""' "$metadata_file")
 
             # Skip if not a community plugin or no dynamic artifact
             [[ "$support" != "community" ]] && continue
@@ -628,6 +641,7 @@ process_overlays_repo() {
             fi
 
             # Add to migration table (sorted by title)
+            # shellcheck disable=SC2028
             echo "${display_title}||*${display_title}*\n|\`${old_path}\`\n|\`${new_path}\`" >> "$MIGRATION_TABLE_FILE"
 
             migration_count=$((migration_count + 1))
@@ -640,6 +654,7 @@ process_overlays_repo() {
     # Add known bundled plugins - these are hardcoded as they require manual tracking
     # These plugins continue to be bundled in 1.9 while transitioning to ghcr.io
     # Format matches migration table: Plugin Name | Old Path | New Path
+    # shellcheck disable=SC2129
     echo -e "|*Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "|*Scaffolder Backend Module Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "|*Tekton*\n|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
@@ -676,7 +691,7 @@ process_overlays_repo() {
 
 # Call function if not skipped
 if [[ $SKIP_OVERLAYS -eq 0 ]]; then
-    process_overlays_repo
+    generate_migration_table
 fi
 
 # summary of changes since last time
@@ -689,7 +704,7 @@ pushd "$SCRIPT_DIR" >/dev/null || exit
 popd >/dev/null || exit
 
 # see https://issues.redhat.com/browse/RHIDP-3187 - only GA plugins should be enabled by default
-if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;cat "${ENABLED_PLUGINS}.errors"; fi
+if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;sort -u "${ENABLED_PLUGINS}.errors"; fi
 
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
