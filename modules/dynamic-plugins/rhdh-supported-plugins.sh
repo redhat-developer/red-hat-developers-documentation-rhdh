@@ -20,8 +20,8 @@ QUIET=1; # suppress debug output
 DO_CLEAN=0
 
 BRANCH=main
-SKIP_RHDH=0
-SKIP_OVERLAYS=0
+SKIP_TABLES=0
+SKIP_MIGRATION=0
 
 rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
@@ -39,7 +39,7 @@ Generate an updated table of dynamic plugins from content in the following two r
 * $rhdhRepo
 * $overlaysRepo
 
-By default, both repos are processed. Use --skip-rhdh or --skip-overlays to skip either.
+By default, both repos are processed. Use --skip-tables or --skip-migration to skip either.
 
 Requires:
 * jq 1.6+
@@ -51,18 +51,18 @@ $0 -b stable-ref-branch [options]
 
 Options:
   -b, --ref-branch    : Branch against which plugin versions should be incremented, like release-1.y; default: main
-  --skip-rhdh         : Skip rhdh repo processing (only generate migration table from rhdh-plugin-export-overlays)
-  --skip-overlays     : Skip rhdh-plugin-export-overlays repo processing (only generate plugins table from rhdh)
+  --skip-tables       : Skip re-generating dynamic plugin tables and .csv
+  --skip-migration    : Skip re-generating the migation guide
   --clean             : Force a clean GH checkout (do not reuse files on disk)
   -v                  : more verbose output
   -h, --help          : Show this help
 
 Examples:
 
-  $0 -b release-1.9                    # Process both repos
-  $0 -b release-1.9 --clean            # Process both repos with fresh checkout
-  $0 -b release-1.9 --skip-overlays    # Only process rhdh repo
-  $0 -b main --skip-rhdh               # Only generate migration table from overlays
+  $0 -b release-1.9
+  $0 -b release-1.9 --clean
+  $0 -b release-1.9 --skip-migration  # Only regen dynamic plugin tables
+  $0 -b main        --skip-tables     # Only regen migration guide
 
 EOF
 }
@@ -73,8 +73,8 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in
     '--clean') DO_CLEAN=1;;
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
-    '--skip-rhdh') SKIP_RHDH=1;;
-    '--skip-overlays') SKIP_OVERLAYS=1;;
+    '--skip-tables') SKIP_TABLES=1;;
+    '--skip-migration') SKIP_MIGRATION=1;;
     '-v') QUIET=0;;
     '-h'|'--help') usage; exit 0;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
@@ -89,16 +89,11 @@ rhdhtmpdir="/tmp/rhdh_$BRANCH" # for DPDY file
 overlaystmpdir="/tmp/rhdh-plugin-export-overlays_$BRANCH" # for catalog metadata
 
 if [[ $DO_CLEAN -eq 1 ]]; then
-    if [[ $SKIP_RHDH -eq 0 ]]; then
-        rm -fr /tmp/plugin-versions_"${BRANCH}".txt "${rhdhtmpdir}" "${overlaystmpdir}"
-    fi
-    if [[ $SKIP_OVERLAYS -eq 0 ]]; then
-        rm -fr "${overlaystmpdir}"
-    fi
+    rm -fr /tmp/plugin-versions_"${BRANCH}".txt "${rhdhtmpdir}" "${overlaystmpdir}"
 fi
 
 # fetch rhdh repo - not needed when regenerating migration table
-if [[ $SKIP_RHDH -eq 0 ]]; then
+if [[ $SKIP_TABLES -eq 0 ]]; then
     if [[ ! -d "${rhdhtmpdir}" ]]; then
         echo -e "${green}Cloning $rhdhRepo (branch: $BRANCH)...${norm}"
         pushd /tmp >/dev/null || exit
@@ -542,7 +537,7 @@ generate_dynamic_plugins_table() {
 }
 
 # Call function if not skipped
-if [[ $SKIP_RHDH -eq 0 ]]; then
+if [[ $SKIP_TABLES -eq 0 ]]; then
     generate_dynamic_plugins_table
 fi
 
@@ -690,7 +685,7 @@ generate_migration_table() {
 }
 
 # Call function if not skipped
-if [[ $SKIP_OVERLAYS -eq 0 ]]; then
+if [[ $SKIP_MIGRATION -eq 0 ]]; then
     generate_migration_table
 fi
 
