@@ -31,11 +31,43 @@ Pipeline succeeds but workflows are missing:: If the CI pipeline succeeds but th
 
 * Make sure the target namespace is labeled for Argo CD:
 +
-[source,terminal]
+[source,terminal,subs="+quotes"]
 ----
-$ oc label ns sonataflow-infra rhdh.redhat.com/argocd-namespace=true
+$ oc label ns _<target_namespace>_ rhdh.redhat.com/argocd-namespace=true
 ----
 
 * Make sure the ArgoCD ServiceAccount has the required permissions to manage resources in the `rhdh` namespace.
 
 Argo CD sync failure:: If resources appear but remain in an `OutOfSync` state, click *Refresh* in the Argo CD UI or verify that the *AppProject* exists in the `orchestrator-gitops` namespace.
+
+PostgreSQL authentication failures in Argo CD:: If the Orchestrator fails to connect to the PostgreSQL database when you deploy by using Argo CD, the failure is often due to a mismatch in password generation.
++
+The Orchestrator Helm chart uses the Helm `lookup` function to check for an existing PostgreSQL secret. Because Argo CD uses `helm template` to render manifests, it cannot query the live cluster. Consequently, the chart generates a new, random password instead of retrieving the existing one, resulting in an authentication failure.
++
+To resolve this failure, you must complete the following steps:
+
+.. Create the database secret manually with the correct credentials:
++
+[source,bash,subs=+attributes]
+----
+$ kubectl create secret generic <backstage-postgresql-svcbind-postgres> --from-literal=password=<your_password>
+----
+
+.. Update your Helm configuration (for example, in `values.yaml`) to disable automatic service binding generation:
++
+[source,yaml]
+----
+upstream:
+  postgresql:
+    serviceBindings:
+      enabled: false
+    auth:
+      username: postgres
+      database: backstage
+      existingSecret: backstage-postgresql-svcbind-postgres
+      secretKeys:
+        adminPasswordKey: password
+        userPasswordKey: password
+----
+
+.. Sync the application in Argo CD to apply the changes.
