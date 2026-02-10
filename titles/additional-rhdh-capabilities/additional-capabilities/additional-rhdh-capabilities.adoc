@@ -36,9 +36,9 @@ This guide explains how to configure ArgoCD to send notifications directly to th
 
 ---
 
-.Part 1: Backstage Configuration
+.Part 1: Backstage configuration
 
-*Step 1: Install the Notifications Plugin*
+**Step 1: Install the notifications plugin**
 
 Add the notifications plugin to your Backstage backend:
 
@@ -51,7 +51,7 @@ yarn --cwd packages/backend add @backstage/plugin-notifications-backend
 yarn --cwd packages/app add @backstage/plugin-notifications
 ----
 
-*Step 2: Register the Backend Plugins*
+**Step 2: Register the Backend Plugins**
 
 In `packages/backend/src/index.ts`:
 
@@ -61,7 +61,7 @@ In `packages/backend/src/index.ts`:
 backend.add(import('@backstage/plugin-notifications-backend'));
 ----
 
-*Step 3: Add the Frontend Components*
+**Step 3: Add the Frontend Components**
 
 In `packages/app/src/App.tsx`:
 
@@ -83,7 +83,7 @@ import { NotificationsSidebarItem } from '@backstage/plugin-notifications';
 <NotificationsSidebarItem />;
 ----
 
-*Step 4: Configure External Access Token*
+**Step 4: Configure External Access Token**
 
 In your `app-config.yaml`, configure a static token for ArgoCD to authenticate:
 
@@ -102,9 +102,9 @@ backend:
 
 ---
 
-.Part 2: ArgoCD Configuration
+.Part 2: ArgoCD configuration
 
-*Step 1: Enable the Notifications Controller*
+**Step 1: Enable the notifications controller**
 
 For OpenShift GitOps:
 
@@ -122,7 +122,7 @@ oc patch argocd openshift-gitops -n openshift-gitops --type merge -p '
 
 For standard ArgoCD, ensure the notifications controller is deployed.
 
-*Step 2: Create the Notifications Secret*
+**Step 2: Create the notifications Secret**
 
 Store the Backstage authentication token:
 
@@ -145,11 +145,11 @@ Apply it:
 kubectl apply -f argocd-notifications-secret.yaml
 ----
 
-*Step 3: Configure Notifications*
+**Step 3: Configure notifications**
 
 > **Important for OpenShift GitOps Users:** The OpenShift GitOps operator manages the `argocd-notifications-cm` ConfigMap. If you edit the ConfigMap directly, your changes may be overwritten. Instead, use the `NotificationsConfiguration` Custom Resource (CR) as shown below.
 
-.Option A: For OpenShift GitOps
+*Option A: For OpenShift GitOps*
 
 Use the `NotificationsConfiguration` Custom Resource:
 
@@ -159,12 +159,12 @@ Use the `NotificationsConfiguration` Custom Resource:
 
 > The configuration below is a starting template that you can customize to fit your needs:
 >
-> - **Add triggers**: You can add more triggers for other events (forexample, `app.status.sync.status == 'Unknown'`, `app.status.health.status == 'Healthy'`, `app.status.health.status == 'Missing'`, sync running, etc.)
+> - **Add triggers**: You can add more triggers for other events (for example, `app.status.sync.status == 'Unknown'`, `app.status.health.status == 'Healthy'`, `app.status.health.status == 'Missing'`, sync running)
 > - **Remove triggers**: Feel free to remove any triggers you don't need
 > - **Customize templates**: Modify the notification titles, descriptions, severity levels, and topics to match your organization's preferences
 > - **Adjust conditions**: Modify the `when` expressions to fine-tune when notifications are sent
 >
-> For a complete list of available trigger conditions and variables, see the [ArgoCD Notifications Triggers documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/triggers/).
+> For a complete list of available trigger conditions and variables, see the link:https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/triggers/[ArgoCD Notifications Triggers documentation].
 ====
 
 [source,bash,subs="+attributes,+quotes"]
@@ -292,7 +292,7 @@ spec:
 EOF
 ----
 
-... Option B: For Standard ArgoCD
+*Option B: For Standard ArgoCD*
 
 For non-OpenShift installations, you can edit the ConfigMap directly:
 
@@ -413,16 +413,19 @@ kubectl apply -f argocd-notifications-cm.yaml
 
 ---
 
-.Part 3: Enable Notifications for Your Application
+.Part 3: Enable notifications for your application
 
-.. Add Required Annotations to Your ArgoCD Application
+**Add required annotations to your ArgoCD application**
 
 Each ArgoCD Application that should send notifications needs two things:
 
 1. **The Backstage entity reference** - tells ArgoCD which Backstage entity should receive notifications
 2. **Trigger subscriptions** - tells ArgoCD which events to notify about
 
-> **Important:** The subscription annotation format is `notifications.argoproj.io/subscribe.<trigger-name>.<service>`. The trigger name must match exactly what you configured (with the `-backstage` suffix).
+[IMPORTANT]
+====
+The subscription annotation format is `notifications.argoproj.io/subscribe.<trigger-name>.<service>`. The trigger name must match exactly what you configured (with the `-backstage` suffix).
+====
 
 [source,yaml]
 ----
@@ -447,12 +450,11 @@ spec:
 ---
 
 .Example: Complete Setup Flow
-
-.. Scenario
+**Scenario**
 
 You have a service called `order-service` managed by ArgoCD, and you want the team to receive Backstage notifications on sync events.
 
-. Backstage Catalog Entity
+. *Backstage Catalog Entity*
 +
 [source,yaml]
 ----
@@ -470,7 +472,7 @@ spec:
   lifecycle: production
 ----
 
-. ArgoCD Application
+. *ArgoCD Application*
 +
 [source,yaml]
 ----
@@ -502,7 +504,7 @@ spec:
       selfHeal: true
 ----
 
-. What Happens
+. *What Happens*
 
 1. **Developer pushes code** → ArgoCD detects change and syncs
 2. **Sync succeeds** → ArgoCD notifications controller fires `on-deployed-backstage` trigger
