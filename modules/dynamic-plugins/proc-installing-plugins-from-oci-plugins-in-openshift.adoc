@@ -1,0 +1,73 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-installing-plugins-from-oci-plugins-in-openshift_{context}"]
+
+= Installing plugins from OCI plugins in OpenShift
+
+.Prerequisites
+* Your cluster administrator must add the trusted corporate CA bundle to the cluster-wide configuration. For more information, see _Security and compliance_ in the link:https://docs.redhat.com/en/documentation/openshift_container_platform[OpenShift Container Platform] documentation.
+
+.Procedure
+. Create an empty ConfigMap in the namespace where you are deploying your {product-very-short} instance. You must add the `config.openshift.io/inject-trusted-cabundle` label to your ConfigMap, as follows:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trusted-ca
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"
+----
+. Wait for the trusted CA bundle to be injected into the ConfigMap. You can verify with the following command:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+oc get cm trusted-ca
+----
++
+You should see a block of certificates under the `ca-bundle.crt` key.
+. Mount the ConfigMap into the `/etc/pki/ca-trust/extracted/pem` path of the {product-very-short} init container. 
+.. For a Helm chart installation, update your Helm chart configuration file, as follows:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      # IMPORTANT: Due to a Helm limitation with arrays, you must also
+      # include all the volumes defined in the default Helm Chart
+      # before adding the new one
+      # ...
+      - name: trusted-ca
+        configMap:
+          name: trusted-ca
+
+    initContainers:
+      - name: install-dynamic-plugins
+        # IMPORTANT: Due to a Helm limitation with arrays, you must also
+        # include all the other fields defined in the default Helm Chart
+        # ...
+
+        volumeMounts:
+          # IMPORTANT: Due to a Helm limitation with arrays, you must also
+          # include all the volume mounts defined in the default Helm Chart
+          # before adding the new one
+          # ...
+          - name: trusted-ca
+            mountPath: /etc/pki/ca-trust/extracted/pem
+----
+.. For Operator-based installations, update your Backstage Custom Resource (CR), as follows:
++
+[source,yaml]
+----
+spec:
+  application:
+    extraFiles:
+      configMaps:
+        - name: trusted-ca
+          mountPath: /etc/pki/ca-trust/extracted/pem
+          containers:
+            # Note: Set to "*" instead if you want to mount it in all containers
+            - install-dynamic-plugins
+----

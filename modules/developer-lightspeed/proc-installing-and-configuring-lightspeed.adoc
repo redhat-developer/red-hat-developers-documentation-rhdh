@@ -11,7 +11,7 @@ Llama stack server (container sidecar):: Based on open source https://github.com
 
 {ls-brand-name} (dynamic plugins):: These plugins are required to enable the {ls-short} user interface within your {product-very-short} instance.
 
-Configuring these components to initialise correctly and communicate with each other is essential in order to provide {ls-short} to your users.
+Configuring these components to initialize correctly and communicate with each other is essential in order to provide {ls-short} to your users.
 
 [TIP]
 ====
@@ -74,6 +74,16 @@ data:
       sqlite:
         db_path: "/tmp/data/conversations/lcs_cache.db"
 ----
++
+[IMPORTANT]
+====
+LCS uses Llama Stack expansion syntax for environment variables. To make sure the service correctly parses variables in the `lightspeed-stack.yaml` file, you must use the `${env.VAR}` format. Variable names are case-sensitive and must be uppercase. The syntax `${env.var}` is not supported. For example:
+[source,yaml]
+----
+model_config:
+  api_key: ${env.VAR}
+----
+====
 
 .. Click *Create*.
 
@@ -102,7 +112,7 @@ data:
         - https://avatars.githubusercontent.com # This is to load GitHub avatars in the UI
         script-src:
         - "'self'"
-        - "'unsafe-eval'" 
+        - "'unsafe-eval'"
         - https://cdn.jsdelivr.net
 
     lightspeed:
@@ -125,8 +135,8 @@ data:
 +
 [IMPORTANT]
 ====
-{product} 1.8 configures the Llama Stack image to use the vllm provider exclusively. The vllm provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (api.openai.com).
-Do not use the official OpenAI API URL or token with vllm in this release. Attempting this might result in errors or improper responses. Native OpenAI provider support is planned for future releases.
+{product} 1.8 configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (api.openai.com).
+Do not use the official OpenAI API URL or token with vLLM in this release. Attempting this might result in errors or improper responses. Native OpenAI provider support is planned for future releases.
 ====
 
 .. In the {ocp-short} web console, go to *Secrets*.
@@ -151,14 +161,14 @@ stringData:
 +
 where:
 
-`VLLM_URL`:: Required for remote services: Set this to the API endpoint URL of your preferred LLM provider, if it is compatible with the OpenAI API specification (Examples: OpenAI, {rhoai-brand-name}, vLLM)
-`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification
-`VLLM_MAX_TOKENS`:: Optional
-`VLLM_TLS_VERIFY`:: Optional
+`VLLM_URL`:: Required for remote services: Set this to the API endpoint URL of your preferred LLM provider, if it is compatible with the OpenAI API specification (Examples: OpenAI, {rhoai-brand-name}, vLLM).
+`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification.
+`VLLM_MAX_TOKENS`:: Optional.
+`VLLM_TLS_VERIFY`:: Optional.
 //`OLLAMA_URL`:: Set this if you altered the `run.yaml` file to use Ollama
 //`OPENAI_API_KEY`:: Set this if you altered the `run.yaml` file. If using `OpenAI` through the generic `VLLM` provider configuration, you must map the API key to `VLLM_API_KEY` instead
-`VALIDATION_PROVIDER`:: Set this as `vllm`, `ollama`, `openai`, depending on the key you have set in this configuration file
-`VALIDATION_MODEL_NAME`:: Set the name of the model you want to use for validation
+`VALIDATION_PROVIDER`:: Set this as `vllm`, `ollama`, `openai`, depending on the key you have set in this configuration file.
+`VALIDATION_MODEL_NAME`:: Set the name of the model you want to use for validation.
 
 .. Click *Create*.
 
@@ -169,34 +179,29 @@ where:
 includes:
 - dynamic-plugins.default.yaml
 plugins:
-- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed
-  disabled: false
+- disabled: false
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed
   pluginConfig:
-    lightspeed:
-      # OPTIONAL: Custom users prompts displayed to users
-      prompts:
-        - title: 'Getting Started with Red Hat Developer Hub'
-          message: Can you guide me through the first steps to start using Developer Hub as a developer, like exploring the Software Catalog and adding my service?
     dynamicPlugins:
       frontend:
         red-hat-developer-hub.backstage-plugin-lightspeed:
+          appIcons:
+            - name: LightspeedIcon
+              module: LightspeedPlugin
+              importName: LightspeedIcon        
+          dynamicRoutes:
+            - importName: LightspeedPage
+              menuItem:
+                icon: LightspeedIcon
+                text: Lightspeed        
+              module: LightspeedPlugin                  
+              path: /lightspeed          
           translationResources:
             - importName: lightspeedTranslations
               module: Alpha
               ref: lightspeedTranslationRef
-          appIcons:
-            - name: LightspeedIcon
-              module: LightspeedPlugin
-              importName: LightspeedIcon
-          dynamicRoutes:
-            - path: /lightspeed
-              importName: LightspeedPage
-              module: LightspeedPlugin
-              menuItem:
-                icon: LightspeedIcon
-                text: Lightspeed
-- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed-backend
-  disabled: false
+- disabled: false
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed-backend
 ----
 
 . Update your deployment configuration: Update the deployment configuration based on how your {product-very-short} instance was installed. You must add two sidecar containers: `llama-stack` and `lightspeed-core`.
@@ -207,75 +212,70 @@ plugins:
 +
 [source,yaml]
 ----
-    appConfig:
-      configMaps:
-        - name: lightspeed-app-config
+appConfig:
+  configMaps:
+    - name: lightspeed-app-config
 ----
 ... Update the `spec.deployment.patch.spec.template.spec.volumes` specification to include volumes for {lcs-short} configuration (`lightspeed-stack`), shared storage for feedback (`shared-storage`), and RAG data (`rag-data-volume`):
 +
 [source,yaml]
 ----
-    volumes:
-      - configMap:
-          name: lightspeed-stack
-        name: lightspeed-stack
-      - emptyDir: {}
-        name: shared-storage
-      - emptyDir: {}
-        name: rag-data-volume
+volumes:
+  - configMap:
+      name: lightspeed-stack
+    name: lightspeed-stack
+  - emptyDir: {}
+    name: shared-storage
+  - emptyDir: {}
+    name: rag-data-volume
 ----
 ... Add the `initContainers` section to initialize RAG data:
 [source,yaml]
 +
 ----
-    initContainers:
-      - name: init-rag-data
-        image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
-        command:
-          - "sh"
-          - "-c"
-          - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /data/ && cp -r /rag/embeddings_model /data/ && echo 'Copy complete.'"
-        volumeMounts:
-          - mountPath: /data
-            name: rag-data-volume
+initContainers:
+  - name: init-rag-data
+    image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
+    command:
+      - "sh"
+      - "-c"
+      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /data/ && cp -r /rag/embeddings_model /data/ && echo 'Copy complete.'"
+    volumeMounts:
+      - mountPath: /data
+        name: rag-data-volume
 ----
 ... Add the Llama Stack and the {lcs-short} containers to the `spec.deployment.patch.spec.template.spec.containers` section:
 +
 [source,yaml]
 ----
-  spec:
-    application:
-      - extraEnvs:
-          secrets:
-            - name: lightspeed-secrets
-    containers:
-      # ... Your existing RHDH container definition ...
-      - envFrom:
-          - secretRef:
-              name: llama-stack-secrets
-        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1' # Llama Stack image
-        name: llama-stack
-        volumeMounts:
-          - mountPath: /app-root/.llama
-            name: shared-storage
-          - mountPath: /app-root/embeddings_model
-            name: rag-data-volume
-            subPath: embeddings_model
-          - mountPath: /app-root/vector_db/rhdh_product_docs
-            name: rag-data-volume
-            subPath: rhdh_product_docs
-      - image: 'quay.io/lightspeed-core/lightspeed-stack:dev-20251021-ee9f08f' # Lightspeed Core Service image
-        name: lightspeed-core
-        volumeMounts:
-          - mountPath: /app-root/lightspeed-stack.yaml
-            name: lightspeed-stack
-            subPath: lightspeed-stack.yaml
-          - mountPath: /tmp/data/feedback
-            name: shared-storage
-          - mountPath: /tmp/data/transcripts
-            name: shared-storage
-          - mountPath: /tmp/data/conversations
-            name: shared-storage
+containers:
+  # ... Your existing RHDH container definition ...
+  - envFrom:
+      - secretRef:
+          name: llama-stack-secrets
+    image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1' # Llama Stack image
+    name: llama-stack
+    volumeMounts:
+      - mountPath: /app-root/.llama
+        name: shared-storage
+      - mountPath: /app-root/embeddings_model
+        name: rag-data-volume
+        subPath: embeddings_model
+      - mountPath: /app-root/vector_db/rhdh_product_docs
+        name: rag-data-volume
+        subPath: rhdh_product_docs
+  - image: 'quay.io/lightspeed-core/lightspeed-stack:dev-20251021-ee9f08f' # Lightspeed Core Service image
+    name: lightspeed-core
+    volumeMounts:
+      - mountPath: /app-root/lightspeed-stack.yaml
+        name: lightspeed-stack
+        subPath: lightspeed-stack.yaml
+      - mountPath: /tmp/data/feedback
+        name: shared-storage
+      - mountPath: /tmp/data/transcripts
+        name: shared-storage
+      - mountPath: /tmp/data/conversations
+        name: shared-storage
 ----
 ... Click *Save*. The Pods are automatically restarted.
 
@@ -325,7 +325,7 @@ plugins:
           - mountPath: /data
             name: rag-data-volume
 ----
-... Add the Llama Stack and {lcs-short} container definitions to `extraContainers`
+... Add the Llama Stack and {lcs-short} container definitions to `extraContainers`.
 +
 [NOTE]
 ====
@@ -379,11 +379,11 @@ p, role:default/_<your_team>_, lightspeed.chat.create, create, allow
 p, role:default/_<your_team>_, lightspeed.chat.delete, delete, allow
 g, user:default/_<your_user>_, role:default/_<your_team>_
 ----
-... Upload your `rbac-policies.csv` file to an `rbac-policies` ConfigMap in your {ocp-short} project containing {product-very-short} and update your Backstage CR:
+... Upload your `rbac-policies.csv` file to an `rbac-policies` ConfigMap in your {ocp-short} project containing {product-very-short} and update your {backstage} CR:
 +
 [source,yaml]
 ----
-apiVersion: rhdh.redhat.com/v1alpha3
+apiVersion: rhdh.redhat.com/v1alpha5
 kind: Backstage
 spec:
   application:

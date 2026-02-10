@@ -1,33 +1,32 @@
 :_mod-docs-content-type: CONCEPT
 
-[id="con-best-practices-for-threshold-rules"]
-= Best practices for threshold rules
+[id="con-best-practices-for-threshold-rules_{context}"]
+= Verify logical flow in Scorecard threshold rules
 
-Threshold rule evaluation is order-dependent. You must follow logical ordering to avoid unintended category assignments, as the system stops evaluation once a value matches the first rule.
+To ensure Scorecard assigns the correct health status, order rules carefully, because the evaluation stops at the first matching rule.
 
-== Follow logical ordering
+`Evaluation order for rules`::
 
-Rules must be sequenced logically. Order rules from the most strict (smallest range) to the least strict (largest range) or ensure all ranges are mutually exclusive.
+To ensure the system evaluates all values correctly, sequence rules from the most strict (smallest range) value to the least strict (largest range). If rules are ordered incorrectly, a broad rule can prevent the system from reaching stricter rules.
 
-=== Problematic rule order example
+`Problematic rule order example`::
 
 If rules are ordered incorrectly, a less restrictive rule can prevent stricter rules from being evaluated:
 
 . `warning: <50`: Any value less than 50 triggers the warning rule and stops evaluation.
 . `success: <10`: This rule is not evaluated because all values less than 10 have already matched the preceding warning rule.
 
-=== Correct ordering example
+`Correct ordering example`::
 
-Order the rules from the most restrictive value range to the least restrictive to ensure a logical flow.
+The following example demonstrates the correct sequence for successes, warnings, and errors:
 
 [source,yaml]
 ----
-# Correct Example: Order from most restrictive (Success) to least restrictive (Error)
 rules:
   - key: success
-    expression: '<10'     # Only values below 10
+    expression: '<10'     # Most restrictive: Only values below 10
   - key: warning
-    expression: '10-50'   # Only values between 10 and 50
+    expression: '10-50'   # Values between 10 and 50
   - key: error
-    expression: '>50'     # All remaining values above 50
+    expression: '>50'     # Least restrictive: All values above 50
 ----
