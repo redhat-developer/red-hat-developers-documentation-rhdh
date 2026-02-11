@@ -31,6 +31,8 @@ This reinstallation is required due to the following fundamental architectural c
 * You are logged in to your {ocp-short} account.
 * You have an {product-very-short} instance installed using either the Operator or the Helm chart.
 * You have created a {installing-and-viewing-plugins-book-link}##rhdh-installing-rhdh-plugins_title-plugins-rhdh-about[custom dynamic plugins ConfigMap].
+* You have installed and activated the `floating-action-button` plugins.
+* You have administrative access to the {product-very-short} configuration files.
 
 .Procedure
 
@@ -185,23 +187,41 @@ plugins:
     dynamicPlugins:
       frontend:
         red-hat-developer-hub.backstage-plugin-lightspeed:
-          appIcons:
-            - name: LightspeedIcon
-              module: LightspeedPlugin
-              importName: LightspeedIcon        
-          dynamicRoutes:
-            - importName: LightspeedPage
-              menuItem:
-                icon: LightspeedIcon
-                text: Lightspeed        
-              module: LightspeedPlugin                  
-              path: /lightspeed          
-          translationResources:
-            - importName: lightspeedTranslations
-              module: Alpha
-              ref: lightspeedTranslationRef
-- disabled: false
-  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed-backend
+              translationResources:
+                - importName: lightspeedTranslations
+                  module: Alpha
+                  ref: lightspeedTranslationRef
+              dynamicRoutes:
+                - path: /lightspeed
+                  importName: LightspeedPage
+              mountPoints:
+                - mountPoint: application/listener
+                  importName: LightspeedFAB
+                - mountPoint: application/provider
+                  importName: LightspeedDrawerProvider
+                - mountPoint: application/drawer-state
+                  importName: LightspeedDrawerStateExposer
+                - mountPoint: application/drawer-content
+                  importName: LightspeedChatContainer
+                  config:
+                    id: lightspeed
+                    priority: 100
+----
+
+. Required if your environment uses another global floating action button (FAB): You must move the existing FAB or disable it to prevent interface elements from overlapping by updating your dynamic plugin configuration file with the following changes:
++
+[source,yaml]
+----
+red-hat-developer-hub.backstage-plugin-bulk-import:
+  mountPoints:
+    - mountPoint: global.floatingactionbutton/config
+      importName: BulkImportPage # Example
+      config:
+        slot: 'bottom-left'
+        icon: BulkImportIcon
+        label: 'Bulk import'
+        toolTip: 'Register multiple repositories in bulk'
+        to: /bulk-import
 ----
 
 . Update your deployment configuration: Update the deployment configuration based on how your {product-very-short} instance was installed. You must add two sidecar containers: `llama-stack` and `lightspeed-core`.
