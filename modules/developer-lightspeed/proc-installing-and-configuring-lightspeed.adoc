@@ -153,24 +153,29 @@ metadata:
   name: llama-stack-secrets
 type: Opaque
 stringData:
+  ENABLE_VLLM: ""
+  ENABLE_VERTEX_AI: ""
+  ENABLE_OPENAI: ""
+  ENABLE_OLLAMA: ""
   VLLM_URL: ""
   VLLM_API_KEY: ""
   VLLM_MAX_TOKENS: ""
   VLLM_TLS_VERIFY: ""
-  VALIDATION_PROVIDER: ""
-  VALIDATION_MODEL_NAME: ""
+  OPENAI_API_KEY: ""
+  VERTEX_AI_PROJECT: ""
+  VERTEX_AI_LOCATION: ""
+  GOOGLE_APPLICATION_CREDENTIALS: ""
+  OLLAMA_URL: ""
+  SAFETY_MODEL: ""
+  SAFETY_URL: ""
+  SAFETY_API_KEY: ""
 ----
 +
 where:
 
-`VLLM_URL`:: Required for remote services: Set this to the API endpoint URL of your preferred LLM provider, if it is compatible with the OpenAI API specification (Examples: OpenAI, {rhoai-brand-name}, vLLM).
-`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification.
-`VLLM_MAX_TOKENS`:: Optional.
-`VLLM_TLS_VERIFY`:: Optional.
-//`OLLAMA_URL`:: Set this if you altered the `run.yaml` file to use Ollama
-//`OPENAI_API_KEY`:: Set this if you altered the `run.yaml` file. If using `OpenAI` through the generic `VLLM` provider configuration, you must map the API key to `VLLM_API_KEY` instead
-`VALIDATION_PROVIDER`:: Set this as `vllm`, `ollama`, `openai`, depending on the key you have set in this configuration file.
-`VALIDATION_MODEL_NAME`:: Set the name of the model you want to use for validation.
+`SAFETY_MODEL`:: Recommended value is `llama-guard3:8b`
+`SAFETY_URL`:: The URL that hosts the safety model. This is post-fixed with `/v1`. For example: `localhost:#####/v1`
+`SAFETY_API_KEY`: The API key for that model if applicable.
 
 .. Click *Create*.
 
@@ -182,7 +187,7 @@ includes:
 - dynamic-plugins.default.yaml
 plugins:
 - disabled: false
-  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.45.3__1.2.2
   pluginConfig:
     dynamicPlugins:
       frontend:
@@ -201,11 +206,15 @@ plugins:
                   importName: LightspeedDrawerProvider
                 - mountPoint: application/drawer-state
                   importName: LightspeedDrawerStateExposer
+                  config:
+                    id: lightspeed
                 - mountPoint: application/drawer-content
                   importName: LightspeedChatContainer
                   config:
                     id: lightspeed
                     priority: 100
+- disabled: false
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.45.3__1.2.2
 ----
 
 . Required if your environment uses another global floating action button (FAB): You must move the existing FAB or disable it to prevent interface elements from overlapping by updating your dynamic plugin configuration file with the following changes:
@@ -255,13 +264,13 @@ volumes:
 ----
 initContainers:
   - name: init-rag-data
-    image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
+    image: 'quay.io/redhat-ai-dev/rag-content:release-1.9-lcs'
     command:
       - "sh"
       - "-c"
-      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /data/ && cp -r /rag/embeddings_model /data/ && echo 'Copy complete.'"
+      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /rag-content/ && cp -r /rag/embeddings_model /rag-content/ && echo 'Copy complete.'"
     volumeMounts:
-      - mountPath: /data
+      - mountPath: /rag-content
         name: rag-data-volume
 ----
 ... Add the Llama Stack and the {lcs-short} containers to the `spec.deployment.patch.spec.template.spec.containers` section:
@@ -273,18 +282,14 @@ containers:
   - envFrom:
       - secretRef:
           name: llama-stack-secrets
-    image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1' # Llama Stack image
+    image: 'quay.io/redhat-ai-dev/llama-stack:0.1.3' # Llama Stack image
     name: llama-stack
     volumeMounts:
       - mountPath: /app-root/.llama
         name: shared-storage
-      - mountPath: /app-root/embeddings_model
+      - mountPath: /rag-content
         name: rag-data-volume
-        subPath: embeddings_model
-      - mountPath: /app-root/vector_db/rhdh_product_docs
-        name: rag-data-volume
-        subPath: rhdh_product_docs
-  - image: 'quay.io/lightspeed-core/lightspeed-stack:dev-20251021-ee9f08f' # Lightspeed Core Service image
+  - image: 'quay.io/lightspeed-core/lightspeed-stack:0.4.0' # Lightspeed Core Service image
     name: lightspeed-core
     volumeMounts:
       - mountPath: /app-root/lightspeed-stack.yaml
