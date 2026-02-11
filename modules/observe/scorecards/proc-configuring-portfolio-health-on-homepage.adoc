@@ -1,0 +1,65 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configuring-portfolio-health-on-homepage_{context}"]
+= Configuring portfolio health on the homepage
+
+You can monitor the collective technical health of your portfolio by adding the `AggregatedScorecard` widget to the {product-very-short} homepage. This widget consolidates key performance indicators (KPIs) across all entities you own.
+
+.Prerequisites
+
+* You established owner group relationships in the Software Catalog.
+* {scorecard-plugin-book-link}##assembly-configuring-scorecards-in-rhdh[You installed the Scorecard plugin].
+* You have the `scorecard.metric.read` permission.
+* You have administrative access to the {product-very-short} configuration.
+
+.Procedure
+
+You can configure the homepage widget by using the user interface (UI) or by modifying the application configuration file.
+
+*To configure the widget by using the UI:*
+
+. Log in to .
+. Enter the *Edit* mode on the home page.
+. Drag and drop the `AggregatedScorecard` widget into your preferred layout position.
+. Save your changes.
+
+*To configure the widget by using the application configuration file:*
+
+. Open your {product-very-short}`{my-app-config-file}` file. For more information about this file, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html/configuring_red_hat_developer_hub/index[Configuring Red Hat Developer Hub].
+. Add the `AggregatedScorecard` mount points to the `dynamic-home-page` plug-in configuration:
++
+[source,yaml]
+----
+- package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page
+  disabled: false
+  pluginConfig:
+    dynamicPlugins:
+      frontend:
+        red-hat-developer-hub.backstage-plugin-dynamic-home-page:
+          dynamicRoutes:
+            - path: /
+              importName: DynamicHomePage
+          mountPoints:
+            - mountPoint: home.page/cards
+              importName: ScorecardHomepageCard
+              config:
+                id: "scorecard-jira.open_issues"
+                title: "Jira open blocking tickets"
+                props:
+                  metricId: "jira.open_issues"
+            - mountPoint: home.page/cards
+              importName: ScorecardHomepageCard
+              config:
+                id: "scorecard-github.open_prs"
+                title: "GitHub open pull requests"
+                props:
+                  metricId: "github.open_prs"
+----
+
+NOTE: The widget automatically calculates and displays aggregations for the entities you own. You do not have to manually configure filters or specify target owner groups in the widget settings.
+
+.Verification
+
+. Log in to the Red Hat Developer Hub.
+. On the *Home* page, verify that the *Aggregated Scorecard* widget appears.
+. Confirm that the displayed KPIs reflect the status of your owned components, systems, and resources.
