@@ -19,6 +19,51 @@ You can configure the homepage widget by using the user interface (UI) or by mod
 *To configure the widget by using the UI:*
 
 . Log in to {product-very-short}.
+. Update your {product-very-short} `{my-app-config-file}` with the following code:
++
+[source,yaml]
+----
+- package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page
+  disabled: false
+  pluginConfig:
+    dynamicPlugins:
+      frontend:
+        red-hat-developer-hub.backstage-plugin-dynamic-home-page:
+          dynamicRoutes:
+            - path: /
+              importName: DynamicCustomizableHomePage
+- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard:bs_1.45.3__2.3.5!red-hat-developer-hub-backstage-plugin-scorecard
+  disabled: false
+  pluginConfig:
+    dynamicPlugins:
+      frontend:
+        red-hat-developer-hub.backstage-plugin-scorecard:
+          entityTabs:
+            - path: "/scorecard"
+              title: Scorecard
+              mountPoint: entity.page.scorecard
+          mountPoints:
+            - mountPoint: entity.page.scorecard/cards
+              importName: EntityScorecardContent
+              config:
+                layout:
+                  gridColumn: 1 / -1
+            - mountPoint: home.page/cards
+              importName: ScorecardHomepageCard
+              config:
+                id: "scorecard-github.open_prs"
+                title: "GitHub open PRs"
+                props:
+                  metricId: "jira.open_issues"
+            - mountPoint: home.page/cards
+              importName: ScorecardHomepageCard
+              config:
+                id: "scorecard-github.open_prs"
+                title: "GitHub open PRs"
+                props:
+                  metricId: "github.open_prs"
+----
+For more information, see {customizing-book-link}[{customizing-book-title}].
 . Enter the *Edit* mode on the home page.
 . Click *Add widget* and select the metric to include. Note that you can add only metric at a time.
 . Drag the widget into your preferred layout position.
@@ -31,79 +76,22 @@ You can configure the homepage widget by using the user interface (UI) or by mod
 +
 [source,yaml]
 ----
-plugins:
-  - disabled: false
-    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard:pr_1807__2.3.0!red-hat-developer-hub-backstage-plugin-scorecard
-    pluginConfig:
-      dynamicPlugins:
-        frontend:
-          red-hat-developer-hub.backstage-plugin-scorecard:
-            entityTabs:
-              - path: '/scorecard'
-                title: Scorecard
-                mountPoint: entity.page.scorecard
-            mountPoints:
-              - mountPoint: entity.page.scorecard/cards
-                importName: EntityScorecardContent
-                config:
-                  layout:
-                    gridColumn: 1 / -1
-              - mountPoint: home.page/cards
-                importName: ScorecardHomepageCard
-                config:
-                  id: 'scorecard-jira.open_issues'
-                  title: 'Jira open blocking tickets'
-                  props: {
-                    metricId: 'jira.open_issues'
-                  }
-              - mountPoint: home.page/cards
-                importName: ScorecardHomepageCard
-                config:
-                  id: 'scorecard-github.open_prs'
-                  title: 'GitHub open PRs'
-                  props: {
-                    metricId: 'github.open_prs'
-                  }
-  - disabled: false
-    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend:pr_1807__2.3.0!red-hat-developer-hub-backstage-plugin-scorecard-backend
-  - disabled: false
-    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-github:pr_1807__2.3.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-github
-    pluginConfig:
-      integrations:
-        github:
-          - host: github.com
-            token: _<your_token>_
-  - disabled: false
-    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:pr_1807__2.3.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira
-    pluginConfig:
-      jira:
-        baseUrl: https://issues.redhat.com
-        token: _<your_token>_
-        product: datacenter
-  - disabled: false
-    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-openssf:pr_1807__0.1.0!red-hat-developer-hub-backstage-plugin-scorecard-backend-module-openssf
-  - disabled: false
-    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-dynamic-home-page:bs_1.45.3__1.10.3!red-hat-developer-hub-backstage-plugin-dynamic-home-page
-    pluginConfig:
-      dynamicPlugins:
-        frontend:
-          red-hat-developer-hub.backstage-plugin-dynamic-home-page:
-            dynamicRoutes:
-            - path: /
-              importName: DynamicCustomizableHomePage
-            mountPoints:
-              - mountPoint: home.page/cards
-                importName: OnboardingSection
-                config:
-                  id: 'onboarding-section'
-                  title: 'Onboarding section'
-              - mountPoint: home.page/cards
-                importName: EntitySection
-                config:
-                  id: 'entity-section'
-                  title: 'Entity section'
-  - disabled: true
-    package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page
+- mountPoint: home.page/cards
+                    importName: ScorecardHomepageCard
+                    config:
+                      id: 'scorecard-jira.open_issues'
+                      title: 'Jira open blocking tickets'
+                      props: {
+                        metricId: 'jira.open_issues'
+                      }
+                  - mountPoint: home.page/cards
+                    importName: ScorecardHomepageCard
+                    config:
+                      id: 'scorecard-github.open_prs'
+                      title: 'GitHub open PRs'
+                      props: {
+                        metricId: 'github.open_prs'
+                      }
 ----
 
 [NOTE]
