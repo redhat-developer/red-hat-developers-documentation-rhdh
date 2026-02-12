@@ -1,0 +1,36 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-ensuring-high-availability-with-database-and-cache-layer_{context}"]
+= Ensuring High Availability (HA) with database and cache layers
+
+To achieve high availability in {product}, you must implement redundancy and failover for the backend service and external data dependencies (PostgreSQL and optional Redis cache).
+
+Scale the backend::
+
+{product-very-short} stateless backend design enables horizontal scaling. Because persistent data is stored in PostgreSQL and sessions are externalized to the database, any backend instance can serve any request. An optional Redis cache can improve performance by sharing cached data across instances.
+
+How to achieve backend high availability:::
+
+. *Deploy multiple backend instances*: Run at least 2-3 instances for basic HA
+. *Configure a load balancer*: Use platform-provided load balancing (OpenShift Routes, Kubernetes Ingress, or cloud provider load balancers)
+. *Enable health checks*: Configure the load balancer to probe backend health and remove failed instances from rotation
+. *Session affinity not required*: Any instance can serve any request due to database-backed sessions
+
+Ensure database high availability::
+PostgreSQL is required for {product-very-short} operations. A database outage will render the deployment non-functional until the database is restored.
+
+For production deployments, configure PostgreSQL with high availability (primary-replica replication) to minimize downtime. When configured to use catalog providers exclusively, the database does not require disaster recovery backups because catalog data can be repopulated from external sources (Git repositories, CI/CD platforms, and other integrations).
+
+In this configuration, the database serves as an indexed cache of data that originates in external systems.
+
+Configure cache high availability (optional)::
+
+For production deployments with multiple backend instances, configuring Redis improves performance by sharing cached data across instances.
+
+Impact of cache failure:::
+
+* Slower response times due to cache misses
+* Increased database load as data must be fetched from PostgreSQL
+* No impact on authentication or core functionality
+
+For production deployments, configure Redis with high availability using Redis Sentinel (for smaller deployments) or Redis Cluster (for larger deployments with multiple primary nodes).
