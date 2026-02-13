@@ -14,44 +14,54 @@ You can monitor the collective technical health of your portfolio by adding the 
 
 .Procedure
 
-You can configure the homepage widget by using the user interface (UI) or by modifying the application configuration file.
+You can configure the homepage widgets for the interactive homepage that allows users to customize cards or for read-only homepage that displays configured cards in a pre-defined layout.
 
-*To configure the widget by using the UI:*
+*To configure the widgets for customizable homepage:*
 
 . Update your {product-very-short} `{my-app-config-file}` with the following code:
 +
 [source,yaml]
 ----
-- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard:bs_1.45.3__2.3.5!red-hat-developer-hub-backstage-plugin-scorecard
-  disabled: false
-  pluginConfig:
-    dynamicPlugins:
-      frontend:
-        red-hat-developer-hub.backstage-plugin-scorecard:
-          entityTabs:
-            - path: "/scorecard"
-              title: Scorecard
-              mountPoint: entity.page.scorecard
-          mountPoints:
-            - mountPoint: entity.page.scorecard/cards
-              importName: EntityScorecardContent
-              config:
-                layout:
-                  gridColumn: 1 / -1
-            - mountPoint: home.page/cards
-              importName: ScorecardHomepageCard
-              config:
-                id: "scorecard-github.open_prs"
-                title: "GitHub open PRs"
-                props:
-                  metricId: "jira.open_issues"
-            - mountPoint: home.page/cards
-              importName: ScorecardHomepageCard
-              config:
-                id: "scorecard-github.open_prs"
-                title: "GitHub open PRs"
-                props:
-                  metricId: "github.open_prs"
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard:bs_1.45.3__2.3.5!red-hat-developer-hub-backstage-plugin-scorecard
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-scorecard:
+            entityTabs:
+              - path: "/scorecard"
+                title: Scorecard
+                mountPoint: entity.page.scorecard
+            mountPoints:
+              - mountPoint: entity.page.scorecard/cards
+                importName: EntityScorecardContent
+                config:
+                  layout:
+                    gridColumn: 1 / -1
+              - mountPoint: home.page/cards
+                importName: ScorecardHomepageCard
+                config:
+                  id: "scorecard-github.open_prs"
+                  title: "GitHub open PRs"
+                  props:
+                    metricId: "jira.open_issues"
+              - mountPoint: home.page/cards
+                importName: ScorecardHomepageCard
+                config:
+                  id: "scorecard-github.open_prs"
+                  title: "GitHub open PRs"
+                  props:
+                    metricId: "github.open_prs"
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-dynamic-home-page:
+            dynamicRoutes:
+              - path: /
+                importName: DynamicCustomizableHomePage
 ----
 For more information, see {customizing-book-link}[{customizing-book-title}].
 . Log in to {product-very-short}.
@@ -60,7 +70,7 @@ For more information, see {customizing-book-link}[{customizing-book-title}].
 . Drag the widget into your preferred layout position.
 . Click *Save*.
 
-*To configure the Jira and GitHub widget statically:*
+*To configure the widgets for read-only homepage:*
 
 . Open your {product-very-short}`{my-app-config-file}` file. For more information, see link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html/configuring_red_hat_developer_hub/index[{configuring-book-title}].
 . Add the aggregated Scorecard mount points to the dynamic plugin configuration file:
