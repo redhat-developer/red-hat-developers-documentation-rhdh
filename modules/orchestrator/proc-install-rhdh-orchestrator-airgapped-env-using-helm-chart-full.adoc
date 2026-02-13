@@ -28,6 +28,11 @@ mirror:
   - name: registry.redhat.io/openshift-serverless-1/logic-db-migrator-tool-rhel9:{rhoserverless-version}.0
   - name: registry.redhat.io/openshift-serverless-1/logic-swf-builder-rhel9:{rhoserverless-version}.0
   - name: registry.redhat.io/openshift-serverless-1/logic-swf-devmode-rhel9:{rhoserverless-version}.0
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator@sha256:7355b244d463187b11174b091b10235167ffc6fbd9466ec3cff0a8b5b04d6e98
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend@sha256:05f14d7c6cc41dd50cdb0adafa97137593caa4c218563fcc00bb30d36ad6bf2f
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator@sha256:6a138dd4c6bb7b98d7af58657395fc3ef3b96768276a2d65d9a7ef5fda52f2b5
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets@sha256:6e12decf7664c5c3410b1c7308eaa6daabeabbbc7baae5beddcdf52afdb702f8
+
 
   helm:
     repositories:
@@ -116,21 +121,60 @@ To configure the Orchestrator plugins to use a custom registry, complete the fol
 +
 * Open your `values.yaml` file.
 +
-* List the Orchestrator plugin packages under the `orchestrator.plugins` section.
-You must replace the simplified package references with the full URLs that point to your OCI registry, as shown in the following example:
+* List the Orchestrator plugin packages under the `orchestrator.plugins` section. You must replace the simplified package references with the full URLs that point to your custom OCI registry. You must explicitly include the `pluginConfig` configuration for each plugin as shown in the following example:
 +
 [source,yaml]
 ----
 orchestrator:
   plugins:
-    - disabled: false
-      package: oci://<custom_registry_url>[:]/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator@sha256:7355b244d463187b11174b091b10235167ffc6fbd9466ec3cff0a8b5b04d6e98
-    - disabled: false
-      package: oci://<custom_registry_url>[:]/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend@sha256:05f14d7c6cc41dd50cdb0adafa97137593caa4c218563fcc00bb30d36ad6bf2f
-    - disabled: false
-      package: oci://<custom_registry_url>[:]/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator@sha256:6a138dd4c6bb7b98d7af58657395fc3ef3b96768276a2d65d9a7ef5fda52f2b5
-    - disabled: false
-      package: oci://<custom_registry_url>[:]/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets@sha256:6e12decf7664c5c3410b1c7308eaa6daabeabbbc7baae5beddcdf52afdb702f8
+    - package: oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend@sha256:05f14d7c6cc41dd50cdb0adafa97137593caa4c218563fcc00bb30d36ad6bf2f
+      disabled: true
+      pluginConfig:
+        orchestrator:
+          dataIndexService:
+            url: http://sonataflow-platform-data-index-service
+    - package: oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets@sha256:6e12decf7664c5c3410b1c7308eaa6daabeabbbc7baae5beddcdf52afdb702f8
+      disabled: true
+      pluginConfig:
+        dynamicPlugins:
+          frontend:
+            red-hat-developer-hub.backstage-plugin-orchestrator-form-widgets: {}
+    - package: oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator@sha256:7355b244d463187b11174b091b10235167ffc6fbd9466ec3cff0a8b5b04d6e98
+      disabled: true
+      pluginConfig:
+        dynamicPlugins:
+          frontend:
+            red-hat-developer-hub.backstage-plugin-orchestrator:
+              appIcons:
+              - importName: OrchestratorIcon
+                name: orchestratorIcon
+              dynamicRoutes:
+              - importName: OrchestratorPage
+                menuItem:
+                  icon: orchestratorIcon
+                  text: Orchestrator
+                  textKey: menuItem.orchestrator
+                path: /orchestrator
+              entityTabs:
+              - path: /workflows
+                title: Workflows
+                titleKey: catalog.entityPage.workflows.title
+                mountPoint: entity.page.workflows
+              mountPoints:
+              - mountPoint: entity.page.workflows/cards
+                importName: OrchestratorCatalogTab
+                config:
+                  layout:
+                  gridColumn: 1 / -1
+                  if:
+                    anyOf:
+                    - IsOrchestratorCatalogTabAvailable
+    - package: oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator@sha256:6a138dd4c6bb7b98d7af58657395fc3ef3b96768276a2d65d9a7ef5fda52f2b5
+      disabled: true
+      pluginConfig:
+        orchestrator:
+          dataIndexService:
+            url: http://sonataflow-platform-data-index-service
 ----
 +
 where:
