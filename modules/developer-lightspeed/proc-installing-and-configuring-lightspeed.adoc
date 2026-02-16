@@ -13,11 +13,11 @@ Llama stack server (container sidecar):: Based on open source https://github.com
 
 Configuring these components to initialize correctly and communicate with each other is essential in order to provide {ls-short} to your users.
 
-[TIP]
+[NOTE]
 ====
-If you are upgrading from the previous {ls-short} Developer Preview with Road-Core Service, you must remove all existing {ls-short} configurations and settings before you reinstall.
+* If you are upgrading from the previous {ls-short} Developer Preview with Road-Core Service, you must remove all existing {ls-short} configurations and settings before you reinstall.
 
-To prevent or resolve upgrade inconsistencies, first drop and recreate the dynamic plugins volume.
+* To prevent or resolve upgrade inconsistencies, first drop and recreate the dynamic plugins volume.
 
 This reinstallation is required due to the following fundamental architectural changes:
 
@@ -31,7 +31,6 @@ This reinstallation is required due to the following fundamental architectural c
 * You are logged in to your {ocp-short} account.
 * You have an {product-very-short} instance installed using either the Operator or the Helm chart.
 * You have created a {installing-and-viewing-plugins-book-link}##rhdh-installing-rhdh-plugins_title-plugins-rhdh-about[custom dynamic plugins ConfigMap].
-* You have installed and activated the `floating-action-button` plugins.
 * You have administrative access to the {product-very-short} configuration files.
 
 .Procedure
@@ -137,7 +136,7 @@ data:
 +
 [IMPORTANT]
 ====
-{product} 1.8 configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (api.openai.com).
+{product} {product-version} configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (api.openai.com).
 Do not use the official OpenAI API URL or token with vLLM in this release. Attempting this might result in errors or improper responses. Native OpenAI provider support is planned for future releases.
 ====
 
@@ -173,25 +172,26 @@ stringData:
 +
 where:
 
-`ENABLE_VLLM`:: Set to 'true' for vLLM enablement.
-`ENABLE_OPENAI`:: Set to 'true' for Openai enablement.
-`ENABLE_VERTEX_AI`:: Set to 'true' for Vertex AI enablement.
-`ENABLE_OLLAMA`:: Set to 'true' for Ollama enablement.
+`ENABLE_VLLM`:: Enables the vLLM provider. Set to true to activate.
+`ENABLE_OPENAI`:: Enables the OpenAI provider. Set to true to activate.
+`ENABLE_VERTEX_AI`:: Enables the Vertex AI provider. Set to true to activate.
+`ENABLE_OLLAMA`:: Enables the Ollama provider. Set to true to activate.
 [NOTE]
 ====
-If you want to disable them, leave them blank. I.e. `ENABLE_VLLM=""`
+To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
 ====
-`VLLM_URL`:: Required for remote services: Set this to the API endpoint URL of your preferred LLM provider, if it is compatible with the OpenAI API specification (Examples: OpenAI, {rhoai-brand-name}, vLLM).
-`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification.
-`VLLM_MAX_TOKENS`:: Optional.
-`VLLM_TLS_VERIFY`:: Optional.
-`OPENAI_API_KEY`:: Required for use of OpenAI models via OpenAI API.
-`VERTEX_AI_PROJECT`:: Required for use of Gemini through Vertex AI.
-`VERTEX_AI_LOCATION`:: Required for use of Gemini through Vertex AI.
-`GOOGLE_APPLICATION_CREDENTIALS`:: Required for use of Gemini through Vertex AI.
-`SAFETY_MODEL`:: Recommended value is `llama-guard3:8b`
-`SAFETY_URL`:: The URL that hosts the safety model. This is post-fixed with `/v1`. For example: `localhost:#####/v1`
-`SAFETY_API_KEY`: The API key for that model if applicable.
+`VLLM_URL`:: The API endpoint URL for the LLM provider. The provider must comply with the OpenAI API specification. Examples include OpenAI, {rhoai-brand-name}, and vLLM.
+`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification. 
+`VLLM_MAX_TOKENS`:: Optional. The maximum number of tokens the model generates.
+`VLLM_TLS_VERIFY`:: Optional. Specifies whether the system verifies the TLS certificate for the vLLM endpoint.
+`OPENAI_API_KEY`:: The API key required to access OpenAI models through the OpenAI API.
+`VERTEX_AI_PROJECT`:: The Google Cloud project ID required to access Gemini through Vertex AI.
+`VERTEX_AI_LOCATION`:: The Google Cloud region required to access Gemini through Vertex AI.
+`GOOGLE_APPLICATION_CREDENTIALS`:: The credentials required to authenticate with Google Cloud to access Vertex AI.
+`OLLAMA_URL`:: The URL for the Ollama service.
+`SAFETY_MODEL`:: The identifier for the safety model. The recommended value is llama-guard3:8b.
+`SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`).
+`SAFETY_API_KEY`:: The API key required to authenticate with the safety model, if applicable.
 
 .. Click *Create*.
 
@@ -203,7 +203,7 @@ includes:
 - dynamic-plugins.default.yaml
 plugins:
 - disabled: false
-  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.45.3__1.2.2
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.45.3__1.2.3
   pluginConfig:
     dynamicPlugins:
       frontend:
@@ -220,17 +220,17 @@ plugins:
                   importName: LightspeedFAB
                 - mountPoint: application/provider
                   importName: LightspeedDrawerProvider
-                - mountPoint: application/drawer-state
+                - mountPoint: application/internal/drawer-state
                   importName: LightspeedDrawerStateExposer
                   config:
                     id: lightspeed
-                - mountPoint: application/drawer-content
+                - mountPoint: application/internal/drawer-content
                   importName: LightspeedChatContainer
                   config:
                     id: lightspeed
                     priority: 100
 - disabled: false
-  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.45.3__1.2.2
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.45.3__1.2.3
 ----
 
 . Required if your environment uses another global floating action button (FAB): You must move the existing FAB or disable it to prevent interface elements from overlapping by updating your dynamic plugin configuration file with the following changes:
@@ -243,7 +243,7 @@ red-hat-developer-hub.backstage-plugin-bulk-import:
       importName: BulkImportPage # Example
       config:
         slot: 'bottom-left'
-        icon: BulkImportIcon
+        icon: bulkImportIcon
         label: 'Bulk import'
         toolTip: 'Register multiple repositories in bulk'
         to: /bulk-import
