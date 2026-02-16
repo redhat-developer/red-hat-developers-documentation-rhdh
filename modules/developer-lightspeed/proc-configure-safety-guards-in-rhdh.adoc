@@ -1,0 +1,182 @@
+:_mod-docs-content-type: PROCEDURE5
+
+[id="proc-configure-safety-guards-rhdh_{context}"]
+= Configure safety guards in {product}
+
+To protect users from insecure or harmful AI model outputs, {product} ({product-very-short}) uses Llama Guard as a default safety shield. You must configure these guards to align with your organization's security policies.
+
+`Default safety guard configuration`::
+
+The system uses Llama Guard as the default safety shield. Override these settings in the `run.yaml` file.
+
+[NOTE] 
+====
+The `external_providers_dir` parameter defaults to null and is no longer required in your configuration.
+====
+
+`Overriding safety guards`::
+
+To implement custom security layers or different safety shields, you must define a new safety provider within a custom `run.yaml` file.
+
+`Disabling safety guards`::
+
+To run {product-very-short} without safety guards, you must use the `run-no-guard.yaml` configuration file.
+
+[IMPORTANT]
+====
+Running without safety guards increases the risk of unvalidated model output. Only use this configuration in secure development environments.
+====
+
+`Applying the no-guard configuration`::
+
+To run the system without a safety guard, perform these steps:
+
+.Procedure
+. Add the following YAML file as a config map to your namespace:
++
+[source,yaml]
+----
+version: 2
+image_name: redhat-ai-dev-llama-stack-no-guard
+apis:
+- agents
+- inference
+- safety
+- tool_runtime
+- vector_io
+- files
+container_image:
+external_providers_dir:
+providers:
+  agents:
+  - config:
+      persistence:
+        agent_state:
+          namespace: agents
+          backend: kv_default
+      responses:
+        table_name: responses
+        backend: sql_default
+    provider_id: meta-reference
+    provider_type: inline::meta-reference
+  inference:
+  - provider_id: ${env.ENABLE_VLLM:+vllm}
+    provider_type: remote::vllm
+    config:
+      url: ${env.VLLM_URL:=}
+      api_token: ${env.VLLM_API_KEY:=}
+      max_tokens: ${env.VLLM_MAX_TOKENS:=4096}
+      tls_verify: ${env.VLLM_TLS_VERIFY:=true}
+  - provider_id: ${env.ENABLE_OLLAMA:+ollama}
+    provider_type: remote::ollama
+    config:
+      url: ${env.OLLAMA_URL:=http://localhost:11434}
+  - provider_id: ${env.ENABLE_OPENAI:+openai}
+    provider_type: remote::openai
+    config:
+      api_key: ${env.OPENAI_API_KEY:=}
+  - provider_id: ${env.ENABLE_VERTEX_AI:+vertexai}
+    provider_type: remote::vertexai
+    config:
+      project: ${env.VERTEX_AI_PROJECT:=}
+      location: ${env.VERTEX_AI_LOCATION:=us-central1}
+  - provider_id: sentence-transformers
+    provider_type: inline::sentence-transformers
+    config: {}
+  tool_runtime:
+  - provider_id: model-context-protocol
+    provider_type: remote::model-context-protocol
+    config: {}
+  - provider_id: rag-runtime
+    provider_type: inline::rag-runtime
+    config: {}
+  vector_io:
+  - provider_id: faiss
+    provider_type: inline::faiss
+    config:
+      persistence:
+        namespace: vector_io::faiss
+        backend: faiss_kv
+  files:
+  - provider_id: localfs
+    provider_type: inline::localfs
+    config:
+      storage_dir: /tmp/llama-stack-files
+      metadata_store:
+        table_name: files_metadata
+        backend: sql_default
+storage:
+  backends:
+    kv_default:
+      type: kv_sqlite
+      db_path: /tmp/kvstore.db
+    sql_default:
+      type: sql_sqlite
+      db_path: /tmp/sql_store.db
+    faiss_kv:
+      type: kv_sqlite
+      db_path: /rag-content/vector_db/rhdh_product_docs/1.8/faiss_store.db
+stores:
+  metadata:
+    namespace: registry
+    backend: faiss_kv
+  inference:
+    table_name: inference_store
+    backend: sql_default
+    max_write_queue_size: 10000
+    num_writers: 4
+  conversations:
+    table_name: openai_conversations
+    backend: sql_default
+registered_resources:
+  models:
+  - model_id: sentence-transformers/all-mpnet-base-v2
+    metadata:
+      embedding_dimension: 768
+      model_type: embedding
+    provider_id: sentence-transformers
+    provider_model_id: /rag-content/embeddings_model
+  tool_groups:
+  - provider_id: rag-runtime
+    toolgroup_id: builtin::rag
+  vector_dbs:
+  - vector_db_id: rhdh-product-docs-1_8
+    embedding_model: sentence-transformers/all-mpnet-base-v2
+    embedding_dimension: 768
+    provider_id: faiss
+server:
+  auth:
+  host:
+  port: 8321
+  quota:
+  tls_cafile:
+  tls_certfile:
+  tls_keyfile:
+----
+
+. Mount the config map to your Llama Stack container at `/app-root/run.yaml` to make sure it overrides the default image file:
++
+[source,yaml]
+----
+name: llama-stack
+volumeMounts:
+- mountPath: /app-root/run.yaml
+  subPath: run.yaml
+  name: llama-stack-config
+----
+
+. Configure the required volume:
++
+[source,yaml]
+----
+volumes:
+- name: llama-stack-config
+  configMap:
+    name: llama-stack-config
+----
++
+where:
+
+`llama-stack-config`:: The config map where you added the new no-guard configuration file.
+
+. Restart the deployment if it does not trigger an automatic rollout.
