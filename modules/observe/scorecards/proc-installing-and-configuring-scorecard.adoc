@@ -1,15 +1,17 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="proc-installing-and-configuring-scorecard_{context}"]
-= Installing and configuring Scorecard to view metrics
+= Configure RBAC for Scorecards
 
-To enable users to view Scorecard metrics, you need to grant read access using Role-Based Access Control (RBAC). You can configure these permissions either through the RBAC CSV file or the RBAC UI, depending on how you manage access in your environment.
+To view Scorecard metrics in {product-very-short}, you must grant read access using Role-Based Access Control (RBAC). Configure these permissions using the RBAC CSV file or the RBAC Web UI, depending on how you manage access in your environment.
 
 .Prerequisite
- * You have {authorization-book-link}#enabling-and-giving-access-to-rbac[enabled RBAC, have a policy administrator role in {product-very-short}, and have added `scorecard` to plugins with permission].
+ * You have {authorization-book-link}#enabling-and-giving-access-to-rbac[enabled RBAC and assigned a policy administrator role].
+ * You have added `scorecard` to the list of authorized plugins under your `permission.rbac.pluginsWithPermission` configuration.
 
 .Procedure
-Grant the required permissions by using one of the following methods:
+
+. Grant the required permissions by using one of the following methods:
 
 * To use the RBAC CSV file, add the following policy to your CSV file to allow users to view metrics:
 +
@@ -23,11 +25,46 @@ p, role:default/scorecard-viewer, catalog.entity.read, read, allow
 See {authorization-book-link}#ref-rbac-permission-policies_title-authorization[Permission policies reference].
 
 * To use the RBAC Web UI, complete the following steps:
-.. In the {product} menu, navigate to *Administration > RBAC*.
-.. Select or create the *Role* that requires Scorecard access.
-.. In the *Add permission policies* section, select *Scorecard* from the plugins dropdown.
+.. In the {product} navigation menu, go to *Administration > RBAC*.
+.. Select or create the *Role* for Scorecard access.
+.. In the *Add permission policies* section, select *Scorecard* from the plugins list.
 .. Expand the *Scorecard* entry, select *policy* with the following details, and click *Next*:
 *** *Name*: `scorecard.metric.read`
 *** *Permission*: `read`
 +
 image::rhdh/scorecard-create-role.png[The RBAC UI showing the scorecard.metric.read permission selected for a role.]
+
+. Optional: Restrict access to specific metrics. You must use only one of the following methods to apply a conditional policy:
+
+* Web UI:
+... In your {product-very-short} navigation menu, go to *Administration* > *RBAC*.
+... In the *Add permission policies* step, select the following:
+** *Name*: `scorecard.metrics.read` 
+** *Permission*: `Read`
+... Click *Use advanced customized permissions to allow access to specific parts of the selected resource type* under *Actions* .
+... Select the `HAS_METRIC_ID` rule and specify the plugin IDs, using commas to separate multiple IDs.
+
+* External configuration file:
+.. Define the conditional policy in the `rbac-conditional-policies.yaml` file as described in {authorization-book-link}#managing-authorizations-by-using-external-files[Defining conditional policies]:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+result: CONDITIONAL
+roleEntityRef: "role:default/scorecard-viewer"
+pluginId: scorecard
+resourceType: scorecard-metric
+permissionMapping:
+  - read
+conditions:
+  rule: HAS_METRIC_ID
+  resourceType: scorecard-metric
+  params:
+    metricIds: [_<your_metric_id>_]
+----
++
+where:
+
+`metricIds`:: Enter the metric ID for user access, such as `github.open_prs`.
+
+This policy allows users to read only the specified metrics and restricts access to all other metrics. 
+
