@@ -1,0 +1,37 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-achieve-high-availability-with-database-and-cache-layer_{context}"]
+= Achieve high availability with database and cache layers
+
+To achieve high availability (HA) in {product}, you must implement redundancy and failover for the backend service and its external data dependencies. This configuration uses horizontal scaling, database replication, and a shared logical cache to make sure {product-very-short} remains operational during component failures.
+
+.Backend scalability
+
+{product-very-short} backend uses a stateless design to support horizontal scaling. PostgreSQL stores persistent data and the database manages sessions, allowing multiple backend instances to serve any request simultaneously. To improve performance, you can configure an optional logical cache using Redis.
+
+To maintain backend availability, observe the following architectural requirements:
+
+Deploy multiple backend instances:: Run at least two backend instances for basic HA.
+Configure a load balancer:: Use platform-provided load balancing, such as OpenShift Routes, Kubernetes Ingress, or cloud provider load balancers.
+Enable health checks:: Configure the load balancer to probe backend health and remove failed instances from rotation.
+Disable session affinity (sticky sessions):: Database-backed sessions allow any instance to serve any request.
+
+.Database high availability
+{product-very-short} operations rely on PostgreSQL for persistence. A database outage renders the deployment non-functional until the database is restored. For production deployments, you must configure PostgreSQL with high availability (primary-replica replication) to minimize downtime.
+
+[IMPORTANT]
+====
+If you use catalog providers exclusively, the database acts as an indexed cache. You do not require disaster recovery backups because you can repopulate catalog data from external sources of truth, such as Git repositories, CI/CD platforms, and monitoring tools.
+====
+
+.Cache high availability (optional)
+
+Configuring Redis as a shared logical cache improves production performance by sharing cached data across multiple backend instances. A shared cache makes sure that all instances access the same processed data, such as rendered TechDocs.
+
+If the logical cache fails, the platform remains functional, but you might experience the following symptoms:l cache fails, the platform remains functional, but you might experience the following symptoms:
+
+* Slower response times due to cache misses.
+* Increased database load because the backend must fetch data from PostgreSQL.
+* No impact on authentication or core functionality.
+
+For maximum performance stability in production, configure Redis with high availability using Redis Sentinel for small deployments or Redis Cluster for larger deployments.
