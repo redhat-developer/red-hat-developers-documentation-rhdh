@@ -1,0 +1,91 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-user-authentication-with-gilab-basic"]
+= Enable user authentication with GitLab
+
+Add GitLab to your {product-very-short} deployment
+and use it as an authentication provider.
+The basic configuration in {product-very-short} requires only a few simple steps.
+
+.Prerequisites
+* You have configured link:https://docs.gitlab.com/api/oauth2/[GitLab OAuth application].
+* You have set up link:https://docs.gitlab.com/user/profile/personal_access_tokens/[GitLab personal access tokens].
+* You have set up a link:https://docs.gitlab.com/user/group/[GitLab parent group].
+
+.Procedure
+. Enable the `backstage-plugin-catalog-backend-module-gitlab-org-dynamic` plugin.
+. Add the following configuration to your `app-config.yaml` file:
++
+[source,yaml]
+----
+includeTransitiveGroupOwnership: true
+signInPage: gitlab
+auth:
+  environment: production
+  session:
+    secret: <secret_name>
+  providers:
+    gitlab:
+      production:
+        audience: https://${GITLAB_HOST}
+        clientId: ${GITLAB_CLIENT_ID}
+        clientSecret: ${GITLAB_CLIENT_SECRET}
+        callbackUrl: http://localhost:7007}/api/auth/gitlab/handler/frame
+
+....
+
+catalog:
+  providers:
+    gitlab:
+      default:
+        host: ${GITLAB_HOST}
+        orgEnabled: true
+        group: ${GITLAB_PARENT_ORG}
+        restrictUsersToGroup: true
+        includeUsersWithoutSeat: true
+        schedule:
+          initialDelay:
+            seconds: 0
+          frequency:
+            minutes: 1
+          timeout:
+            minutes: 1
+
+...
+
+integrations:
+  gitlab:
+    - host: ${GITLAB_HOST}
+      token: ${GITLAB_TOKEN}
+      apiBaseUrl: https://${GITLAB_HOST}/api/v4
+----
++
+
+`environment`::
+Enter `production` to disable the Guest login option in the {product-short} login page.
+
+`audience`::
+Enter your GitLab instance address: `https://${GITLAB_HOST}`.
+
+`clientId`::
+Enter the configured client ID: `${GITLAB_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name: `${GITLAB_CLIENT_SECRET}`.
+
+`host`::
+Enter your GitLab instance: `${GITLAB_HOST}`.
+
+`group`::
+Enter your configured GitLab parent group: `${GITLAB_PARENT_ORG}`.
+
+`token`::
+Enter your configured GitLab personal access token: `${GITLAB_TOKEN}`.
+
+`apiBaseUrl`::
+Enter your GitLab API address: `https://${GITLAB_HOST}/api/v4`.
+
+.Verification
+
+. Open {product-very-short} and wait for first ingestion.
+. Log in with your GitLab account.
