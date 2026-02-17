@@ -1,0 +1,77 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-establishing-ownership-in-the-software-catalog_{context}"]
+= Establishing ownership in the Software Catalog
+
+To enable automatic metric aggregation in the Scorecard plugin, you must establish ownership relationships between users, groups, and components in the Software Catalog. The Scorecard plugin uses these definitions to calculate health trends based on who owns the entities.
+
+When you implement the following examples, you must replace the placeholder values with your specific project details.
+
+`Group entity`::
+
+The `Group` entity defines a team within a specific namespace.
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: _<example_team>_
+  namespace: _<your_namespace>_
+spec:
+  type: team
+  children: [user:_<your_namespace>_/userName]
+----
+
+`User entity`::
+
+The `User` entity defines an individual and establishes their team membership by using the `memberOf` field.
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: userName
+  title: Example User
+spec:
+  profile:
+    displayName: Example User
+  memberOf: [group:_<your_namespace>_/example-team]
+----
+
+`Component entities`::
+
+The `Component` specification defines the owner to include the component in a user's or team's aggregated metrics.
+
+[source,yaml]
+----
+# Example of user ownership
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: _<user_owned_service>_
+  annotations:
+    github.com/_<your_project_name>_: example-org/example-repository
+    jira/project-key: ET 
+spec:
+  type: service
+  owner: user:_<your_namespace>_/userName
+  lifecycle: production
+----
+
+[source,yaml]
+----
+# Example of group ownership
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: _<group_owned_service>_
+  annotations:
+    github.com/_<your_project_name>_: example-org/example-repository
+    jira/project-key: ET 
+spec:
+  type: service
+  owner: group:_<your_namespace>_/_<example_team>_
+  lifecycle: production
+----
