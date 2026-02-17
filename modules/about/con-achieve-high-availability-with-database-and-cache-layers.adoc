@@ -3,31 +3,35 @@
 [id="con-achieve-high-availability-with-database-and-cache-layer_{context}"]
 = Achieve high availability with database and cache layers
 
-To achieve high availability (HA) in {product}, you must implement redundancy and failover for the backend service and its external data dependencies. This configuration ensures that {product-very-short} remains operational during component failures by using horizontal scaling, database replication, and a shared logical cache.
+To achieve high availability (HA) in {product}, you must implement redundancy and failover for the backend service and its external data dependencies. This configuration uses horizontal scaling, database replication, and a shared logical cache to make sure {product-very-short} remains operational during component failures.
 
 .Backend scalability
 
-{product-very-short} backend uses a stateless design to support horizontal scaling. Because persistent data is stored in PostgreSQL and sessions are externalized to the database, you can run multiple backend instances simultaneously where any instance can serve any request. To improve performance, you can configure an optional logical cache using Redis. To maintain backend availability, observe the following architectural requirements:
+{product-very-short} backend uses a stateless design to support horizontal scaling. PostgreSQL stores persistent data and the database manages sessions, allowing multiple backend instances to serve any request simultaneously. To improve performance, you can configure an optional logical cache using Redis.
 
-Deploy multiple backend instances:: Run at least two to three backend instances for basic HA.
-Configure a load balancer:: Use platform-provided load balancing (for example, OpenShift Routes, Kubernetes Ingress, or cloud provider load balancers).
+To maintain backend availability, observe the following architectural requirements:
+
+Deploy multiple backend instances:: Run at least two backend instances for basic HA.
+Configure a load balancer:: Use platform-provided load balancing, such as OpenShift Routes, Kubernetes Ingress, or cloud provider load balancers.
 Enable health checks:: Configure the load balancer to probe backend health and remove failed instances from rotation.
-Disable session affinity (sticky sessions):: Any instance can serve any request due to database-backed sessions.
+Disable session affinity (sticky sessions):: Database-backed sessions allow any instance to serve any request.
 
 .Database high availability
-PostgreSQL is required for {product-very-short} operations. A database outage renders the deployment non-functional until the database is restored. For production deployments, you must configure PostgreSQL with high availability (primary-replica replication) to minimize downtime.
+{product-very-short} operations rely on PostgreSQL for persistence. A database outage renders the deployment non-functional until the database is restored. For production deployments, you must configure PostgreSQL with high availability (primary-replica replication) to minimize downtime.
 
 [IMPORTANT]
 ====
-When you use catalog providers exclusively, the database acts as an indexed cache of data from external sources. The database does not require disaster recovery backups because the catalog data can be repopulated from external sources of truth, such as Git repositories, CI/CD platforms, and monitoring tools.
+If you use catalog providers exclusively, the database acts as an indexed cache. You do not require disaster recovery backups because you can repopulate catalog data from external sources of truth, such as Git repositories, CI/CD platforms, and monitoring tools.
 ====
 
 .Cache high availability (optional)
 
-Configuring Redis as a shared logical cache improves performance in production deployments by sharing cached data across multiple backend instances. A shared cache ensures that all instances have access to the same processed data, such as rendered TechDocs. If the logical cache fails, the platform remains functional, but you might experience the following symptoms:
+Configuring Redis as a shared logical cache improves production performance by sharing cached data across multiple backend instances. A shared cache makes sure that all instances access the same processed data, such as rendered TechDocs.
+
+If the logical cache fails, the platform remains functional, but you might experience the following symptoms:l cache fails, the platform remains functional, but you might experience the following symptoms:
 
 * Slower response times due to cache misses.
-* Increased database load as data must be fetched from PostgreSQL.
+* Increased database load because the backend must fetch data from PostgreSQL.
 * No impact on authentication or core functionality.
 
-For production environments requiring maximum performance stability, configure Redis with high availability using Redis Sentinel for small deployments or Redis Cluster for larger deployments.
+For maximum performance stability in production, configure Redis with high availability using Redis Sentinel for small deployments or Redis Cluster for larger deployments.
