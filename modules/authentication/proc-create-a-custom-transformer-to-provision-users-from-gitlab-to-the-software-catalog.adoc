@@ -1,0 +1,84 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="create-a-custom-transformer-to-provision-users-from-gitlab-to-the-software-catalog"]
+= Create a custom transformer to provision users from GitLab to the software catalog
+
+Customize how {product} provisions users and groups to {product} software catalog entities,
+by creating a backend module that uses the `keycloakTransformerExtensionPoint` to offer custom user and group transformers for the GitLab backend.
+
+.Prerequisites
+* You have xref:enabling-user-authentication-with-gitlab-with-optional-steps[enabled provisioning users from GitLab to the software catalog].
+
+.Procedure
+. Create a new backend module:
++
+[source,shell]
+----
+$ yarn new
+? What type of module would you like to create? backend-plugin-module
+? Enter the ID if the plugin [required]? catalog
+? Enter the ID of the module [required]? gitlab-org-transformer
+----
++
+The command creates a plugin named: `catalog-backend-module-gitlab-org-transformer`.
+
+. Install required packages:
++
+[source,shell]
+----
+$ yarn --cwd plugins/catalog-backend-module-gitlab-org-transformer add @backstage/plugin-catalog-backend-module-gitlab-org
+----
+
+. (Optional) Install recommended packages to extend the default transformers or Transformer type checking:
++
+[source,shell]
+----
+$ yarn --cwd plugins/catalog-backend-module-gitlab-org-transformer add @backstage/plugin-catalog-backend-module-gitlab
+----
+
+. (Optional) Install recommended packages for UserEntity or GroupEntity type checking:
++
+[source,shell]
+----
+$ yarn --cwd plugins/catalog-backend-module-gitlab-org-transformer add @backstage/catalog-model
+----
+
+. Refer to the link:https://github.com/redhat-developer/rhdh-examples/tree/main/plugins/backstage-plugin-catalog-backend-module-gitlab-org-transformer[sample plugin] and implement `plugins/catalog-backend-module-gitlab-org-transformer/src/module.ts`.
+
+. Package and export the plugin as a Dynamic Plugin, and embed the required package for the custom transformer.
++
+[source,shell]
+----
+$ npx @red-hat-developer-hub/cli@latest plugin export \
+  --embed-package @backstage/plugin-catalog-backend-module-gitlab \
+  --embed-package @backstage/plugin-catalog-backend-module-gitlab-org \
+  --ignore-version-check @backstage/backend-defaults
+----
+
+[IMPORTANT]
+====
+Verify that the installed plugin version is compatible with the Backstage version
+
+See plugin marketplace for the version to import.
+====
+
+
+.Verification
+
+* {product-short} imports the users and groups each time when started.
+Check the console logs to verify the synchronization result.
++
+Successful synchronization example:
++
+[source,json]
+----
+FIXME
+----
+
+* After the first import is complete, go to the *Catalog* page and select **User** to view the list of users.
+
+* When you select a user, you see the information imported from GitHub.
+
+* You can select a group, view the list, and access or review the information imported from GitHub.
+
+* You can log in with a GitHub account.
