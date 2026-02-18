@@ -1,0 +1,62 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-fix-array-not-merged-by-default_{context}"]
+= Fix Helm not merging fields with arrays by default
+
+If you use Helm to install dynamic plugins,
+you might encounter an issue where fields with arrays are not merged by default after you configure them.
+This leads to overwriting of predefined values when you add new ones.
+The issue affects fields such as:
+
+* `extraEnvVars`
+* `extraVolumeMounts`
+* `extraVolumes`
+
+Fix this issue
+by duplicating the predefined values from {product-very-short} Helm Chart's `values.yaml` file into your own version of the file.
+
+.Procedure
+* For `extraEnvVars`, add the following content to your `values.yaml` file:
++
+[source,yaml]
+----
+extraEnvVars:
+      - name: BACKEND_SECRET
+        valueFrom:
+          secretKeyRef:
+            key: backend-secret
+            name: '{{ include "janus-idp.backend-secret-name" $ }}'
+      - name: POSTGRESQL_ADMIN_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: postgres-password
+            name: '{{- include "janus-idp.postgresql.secretName" . }}'
+----
+* For `extraVolumeMounts`, add the following content to your `values.yaml` file:
++
+[source,yaml]
+----
+extraVolumeMounts:
+      - name: dynamic-plugins-root
+        mountPath: /opt/app-root/src/dynamic-plugins-root
+      - name: temp
+        mountPath: /tmp
+----
+* For `extraVolume`, add the following content to your `values.yaml` file:
++
+[source,yaml]
+----
+extraVolumes:
+      - name: dynamic-plugins-root
+        ephemeral:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 5Gi
+----
+
+
+
