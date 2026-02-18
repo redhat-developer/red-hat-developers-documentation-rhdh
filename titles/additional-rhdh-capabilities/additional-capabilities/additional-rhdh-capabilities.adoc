@@ -1,11 +1,24 @@
 [id='additional-rhdh-capabilities_{context}']
 
-== ArgoCD notifications integration with {backstage}
+== Integrate ArgoCD notifications with {product}
 
-This guide explains how to configure ArgoCD to send notifications directly to the Backstage Notifications plugin when application sync events occur.
+This guide explains how to configure ArgoCD to send notifications directly to the {product} ({product-very-short}) Notifications plugin when application sync events occur.
+
+[IMPORTANT]
+====
+*Administrative Requirements*
+
+This integration requires infrastructure-level access. To proceed, you must have:
+
+* `cluster-admin` permissions on {ocp-brand-name}.
+* Write access to the {product-very-short} source code or configuration.
+
+_This task is intended for Platform Engineers; it involves cluster-wide runtime changes_.
+====
 
 .Overview
 
+The following diagram illustrates the flow from an ArgoCD event in the cluster to the {product-very-short} user interface.
 ----
 ┌────────────────────────────────────────────────────────────────────┐
 │                    Kubernetes / OpenShift Cluster                  │
@@ -30,62 +43,37 @@ This guide explains how to configure ArgoCD to send notifications directly to th
 
 .Prerequisites
 
-* ArgoCD installed with the notifications controller enabled
-* Backstage with the Notifications plugin installed
-* Network connectivity from ArgoCD to Backstage
+Before you begin, make sure you have the following:
+* Administrative access to the OpenShift cluster where ArgoCD and {product-very-short} are running.
+* ArgoCD installed with the notifications controller enabled.
+* Network connectivity from the ArgoCD namespace to the {product-very-short} endpoint.
 
 ---
 
-.Part 1: Backstage configuration
+.Part 1: Enable the notifications plugin in {product-very-short}
 
-**Step 1: Install the notifications plugin**
+*Environment*: {product-very-short} Configuration.
 
-Add the notifications plugin to your Backstage backend:
+**Step 1: Enable the dynamic plugins**
 
-[source,bash]
-----
-# Backend
-yarn --cwd packages/backend add @backstage/plugin-notifications-backend
-
-# Frontend
-yarn --cwd packages/app add @backstage/plugin-notifications
-----
-
-**Step 2: Register the Backend Plugins**
-
-In `packages/backend/src/index.ts`:
+Add the following to your `{my-app-config-file}` or your custom {product-very-short} ConfigMap:
 
 [source,yaml]
 ----
-// Add notifications support
-backend.add(import('@backstage/plugin-notifications-backend'));
+dynamicPlugins:
+  frontend:
+    backstage-plugin-notifications:
+      enabled: true
+  backend:
+    backstage-plugin-notifications-backend:
+      enabled: true
 ----
 
-**Step 3: Add the Frontend Components**
+**Step 2: Generate and configure a static external access token**
 
-In `packages/app/src/App.tsx`:
+To allow ArgoCD to authenticate with the {product-very-short} backend, you must provide a secure token.
 
-[source,yaml,subs="+attributes,+quotes"]
-----
-import { NotificationsPage } from '@backstage/plugin-notifications';
-
-// Add route
-<Route path="/notifications" element={<NotificationsPage />} />;
-----
-
-In `packages/app/src/components/Root/Root.tsx`:
-
-[source,yaml,subs="+attributes,+quotes"]
-----
-import { NotificationsSidebarItem } from '@backstage/plugin-notifications';
-
-// Add to sidebar
-<NotificationsSidebarItem />;
-----
-
-**Step 4: Configure External Access Token**
-
-In your `app-config.yaml`, configure a static token for ArgoCD to authenticate:
+You can generate a random, unique string to use as a token. In your `{my-app-config-file}`, configure the token under the `externalAccess` section:
 
 [source,yaml]
 ----
@@ -103,6 +91,10 @@ backend:
 ---
 
 .Part 2: ArgoCD configuration
+
+*Environment*: OpenShift Cluster (executing `oc` commands).
+
+Once {product-very-short} is configured to receive notifications, configure the ArgoCD notifications controller to send them.
 
 **Step 1: Enable the notifications controller**
 
@@ -124,7 +116,7 @@ For standard ArgoCD, ensure the notifications controller is deployed.
 
 **Step 2: Create the notifications Secret**
 
-Store the Backstage authentication token:
+Store the {product-very-short} authentication token in a cluster secret:
 
 [source,yaml]
 ----
@@ -147,7 +139,7 @@ kubectl apply -f argocd-notifications-secret.yaml
 
 **Step 3: Configure notifications**
 
-> **Important for OpenShift GitOps Users:** The OpenShift GitOps operator manages the `argocd-notifications-cm` ConfigMap. If you edit the ConfigMap directly, your changes may be overwritten. Instead, use the `NotificationsConfiguration` Custom Resource (CR) as shown below.
+> **Important for OpenShift GitOps Users:** The OpenShift GitOps operator manages the `argocd-notifications-cm` ConfigMap. If you edit the ConfigMap directly, your changes may be overwritten. Instead, always use the `NotificationsConfiguration` Custom Resource (CR) as shown below.
 
 *Option A: For OpenShift GitOps*
 
@@ -415,6 +407,10 @@ kubectl apply -f argocd-notifications-cm.yaml
 
 .Part 3: Enable notifications for your application
 
+*Environment*: OpenShift Cluster (ArgoCD Application manifests).
+
+Update individual ArgoCD `Application` manifests to enable the notifications for specific components.
+
 **Add required annotations to your ArgoCD application**
 
 Each ArgoCD Application that should send notifications needs two things:
@@ -515,7 +511,7 @@ spec:
 
 ## Troubleshooting
 
-### Notifications Not Appearing
+### Notifications Not Appearing in {product-very-short}
 
 1. **Check notifications controller is running:**
 +
