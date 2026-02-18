@@ -1,0 +1,64 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-sample-software-template_{context}"]
+= Sample Software Template
+
+The following example shows a basic Software Template that collects a project name and publishes it to GitHub.
+
+[source,yaml]
+----
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: basic-node-service
+  title: Basic Node.js Service
+  description: A starter kit for a standardized Node.js microservice.
+  tags:
+    - nodejs
+    - recommended
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: ProjectDetails
+      required:
+        - name
+        - owner
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name for the new repository.
+        owner:
+          title: Owner
+          type: string
+          description: The group responsible for this component.
+          ui:field: OwnerPicker
+          ui:options:
+            allowedKinds:
+              - Group
+
+  steps:
+    - id: fetch-base
+      name: Fetch Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          owner: ${{ parameters.owner }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: This is ${{ parameters.name }}
+        repoUrl: github.com?owner=my-org&repo=${{ parameters.name }}
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+----
