@@ -3,27 +3,27 @@
 [id="proc-installing-and-configuring-lightspeed_{context}"]
 = Installing and configuring {ls-brand-name}
 
-{ls-short} consists of several components which work together to deliver virtual assistant (chat) functionality to your developers. The following list main components:
+{ls-short} includes several components that work together to provide virtual assistant (chat) functionality:
 
-Llama stack server (container sidecar):: Based on open source https://github.com/llamastack/llama-stack[Llama Stack], this service operates as the main gateway to your LLM inferencing provider for chat services. Its modular architecture supports the integration of other services, such as Model Context Protocol (MCP). To support the chat functionality of {ls-short}, you must integrate your LLM provider with the Llama Stack server. This dependency on external LLM providers is called _Bring Your Own Model_ or BYOM.
+Llama stack server (container sidecar):: Based on open source https://github.com/llamastack/llama-stack[Llama Stack], this service is the gateway to your LLM inferencing provider for chat services. Its modular architecture supports integrating other services, such as Model Context Protocol (MCP). To enable chat functionality, you must integrate your LLM provider with the Llama Stack server using _Bring Your Own Model_ or BYOM.
 
-{lcs-name} ({lcs-short}) (container sidecar):: Based on the open source https://github.com/lightspeed-core[Lightspeed Core], this service extends the Llama Stack server by providing features such as chat history maintenance and user feedback gathering.
+{lcs-name} ({lcs-short}) (container sidecar):: Based on the open source https://github.com/lightspeed-core[Lightspeed Core], this service extends the Llama Stack server by maintaining chat history and gathering user feedback.
 
-{ls-brand-name} (dynamic plugins):: These plugins are required to enable the {ls-short} user interface within your {product-very-short} instance.
+{ls-brand-name} (dynamic plugins):: These plugins enable the {ls-short} user interface within your {product-very-short} instance.
 
-Configuring these components to initialize correctly and communicate with each other is essential in order to provide {ls-short} to your users.
+To provide {ls-short} to your users, you must configure these components to communicate with each other. 
 
 [NOTE]
 ====
-* If you are upgrading from the previous {ls-short} Developer Preview with Road-Core Service, you must remove all existing {ls-short} configurations and settings before you reinstall.
+* If you are upgrading from the previous {ls-short} Developer Preview with Road-Core Service, you must remove all existing {ls-short} configurations before reinstalling.
 
-* To prevent or resolve upgrade inconsistencies, first drop and recreate the dynamic plugins volume.
+* To prevent or resolve upgrade inconsistencies, drop and recreate the dynamic plugins volume.
 
 This reinstallation is required due to the following fundamental architectural changes:
 
 * The previous release used Road-Core Service as a sidecar container for interfacing with LLM providers.
 
-* The updated architecture replaces {rcs-short} with the new {lcs-name} and Llama Stack server, which necessitates new configurations for the plugins, volumes, containers, and secrets.
+* The updated architecture replaces {rcs-short} with the new {lcs-name} and Llama Stack server, which requires new configurations for the plugins, volumes, containers, and secrets.
 ====
 
 .Prerequisites
@@ -37,11 +37,10 @@ This reinstallation is required due to the following fundamental architectural c
 
 You must manually install and configure the {ls-short} plugin, the {lcs-name} ({lcs-short}) sidecar container, and the Llama Stack sidecar container.
 
-. Create the {lcs-name} ({lcs-short}) ConfigMap: The {lcs-short} ConfigMap stores the configuration for the {lcs-name} and is mounted to the {lcs-short} container.
-
+. Create the {lcs-name} ({lcs-short}) ConfigMap to store the service configuration:
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMaps*.
-.. From the *Create ConfigMap* page, select the *YAML view* option and edit the file using the following structure. This example demonstrates the configuration for the {lcs-short} ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
+.. Select *YAML view* and edit the file using the following structure. This example demonstrates the configuration for the {lcs-short} ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
 +
 [source,yaml]
 ----
@@ -85,13 +84,12 @@ model_config:
   api_key: ${env.VAR}
 ----
 ====
-
 .. Click *Create*.
 
-. Create the {ls-short} ConfigMap: Create a dedicated {ls-short} ConfigMap (`lightspeed-app-config`) to hold specific plugin configurations.
+. Create the {ls-short}  ConfigMap (`lightspeed-app-config`) for plugin configurations:
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMap*.
-.. From the *Create ConfigMap* page, select the *YAML view* option and add the following example:
+.. Select the *YAML view* option and add the following configuration:
 +
 [source,yaml]
 ----
@@ -129,20 +127,19 @@ data:
       # OPTIONAL: Override default RHDH system prompt
       # systemPrompt: "You are a helpful assistant focused on Red Hat Developer Hub development."
 ----
-
 .. Click *Create*.
 
-. Create Llama Stack Secret file (`llama-stack-secrets`): This file holds sensitive configuration data for your LLM provider and Llama Stack environment variables.
+. Create Llama Stack Secret file (`llama-stack-secrets`) for LLM provider credentials:
 +
 [IMPORTANT]
 ====
-{product} {product-version} configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (api.openai.com).
+{product} {product-version} configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (`api.openai.com`).
 Do not use the official OpenAI API URL or token with vLLM in this release. Attempting this might result in errors or improper responses. Native OpenAI provider support is planned for future releases.
 ====
 
-.. In the {ocp-short} web console, go to *Secrets*.
+.. In the {ocp-short} web console, navigate to *Secrets*.
 .. Click *Create* -> *Key/value secret*.
-.. In the *Create key/value secret* page, select the *YAML view* option and add the following example:
+.. Select the *YAML view* option and add the following structure:
 +
 [source,yaml]
 ----
@@ -152,12 +149,12 @@ metadata:
   name: llama-stack-secrets
 type: Opaque
 stringData:
-  ENABLE_VLLM: ""
+  ENABLE_VLLM: "true"
   ENABLE_VERTEX_AI: ""
   ENABLE_OPENAI: ""
   ENABLE_OLLAMA: ""
-  VLLM_URL: ""
-  VLLM_API_KEY: ""
+  VLLM_URL: "_<api_endpoint>_"
+  VLLM_API_KEY: "_<api_key>_"
   VLLM_MAX_TOKENS: ""
   VLLM_TLS_VERIFY: ""
   OPENAI_API_KEY: ""
@@ -165,8 +162,8 @@ stringData:
   VERTEX_AI_LOCATION: ""
   GOOGLE_APPLICATION_CREDENTIALS: ""
   OLLAMA_URL: ""
-  SAFETY_MODEL: ""
-  SAFETY_URL: ""
+  SAFETY_MODEL: "llama-guard3:8b"
+  SAFETY_URL: "http://localhost:#####/v1"
   SAFETY_API_KEY: ""
 ----
 +
@@ -192,7 +189,6 @@ To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
 `SAFETY_MODEL`:: The identifier for the safety model. The recommended value is llama-guard3:8b.
 `SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`).
 `SAFETY_API_KEY`:: The API key required to authenticate with the safety model, if applicable.
-
 .. Click *Create*.
 
 . Update the dynamic plugins ConfigMap: Add the {ls-short} plugin image to your existing dynamic plugins ConfigMap (`dynamic-plugins-rhdh`).
@@ -233,7 +229,7 @@ plugins:
   package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.45.3__1.2.3
 ----
 
-. Required if your environment uses another global floating action button (FAB): You must move the existing FAB or disable it to prevent interface elements from overlapping by updating your dynamic plugin configuration file with the following changes:
+. Required only if your environment uses another global floating action button (FAB): You must move the existing FAB or disable it to prevent interface elements from overlapping by updating your dynamic plugin configuration file with the following changes:
 +
 [source,yaml]
 ----
@@ -246,7 +242,7 @@ plugins:
           mountPoints:
           # START: If the user has an existing BulkImportPage FAB, move the FAB to the left
             - mountPoint: global.floatingactionbutton/config
-              importName: BulkImportPage # Example
+              importName: BulkImportPage
               config:
                 slot: 'bottom-left'
           # END
@@ -483,4 +479,5 @@ g, user:default/_<your_user>_, role:default/_<your_team>_
 .Verification
 
 . Log in to your {product-very-short} instance.
-. In your {product-very-short} navigation menu, you are able to see and access the *Lightspeed* menu item. Clicking this menu item takes you to the {ls-short} screen.
+. Verify that you can see and access the *Lightspeed* FAB in the home page.
+. Select the *Lightspeed* FAB and verify the chat screen loads.
