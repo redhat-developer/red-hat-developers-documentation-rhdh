@@ -1,8 +1,8 @@
 [id='additional-rhdh-capabilities_{context}']
 
-== Integrate ArgoCD notifications with {product}
+== Integrate Argo CD notifications with {product}
 
-This guide explains how to configure ArgoCD to send notifications directly to the {product} ({product-very-short}) Notifications plugin when application sync events occur.
+This guide explains how to configure Argo CD to send notifications directly to the {product} ({product-very-short}) Notifications plugin when application sync events occur.
 
 [IMPORTANT]
 ====
@@ -18,12 +18,12 @@ _This task is intended for Platform Engineers; it involves cluster-wide runtime 
 
 .Overview
 
-The following diagram illustrates the flow from an ArgoCD event in the cluster to the {product-very-short} user interface.
+The following diagram illustrates the flow from an Argo CD event in the cluster to the {product-very-short} user interface.
 ----
 ┌────────────────────────────────────────────────────────────────────┐
 │                    Kubernetes / OpenShift Cluster                  │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                         ArgoCD                              │   │
+│  │                         Argo CD                              │   │
 │  │  ┌─────────────────┐     ┌────────────────────────────────┐ │   │
 │  │  │ Your App        │────▶│ Notifications Controller       │ │   │
 │  │  │ (with annotations)    │                                │ │   │
@@ -44,9 +44,9 @@ The following diagram illustrates the flow from an ArgoCD event in the cluster t
 .Prerequisites
 
 Before you begin, make sure you have the following:
-* Administrative access to the OpenShift cluster where ArgoCD and {product-very-short} are running.
-* ArgoCD installed with the notifications controller enabled.
-* Network connectivity from the ArgoCD namespace to the {product-very-short} endpoint.
+* Administrative access to the OpenShift cluster where Argo CD and {product-very-short} are running.
+* Argo CD installed with the notifications controller enabled.
+* Network connectivity from the Argo CD namespace to the {product-very-short} endpoint.
 
 ---
 
@@ -71,7 +71,7 @@ dynamicPlugins:
 
 **Step 2: Generate and configure a static external access token**
 
-To allow ArgoCD to authenticate with the {product-very-short} backend, you must provide a secure token.
+To allow Argo CD to authenticate with the {product-very-short} backend, you must provide a secure token.
 
 You can generate a random, unique string to use as a token. In your `{my-app-config-file}`, configure the token under the `externalAccess` section:
 
@@ -90,11 +90,11 @@ backend:
 
 ---
 
-.Part 2: ArgoCD configuration
+.Part 2: Argo CD configuration
 
 *Environment*: OpenShift Cluster (executing `oc` commands).
 
-Once {product-very-short} is configured to receive notifications, configure the ArgoCD notifications controller to send them.
+Once {product-very-short} is configured to receive notifications, configure the Argo CD notifications controller to send them.
 
 **Step 1: Enable the notifications controller**
 
@@ -112,7 +112,7 @@ oc patch argocd openshift-gitops -n openshift-gitops --type merge -p '
 }'
 ----
 
-For standard ArgoCD, ensure the notifications controller is deployed.
+For standard Argo CD, ensure the notifications controller is deployed.
 
 **Step 2: Create the notifications Secret**
 
@@ -156,12 +156,12 @@ Use the `NotificationsConfiguration` Custom Resource:
 > - **Customize templates**: Modify the notification titles, descriptions, severity levels, and topics to match your organization's preferences
 > - **Adjust conditions**: Modify the `when` expressions to fine-tune when notifications are sent
 >
-> For a complete list of available trigger conditions and variables, see the link:https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/triggers/[ArgoCD Notifications Triggers documentation].
+> For a complete list of available trigger conditions and variables, see the link:https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/triggers/[Argo CD Notifications Triggers documentation].
 ====
 
 [source,bash,subs="+attributes,+quotes"]
 ----
-# Get your ArgoCD URL first
+# Get your Argo CD URL first
 ARGOCD_URL=$(oc get routes -n openshift-gitops openshift-gitops-server -o jsonpath='https://{.spec.host}')
 BACKSTAGE_URL="https://your-backstage-url.com"
 
@@ -284,7 +284,7 @@ spec:
 EOF
 ----
 
-*Option B: For Standard ArgoCD*
+*Option B: For Standard Argo CD*
 
 For non-OpenShift installations, you can edit the ConfigMap directly:
 
@@ -407,16 +407,16 @@ kubectl apply -f argocd-notifications-cm.yaml
 
 .Part 3: Enable notifications for your application
 
-*Environment*: OpenShift Cluster (ArgoCD Application manifests).
+*Environment*: OpenShift Cluster (Argo CD Application manifests).
 
-Update individual ArgoCD `Application` manifests to enable the notifications for specific components.
+Update individual Argo CD `Application` manifests to enable the notifications for specific components.
 
-**Add required annotations to your ArgoCD application**
+**Add required annotations to your Argo CD application**
 
-Each ArgoCD Application that should send notifications needs two things:
+Each Argo CD Application that should send notifications needs two things:
 
-1. **The Backstage entity reference** - tells ArgoCD which Backstage entity should receive notifications
-2. **Trigger subscriptions** - tells ArgoCD which events to notify about
+1. **The Backstage entity reference** - tells Argo CD which Backstage entity should receive notifications
+2. **Trigger subscriptions** - tells Argo CD which events to notify about
 
 [IMPORTANT]
 ====
@@ -448,7 +448,7 @@ spec:
 .Example: Complete Setup Flow
 **Scenario**
 
-You have a service called `order-service` managed by ArgoCD, and you want the team to receive Backstage notifications on sync events.
+You have a service called `order-service` managed by Argo CD, and you want the team to receive Backstage notifications on sync events.
 
 . *Backstage Catalog Entity*
 +
@@ -468,7 +468,7 @@ spec:
   lifecycle: production
 ----
 
-. *ArgoCD Application*
+. *Argo CD Application*
 +
 [source,yaml]
 ----
@@ -502,10 +502,10 @@ spec:
 
 . *What Happens*
 
-1. **Developer pushes code** → ArgoCD detects change and syncs
-2. **Sync succeeds** → ArgoCD notifications controller fires `on-deployed-backstage` trigger
+1. **Developer pushes code** → Argo CD detects change and syncs
+2. **Sync succeeds** → Argo CD notifications controller fires `on-deployed-backstage` trigger
 3. **Webhook sent** → POST to Backstage `/api/notifications/notifications`
-4. **Notification appears** → Team sees "🚀 order-service - Deployed" in Backstage with a link to ArgoCD
+4. **Notification appears** → Team sees "🚀 order-service - Deployed" in Backstage with a link to Argo CD
 
 ---
 
@@ -561,7 +561,7 @@ This error means the webhook service is not configured. Common causes:
 
 This means the trigger is using the wrong template format (text instead of JSON). Common causes:
 
-1. **Template name conflicts:** Using names like `template.app-sync-succeeded` that conflict with ArgoCD defaults (which use email/message format, not webhook).
+1. **Template name conflicts:** Using names like `template.app-sync-succeeded` that conflict with Argo CD defaults (which use email/message format, not webhook).
 2. **Wrong subscription:** Application is subscribed to the default trigger instead of your custom one.
 
 **Solution:** Use custom template/trigger names with a suffix like `-backstage`:
@@ -588,7 +588,7 @@ spec:
 "
 ----
 
-For standard ArgoCD, add to ConfigMap:
+For standard Argo CD, add to ConfigMap:
 
 [source,yaml]
 ----
@@ -615,7 +615,7 @@ kubectl rollout restart deployment -n openshift-gitops -l app.kubernetes.io/name
 ## Security Considerations
 
 1. **Use strong tokens** - Generate random tokens with sufficient entropy
-2. **Rotate tokens periodically** - Update both ArgoCD secret and Backstage config
+2. **Rotate tokens periodically** - Update both Argo CD secret and Backstage config
 3. **Use HTTPS** - Ensure Backstage is accessible over HTTPS in production
 4. **Network policies** - Consider restricting which pods can reach Backstage
 
@@ -623,6 +623,6 @@ kubectl rollout restart deployment -n openshift-gitops -l app.kubernetes.io/name
 
 ## Additional Resources
 
-* link:https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/[ArgoCD Notifications Documentation]
+* link:https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/[Argo CD Notifications Documentation]
 * link:https://backstage.io/docs/notifications/[Backstage Notifications Plugin]
-* link:https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/webhook/[ArgoCD Webhook Service Configuration]
+* link:https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/webhook/[Argo CD Webhook Service Configuration]
