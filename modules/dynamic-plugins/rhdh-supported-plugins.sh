@@ -184,6 +184,12 @@ generate_dynamic_plugins_table() {
 
       debug ".spec.packageName | .metadata.name: $Plugin"
 
+      # skip plugins for which there is metadata but which we don't include in default.packages.yaml
+      if [[ $(yq -r '.packages.enabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "" ]] && \
+         [[ $(yq -r '.packages.disabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "" ]]; then
+          debug "${red}Skip[0] Plugin = $Plugin not found in default.packages.yaml\n"; continue;
+      fi
+
       # If Plugin is still not a proper npm package name, try to construct it
       if [[ $Plugin != "@"* ]] && [[ $Plugin == "$Name" ]]; then
           Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
@@ -205,7 +211,6 @@ generate_dynamic_plugins_table() {
           # remove dupe suffixes
           Path="${Path/-dynamic-dynamic/-dynamic}"
       fi
-
 
       debug "Got: Path = $Path"
       # DEPRECATED :: Filter 0: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
@@ -230,16 +235,18 @@ generate_dynamic_plugins_table() {
       [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") == "@redhat"* ]] && \
         { debug "Skip[3] Plugin = $Plugin\n"; continue; }
 
-      # shellcheck disable=SC2016
-      found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-      # shellcheck disable=SC2016
-      found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-
-      Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-      if [[ $Path2 ]]; then
-          Path=$Path2
-      else
-          Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+      # DEPRECATED :: once wrappers are removed, we don't need this anymore
+      if [[ $Path ]] && [[ $Path == "./dynamic-plugins/dist/"* ]]; then
+        # shellcheck disable=SC2016
+        found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
+        # shellcheck disable=SC2016
+        found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
+        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+        if [[ $Path2 ]]; then
+            Path=$Path2
+        else
+            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        fi
       fi
 
       # For extensions YAML files, skip the default config check for inclusion
