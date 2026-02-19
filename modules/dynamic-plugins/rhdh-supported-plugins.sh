@@ -329,7 +329,9 @@ generate_dynamic_plugins_table() {
               # Extract ${VARIABLE_NAME} patterns
               vars=$(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | sort -u)
               for var in $vars; do
-                  Required_Variables="${Required_Variables}\`$var\`\n\n"
+                  if [[ $var ]]; then
+                    Required_Variables="${Required_Variables}\`$var\`\n\n"
+                  fi
               done
           fi
           Required_Variables_CSV=$(echo -e "$Required_Variables" | tr -s "\n" ";")
@@ -531,8 +533,14 @@ generate_dynamic_plugins_table() {
     exit 1
   fi
 
-  # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
-  sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
+  # count enabled plugins
+
+  # shellcheck disable=SC2002
+  COUNT_ENABLED_PLUGINS=$(cat "$ENABLED_PLUGINS" | wc -l ) # if we use wc by itself we get the count AND the filename; only want the count
+  echo "Got COUNT_ENABLED_PLUGINS = $COUNT_ENABLED_PLUGINS preinstalled plugins"
+  # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc, and the counter
+  sed -r -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
+      -e "s/%%COUNT_ENABLED_PLUGINS%%/$COUNT_ENABLED_PLUGINS/" \
       "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.template.adoc}" > "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.adoc}"
 }
 
