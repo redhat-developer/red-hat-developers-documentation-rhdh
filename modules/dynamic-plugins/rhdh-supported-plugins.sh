@@ -189,8 +189,7 @@ generate_dynamic_plugins_table() {
           Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
               -e 's|janus/idp-|janus-idp/|' \
               -e 's|red/hat-developer-hub-|red-hat-developer-hub/|' \
-              -e 's|backstage/community-|backstage-community/|' \
-              -e 's|parfuemerie/douglas-|parfuemerie-douglas/|')"
+              -e 's|backstage/community-|backstage-community/|')"
       fi
 
       # Extract lifecycle and path from YAML spec
@@ -207,6 +206,8 @@ generate_dynamic_plugins_table() {
           Path="${Path/-dynamic-dynamic/-dynamic}"
       fi
 
+
+      debug "Got: Path = $Path"
       # DEPRECATED :: Filter 0: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
       # Accept both patterns:
       #  - Frontend: ./dynamic-plugins/dist/<name>
@@ -298,17 +299,15 @@ generate_dynamic_plugins_table() {
               fi
           fi
 
-          # compute Default from dynamic-plugins.default.yaml
+          # compute Default (enabled or disabled status) from default.packages.yaml
           # shellcheck disable=SC2016
-          disabled=$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path) | .disabled' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-          # shellcheck disable=SC2016
-          if [[ ! $disabled ]]; then disabled=$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path) | .disabled' "${rhdhtmpdir}"/dynamic-plugins.default.yaml); fi
-          # echo "Using Path = $Path got disabled = $disabled"
-          # null or false == enabled by default
           Default="Enabled"
-          if [[ $disabled == "true" ]]; then
-              Default="Disabled"
-          else
+          if [[ $(yq -r '.packages.disabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "$Plugin" ]]; then
+            Default="Disabled"
+          fi
+          # debug "Using Plugin = $Plugin got Default = $Default"
+          # null or false == enabled by default
+          if [[ $Default == "Enabled" ]]; then
               if [[ $Support_Level == "Production" ]]; then
                   # see https://issues.redhat.com/browse/RHIDP-3187 - only Production-level support (GA) plugins should be enabled by default
                   echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
@@ -387,11 +386,11 @@ generate_dynamic_plugins_table() {
           # Use temporary files to allow sorting later
           key="$PrettyName-$RoleSort-$Role-$Plugin"
           if [[ $Path ]]; then
-            # TODO this error should never happen!
-            echo -e "${red}[ERROR] ! Path not found for $Plugin $Version ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
             # shellcheck disable=SC1087
             adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
           else
+            # TODO this error should never happen!
+            echo -e "${red}[ERROR] ! Path not found for $Plugin $Version ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
             # shellcheck disable=SC1087
             adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\n\n$Required_Variables"
           fi
