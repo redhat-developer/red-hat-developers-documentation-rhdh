@@ -1,0 +1,45 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-scheduling-metrics-to-avoid-api-limits_{context}"]
+= Schedule metrics to avoid API limits
+
+To balance data freshness with system performance and API rate limits, you can customize the collection frequency for Scorecard metrics. Scorecard uses the {backstage} built-in scheduler service. The default refresh frequency is hourly, but you can adjust it for each metric.
+
+.Prerequisites
+
+* You have administrative access to the {product-very-short} configuration.
+* You have identified the `datasourceId` and `metricName` for the provider you want to configure.
+
+.Procedure
+
+. Open your {product-very-short} `{my-app-config-file}` file.
+. Navigate to the `scorecard.plugins` section.
+. Add a schedule configuration for your specific data source and metric using the following structure:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    my_datasource:
+      example_metric:
+        schedule:
+          frequency:
+            cron: '0 6 * * *'
+          timeout:
+            minutes: 5
+          initialDelay:
+            minutes: 1
+----
+. Define the schedule parameters based on the `Backstage SchedulerServiceTaskScheduleDefinitionConfig` schema.
+. Save the file.
+. Restart the {product-very-short} backend to apply the changes.
++
+[IMPORTANT]
+====
+**Constraints:** You must make sure the configured frequency does not exceed the API rate limits of your metric provider.
+====
+
+.Verification
+
+* Review the backend logs to make sure the task is scheduled without errors.
+* Verify that new metric data appears in the database according to the defined interval.

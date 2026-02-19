@@ -1,0 +1,44 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-system-architecture-for-deployment-planning_{context}"]
+= System architecture for deployment planning
+
+{product} ({product-very-short}) uses a client-server architecture with a browser-based frontend and a stateless backend service layer. Use this architecture to plan for horizontal scaling, high availability, and efficient data synchronization across the Software Catalog.
+
+By understanding the {product-very-short} architecture, you can perform the following planning tasks:
+
+Plan scalable deployments:: Deploy multiple backend instances behind a load balancer to manage increased load.
+Ensure high availability:: Configure database replication and cache clustering to eliminate single points of failure.
+Optimize resource allocation:: Assign infrastructure resources based on which components require persistent storage or high-performance memory.
+
+The following diagram shows the {product-very-short} internal architecture (frontend and backend) and its external dependencies, such as authentication providers, load balancers, and databases:
+
+image::rhdh/rhdh-architecture-diagram.png[]
+
+The {product-very-short} architecture includes three primary layers. While the data layer (PostgreSQL and optional Redis cache) stores the indexed Software Catalog, the source of truth remains in external systems, such as Git repositories, CI/CD platforms, and other integrations. Catalog providers continuously scan these external systems and synchronize data to the database for fast querying.
+
+.Frontend (Client)
+The frontend is a browser-based single-page application (SPA). Use the frontend interface to browse the Software Catalog, interact with plugins, and connect to external integrations. The frontend communicates with the backend exclusively using REST API calls.
+
+.Backend (Service Layer)
+The backend provides REST API endpoints for the frontend. It manages the Software Catalog (an inventory of your organization's software components, APIs, and resources) and handles authentication.
+
+The stateless design allows you to scale the backend horizontally by running multiple instances behind a load balancer. The backend externalizes all persistent state to a PostgreSQL database, including:
+
+* Catalog entities
+* Task history
+* Session data (managed through a database-backed session store)
+
+.External data dependencies
+{product-very-short} requires PostgreSQL for persistence. For production environments, use a logical cache to improve performance.
+
+PostgreSQL database::
+Stores indexed Software Catalog entities (synchronized from external systems like Git repositories and CI/CD platforms), profiles, authentication data, and backend state. You must configure PostgreSQL with high availability (HA) for production deployments.
+
+Redis Cache (Optional)::
+Configure Redis as a shared logical cache across backend instances to improve performance for frequently accessed data, such as rendered TechDocs and catalog entities.
+
+[TIP]
+====
+The default in-memory cache is suitable only for single-instance deployments. You must use Redis for production deployments with multiple backend instances to ensure cache consistency.
+====
