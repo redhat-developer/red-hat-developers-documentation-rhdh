@@ -258,6 +258,7 @@ generate_dynamic_plugins_table() {
           # * packages/app/package.json#.dependencies
           # * packages/backend/package.json#.dependencies
           # echo "[DEBUG] Check version of $Name is really $VersionJQ (from Path = $Path)..."
+          # shellcheck disable=SC2086
           match=$(grep "\"$Name\": \"" $pluginVersFile || true)
           Version=$VersionJQ
           if [[ $match ]]; then
@@ -315,10 +316,10 @@ generate_dynamic_plugins_table() {
                   # as discussed in RHDH SOS on Jul 14, we are now opening the door for TP plugins to be on by default.
                   # PM (Ben) and Support (Tim) are cool with this as long as the docs clearly state
                   # what is TP, and how to disable the TP content
-                  echo -e "${blue}[WARN] $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a ${ENABLED_PLUGINS}.errors
+                  echo -e "${blue}[WARN] $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a "${ENABLED_PLUGINS}.errors"
                   echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
               else
-                  echo -e "${red}[ERROR] $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a ${ENABLED_PLUGINS}.errors
+                  echo -e "${red}[ERROR] $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a "${ENABLED_PLUGINS}.errors"
               fi
           fi
 
@@ -327,6 +328,7 @@ generate_dynamic_plugins_table() {
           appConfig=$(yq -r '.spec.appConfigExamples[0].content // empty' "$y" 2>/dev/null)
           if [[ -n "$appConfig" && "$appConfig" != "null" ]]; then
               # Extract ${VARIABLE_NAME} patterns
+              # shellcheck disable=SC2016
               vars=$(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | sort -u)
               for var in $vars; do
                   if [[ $var ]]; then
@@ -382,11 +384,17 @@ generate_dynamic_plugins_table() {
           RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; Role="Backend"; else Role="Frontend"; fi
           if [[ $Plugin == *"scaffolder"* ]]; then RoleSort=3; fi
 
-          # TODO include missing data fields for Provider and Description - see https://issues.redhat.com/browse/RHIDP-3496 and https://issues.redhat.com/browse/RHIDP-3440
-
           # Use temporary files to allow sorting later
           key="$PrettyName-$RoleSort-$Role-$Plugin"
-          adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+          if [[ $Path ]]; then
+            # TODO this error should never happen!
+            echo -e "${red}[ERROR] ! Path not found for $Plugin $Version ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
+            # shellcheck disable=SC1087
+            adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+          else
+            # shellcheck disable=SC1087
+            adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\n\n$Required_Variables"
+          fi
           csv_content="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Lifecycle\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
 
           # split into three tables based on support level
