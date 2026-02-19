@@ -1,0 +1,115 @@
+:_mod-docs-content-type: SNIPPET
+
+.Procedure
+. Allow {product-short} to authenticate with GitLab, by creating a GitLab OAuth application.
+.. link:https://docs.gitlab.com/integration/oauth_provider/[Register a GitLab OAuth 2 application] with the following configuration:
+
+GitLab OAuth 2 application name::
+Enter a unique name identifying your GitLab OAuth 2 application, such as `authenticating-with-rhdh-__<GUID>__`.
+
+Redirect URI::
+Enter your {product-short} URL: `pass:c,a,q[{my-product-url}]`.
+
+Authorization callback URL::
+Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/gitlab/handler/frame]`.
+
+Authorized application scope::
+Enable `email`, `profile`, `openid`, and `read_user`.
+
+.. Save the application and note down the following values for the next step:
+
+* **OAuth 2 Client ID**, available in the *Application ID* field
+* **OAuth 2 Client secret**, accessible by selecting *Copy* in the *Secret* field
+
+. Add your GitLab credentials to {product-short}
+by adding the following key/value pairs to {configuring-book-link}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their environment variable name.
+
+`GITLAB_CLIENT_ID`::
+Enter the saved **OAuth 2 Client ID**.
+
+`GITLAB_CLIENT_SECRET`::
+Enter the saved **OAuth 2 Client Secret**.
+
+`GITLAB_URL`::
+Enter the GitLab host domain: __`<gitlab_host_domain>`__.
+
+`GITLAB_ORG`::
+Enter your GitLab organization name, such as `__<your_gitlab_organization_name>__`.
+
+. Enable the GitLab catalog provider plugin in your `dynamic-plugins.yaml` file to import GitLab users and groups to the {product-short} software catalog.
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-gitlab-org-dynamic
+    disabled: false
+----
+
+. Enable provisioning GitLab users and groups to the {product-short} software catalog by adding the GitLab catalog provider section to your `{my-app-config-file}` file:
++
+[id=githubProviderId]
+[source,yaml]
+----
+catalog:
+  providers:
+    gitlab:
+      default:
+        host: $\{GITLAB_HOST}
+        orgEnabled: true
+        group: $\{GITLAB_PARENT_ORG}
+        restrictUsersToGroup: true
+        includeUsersWithoutSeat: true
+        schedule:
+          initialDelay:
+            seconds: 0
+          frequency:
+            minutes: 1
+          timeout:
+            minutes: 1
+----
+
+`host`::
+Enter your GitLab instance address: `${GITLAB_HOST}`.
+
+`group`::
+Enter your configured link:https://docs.gitlab.com/user/group/[GitLab parent group]: `${GITLAB_PARENT_ORG}`.
+
+`schedule.frequency`::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`schedule.timeout`::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+`schedule.initialDelay`::
+Enter your schedule initial delay, in the ISO duration or "human duration" format.
+
+. Enable the GitLab authentication provider, by adding the GitLab authentication provider section to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+includeTransitiveGroupOwnership: true
+signInPage: gitlab
+auth:
+  environment: production
+  session:
+    secret: <name_of_secret>
+  providers:
+    gitlab:
+      production:
+        audience: https://${GITLAB_HOST}
+        clientId: $\{GITLAB_CLIENT_ID}
+        clientSecret: $\{GITLAB_CLIENT_SECRET}
+        callbackUrl: {my-product-url}/api/auth/gitlab/handler/frame
+----
+`audience`::
+Enter your GitLab instance address: `pass:c,a,q[https://${GITLAB_HOST}]`
+
+`clientId`::
+Enter the configured client ID: `${GITLAB_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name: `${GITLAB_CLIENT_SECRET}`.
+
+`callbackUrl`::
+Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/gitlab/handler/frame]`
