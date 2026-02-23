@@ -66,15 +66,15 @@ Access to a Unix-based operating system, such as Linux, macOS or Windows Subsyst
 [source,terminal]
 ----
 # Create a directory for your workspace
-mkdir rhdh-plugin-dev
-cd rhdh-plugin-dev
+mkdir my-backstage-app
+cd my-backstage-app
 
 # Initialize the Backstage app
 # For RHDH 1.9 (adjust version based on the table above)
 npx @backstage/create-app@0.7.6 --path .
 ----
 
-. If this is the first time that you are installing a Backstage application on this device, the following question is displayed. Enter y and select Enter to proceed with the installation.
+. If this is the first time that you are installing a Backstage application on this device, the following question is displayed:
 +
 [terminal,source]
 --
@@ -82,6 +82,8 @@ Need to install the following packages:
 @backstage/create-app@0.7.4
 ok to proceed? (y)
 --
++
+Enter `y` and proceed with the installation.
 . Enter the name for your application and select Enter. This is the root directory of your application. In this example, the name is set to my-backstage-app.
 +
 .Output from create app
@@ -165,52 +167,11 @@ Creating the app...
 ➤ YN0000: └ Completed in 0s 833ms
 --
 
-//Your Backstage application is fully installed and ready to be run. Now that the installation is complete, you can go to the application directory and start the app using the `yarn start` command. The `yarn start` command will run both the frontend and backend as separate processes (named [0] and [1]) in the same window.
-
 .Verification
-
-. Change to the root directory of your Backstage application. This is the same as the name of your application that you provided during the installation. In this example, it is my-backstage-app.
-+
-[source,terminal]
---
-$ cd my-backstage-app
---
-
-. Start the Backstage application.
-+
-[source,terminal]
---
-$ yarn start
---
-+
-As the frontend and backend are starting, you will see output similar to the following. The output shows that the app and backend are starting up with the configuration coming from app-config.yaml. You will see the plugins being initialized, and authorization and permissions being setup. In addition you will see a series of REST API calls for those plugins that use a service backend, such as the service catalog.
-+
-.Output from starting the application
-[source, terminal]
---
-Starting app, backend
-Loaded config from app-config.yaml
-.
-.
-2025-10-15T12:26:41.564Z backstage info Plugin initialization started: 'app', 'proxy', 'scaffolder', 'techdocs', 'auth', 'catalog', 'permission', 'search', 'kubernetes', 'notifications', 'signals' type="initialization"
-Rspack compiled successfully
-.
-.
-2025-10-15T15:17:21.130Z auth info Created new signing key eec1a9e4-4395-4698-9a9f-f1b5cbcf152b component="token-factory"
-2025-10-15T15:17:21.139Z auth info Issuing token for user:development/guest, with entities user:development/guest component="token-factory"
-2025-10-15T15:17:21.223Z rootHttpRouter info [2025-10-15T15:17:21.223Z] "GET /api/auth/guest/refresh HTTP/1.1" 200 802 "http://localhost:3000/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" type="incomingRequest" date="2025-10-15T15:17:21.223Z" method="GET" url="/api/auth/guest/refresh" status=200 httpVersion="1.1" userAgent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" contentLength=802 referrer="http://localhost:3000/"
-.
-.
-2025-10-15T15:17:24.051Z rootHttpRouter info [2025-10-15T15:17:24.051Z] "GET /api/catalog/entities?fields=metadata,kind,spec.profile&filter=kind%3Dgroup%2Crelations.hasMember%3Duser%3Adevelopment%2Fguest HTTP/1.1" 304 0 "http://localhost:3000/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" type="incomingRequest" date="2025-10-15T15:17:24.051Z" method="GET" url="/api/catalog/entities?fields=metadata,kind,spec.profile&filter=kind%3Dgroup%2Crelations.hasMember%3Duser%3Adevelopment%2Fguest" status=304 httpVersion="1.1" userAgent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0" referrer="http://localhost:3000/"
-.
-.
---
-
-Your Backstage application is launched.
+Your workspace should now contain `packages/app/`, `packages/backend/`, and `plugins/` directories, along with a root `package.json` with Backstage dependencies.
 
 == Creating a new plugin
 .Procedure
-//. Run `yarn install` to install dependencies.
 . Create a new plugin by using the `yarn new` command, as follows:
 +
 [source,terminal]
@@ -246,22 +207,54 @@ $ yarn new
 Successfully created frontend-plugin
 --
 
+. (Optional) To preview your plugin with {product-very-short} styling, configure the {product-very-short} theme package in the plugin, as follows:
++
+[source,terminal]
+--
+$ cd plugins/my-plugin
+$ yarn add --dev @red-hat-developer-hub/backstage-plugin-theme
+--
++
+Update `dev/index.tsx` file to use {product-very-short} themes:
++
+[source,javascript]
+--
+// dev/index.tsx
+
+// Import the RHDH themes from the plugin
+import { getAllThemes } from '@red-hat-developer-hub/backstage-plugin-theme';
+// ...
+// ...
+createDevApp()
+  // ...
+  // ...
+  // Add RHDH themes to the development harness
+  .addThemes(getAllThemes())
+  .render();
+--
++
+[NOTE]
+====
+This configuration is only for the local development harness (`dev/index.tsx`). When deployed to {product-very-short}, the application provides theming automatically.
+====
 .Verification
 The system generates a new Backstage plugin using your provided ID, then automatically builds and integrates it into the application.
 
-If you have started your development server, by executing the `yarn start` command, you can view the plugin by navigating to link:http://localhost:3000/my-plugin[]
+The `plugins/my-plugin/` directory should exist with `src/`, `dev/` folders, and a `package.json` file.
 
-image::rhdh/bs-created-plugin.png[backstage-plugin-creation]
+// If you have started your development server, by executing the `yarn start` command, you can view the plugin by navigating to link:http://localhost:3000/my-plugin[]
 
-[NOTE]
---
-You can also serve the plugin in isolation by running `yarn start` in the plugin directory. Or by using the `yarn workspace` command, for example:
+// image::rhdh/bs-created-plugin.png[backstage-plugin-creation]
+
+You can also serve the plugin in isolation by running `yarn start` in the plugin directory, for example:
 
 [source, terminal]
 ----
-$ yarn workspace @backstage/plugin-my-plugin start
+$ cd plugins/my-plugin
+$ yarn start
 ----
---
+
+// Implementing a plugin component (TBD)
 
 
 
