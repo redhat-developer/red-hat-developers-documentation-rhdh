@@ -207,7 +207,7 @@ You can test a plugin locally by using your Backstage application.
 
 [NOTE]
 ====
-You can also use {product-very-short} Local to test your plugins by copying the `dist-dynamic/` folder contents to the {product-very-short} Local `local-plugins` folder or by using an exported dynamic plugin package from your container registry. For more details, see _Verify plugins locally_.
+You can also use {product-very-short} Local to test your plugins by copying the `dist-dynamic/` folder contents to the {product-very-short} Local `local-plugins` folder. For more details, see _Verify plugins locally_.
 ====
 
 For example, to test your component card locally in your Backstage application by using the development harness, update the `dev/index.tsx` file to include the new component card.
@@ -291,3 +291,55 @@ $ yarn start
 .Verification
 Navigate to `http://localhost:3000/simple-example/entity` in your browser. You should see the Entity Page with your `ExampleCard` component displaying "Entity: example-service".
 
+== Configure frontend plugin wiring
+
+Dynamic frontend plugins are registered and configured in the `dynamic-plugins.yaml` file. 
+
+[IMPORTANT]
+====
+If you are using {product-very-short} Local for development and testing, use `dynamic-plugins.override.yaml` instead. 
+====
+
+This configuration determines how the plugin is integrated with the {product-very-short} interface, such as adding routes, sidebar menu items, and mount points.
+
+.`dynamic-plugins.yaml` example
+[source, yaml]
+----
+plugins:
+  # Option 1: Load from an OCI image
+  - package: oci://quay.io/<namespace>/simple-example:v0.1.0!backstage-plugin-simple-example
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          # The package name must match package.json (usually internal.backstage-plugin-<id>)
+          internal.backstage-plugin-simple-example:
+            dynamicRoutes:
+              - path: /simple-example
+                # Must match the export in src/index.ts
+                importName: SimpleExamplePage
+                menuItem:
+                  icon: extension
+                  text: Simple Example
+            mountPoints:
+              - mountPoint: entity.page.overview/cards
+                # Must match the export in src/index.ts
+                importName: ExampleCard
+                config:
+                  layout:
+                    gridColumnEnd: 'span 4'
+                  if:
+                    allOf:
+                      - isKind: component
+
+  # Option 2: Load from local directory (for local RHDH testing)
+  # - package: ./local-plugins/simple-example
+  #   disabled: false
+  #   pluginConfig: ... (same as above)
+----
+
+.Verification
+After restarting {product-very-short}, you should see "Simple Example" in the sidebar menu. Clicking it should display your plugin page. Navigate to any Component entity page to verify the `ExampleCard` appears in the Overview tab.
+
+.Additional resources
+link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html/installing_and_viewing_plugins_in_red_hat_developer_hub/assembly-front-end-plugin-wiring.adoc[Frontend Plugin Wiring]
