@@ -3,44 +3,44 @@
 [id="proc-installing-and-configuring-lightspeed_{context}"]
 = Installing and configuring {ls-brand-name}
 
-{ls-short} consists of several components which work together to deliver virtual assistant (chat) functionality to your developers. The following list main components:
+{ls-short} includes several components that work together to provide virtual assistant (chat) functionality:
 
-Llama stack server (container sidecar):: Based on open source https://github.com/llamastack/llama-stack[Llama Stack], this service operates as the main gateway to your LLM inferencing provider for chat services. Its modular architecture supports the integration of other services, such as Model Context Protocol (MCP). To support the chat functionality of {ls-short}, you must integrate your LLM provider with the Llama Stack server. This dependency on external LLM providers is called _Bring Your Own Model_ or BYOM.
+Llama stack server (container sidecar):: Based on open source https://github.com/llamastack/llama-stack[Llama Stack], this service is the gateway to your LLM inferencing provider for chat services. Its modular architecture supports integrating other services, such as Model Context Protocol (MCP). To enable chat functionality, you must integrate your LLM provider with the Llama Stack server using _Bring Your Own Model_ or BYOM.
 
-{lcs-name} ({lcs-short}) (container sidecar):: Based on the open source https://github.com/lightspeed-core[Lightspeed Core], this service extends the Llama Stack server by providing features such as chat history maintenance and user feedback gathering.
+{lcs-name} ({lcs-short}) (container sidecar):: Based on the open source https://github.com/lightspeed-core[Lightspeed Core], this service extends the Llama Stack server by maintaining chat history and gathering user feedback.
 
-{ls-brand-name} (dynamic plugins):: These plugins are required to enable the {ls-short} user interface within your {product-very-short} instance.
+{ls-brand-name} (dynamic plugins):: These plugins enable the {ls-short} user interface within your {product-very-short} instance.
 
-Configuring these components to initialize correctly and communicate with each other is essential in order to provide {ls-short} to your users.
+To provide {ls-short} to your users, you must configure these components to communicate with each other. 
 
-[TIP]
+[NOTE]
 ====
-If you are upgrading from the previous {ls-short} Developer Preview with Road-Core Service, you must remove all existing {ls-short} configurations and settings before you reinstall.
+* If you are upgrading from the previous {ls-short} Developer Preview with Road-Core Service, you must remove all existing {ls-short} configurations before reinstalling.
 
-To prevent or resolve upgrade inconsistencies, first drop and recreate the dynamic plugins volume.
+* To prevent or resolve upgrade inconsistencies, drop and recreate the dynamic plugins volume.
 
 This reinstallation is required due to the following fundamental architectural changes:
 
 * The previous release used Road-Core Service as a sidecar container for interfacing with LLM providers.
 
-* The updated architecture replaces {rcs-short} with the new {lcs-name} and Llama Stack server, which necessitates new configurations for the plugins, volumes, containers, and secrets.
+* The updated architecture replaces {rcs-short} with the new {lcs-name} and Llama Stack server, which requires new configurations for the plugins, volumes, containers, and secrets.
 ====
 
 .Prerequisites
 
 * You are logged in to your {ocp-short} account.
 * You have an {product-very-short} instance installed using either the Operator or the Helm chart.
-* You have created a {installing-and-viewing-plugins-book-link}##rhdh-installing-rhdh-plugins_title-plugins-rhdh-about[custom dynamic plugins ConfigMap].
+* You have created a {installing-and-viewing-plugins-book-link}#rhdh-installing-rhdh-plugins_title-plugins-rhdh-about[custom dynamic plugins ConfigMap].
+* You have administrative access to the {product-very-short} configuration files.
 
 .Procedure
 
 You must manually install and configure the {ls-short} plugin, the {lcs-name} ({lcs-short}) sidecar container, and the Llama Stack sidecar container.
 
-. Create the {lcs-name} ({lcs-short}) ConfigMap: The {lcs-short} ConfigMap stores the configuration for the {lcs-name} and is mounted to the {lcs-short} container.
-
+. Create the {lcs-name} ({lcs-short}) ConfigMap to store the service configuration:
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMaps*.
-.. From the *Create ConfigMap* page, select the *YAML view* option and edit the file using the following structure. This example demonstrates the configuration for the {lcs-short} ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
+.. Select *YAML view* and edit the file using the following structure. This example demonstrates the configuration for the {lcs-short} ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
 +
 [source,yaml]
 ----
@@ -84,13 +84,12 @@ model_config:
   api_key: ${env.VAR}
 ----
 ====
-
 .. Click *Create*.
 
-. Create the {ls-short} ConfigMap: Create a dedicated {ls-short} ConfigMap (`lightspeed-app-config`) to hold specific plugin configurations.
+. Create the {ls-short}  ConfigMap (`lightspeed-app-config`) for plugin configurations:
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMap*.
-.. From the *Create ConfigMap* page, select the *YAML view* option and add the following example:
+.. Select the *YAML view* option and add the following configuration:
 +
 [source,yaml]
 ----
@@ -110,7 +109,7 @@ data:
         - https://img.freepik.com
         - https://cdn.dribbble.com
         - https://avatars.githubusercontent.com # This is to load GitHub avatars in the UI
-        script-src:
+      script-src:
         - "'self'"
         - "'unsafe-eval'"
         - https://cdn.jsdelivr.net
@@ -119,7 +118,7 @@ data:
       # OPTIONAL: Custom users prompts displayed to users
       # If not provided, the plugin uses built-in default prompts
       prompts:
-        - title: `Getting Started with Red Hat Developer Hub`
+        - title: Getting Started with Red Hat Developer Hub
           message: Can you guide me through the first steps to start using {product-short} as a developer, like exploring the Software Catalog and adding my service?
 
       # OPTIONAL: Port for lightspeed service (default: 8080)
@@ -128,20 +127,19 @@ data:
       # OPTIONAL: Override default RHDH system prompt
       # systemPrompt: "You are a helpful assistant focused on Red Hat Developer Hub development."
 ----
-
 .. Click *Create*.
 
-. Create Llama Stack Secret file (`llama-stack-secrets`): This file holds sensitive configuration data for your LLM provider and Llama Stack environment variables.
+. Create Llama Stack Secret file (`llama-stack-secrets`) for LLM provider credentials:
 +
 [IMPORTANT]
 ====
-{product} 1.8 configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (api.openai.com).
+{product} {product-version} configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (`api.openai.com`).
 Do not use the official OpenAI API URL or token with vLLM in this release. Attempting this might result in errors or improper responses. Native OpenAI provider support is planned for future releases.
 ====
 
-.. In the {ocp-short} web console, go to *Secrets*.
+.. In the {ocp-short} web console, navigate to *Secrets*.
 .. Click *Create* -> *Key/value secret*.
-.. In the *Create key/value secret* page, select the *YAML view* option and add the following example:
+.. Select the *YAML view* option and add the following structure:
 +
 [source,yaml]
 ----
@@ -151,25 +149,46 @@ metadata:
   name: llama-stack-secrets
 type: Opaque
 stringData:
-  VLLM_URL: ""
-  VLLM_API_KEY: ""
+  ENABLE_VLLM: "true"
+  ENABLE_VERTEX_AI: ""
+  ENABLE_OPENAI: ""
+  ENABLE_OLLAMA: ""
+  VLLM_URL: "_<api_endpoint>_"
+  VLLM_API_KEY: "_<api_key>_"
   VLLM_MAX_TOKENS: ""
   VLLM_TLS_VERIFY: ""
-  VALIDATION_PROVIDER: ""
-  VALIDATION_MODEL_NAME: ""
+  OPENAI_API_KEY: ""
+  VERTEX_AI_PROJECT: ""
+  VERTEX_AI_LOCATION: ""
+  GOOGLE_APPLICATION_CREDENTIALS: ""
+  OLLAMA_URL: ""
+  SAFETY_MODEL: "llama-guard3:8b"
+  SAFETY_URL: "http://localhost:#####/v1"
+  SAFETY_API_KEY: ""
 ----
 +
 where:
 
-`VLLM_URL`:: Required for remote services: Set this to the API endpoint URL of your preferred LLM provider, if it is compatible with the OpenAI API specification (Examples: OpenAI, {rhoai-brand-name}, vLLM).
-`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification.
-`VLLM_MAX_TOKENS`:: Optional.
-`VLLM_TLS_VERIFY`:: Optional.
-//`OLLAMA_URL`:: Set this if you altered the `run.yaml` file to use Ollama
-//`OPENAI_API_KEY`:: Set this if you altered the `run.yaml` file. If using `OpenAI` through the generic `VLLM` provider configuration, you must map the API key to `VLLM_API_KEY` instead
-`VALIDATION_PROVIDER`:: Set this as `vllm`, `ollama`, `openai`, depending on the key you have set in this configuration file.
-`VALIDATION_MODEL_NAME`:: Set the name of the model you want to use for validation.
-
+`ENABLE_VLLM`:: Enables the vLLM provider. Set to true to activate.
+`ENABLE_OPENAI`:: Enables the OpenAI provider. Set to true to activate.
+`ENABLE_VERTEX_AI`:: Enables the Vertex AI provider. Set to true to activate.
+`ENABLE_OLLAMA`:: Enables the Ollama provider. Set to true to activate.
+[NOTE]
+====
+To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
+====
+`VLLM_URL`:: The API endpoint URL for the LLM provider. The provider must comply with the OpenAI API specification. Examples include OpenAI, {rhoai-brand-name}, and vLLM.
+`VLLM_API_KEY`:: Required for remote services: Set this to the API key or token required for authentication with your remote LLM provider, if it is compatible with the OpenAI API specification. 
+`VLLM_MAX_TOKENS`:: Optional. The maximum number of tokens the model generates.
+`VLLM_TLS_VERIFY`:: Optional. Specifies whether the system verifies the TLS certificate for the vLLM endpoint.
+`OPENAI_API_KEY`:: The API key required to access OpenAI models through the OpenAI API.
+`VERTEX_AI_PROJECT`:: The Google Cloud project ID required to access Gemini through Vertex AI.
+`VERTEX_AI_LOCATION`:: The Google Cloud region required to access Gemini through Vertex AI.
+`GOOGLE_APPLICATION_CREDENTIALS`:: The credentials required to authenticate with Google Cloud to access Vertex AI.
+`OLLAMA_URL`:: The URL for the Ollama service.
+`SAFETY_MODEL`:: The identifier for the safety model. The recommended value is llama-guard3:8b.
+`SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`).
+`SAFETY_API_KEY`:: The API key required to authenticate with the safety model, if applicable.
 .. Click *Create*.
 
 . Update the dynamic plugins ConfigMap: Add the {ls-short} plugin image to your existing dynamic plugins ConfigMap (`dynamic-plugins-rhdh`).
@@ -180,33 +199,76 @@ includes:
 - dynamic-plugins.default.yaml
 plugins:
 - disabled: false
-  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.45.3__1.2.3
   pluginConfig:
     dynamicPlugins:
       frontend:
         red-hat-developer-hub.backstage-plugin-lightspeed:
-          appIcons:
-            - name: LightspeedIcon
-              module: LightspeedPlugin
-              importName: LightspeedIcon        
-          dynamicRoutes:
-            - importName: LightspeedPage
-              menuItem:
-                icon: LightspeedIcon
-                text: Lightspeed        
-              module: LightspeedPlugin                  
-              path: /lightspeed          
-          translationResources:
-            - importName: lightspeedTranslations
-              module: Alpha
-              ref: lightspeedTranslationRef
+              translationResources:
+                - importName: lightspeedTranslations
+                  module: Alpha
+                  ref: lightspeedTranslationRef
+              dynamicRoutes:
+                - path: /lightspeed
+                  importName: LightspeedPage
+              mountPoints:
+                - mountPoint: application/listener
+                  importName: LightspeedFAB
+                - mountPoint: application/provider
+                  importName: LightspeedDrawerProvider
+                - mountPoint: application/internal/drawer-state
+                  importName: LightspeedDrawerStateExposer
+                  config:
+                    id: lightspeed
+                - mountPoint: application/internal/drawer-content
+                  importName: LightspeedChatContainer
+                  config:
+                    id: lightspeed
+                    priority: 100
 - disabled: false
-  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.42.5__1.0.3!red-hat-developer-hub-backstage-plugin-lightspeed-backend
+  package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.45.3__1.2.3
+----
+
+. Required only if your environment uses another global floating action button (FAB): You must move the existing FAB or disable it to prevent interface elements from overlapping by updating your dynamic plugin configuration file with the following changes:
++
+[source,yaml]
+----
+- package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import
+  disabled: true
+  pluginConfig:
+    dynamicPlugins:
+      frontend:
+        red-hat-developer-hub.backstage-plugin-bulk-import:
+          mountPoints:
+          # START: If the user has an existing BulkImportPage FAB, move the FAB to the left
+            - mountPoint: global.floatingactionbutton/config
+              importName: BulkImportPage
+              config:
+                slot: 'bottom-left'
+          # END
+                icon: BulkImportIcon
+                label: 'Bulk import'
+                toolTip: 'Register multiple repositories in bulk'
+                to: /bulk-import
+          translationResources:
+          - importName: bulkImportTranslations
+            module: Alpha
+            ref: bulkImportTranslationRef
+          appIcons:
+          - name: bulkImportIcon
+            importName: BulkImportIcon
+          dynamicRoutes:
+          - path: /bulk-import
+            importName: BulkImportPage
+            menuItem:
+              icon: bulkImportIcon
+              text: Bulk import
+              textKey: menuItem.bulkImport
 ----
 
 . Update your deployment configuration: Update the deployment configuration based on how your {product-very-short} instance was installed. You must add two sidecar containers: `llama-stack` and `lightspeed-core`.
 
-** For an Operator-installed {product-very-short} instance (Update {backstage} Custom Resource (CR)):
+** For an Operator-installed {product-very-short} instance (Update {backstage} custom resource (CR)):
 
 ... In the `spec.application.appConfig.configMaps` section of your {backstage} CR, add the {ls-short} custom app configuration:
 +
@@ -235,13 +297,13 @@ volumes:
 ----
 initContainers:
   - name: init-rag-data
-    image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
+    image: 'quay.io/redhat-ai-dev/rag-content:release-1.9-lcs'
     command:
       - "sh"
       - "-c"
-      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /data/ && cp -r /rag/embeddings_model /data/ && echo 'Copy complete.'"
+      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /rag-content/ && cp -r /rag/embeddings_model /rag-content/ && echo 'Copy complete.'"
     volumeMounts:
-      - mountPath: /data
+      - mountPath: /rag-content
         name: rag-data-volume
 ----
 ... Add the Llama Stack and the {lcs-short} containers to the `spec.deployment.patch.spec.template.spec.containers` section:
@@ -253,18 +315,14 @@ containers:
   - envFrom:
       - secretRef:
           name: llama-stack-secrets
-    image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1' # Llama Stack image
+    image: 'quay.io/redhat-ai-dev/llama-stack:0.1.4' # Llama Stack image
     name: llama-stack
     volumeMounts:
       - mountPath: /app-root/.llama
         name: shared-storage
-      - mountPath: /app-root/embeddings_model
+      - mountPath: /rag-content
         name: rag-data-volume
-        subPath: embeddings_model
-      - mountPath: /app-root/vector_db/rhdh_product_docs
-        name: rag-data-volume
-        subPath: rhdh_product_docs
-  - image: 'quay.io/lightspeed-core/lightspeed-stack:dev-20251021-ee9f08f' # Lightspeed Core Service image
+  - image: 'quay.io/lightspeed-core/lightspeed-stack:0.4.0' # Lightspeed Core Service image
     name: lightspeed-core
     volumeMounts:
       - mountPath: /app-root/lightspeed-stack.yaml
@@ -282,6 +340,40 @@ containers:
 ** For a Helm-installed {product-very-short} instance (Update the Helm chart):
 
 ... Add your dynamic plugins configuration in the `global.dynamic` property.
++
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+      - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed:bs_1.45.3__1.2.3
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              red-hat-developer-hub.backstage-plugin-lightspeed:
+                translationResources:
+                  - importName: lightspeedTranslations
+                    module: Alpha
+                    ref: lightspeedTranslationRef
+                dynamicRoutes:
+                  - path: /lightspeed
+                    importName: LightspeedPage
+                mountPoints:
+                  - mountPoint: application/listener
+                    importName: LightspeedFAB
+                  - mountPoint: application/provider
+                    importName: LightspeedDrawerProvider
+                  - mountPoint: application/internal/drawer-state
+                    importName: LightspeedDrawerStateExposer
+                    config:
+                      id: lightspeed
+                  - mountPoint: application/internal/drawer-content
+                    importName: LightspeedChatContainer
+                    config:
+                      id: lightspeed
+                      priority: 100
+      - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-lightspeed-backend:bs_1.45.3__1.2.3
+----
 ... Add your {ls-short} custom app config file to `extraAppConfig`:
 +
 [source,yaml]
@@ -316,7 +408,7 @@ containers:
 ----
   initContainers:
       - name: init-rag-data
-        image: 'quay.io/redhat-ai-dev/rag-content:release-1.8-lcs'
+        image: 'quay.io/redhat-ai-dev/rag-content:release-1.9-lcs'
         command:
           - "sh"
           - "-c"
@@ -339,7 +431,7 @@ If you have Road-Core Service installed from the previous {ls-brand-name} config
       - envFrom:
           - secretRef:
               name: llama-stack-secrets
-        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.1'
+        image: 'quay.io/redhat-ai-dev/llama-stack:0.1.4'
         name: llama-stack
         volumeMounts:
           - mountPath: /app-root/.llama
@@ -351,7 +443,7 @@ If you have Road-Core Service installed from the previous {ls-brand-name} config
             name: rag-data-volume
             subPath: rhdh_product_docs
       # Lightspeed Core Service Container
-      - image: 'quay.io/lightspeed-core/lightspeed-stack:dev-20251021-ee9f08f'
+      - image: 'quay.io/lightspeed-core/lightspeed-stack:0.4.0'
         name: lightspeed-core
         volumeMounts:
           - mountPath: /app-root/lightspeed-stack.yaml
@@ -366,7 +458,7 @@ If you have Road-Core Service installed from the previous {ls-brand-name} config
 ----
 ... Click *Save* and then Helm upgrade.
 
-. Optional: Manage authorization (RBAC): If you have users who are not administrators, you must {authorization-book-link}##enabling-and-giving-access-to-rbac[define permissions and roles] for them to use {ls-short}. The Lightspeed Backend plugin uses {backstage} RBAC for authorization.
+. Optional: Manage authorization (RBAC): If you have users who are not administrators, you must {authorization-book-link}#enabling-and-giving-access-to-rbac[define permissions and roles] for them to use {ls-short}. The Lightspeed Backend plugin uses {backstage} RBAC for authorization.
 
 ** For an Operator-installed {product-very-short} instance:
 
@@ -421,4 +513,5 @@ g, user:default/_<your_user>_, role:default/_<your_team>_
 .Verification
 
 . Log in to your {product-very-short} instance.
-. In your {product-very-short} navigation menu, you are able to see and access the *Lightspeed* menu item. Clicking this menu item takes you to the {ls-short} screen.
+. Verify that you can see and access the *Lightspeed* FAB in the home page.
+. Select the *Lightspeed* FAB and verify the chat screen loads.
