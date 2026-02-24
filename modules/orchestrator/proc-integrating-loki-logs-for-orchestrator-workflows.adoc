@@ -7,7 +7,7 @@ To troubleshoot and debug errors, integrate Loki logs into the {product} interfa
 
 .Prerequisites
 
-* You have installed and integrated the Orchestrator backend plugin in your {product} instance.
+* You have enabled the Orchestrator plugins in your {product} instance.
 
 * You have a running Loki instance.
 
@@ -15,34 +15,25 @@ To troubleshoot and debug errors, integrate Loki logs into the {product} interfa
 
 .Procedure
 
-. Install the Loki backend module by entering the following command in your root directory:
+. Enable the Loki backend module in the `redhat-developer-hub-dynamic-plugins` ConfigMap.
 +
-[source,terminal]
-----
-$ yarn workspace backend add @red-hat-developer-hub/backstage-plugin-orchestrator-backend-module-loki
-----
+image::rhdh/enable-the-loki-backend-module.png[]
 
-. Import the new backend module into your `packages/backend/src/index.ts` file:
+. Open the ConfigMap and select the *YAML* view.
+
+. Add the Loki backend module to the `plugins` section:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
-import { createBackend } from '@backstage/backend-defaults';
-const backend = createBackend();
-
-// orchestrator backend
-backend.add(
-  import('@red-hat-developer-hub/backstage-plugin-orchestrator-backend'),
-);
-
-// orchestrator Log Provider
-backend.add(
-  import('@red-hat-developer-hub/backstage-plugin-orchestrator-backend-module-loki'),
-);
-
-backend.start();
+- disabled: false
+      package: oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend-module-loki:{{inherit}}
 ----
++
+image::rhdh/add-loki-backend-module-plugin.png[]
 
-. Add the Loki workflow log provider integration to the *orchestrator* section of your application `{my-app-config-file}` file:
+. Save the file.
+
+. In your application `{my-app-config-file}` ConfigMap file, add the Loki workflow log provider integration to the *orchestrator* section:
 +
 [source,yaml]
 ----
@@ -59,6 +50,19 @@ where:
 `baseUrl`:: Specifies the base URL of your Loki instance. This value is required.
 
 `logStreamSelectors`:: Specifies log stream selectors to filter the logs. By default, the plugin retrieves all logs. For more information about selector syntax, see the link:https://grafana.com/docs/loki/latest/query/log_queries/#log-stream-selector[Grafana Loki documentation].
++
+image::rhdh/add-loki-workflow-log-provider.png[]
++
+image::rhdh/loki-workflow-log-provider.png[]
++
+[NOTE]
+====
+The `baseURl` might vary depending on where you store and access the Loki logs.
+====
+
+. Save the ConfigMap.
+
+. Restart the {product} `pod`.
 
 .Verification
 
