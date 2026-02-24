@@ -44,8 +44,8 @@ mirror:
           - name: redhat-developer-hub-orchestrator-infra
             version: "{product-bundle-version}"
   operators:
-    - catalog: registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}
-      # For example: registry.redhat.io/redhat/redhat-operator-index:v4.19
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v<ocp-version>
+     # For example: registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}
       packages:
       - name: logic-operator
         channels:
@@ -68,7 +68,7 @@ mkdir local-manifests-osl
 podman create --name temp-container "$IMG" -c "cat /manifests/logic-operator.clusterserviceversion.yaml"
 podman cp temp-container:/manifests ./local-manifests-osl
 podman rm temp-container
-yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | select(test("^.*\\/.*:.*$"))' ./local-manifests-osl/manifests/logic-operator-controllers-config_v1_configmap.yaml
+yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | select(test("^.*\\/.*:.*$"))' ./local-manifests-osl/manifests/logic-operator-rhel9-controllers-config_v1_configmap.yaml
 ----
 
 . Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
@@ -132,19 +132,19 @@ You must explicitly include the `pluginConfig` configuration for each plugin as 
 ----
 orchestrator:
   plugins:
-    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend@sha256:05f14d7c6cc41dd50cdb0adafa97137593caa4c218563fcc00bb30d36ad6bf2f
+    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}
       disabled: true
       pluginConfig:
         orchestrator:
           dataIndexService:
             url: http://sonataflow-platform-data-index-service
-    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets@sha256:6e12decf7664c5c3410b1c7308eaa6daabeabbbc7baae5beddcdf52afdb702f8
+    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}
       disabled: true
       pluginConfig:
         dynamicPlugins:
           frontend:
             red-hat-developer-hub.backstage-plugin-orchestrator-form-widgets: {}
-    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator@sha256:7355b244d463187b11174b091b10235167ffc6fbd9466ec3cff0a8b5b04d6e98
+    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}
       disabled: true
       pluginConfig:
         dynamicPlugins:
@@ -174,7 +174,7 @@ orchestrator:
                   if:
                     anyOf:
                     - IsOrchestratorCatalogTabAvailable
-    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator@sha256:6a138dd4c6bb7b98d7af58657395fc3ef3b96768276a2d65d9a7ef5fda52f2b5
+    - package: oci://<custom_registry_url>/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator:{{inherit}}
       disabled: true
       pluginConfig:
         orchestrator:
@@ -186,6 +186,28 @@ where:
 
 `<custom_registry_url>`::
 Enter the address of your custom registry where the OCI images have been mirrored.
+
+`{{inherit}}`::
+Locate the image digests for your version of {product-very-short} in the `dynamic-plugins.default.yaml` file. You can extract this file from the plugin catalog index image to verify the default settings for your specific release:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+#!/bin/bash
+
+unpack () {
+  local IMAGE="$1"
+  DIR="${IMAGE//:/_}"
+  DIR="/tmp/${DIR//\//-}"
+  rm -fr "$DIR"; mkdir -p "$DIR"; container_id=$(podman create "${IMAGE}")
+  podman export $container_id -o /tmp/image.tar && tar xf /tmp/image.tar -C "${DIR}/"; podman rm $container_id; rm -f /tmp/image.tar
+  echo "Unpacked $IMAGE into $DIR"
+  cd $DIR; tree -d -L 3 -I "usr|root|buildinfo"
+}
+
+unpack "registry.access.redhat.com/rhdh/plugin-catalog-index:1.9"
+
+# you can then find the dynamic-plugins.default.yaml under /tmp/registry.access.redhat.com/rhdh/plugin-catalog-index_1.9/dynamic-plugins.default.yaml
+----
 
 .Verification
 
