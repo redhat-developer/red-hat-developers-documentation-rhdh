@@ -1,9 +1,9 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="proc-enable-orchestrator-plugin_{context}"]
-= Enabling the Orchestrator plugin using the Operator
+= Enable the Orchestrator plugins using the Operator
 
-You can enable the Orchestrator plugin in {product-very-short} by configuring dynamic plugins in your {product-custom-resource-type} custom resource (CR).
+You can enable the Orchestrator plugins in {product-very-short} by configuring dynamic plugins in your {product-custom-resource-type} custom resource (CR).
 
 .Prerequisites
 * You have installed {product-very-short} on {ocp-short}.
@@ -11,11 +11,19 @@ You can enable the Orchestrator plugin in {product-very-short} by configuring dy
 
 .Procedure
 
-. To enable the Orchestrator plugin with default settings, set `disabled: false` for the package:
+. To enable the Orchestrator plugins with default settings, set `disabled: false` for the corresponding packages:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
+ disabled: false
+- package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}"
+  disabled: false
+  dependencies:
+    - ref: sonataflow
+- package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator:{{inherit}}"
+  disabled: false
+- package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}"
   disabled: false
 ----
 +
@@ -39,9 +47,6 @@ data:
       plugins:
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
           disabled: false
-            dynamicPlugins:
-                frontend:
-                  red-hat-developer-hub.backstage-plugin-orchestrator:
                     appIcons:
                       - importName: OrchestratorIcon
                         name: orchestratorIcon
@@ -72,9 +77,6 @@ data:
           disabled: false
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}"
           disabled: false
-            dynamicPlugins:
-              frontend:
-                red-hat-developer-hub.backstage-plugin-orchestrator-form-widgets: { }
 ---
 apiVersion: rhdh.redhat.com/v1alpha5
 kind: Backstage
@@ -87,6 +89,11 @@ spec:
         - name: app-config-rhdh
     dynamicPluginsConfigMapName: orchestrator-plugin
 ----
++
+Where:
+
+`{{inherit}}`::
+Enter the correct image digest for your version of {product-very-short}. Refer to the `dynamic-plugins.default.yaml` file.
 
 . Create a secret containing the `BACKEND_SECRET` value as shown in the following example:
 +
