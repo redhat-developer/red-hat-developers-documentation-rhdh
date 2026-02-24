@@ -306,7 +306,7 @@ generate_dynamic_plugins_table() {
               elif [[ $support == "tech-preview"* ]]; then
                   Support_Level="Red Hat Tech Preview"
               elif [[ $support == "community"* ]] || [[ $support == "dev-preview"* ]]; then
-                  Support_Level="Community"
+                  Support_Level="Community Support"
               else
                 echo -e "${blue}[WARN] Could not compute support level for Path = $Path, Plugin = $Plugin" | tee -a "${ENABLED_PLUGINS}.errors"
               fi
