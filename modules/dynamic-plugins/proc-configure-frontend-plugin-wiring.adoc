@@ -1,0 +1,58 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configure-frontend-plugin-wiring_{context}"]
+= Configure frontend plugin wiring
+Front-end plugin wiring integrates dynamic front-end plugin components, such as new pages, UI extensions, icons, and APIs, into {product}.
+
+Because the dynamic plugins load at runtime, the core application must discover and connect the exported assets of the plugin to the appropriate user interface systems and locations.
+
+Dynamic frontend plugins are registered and configured in the `dynamic-plugins.yaml` file. 
+
+[IMPORTANT]
+====
+If you are using {product-very-short} Local for development and testing, use `dynamic-plugins.override.yaml` instead. 
+====
+
+This configuration determines how the plugin is integrated with the {product-very-short} interface, such as adding routes, sidebar menu items, and mount points.
+
+.`dynamic-plugins.yaml` example
+[source, yaml]
+----
+plugins:
+  # Option 1: Load from an OCI image
+  - package: oci://quay.io/<namespace>/simple-example:v0.1.0!backstage-plugin-simple-example
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          # The package name must match package.json (usually internal.backstage-plugin-<id>)
+          internal.backstage-plugin-simple-example:
+            dynamicRoutes:
+              - path: /simple-example
+                # Must match the export in src/index.ts
+                importName: SimpleExamplePage
+                menuItem:
+                  icon: extension
+                  text: Simple Example
+            mountPoints:
+              - mountPoint: entity.page.overview/cards
+                # Must match the export in src/index.ts
+                importName: ExampleCard
+                config:
+                  layout:
+                    gridColumnEnd: 'span 4'
+                  if:
+                    allOf:
+                      - isKind: component
+
+  # Option 2: Load from local directory (for local RHDH testing)
+  # - package: ./local-plugins/simple-example
+  #   disabled: false
+  #   pluginConfig: ... (same as above)
+----
+
+.Verification
+After restarting {product-very-short}, you should see "Simple Example" in the sidebar menu. Clicking it should display your plugin page. Navigate to any Component entity page to verify the `ExampleCard` appears in the Overview tab.
+
+.Additional resources
+link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.8/html/installing_and_viewing_plugins_in_red_hat_developer_hub/assembly-front-end-plugin-wiring.adoc_rhdh-extensions-plugins[Frontend Plugin Wiring]
