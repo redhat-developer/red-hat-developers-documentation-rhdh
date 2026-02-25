@@ -298,11 +298,17 @@ generate_dynamic_plugins_table() {
           author=$(yq -r '.spec.author // "unknown"' "$y")
           support=$(yq -r '.spec.support // "unknown"' "$y")
 
-          if [[ $author == "Red Hat"* ]]; then
+          # only RH authoried content should show up as GA
+          # exception for the Roadie http-request scaffolder, too
+          if [[ $author == "Red Hat"* ]] || [[ $Plugin == "@roadiehq/scaffolder-backend-module-http-request" ]]; then
               if [[ $support == "production"* ]] || [[ $support == "generally-available"* ]]; then
                   Support_Level="Production"
               elif [[ $support == "tech-preview"* ]]; then
                   Support_Level="Red Hat Tech Preview"
+              elif [[ $support == "community"* ]] || [[ $support == "dev-preview"* ]]; then
+                  Support_Level="Community Support"
+              else
+                echo -e "${blue}[WARN] Could not compute support level for Path = $Path, Plugin = $Plugin" | tee -a "${ENABLED_PLUGINS}.errors"
               fi
           fi
 
