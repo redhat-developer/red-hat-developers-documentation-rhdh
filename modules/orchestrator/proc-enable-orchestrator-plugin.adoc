@@ -47,28 +47,6 @@ data:
       plugins:
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
           disabled: false
-                    appIcons:
-                      - importName: OrchestratorIcon
-                        name: orchestratorIcon
-                    dynamicRoutes:
-                      - importName: OrchestratorPage
-                        menuItem:
-                          icon: orchestratorIcon
-                          text: Orchestrator
-                        path: /orchestrator
-                    entityTabs:
-                      - path: /workflows
-                        title: Workflows
-                        mountPoint: entity.page.workflows
-                    mountPoints:
-                      - mountPoint: entity.page.workflows/cards
-                      importName: OrchestratorCatalogTab
-                      config:
-                        layout:
-                          gridColumn: '1 / -1'
-                          if:
-                            anyOf:
-                              - IsOrchestratorCatalogTabAvailable
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}"
           disabled: false
           dependencies:
@@ -88,30 +66,6 @@ spec:
       configMaps:
         - name: app-config-rhdh
     dynamicPluginsConfigMapName: orchestrator-plugin
-----
-+
-Where:
-
-`{{inherit}}`::
-Locate the image digests for your version of {product-very-short} in the `dynamic-plugins.default.yaml` file. You can extract this file from the plugin catalog index image to verify the default settings for your specific release:
-+
-[source,bash,subs="+attributes,+quotes"]
-----
-#!/bin/bash
-
-unpack () {
-  local IMAGE="$1"
-  DIR="${IMAGE//:/_}"
-  DIR="/tmp/${DIR//\//-}"
-  rm -fr "$DIR"; mkdir -p "$DIR"; container_id=$(podman create "${IMAGE}")
-  podman export $container_id -o /tmp/image.tar && tar xf /tmp/image.tar -C "${DIR}/"; podman rm $container_id; rm -f /tmp/image.tar
-  echo "Unpacked $IMAGE into $DIR"
-  cd $DIR; tree -d -L 3 -I "usr|root|buildinfo"
-}
-
-unpack "registry.access.redhat.com/rhdh/plugin-catalog-index:1.9"
-
-# you can then find the `dynamic-plugins.default.yaml` under /tmp/registry.access.redhat.com/rhdh/plugin-catalog-index_1.9/dynamic-plugins.default.yaml
 ----
 
 . Create a secret containing the `BACKEND_SECRET` value as shown in the following example:
