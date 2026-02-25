@@ -13,27 +13,18 @@ include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
 
 .Procedure
 
-. Create an `ImageSetConfiguration.yaml` file for `oc-mirror`. You must use an `ImageSetConfiguration` file to include all mirrored images required by the Serverless Logic Operator, as shown in the following example:
+. Create an `ImageSetConfiguration.yaml` file for `oc-mirror`. You must use an `ImageSetConfiguration` file to include all mirrored images required, as shown in the following example:
++
+[NOTE]
+====
+In {product-very-short} {rhoserverless-version}, images for the Serverless Logic Operator (such as PostgreSQL and job services) are automatically resolved by the Operator bundle and do not need to be manually listed in the `additionalimages` section.
+====
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: mirror.openshift.io/v2alpha1
 kind: ImageSetConfiguration
 mirror:
-  additionalimages:
-  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-postgresql-rhel9:{rhoserverless-version}.0
-  - name: registry.redhat.io/openshift-serverless-1/logic-jobs-service-ephemeral-rhel9:{rhoserverless-version}.0
-  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-postgresql-rhel9:{rhoserverless-version}.0
-  - name: registry.redhat.io/openshift-serverless-1/logic-data-index-ephemeral-rhel9:{rhoserverless-version}.0
-  - name: registry.redhat.io/openshift-serverless-1/logic-db-migrator-tool-rhel9:{rhoserverless-version}.0
-  - name: registry.redhat.io/openshift-serverless-1/logic-swf-builder-rhel9:{rhoserverless-version}.0
-  - name: registry.redhat.io/openshift-serverless-1/logic-swf-devmode-rhel9:{rhoserverless-version}.0
-  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator@sha256:7355b244d463187b11174b091b10235167ffc6fbd9466ec3cff0a8b5b04d6e98
-  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend@sha256:05f14d7c6cc41dd50cdb0adafa97137593caa4c218563fcc00bb30d36ad6bf2f
-  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator@sha256:6a138dd4c6bb7b98d7af58657395fc3ef3b96768276a2d65d9a7ef5fda52f2b5
-  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets@sha256:6e12decf7664c5c3410b1c7308eaa6daabeabbbc7baae5beddcdf52afdb702f8
-
-
   helm:
     repositories:
       - name: openshift-charts
@@ -57,18 +48,6 @@ mirror:
         - name: stable
           minVersion: {rhoserverless-version}.0
           maxVersion: {rhoserverless-version}.1
-----
-+
-Alternatively, you can use `podman` commands to find the missing images and add them to the `additionalimages` list if the versions change:
-+
-[source,terminal,subs="+attributes,+quotes"]
-----
-IMG=registry.redhat.io/openshift-serverless-1/logic-operator-bundle:{rhoserverless-version}.0
-mkdir local-manifests-osl
-podman create --name temp-container "$IMG" -c "cat /manifests/logic-operator.clusterserviceversion.yaml"
-podman cp temp-container:/manifests ./local-manifests-osl
-podman rm temp-container
-yq -r '.data."controllers_cfg.yaml" | from_yaml | .. | select(tag == "!!str") | select(test("^.*\\/.*:.*$"))' ./local-manifests-osl/manifests/logic-operator-rhel9-controllers-config_v1_configmap.yaml
 ----
 
 . Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
