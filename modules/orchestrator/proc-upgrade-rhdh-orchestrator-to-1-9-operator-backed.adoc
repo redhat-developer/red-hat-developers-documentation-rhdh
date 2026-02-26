@@ -1,0 +1,54 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-upgrade-rhdh-orchestrator-to-1-9-operator-backed_{context}"]
+= Upgrade the Orchestrator plugins for 1.9 Operator-backed instances
+
+To use Orchestrator plugins with {product} {product-version}, you must update the `dynamic-plugins` ConfigMap to use Open Container Initiative (OCI) image references. In this version, Orchestrator plugins have transitioned from npm packages to OCI images, requiring an update to the plugin source URLs.
+
+[IMPORTANT]
+====
+If you do not update the `dynamic-plugins` ConfigMap after upgrading the {product-very-short} Operator to {product-version}, the {product-short} instance fails to upgrade.
+====
+
+.Prerequisites
+* You have a running instance of {product} with Orchestrator `1.8` backed by the Operator.
+* You have upgraded the {product} Operator to version {product-version}.
+* You have administrative access to the OpenShift cluster.
+
+.Procedure
+. Open your `dynamic-plugins` ConfigMap for editing.
+. Update the `package` references for the Orchestrator plugins to use the {product-version} OCI registry paths as shown in the following example:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: 'oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}'
+        disabled: false
+      - package: 'oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}'
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: 'oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator:{{inherit}}'
+        disabled: false
+      - package: 'oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}'
+        disabled: false
+----
++
+[NOTE]
+====
+The `{{inherit}}` attribute in your configuration automatically resolves to the {product-version} version provided by the Operator.
+====
+
+. Save the configuration changes.
+
+.Verification
+. Log in to your {product} instance.
+. Confirm that the Orchestrator plugins display the version metadata for {product-version}.
