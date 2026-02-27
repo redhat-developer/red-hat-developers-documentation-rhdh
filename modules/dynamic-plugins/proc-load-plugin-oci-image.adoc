@@ -32,11 +32,10 @@ oc create secret generic _<secret_name>_ --from-file=auth.json=${XDG_RUNTIME_DIR
 ** For an Operator-based deployment, replace _<secret_name>_ with `dynamic-plugins-registry-auth`.
 ** For a Helm-based deployment, replace _<secret_name>_ with `<Helm_release_name>_-dynamic-plugins-registry-auth`.
 
-. Define the plugin with the `oci://` prefix in the following format in `dynamic-plugins.yaml` file:
+. Define the plugin with the `oci://` prefix by using one of the following formats in your `dynamic-plugins.yaml` file:
 +
---
-`oci://_<image_name>_:<tag>!_<plugin_name>_`
-
+Standard explicit definition:: Use the format `oci://<image-name>:<tag>!<plugin-path>`, as shown in the following example:
++
 .Example configuration in `dynamic-plugins.yaml` file
 [source,yaml]
 ----
@@ -44,10 +43,11 @@ plugins:
   - disabled: false
     package: oci://quay.io/example/image:v0.0.1!backstage-plugin-myplugin
 ----
---
-. To perform an integrity check, use the image digest in place of the tag in the `dynamic-plugins.yaml` file as shown in the following example:
+
 +
---
+Using image digests:: To perform an integrity check, use the image digest in place of the tag in the `dynamic-plugins.yaml` file as shown in the following example:
++
+
 .Example configuration in `dynamic-plugins.yaml` file
 [source,yaml]
 ----
@@ -55,5 +55,76 @@ plugins:
   - disabled: false
     package: oci://quay.io/example/image@sha256:28036abec4dffc714394e4ee433f16a59493db8017795049c831be41c02eb5dc!backstage-plugin-myplugin
 ----
---
+
++
+Using path auto-detection:: If the OCI image contains only a single plugin, you can omit the ! and the plugin path. The installer will automatically extract the path from the image metadata, as shown in the following example:
++
+.Example configuration in `dynamic-plugins.yaml` file
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: oci://quay.io/example/image:v1.0.0
+----
++
+[NOTE]
+====
+Images must be packaged with the `@red-hat-developer-hub/cli` to ensure the `io.backstage.dynamic-packages` annotation is applied.
+====
+
++
+Using version inheritance:: To inherit a version from a base configuration file, for example, `dynamic-plugins.default.yaml`, use the `{{inherit}}` placeholder to inherit the `v0.0.2` tag, as shown in the following example:
++
+.Example configuration in `dynamic-plugins.default.yaml` file
+[default-source,yaml]
+----
+plugins:
+  - disabled: false
+    package: oci://quay.io/example/image:v0.0.2!backstage-plugin-myplugin
+----
+
+.Example configuration in `dynamic-plugins.yaml` file
+[source,yaml]
+----
+includes:
+  - dynamic-plugins.default.yaml
+plugins:
+  - disabled: false
+    package: oci://quay.io/example/image:{{inherit}}!backstage-plugin-myplugin
+----
++
+[NOTE]
+====
+An error will occur if `{{inherit}}` is used in the includes file itself or if no matching plugin key exists in the base configuration.
+====
+
++
+Combining version inheritance with path omission::
+When using `{{inherit}}` for version inheritance, you can also use the plugin path auto-detection feature by omitting the plugin path entirely. Use this approach when the base configuration in included files already has an explicit path or uses auto-detection itself.
++
+For example, if the plugin in the included file uses auto-detection that resolves to `oci://quay.io/example/image:v0.0.2!example-path`, and you use `{{inherit}}` without a path, it will inherit both the version `v0.0.2` and the plugin path `example-path`.
++
+.Example configuration in `dynamic-plugins.default.yaml` file
+[default-source,yaml]
+----
+plugins:
+  - disabled: false
+    package: oci://quay.io/example/image:v0.0.2
+----
+
+.Example configuration in `dynamic-plugins.yaml` file
+[source,yaml]
+----
+includes:
+  - dynamic-plugins.default.yaml
+plugins:
+  - disabled: false
+    package: oci://quay.io/example/image:{{inherit}}
+----
++
+[NOTE]
+====
+You must define exactly one plugin from that OCI image in the configuration files. The system returns an error if the configuration files contain multiple plugins or no matching plugins.
+====
+
 . To apply the changes, restart the {product-very-short} application.
