@@ -1,6 +1,6 @@
 :_mod-docs-content-type: SNIPPET
 
-. Register GitLab OAuth 2 application to allow {product-very-short} to authenticate with GitLab with the required callback URL and permissions.
+. Register GitLab OAuth 2 application to allow {product-very-short} to authenticate with GitLab. You must use the required callback URL and permissions.
 .. link:https://docs.gitlab.com/integration/oauth_provider/[Register a GitLab OAuth 2 application] using the following configuration:
 
 GitLab OAuth 2 application name::
@@ -64,16 +64,31 @@ catalog:
           initialDelay:
             seconds: 0
           frequency:
-            minutes: 1
+            minutes: 50
           timeout:
-            minutes: 1
+            minutes: 50
 ----
 
 `host`::
 Enter your GitLab instance address: pass:c,a,q[`${GITLAB_HOST}`].
 
+`orgEnabled`::
+Set to `true` to enable the ingestion of GitLab organizational data, such as users and groups. For gitlab.com, you must also provide a value for the `group` parameter.
+
 `group`::
 Enter your configured link:https://docs.gitlab.com/user/group/[GitLab parent group]: `${GITLAB_PARENT_ORG}`.
+
+`restrictUsersToGroup`::
+Set to `true` to ingest only users who are direct members of the configured group.
+
+`includeUsersWithoutSeat`::
+Set to `true` to include users who do not occupy a paid seat. This setting applies only to GitLab SaaS.
+
+`relations`::
+Specify the types of group memberships to include during ingestion. You can use the following values:
+* `INHERITED`: Includes members of any ancestor groups as members of the current group.
+* `DESCENDANTS`: Includes members of any descendant groups as members of the current group.
+* `SHARED_FROM_GROUPS`: Includes members of any invited groups as members of the current group.
 
 `schedule.frequency`::
 Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
@@ -93,7 +108,7 @@ signInPage: gitlab
 auth:
   environment: production
   session:
-    secret: <name_of_secret>
+    secret: _<name_of_secret>_
   providers:
     gitlab:
       production:
@@ -102,6 +117,8 @@ auth:
         clientSecret: $\{GITLAB_CLIENT_SECRET}
         callbackUrl: {my-product-url}/api/auth/gitlab/handler/frame
 ----
++
+
 `audience`::
 Enter your GitLab instance address: `pass:c,a,q[https://${GITLAB_HOST}]`
 
