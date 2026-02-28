@@ -3,9 +3,19 @@
 [id="proc-adding-a-dynamic-plugin"]
 = Adding a dynamic plugin to {product} 
 
-.Procedure
-* To add your custom dynamic plugins to {product}, you must update the `dynamic-plugins.yaml` file by using the following configuration that is generated from the `npx @red-hat-developer-hub/cli@latest plugin package` command:
-+
+// .Procedure
+// * To add your custom dynamic plugins to {product}, you must update the `dynamic-plugins.yaml` file by using the following configuration that is generated from the `npx @red-hat-developer-hub/cli@latest plugin package` command:
+// +
+// [source,yaml,subs="+attributes,+quotes"]
+// ----
+// plugins:
+//   - package: oci://quay.io/_<account-name>_/_<image-name>_:_<tag>_!_<plugin-name>_
+//     disabled: false
+//     pluginConfig: {}
+// ----
+
+To add a custom dynamic plugin to {product}, you must update the `dynamic-plugins.yaml` file by using the following configuration that is generated from the `npx @red-hat-developer-hub/cli@latest plugin package` command:
+
 [source,yaml,subs="+attributes,+quotes"]
 ----
 plugins:
@@ -13,6 +23,53 @@ plugins:
     disabled: false
     pluginConfig: {}
 ----
+
+[NOTE]
+====
+If you are using RHDH Local for development and testing, use the `dynamic-plugins.override.yaml` file instead.
+====
+
+The following example integrates a plugin named `simple-example` with {product-very-short} and includes the `plugin-config` that you must add to display a frontend plugin:
+
+.Procedure
+[source,yaml,subs="+attributes,+quotes"]
+----
+plugins:
+  # Option 1: Load from an OCI image
+  - package: oci://quay.io/<namespace>/simple-example:v0.1.0!backstage-plugin-simple-example
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          # The package name must match package.json (usually internal.backstage-plugin-<id>)
+          internal.backstage-plugin-simple-example:
+            dynamicRoutes:
+              - path: /simple-example
+                # Must match the export in src/index.ts
+                importName: SimpleExamplePage
+                menuItem:
+                  icon: extension
+                  text: Simple Example
+            mountPoints:
+              - mountPoint: entity.page.overview/cards
+                # Must match the export in src/index.ts
+                importName: ExampleCard
+                config:
+                  layout:
+                    gridColumnEnd: 'span 4'
+                  if:
+                    allOf:
+                      - isKind: component
+
+  # Option 2: Load from local directory (for local RHDH testing)
+  # - package: ./local-plugins/simple-example
+  #   disabled: false
+  #   pluginConfig: ... (same as above)
+----
+where
+
+frontend:dynamic-routes:: Contains the sidebar menu item and the plugin route.
+frontend:mountPoints:: Defines the configuration to mount components exposed by the plugin.
 
 [NOTE]
 ====
