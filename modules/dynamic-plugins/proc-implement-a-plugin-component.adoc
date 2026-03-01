@@ -1,0 +1,67 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-implement-a-plugin-component_{context}"]
+= Implement a plugin component
+By default, the frontend plugin already has a sample page component defined in `src/components/ExampleComponent/`. This page is automatically registered in `src/plugin.ts` as `SimpleExamplePage`.
+
+One of the common extensions is to create a new entity card component.
+
+.Procedure
+. In the `src/components/` directory create an `ExampleCard` sub-directory.
+. Create an `ExampleCard.tsx` file, as follows:
++
+[source, javascript]
+----
+import React from 'react';
+import { InfoCard } from '@backstage/core-components';
+import { useEntity } from '@backstage/plugin-catalog-react';
+
+export const ExampleCard = () => {
+  const { entity } = useEntity();
+  return (
+    <InfoCard title="Simple Example Info">
+      <p>Entity: {entity.metadata.name}</p>
+    </InfoCard>
+  );
+};
+----
+. In the `src/components/ExampleCard` directory, create and edit the `index.ts` file, as follows:
++
+[source, javascript]
+----
+export { ExampleCard } from './ExampleCard';
+----
+
+. To register the new entity card component, edit the `src/plugin.ts` file to add the new component to the plugin, as follows:
++
+[source, javascript]
+----
+import { createComponentExtension } from '@backstage/core-plugin-api';
+
+// ...
+// ...
+export const ExampleCard = simpleExamplePlugin.provide(
+  createComponentExtension({
+    name: 'ExampleCard',
+    component: {
+      lazy: () =>
+        import('./components/ExampleCard').then(m => m.ExampleCard),
+    },
+  }),
+);
+----
+
+. Export all components in `src/index.ts` so they can be loaded dynamically:
++
+[source, javascript]
+----
+export { simpleExamplePlugin, SimpleExamplePage, ExampleCard } from './plugin';
+----
+
+.Verification
+Your plugin should have the following new files: 
+
+* `src/components/ExampleCard/ExampleCard.tsx`
+* `src/components/ExampleCard/index.ts`. 
+
+The `src/plugin.ts` should export `ExampleCard`, and `src/index.ts` should re-export it.

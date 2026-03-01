@@ -1,0 +1,107 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-test-a-plugin-locally_{context}"]
+= Test a plugin locally
+You can test a plugin locally by using your {backstage} application.
+
+[NOTE]
+====
+You can also use {product-very-short} Local to test your plugins by copying the generated `dist-dynamic/` folder contents to the {product-very-short} Local `local-plugins` folder. For more details, see _Verify plugins locally_.
+====
+
+For example, to test your component card locally in your {backstage} application by using the development harness, update the `dev/index.tsx` file to include the new component card.
+
+This file is the entry point for the Local Development Sandbox, it serves as a testing harness.
+
+When you are developing a plugin, you do not need to boot up an entire {backstage} (or {product-very-short}) production-grade instance just to see a UI change. Instead, you use the _Dev App_ which is a lightweight, stripped-down version of the {backstage} frontend.
+
+.Primary functions of the Dev App
+
+Plugin isolation:: It allows you to run your plugin in a standalone wrapper. This is what loads when you run yarn start from within the plugin directory.
+
+Mocking the environment:: Since the plugin usually expects to live inside a {backstage} App, `dev/index.tsx` provides the necessary context:
+
+Identity mocks:: Simulating a logged-in user.
+
+API mocks:: Registering test versions of APIs (similar to a mock CatalogApi) so the plugin doesn't try to call a real backend that isn't there.
+
+Route registration:: It defines how the plugin is mounted within this mini-dev-app, usually using createDevApp().
+
+.Procedure
+. Add {backstage} dependencies:
++
+[source, terminal]
+----
+$ yarn add @backstage/catalog-model @backstage/plugin-catalog-react
+----
+. Edit your `dev/index.tsx` file, as follows:
++
+[source, javascript]
+----
+// ...
+// ...
+import { Entity } from '@backstage/catalog-model';
+import { EntityProvider } from '@backstage/plugin-catalog-react';
+import { Page, Header, Content } from '@backstage/core-components';
+import { Grid } from '@material-ui/core';
+import { ExampleCard } from '../src/plugin';
+
+
+// Mock entity for the component card
+const mockEntity: Entity = {
+  apiVersion: 'backstage.io/v1alpha1',
+  kind: 'Component',
+  metadata: {
+    name: 'example-service',
+    description: 'An example service component for plugin development.',
+    annotations: {
+      'backstage.io/techdocs-ref': 'dir:.',
+    },
+  },
+  spec: {
+    type: 'service',
+    lifecycle: 'production',
+    owner: 'team-platform',
+  },
+};
+
+// Create a page with the mock entity and the component card
+const entityPage = (
+  <EntityProvider entity={mockEntity}>
+    <Page themeId="service">
+      <Header
+        title={mockEntity.metadata.name}
+        subtitle={`${mockEntity.kind} · ${mockEntity.spec?.type}`}
+      />
+      <Content>
+        <Grid container spacing={3} alignItems="stretch">
+          <Grid item md={6} xs={12}>
+            <ExampleCard />
+          </Grid>
+        </Grid>
+      </Content>
+    </Page>
+  </EntityProvider>
+);
+
+createDevApp()
+  // ...
+  // ...
+  .addPage({
+    element: entityPage,
+    title: 'Entity Page',
+    path: '/simple-example/entity',
+  })
+  // ...
+  // ...
+  .render();
+----
+. Run the development server:
++
+[source, terminal]
+----
+$ yarn start
+----
+
+.Verification
+Navigate to `http://localhost:3000/simple-example/entity` in your browser. You should see the Entity Page with your `ExampleCard` component displaying "Entity: example-service".
