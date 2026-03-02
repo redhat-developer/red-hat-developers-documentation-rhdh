@@ -7,16 +7,12 @@
 [id="ref-community-plugins-migration_{context}"]
 = Community plugins migration to the GitHub Container Registry
 
-[IMPORTANT]
-====
-*Breaking Change in RHDH 1.9*
 
 Starting with {product} 1.9, community-supported plugins are no longer distributed as bundled wrappers in the {product-short} container image. These plugins are now built using GitHub Actions and published exclusively to the GitHub Container Registry (ghcr.io).
 
 If you use the plugins listed in this section, you must update your dynamic plugins configuration (in `dynamic-plugins-default.yaml`, your ConfigMap or CustomResource) to use the new `oci://ghcr.io/...` paths.
-====
 
-== What changed
+== Understanding the changes
 
 In {product-short} 1.8 and earlier, community plugins were:
 
@@ -28,19 +24,17 @@ Starting with {product-short} 1.9, community plugins are:
 * Built using GitHub Actions from the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays] repository.
 * Published to `ghcr.io/redhat-developer/rhdh-plugin-export-overlays`.
 * Referenced by using OCI registry paths, such as `oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<plugin-name>:<tag>`.
-+
-[TIP]
-====
-To ensure environment stability, use a SHA256 digest instead of a version tag.
-====
 
-== Migration steps
 
-To migrate your configuration:
+== Migrate your configuration
+
+To migrate your configuration, change the `package` paths as follows:
 
 . Identify plugins in your ConfigMap or CustomResource that use local paths starting with `./dynamic-plugins/dist/`.
-. Find the corresponding `ghcr.io` path in the following migration table:
+. Find the corresponding `ghcr.io` path in the migration table, which is later in this chapter. 
+. Update your configuration to use the new OCI registry path.
 +
+The following example shows a migrated configuration:
 [source,yaml]
 ----
 # Before (RHDH 1.8 and earlier)
@@ -54,31 +48,28 @@ plugins:
     disabled: false
 ----
 
-. Update your configuration to use the new OCI registry path.
 
+== The image tag in registry paths
 
-== Understanding the tag format
+As shown in the previous example, the OCI registry path ends with an image tag, which is your {product-very-short} application{apos}s version of {backstage} and the plugin version. The tag format is `bs_<backstage-version>__<plugin-version>`.
 
-The `ghcr.io` image tags use the following format: `bs_<backstage-version>__<plugin-version>`
+For example: `bs_1.45.3__0.26.0`
 
-Example: `bs_1.45.3__0.26.0`:
-where
-* `bs_1.45.3`: Built against {backstage} version 1.45.3
-* `0.26.0`: Nodejs-packaged {backstage} plugin, version 0.26.0
+where:
+
+* `bs_1.45.3`: Is the {backstage} version on which the {product-very-short} application is built (in this case, 1.45.3).
+* `0.26.0`: Is the compatible version of the plugin (in this case, version 0.26.0 of the Nodejs-packaged {backstage} plugin).
+
+To find the correct image tag for a plugin OCI registry path:
+
+. Look in the link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.9/html/red_hat_developer_hub_release_notes/pr01[{product-very-short} release notes preface] for your {backstage} version.
+. Go to the link:https://github.com/orgs/redhat-developer/packages?tab=packages&q=[plugin packages list in the rhdh-plugin-export-overlays repository]. Search for and select your plugin.
+. Locate a compatible {backstage} version from the list of images. For example, because {product-very-short} 1.9 is based on {backstage} 1.45, you can choose any plugin tag starting with `bs_1.45`.  
+
 
 == Community plugins migration table
 
 The following table lists all %%MIGRATION_COUNT%% community-supported plugins that have been migrated from bundled wrappers to `ghcr.io`.
-
-[NOTE]
-====
-Replace `<tag>` with the version tag corresponding to your {product-short} version. For the latest tags, see the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays repository].
-====
-
-[TIP]
-====
-To ensure environment stability, use a SHA256 digest instead of a version tag.
-====
 
 [cols="1,2,3", options="header"]
 |===
@@ -88,6 +79,7 @@ To ensure environment stability, use a SHA256 digest instead of a version tag.
 
 %%MIGRATION_TABLE%%
 |===
+
 
 == Plugins remaining bundled in RHDH 1.9
 
