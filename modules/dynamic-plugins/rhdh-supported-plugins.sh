@@ -478,21 +478,6 @@ generate_dynamic_plugins_table() {
   # shellcheck disable=SC2206
   num_plugins+=($count)
 
-  # 3) Community
-  temp_file="$TEMP_DIR/adoc.community.tmp"
-  out_file="${0/.sh/.ref-community-plugins}"
-  rm -f "$out_file"
-  count=0
-  if [[ -f "$temp_file" ]]; then
-      sort "$temp_file" | while IFS='|' read -r key content; do
-          (( count = count + 1 ))
-          debug " * [$count] $key [ ${out_file##*/} ]"
-          echo -e "$content" >> "$out_file"
-      done
-      count=$(wc -l < "$temp_file")
-  fi
-  # shellcheck disable=SC2206
-  num_plugins+=($count)
 
   # 3) Deprecated
   temp_file="$TEMP_DIR/adoc.deprecated.tmp"
@@ -529,7 +514,7 @@ generate_dynamic_plugins_table() {
   count=1
   index=0
   empties=0
-  for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins ref-deprecated-plugins; do
+  for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-deprecated-plugins; do
       (( index = count - 1 ))
       this_num_plugins=${num_plugins[$index]}
       echo -n -e "${green}[$count] Processing $d ${norm}..."
@@ -681,6 +666,7 @@ generate_migration_table() {
     echo -e "|*Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "|*Scaffolder Backend Module Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "|*Tekton*\n|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Roadie ArgoCD Backend*\n|\`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"    
     echo -e "|*Scaffolder Backend ArgoCD*\n|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "${green}Found $migration_count community plugins to migrate${norm}"
 
