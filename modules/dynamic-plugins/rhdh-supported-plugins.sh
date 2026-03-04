@@ -478,21 +478,6 @@ generate_dynamic_plugins_table() {
   # shellcheck disable=SC2206
   num_plugins+=($count)
 
-  # 3) Community
-  temp_file="$TEMP_DIR/adoc.community.tmp"
-  out_file="${0/.sh/.ref-community-plugins}"
-  rm -f "$out_file"
-  count=0
-  if [[ -f "$temp_file" ]]; then
-      sort "$temp_file" | while IFS='|' read -r key content; do
-          (( count = count + 1 ))
-          debug " * [$count] $key [ ${out_file##*/} ]"
-          echo -e "$content" >> "$out_file"
-      done
-      count=$(wc -l < "$temp_file")
-  fi
-  # shellcheck disable=SC2206
-  num_plugins+=($count)
 
   # 3) Deprecated
   temp_file="$TEMP_DIR/adoc.deprecated.tmp"
@@ -529,7 +514,7 @@ generate_dynamic_plugins_table() {
   count=1
   index=0
   empties=0
-  for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins ref-deprecated-plugins; do
+  for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-deprecated-plugins; do
       (( index = count - 1 ))
       this_num_plugins=${num_plugins[$index]}
       echo -n -e "${green}[$count] Processing $d ${norm}..."
@@ -629,6 +614,7 @@ generate_migration_table() {
             # Extract data from the metadata file
             plugin_title=$(yq -r '.metadata.title // ""' "$metadata_file")
             plugin_name=$(yq -r '.metadata.name // ""' "$metadata_file")
+            plugin_version=$(yq -r '.spec.version // ""' "$metadata_file")
             dynamic_artifact=$(yq -r '.spec.dynamicArtifact // ""' "$metadata_file")
             support=$(yq -r '.spec.support // "unknown"' "$metadata_file")
 
@@ -659,13 +645,14 @@ generate_migration_table() {
 
             if [[ $QUIET -eq 0 ]]; then
                 echo " * Migration: $display_title"
+                echo "   Version: $plugin_version"
                 echo "   Old: $old_path"
                 echo "   New: $new_path"
             fi
 
             # Add to migration table (sorted by title)
             # shellcheck disable=SC2028
-            echo "${display_title}||*${display_title}*\n|\`${old_path}\`\n|\`${new_path}\`" >> "$MIGRATION_TABLE_FILE"
+            echo "${display_title}||*${display_title}*\n|${plugin_version}|\`${old_path}\`\n|\`${new_path}\`" >> "$MIGRATION_TABLE_FILE"
 
             migration_count=$((migration_count + 1))
         done
@@ -678,10 +665,11 @@ generate_migration_table() {
     # These plugins continue to be bundled in 1.9 while transitioning to ghcr.io
     # Format matches migration table: Plugin Name | Old Path | New Path
     # shellcheck disable=SC2129
-    echo -e "|*Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Scaffolder Backend Module Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Tekton*\n|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Scaffolder Backend ArgoCD*\n|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Quay*\n|1.28.1|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Scaffolder Backend Module Quay*\n|2.14.0|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Tekton*\n|3.33.3|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Roadie ArgoCD Backend*\n|4.6.0|\`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"    
+    echo -e "|*Scaffolder Backend ArgoCD*\n|1.8.1|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "${green}Found $migration_count community plugins to migrate${norm}"
 
     # Sort the migration table by plugin title and format for adoc
