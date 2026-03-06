@@ -180,9 +180,156 @@ When working on a title, you typically need to update:
   ifndef::parent-context-of-[context-name][:!context:]
   ```
 
-## Validation Command
+### Issue: Content other than a single list in .Procedure section
+- **Symptom**: DITA task mapping error: "Content other than a single list cannot be mapped to DITA tasks"
+- **Fix**: Move descriptive content (bullets, explanations) before the `.Procedure` section
+- **Example**: If you have bullets describing what data is displayed, put them in the introductory content, not after `.Procedure`
 
-Always run this command from the repository root to validate:
+### Issue: Red Hat style violations
+- **Symptom**: Vale warning about using "like" instead of "such as"
+- **Fix**: Use "such as" for examples (e.g., "catalog entities (such as components, APIs)")
+- **Note**: Always run Vale with default config after DITA validation to catch style issues
+
+## Procedure Module Style Guidelines
+
+### Titles
+- **Use imperative form** (not gerund): "Enable the plugin" not "Enabling the plugin"
+- **Remove fluff**: "Enable the Adoption Insights plugin" not "Enable the Adoption Insights plugin in {product}"
+- **Do NOT use the proc- prefix in the ID**: `[id="enable-the-adoption-insights-plugin_{context}"]`
+- **ID must match title**: Convert title to lowercase, replace spaces with hyphens, add `_{context}` suffix
+
+### Module ID Naming Convention
+```asciidoc
+= Enable the Adoption Insights plugin
+
+[id="enable-the-adoption-insights-plugin_{context}"]
+```
+
+### Procedure Formatting
+
+**Multi-step procedures**: Use ordered lists (numbered steps)
+```asciidoc
+.Procedure
+
+. First step.
+. Second step.
+. Third step.
+```
+
+**Single-step procedures**: Use unordered list (single bullet)
+```asciidoc
+.Procedure
+
+* In your `dynamic-plugins.yaml` file, update the value to `true`.
+```
+
+**Substeps**: Use proper indentation with continuation (+)
+```asciidoc
+. Main step.
++
+Additional context for the step.
++
+[source,yaml]
+----
+code example
+----
+
+. Next step with substeps:
+
+.. Substep 1.
+.. Substep 2.
+```
+
+### Content Organization
+
+**One sentence per line**: Each sentence on its own line for better diff tracking and readability.
+
+**Move non-procedure content before .Procedure**:
+```asciidoc
+[role="_abstract"]
+Short description here.
+
+Introductory content explaining context.
+
+Field definitions or data descriptions go here:
+
+Name::
+Description of the name field
+
+Kind::
+Description of the kind field
+
+.Procedure
+
+. The actual steps go here.
+```
+
+### Description Lists vs Unordered Lists
+
+**Use description lists** (not unordered lists with bold formatting) for field definitions:
+
+✗ **Wrong**:
+```asciidoc
+* *Name*: Description
+* *Kind*: Description
+```
+
+✓ **Correct**:
+```asciidoc
+Name::
+Description
+
+Kind::
+Description
+```
+
+**Do NOT use bold formatting in description list terms** - the term itself is automatically formatted.
+
+### Configuration Settings
+
+**Use description lists for configuration parameters**:
+```asciidoc
+`maxBufferSize`::
+(Optional) Enter the maximum buffer size for event batching.
+The default value is `20`.
+
+`flushInterval`::
+(Optional) Enter the flush interval in milliseconds.
+The default value is `5000ms`.
+```
+
+**Use "Enter" rather than "Specifies"** in parameter descriptions.
+
+### File and Object References
+
+- **Be specific about what you're referencing**:
+  - Use "`dynamic-plugins.yaml` file" not "dynamic plugins config map" (unless you specifically mean a ConfigMap object)
+  - Use "config map" (lowercase, two words) for the general concept
+  - Use "ConfigMap" (one word, capitalized) only for Kubernetes ConfigMap objects
+
+### Lists in Procedures
+
+**Convert inline lists to proper list formatting**:
+
+✗ **Wrong**:
+```asciidoc
+You can use the following options: *Option 1*, *Option 2*, or *Option 3*.
+```
+
+✓ **Correct**:
+```asciidoc
+You can use any of the following options:
+
+* *Option 1*
+* *Option 2*
+* *Option 3*
+```
+
+## Validation Commands
+
+### DITA Validation (Required)
+
+Always run this command from the repository root to validate DITA compliance:
 
 ```bash
 vale --config .vale-dita-only.ini <path-to-assembly-file>
@@ -190,10 +337,23 @@ vale --config .vale-dita-only.ini <path-to-assembly-file>
 
 Or to validate all included files at once, run against the directory containing the modules.
 
+**Target**: 0 errors, 0 warnings, 0 suggestions
+
+### Red Hat Style Validation (Recommended)
+
+After DITA validation passes, run Vale with default config to check Red Hat style guidelines:
+
+```bash
+vale assemblies/assembly-<name>.adoc modules/<category>/<name>/proc-*.adoc
+```
+
+**Target**: 0 errors, 0 warnings (suggestions about include directives can be ignored)
+
 ## Success Criteria
 
 The work is complete when:
 - Vale DITA validation shows: `0 errors, 0 warnings, 0 suggestions`
+- Vale Red Hat style validation shows: `0 errors, 0 warnings`
 - All 14 CQA 2.1 acceptance criteria are verified and met
 - Changes are committed with proper JIRA reference in commit message
 - Pull request is created with proper template and issue link
