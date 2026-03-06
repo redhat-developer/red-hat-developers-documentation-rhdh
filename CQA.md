@@ -195,6 +195,51 @@ When working on a title, you typically need to update:
 - **Fix**: Use "such as" for examples (e.g., "catalog entities (such as components, APIs)")
 - **Note**: Always run Vale with default config after DITA validation to catch style issues
 
+### Issue: Usage of "respective" and "respectively"
+- **Symptom**: Not a Vale error, but poor writing style that makes content harder to understand
+- **Fix**: Rewrite sentences to be explicit about which items correspond to which
+- **Examples**:
+  - ✗ Wrong: "certificates and keys respectively in the `ldap_certs.pem` and `ldap_keys.pem` files"
+  - ✓ Correct: "certificates in the `ldap_certs.pem` file and keys in the `ldap_keys.pem` file"
+  - ✗ Wrong: "their respective environment variable names"
+  - ✓ Correct: "the corresponding environment variable name for each secret"
+  - ✗ Wrong: "Files with _.k8s_ or _.ocp_ extensions provide overrides for Kubernetes and OpenShift, respectively"
+  - ✓ Correct: "Files with _.k8s_ extension provide overrides for Kubernetes, and files with _.ocp_ extension provide overrides for OpenShift"
+
+### Issue: Reference modules with nested sections (level 2+)
+- **Symptom**: Vale DITA error: "Level 2, 3, 4, and 5 sections are not supported in DITA" in reference modules
+- **Root cause**: Reference modules in DITA cannot have nested sections (`==`, `===`, etc.). They can only have:
+  - Level 1 heading (module title)
+  - Tables
+  - Description lists
+  - Paragraphs
+  - Code blocks
+- **Wrong approach**: Converting `==` subheadings to description lists maintains structure but may not be semantic
+- **Correct approach**: Split the monolithic reference module into multiple focused reference modules:
+  1. Create individual reference modules for each major section (each `==` becomes its own module)
+  2. Create an assembly to organize and include all the new reference modules
+  3. Update parent assembly to include the new assembly instead of the old monolithic module
+  4. Update all cross-references (xrefs) throughout the documentation to point to the new assembly ID
+- **Example**: A `ref-permissions.adoc` with 11 `==` subsections becomes:
+  - 11 individual reference modules (one per subsection)
+  - 1 assembly that includes all 11 modules
+  - Parent assembly updated to include the new assembly
+  - All xrefs updated from `ref-permissions_{context}` to `assembly-permissions-reference_{context}`
+
+### Issue: Broken cross-references after module splitting
+- **Symptom**: Build errors showing "Unknown ID" when building with ccutil
+- **Root cause**: When you split a reference module into an assembly + multiple modules, old xrefs still point to the old module ID
+- **Fix**: Search for all xrefs to the old module ID and update them to point to the new assembly ID:
+  ```bash
+  # Find all xrefs to old module
+  grep -r "xref:old-module-id" modules/ assemblies/
+
+  # Update them to new assembly ID
+  xref:old-module-id_{context} → xref:new-assembly-id_{context}
+  xref:old-module-id_title-name → xref:new-assembly-id_title-name
+  ```
+- **Verification**: Run `build/scripts/build-ccutil.sh` to verify all xrefs resolve correctly
+
 ## Procedure Module Style Guidelines
 
 ### Titles
@@ -354,11 +399,28 @@ vale assemblies/assembly-<name>.adoc modules/<category>/<name>/proc-*.adoc
 
 **Target**: 0 errors, 0 warnings (suggestions about include directives can be ignored)
 
+### Build Validation (Required)
+
+After making changes, verify that all titles build successfully and all cross-references resolve:
+
+```bash
+build/scripts/build-ccutil.sh
+```
+
+**Target**: All titles build successfully with "Finished html-single", no "Unknown ID" errors, exit code 0
+
+This validates:
+- All include statements are correct
+- All cross-references (xrefs) resolve properly
+- All AsciiDoc syntax is valid
+- Content structure is compatible with DocBook XML transformation
+
 ## Success Criteria
 
 The work is complete when:
 - Vale DITA validation shows: `0 errors, 0 warnings, 0 suggestions`
 - Vale Red Hat style validation shows: `0 errors, 0 warnings`
+- Build validation (`build/scripts/build-ccutil.sh`) completes successfully with all titles built and no xref errors
 - All 14 CQA 2.1 acceptance criteria are verified and met
 - Changes are committed with proper JIRA reference in commit message
 - Pull request is created with proper template and issue link
