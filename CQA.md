@@ -60,7 +60,7 @@ Requirements (CQA 2.1 Acceptance Criteria):
 
 8. **Titles are brief, complete, and descriptive**:
    - Concept modules: use noun phrases (e.g., "High availability with database and cache layers")
-   - Procedure modules: use gerunds (e.g., "Installing the Operator")
+   - Procedure modules: use present-tense verbs (e.g., "Install the Operator")
    - Reference modules: use noun phrases (e.g., "Sizing requirements for Red Hat Developer Hub")
    - Assembly titles: describe the user story/goal
    - Avoid imperative verbs in concept/reference titles (bad: "Achieve high availability", good: "High availability")
@@ -167,6 +167,11 @@ When working on a title, you typically need to update:
 ### Issue: Incorrect title pattern for content type
 - **Symptom**: Concept module using imperative verb (e.g., "Achieve high availability")
 - **Fix**: Change to noun phrase (e.g., "High availability with database layers")
+
+### Issue: Incorrect title pattern for content type
+- **Symptom**: Procedure module using gerund verb (e.g., "Achieving high availability")
+- **Fix**: Change to present-tense verb (e.g., "Achieve high availability") 
+
 
 ### Issue: Grammar/parallel structure
 - **Symptom**: Verb agreement issues in compound phrases
