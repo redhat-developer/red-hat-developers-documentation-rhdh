@@ -159,7 +159,7 @@ Process:
 7. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
 8. Create pull request using the template at `.github/pull_request_template.md`:
    ```bash
-   gh pr create --title "[RHIDP-XXXXX] Brief description" --body "$(cat <<'EOF'
+   gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
 
    **Version(s):** <version>
