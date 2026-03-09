@@ -27,16 +27,36 @@ Requirements (CQA 2.1 Acceptance Criteria):
 
 1. **Vale DITA validation**: Run `vale --config .vale-dita-only.ini` against all AsciiDoc files included in the title. Result must be 0 errors, with only acceptable warnings documented (callouts, false positive concept links), 0 suggestions.
 
-2. **Content is modularized following Red Hat modular documentation rules**:
-   - Use official templates (assemblies, concept modules, reference modules, procedure modules)
-   - Each module has correct `:_mod-docs-content-type:` metadata
-   - Proper file naming conventions (assembly-*.adoc, con-*.adoc, ref-*.adoc, proc-*.adoc)
+2. **Content is modularized following Red Hat modular documentation rules** (see link:https://redhat-documentation.github.io/modular-docs/[Red Hat Modular Documentation Reference Guide]):
+   - Use official templates: assemblies, concept modules, procedure modules, reference modules, snippets
+   - Each module has correct `:_mod-docs-content-type:` metadata (ASSEMBLY, CONCEPT, PROCEDURE, REFERENCE, SNIPPET)
+   - Proper file naming conventions: `assembly-*.adoc`, `con-*.adoc`, `proc-*.adoc`, `ref-*.adoc`, `snip-*.adoc`
+   - Anchors follow format: `[id="filename_{context}"]` (must match filename without extension, include `{context}` variable)
+   - **No modules nested within modules** - modules should only be included in assemblies
+   - **Snippets** (`:_mod-docs-content-type: SNIPPET`) contain reusable content blocks but NO structural elements (no anchors, H1 headings, or block titles like .Prerequisites)
+   - **Module-specific rules**:
+     * Concept modules: Explain "what" and "why"; no step-by-step instructions; optional subheadings allowed
+     * Procedure modules: Step-by-step instructions only; NO custom subheadings (only standard: .Prerequisites, .Procedure, .Verification, .Troubleshooting, .Next steps); numbered lists for multi-step, bullets for single-step
+     * Reference modules: Lookup data in lists/tables; optional subheadings allowed for complex content
+     * Assemblies: Introduction + include statements only; no detailed content
 
 3. **Assemblies contain only an introductory section, and then include statements for modules**:
-   - Assemblies have brief introduction (1-3 paragraphs max)
-   - No detailed content in assemblies (move to modules)
-   - Context is set and restored properly using ifdef/ifndef
+   - Assemblies have brief introduction (single concise paragraph required)
+   - No detailed content in assemblies (move to modules) - "a module should not contain another module"
+   - Introduction explains what the user accomplishes
+   - Optional components: Prerequisites (applying to entire assembly), Additional resources (links only, no descriptive text)
+   - Context is set and restored properly when nesting assemblies:
+     ```asciidoc
+     // At top of nested assembly
+     ifdef::context[:parent-context: {context}]
+
+     // At end of nested assembly
+     ifdef::parent-context[:context: {parent-context}]
+     ifndef::parent-context[:!context:]
+     ```
    - No commented-out content
+   - All includes use `leveloffset=+1` (or appropriate level)
+   - All module/assembly titles must be H1 (`= Heading`)
 
 4. **Assemblies are one user story each**:
    - Each assembly addresses a single user goal or task
@@ -47,28 +67,48 @@ Requirements (CQA 2.1 Acceptance Criteria):
    - Count from the title level (assembly = level 1, first include = level 2, etc.)
 
 6. **Modules and assemblies start with a clear short description**:
-   - Every module and assembly has `[role="_abstract"]` before the introductory paragraph
-   - Short description is 50-300 characters
+   - Every module and assembly must have a **single, concise introductory paragraph** (Red Hat modular docs requirement)
+   - Mark with `[role="_abstract"]` immediately after the title for DITA compatibility
+   - Introduction should be 50-300 characters for AEM migration
+   - **Purpose of introduction**:
+     * Concept modules: Answer "What is this?" and "Why should users care?"
+     * Procedure modules: Explain what the user accomplishes
+     * Reference modules: Describe the data being presented
+     * Assemblies: Explain what user story/goal is addressed
+   - Introduction enables users to quickly determine if content is relevant
    - Describes the value/purpose (not just "Learn about X")
    - If an introduction paragraph already exists, add `[role="_abstract"]` to mark it (do NOT duplicate)
-   - Remove self-referential language ("Learn about", "This section describes")
+   - Remove self-referential language ("Learn about", "This section describes", "This module explains")
 
 7. **In AsciiDoc, short descriptions must be**:
    - Added as `[role="_abstract"]` immediately after the title
    - Between 50-300 characters
    - Not duplicating existing content—mark the existing intro paragraph when appropriate
 
-8. **Titles are brief, complete, and descriptive**:
-   - Concept modules: use noun phrases (e.g., "High availability with database and cache layers")
-   - Procedure modules: use present-tense verbs (e.g., "Install the Operator")
-   - Reference modules: use noun phrases (e.g., "Sizing requirements for Red Hat Developer Hub")
-   - Assembly titles: describe the user story/goal
+8. **Titles are brief, complete, and descriptive** (following Red Hat modular documentation guide):
+   - **Concept modules**: Use noun phrases (e.g., "High availability with database and cache layers")
+   - **Procedure modules**: Use gerund phrases (e.g., "Creating guided decision tables", "Installing the Operator")
+     * Note: RHDH documentation uses imperative form (e.g., "Install the Operator") which deviates from the official guide but is acceptable within this project
+   - **Reference modules**: Use noun phrases (e.g., "Sizing requirements for Red Hat Developer Hub", "Configuration options reference")
+   - **Assembly titles**:
+     * Task-based assemblies: Use gerund phrases (e.g., "Encrypting block devices")
+     * Non-task assemblies: Use noun phrases (e.g., "API reference")
    - Avoid imperative verbs in concept/reference titles (bad: "Achieve high availability", good: "High availability")
 
 9. **If a procedure includes prerequisites, they are formatted correctly**:
-   - Use `.Prerequisites` block title (not a section heading)
+   - Use `.Prerequisites` block title (not a section heading `== Prerequisites`)
+   - Always use plural "Prerequisites" even for single item
    - List prerequisites as bulleted items
+   - Prerequisites apply conditions or dependencies for the procedure
    - N/A if no procedures in the title
+   - Standard procedure module sections (all optional except .Procedure):
+     * `.Prerequisites` - conditions that must be met
+     * `.Procedure` - the numbered steps (required)
+     * `.Verification` - how to confirm success
+     * `.Troubleshooting` - brief issue resolution (or link to separate troubleshooting procedure)
+     * `.Next steps` - links to related instructions only
+     * `.Additional resources` - links to related documentation
+   - **No custom subheadings allowed in procedures** - only use the standard sections above
 
 10. **Content is grammatically correct and uses American English**:
     - Parallel structure in lists and phrases
@@ -155,9 +195,24 @@ When working on a title, you typically need to update:
 
 ## Common Issues Found and Fixes
 
+### Issue: Modules nested within modules
+- **Symptom**: Include statements for modules within other modules (not in assemblies)
+- **Root cause**: Violates Red Hat modular documentation rule: "A module should not contain another module"
+- **Fix**:
+  1. Create an assembly to contain the modules
+  2. Move all module includes to the assembly
+  3. Update parent assembly to include the new assembly instead of individual modules
+- **Example**: If `proc-main.adoc` includes `proc-substep.adoc`, create `assembly-main-process.adoc` to include both procedures
+
+### Issue: Custom subheadings in procedure modules
+- **Symptom**: Procedure modules contain section headings (`== Custom Section`) beyond standard ones
+- **Root cause**: Red Hat modular docs restrict procedure subheadings to predefined types only
+- **Fix**: Remove custom subheadings; use only: `.Prerequisites`, `.Procedure`, `.Verification`, `.Troubleshooting`, `.Next steps`, `.Additional resources`
+- **Alternative**: Move content requiring subheadings to concept or reference modules
+
 ### Issue: Block titles incompatible with DITA
-- **Symptom**: Vale warning about block titles (`.Title` format)
-- **Fix**: Convert to section headings (`== Title` format)
+- **Symptom**: Vale warning about block titles (`.Title` format) in unexpected contexts
+- **Fix**: Convert to section headings (`== Title` format) or remove if in snippets
 
 ### Issue: Short description missing or wrong length
 - **Symptom**: Vale error about missing shortdesc or character count
@@ -364,7 +419,7 @@ When working on a title, you typically need to update:
 
 ### Procedure Formatting
 
-**Multi-step procedures**: Use ordered lists (numbered steps)
+**Multi-step procedures**: Use ordered lists (numbered steps) with imperative statements
 ```asciidoc
 .Procedure
 
@@ -373,12 +428,14 @@ When working on a title, you typically need to update:
 . Third step.
 ```
 
-**Single-step procedures**: Use unordered list (single bullet)
+**Single-step procedures**: Use unordered list (single bullet) instead of numbered list
 ```asciidoc
 .Procedure
 
 * In your `dynamic-plugins.yaml` file, update the value to `true`.
 ```
+
+**Note on title format**: Red Hat modular docs specify gerund phrases (e.g., "Creating tables"), but RHDH uses imperative form (e.g., "Create tables"). Both are acceptable; maintain consistency within the project.
 
 **Substeps**: Use proper indentation with continuation (+)
 ```asciidoc
@@ -396,6 +453,14 @@ code example
 .. Substep 1.
 .. Substep 2.
 ```
+
+**Standard procedure sections** (from Red Hat modular docs):
+- `.Prerequisites` - Bulleted list of conditions (always plural)
+- `.Procedure` - Numbered steps (required) or single bullet for one-step procedures
+- `.Verification` - How to confirm success (show expected output or verification actions)
+- `.Troubleshooting` - Brief issue resolution; link to separate procedures for complex troubleshooting
+- `.Next steps` - Links to related instructions only (not additional instruction sequences)
+- `.Additional resources` - Links to related documentation
 
 ### Content Organization
 
