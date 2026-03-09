@@ -375,6 +375,85 @@ You can use any of the following options:
 * *Option 3*
 ```
 
+### Source Code Block Types
+
+**Use the correct source type for code blocks**:
+
+- Use `[source,terminal]` for terminal commands (commands you run in a shell)
+- Use `[source,bash]` only for bash scripts (complete scripts with shebang, variables, logic)
+- Use `[source,yaml]`, `[source,json]`, etc. for configuration files
+
+✗ **Wrong**:
+```asciidoc
+[source,bash]
+----
+$ oc project openshift-logging
+----
+```
+
+✓ **Correct**:
+```asciidoc
+[source,terminal]
+----
+$ oc project openshift-logging
+----
+```
+
+### Voice and Tense in Procedures
+
+**Avoid passive voice in procedures (except in prerequisites)**:
+
+✗ **Wrong**:
+```asciidoc
+. Configure outputs to specify where the captured logs are sent.
+. Tuning can be applied per output as needed.
+. Confirm that logs are being forwarded to your Splunk instance.
+```
+
+✓ **Correct**:
+```asciidoc
+. Configure outputs to specify where to send the captured logs.
+. You can apply tuning per output as needed.
+. Verify that your Splunk instance receives logs.
+```
+
+**Use present tense in procedures (except in prerequisites)**:
+
+✗ **Wrong** (past or future tense):
+```asciidoc
+. The forwarder will send logs to the destination.
+. The system was configured to use TLS.
+```
+
+✓ **Correct** (present tense):
+```asciidoc
+. The forwarder sends logs to the destination.
+. The system uses TLS for secure communication.
+```
+
+**Note**: Prerequisites can use past tense (e.g., "You have installed", "You have configured").
+
+### Abstract Guidelines
+
+**Keep abstracts concise and focused**:
+
+- 50-300 characters
+- Focus on the essential action and tools
+- Avoid excessive implementation details
+- Describe the value/purpose, not just "Learn about X"
+
+✗ **Wrong** (217 characters, too detailed):
+```asciidoc
+[role="_abstract"]
+To forward audit logs from {product-short} to Splunk, use the {logging-brand-name} ({logging-short}) Operator and a ClusterLogForwarder instance to capture streamed logs and send them to the HTTPS endpoint of your Splunk instance.
+```
+
+✓ **Correct** (113 characters, focused):
+```asciidoc
+[role="_abstract"]
+Forward audit logs from {product-short} to Splunk by using the {logging-short} Operator and a ClusterLogForwarder instance.
+```
+
 ## Validation Commands
 
 ### DITA Validation (Required)
