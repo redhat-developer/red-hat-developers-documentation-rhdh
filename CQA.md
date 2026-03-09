@@ -699,6 +699,77 @@ This validates:
 - All AsciiDoc syntax is valid
 - Content structure is compatible with DocBook XML transformation
 
+## Claude Code Configuration
+
+This repository uses Claude Code for documentation work. The configuration is stored in `.claude/settings.json` with permission rules that control what operations Claude Code can perform.
+
+### Permission Management Best Practices
+
+**Consolidate permissions using wildcards** to keep settings maintainable:
+
+- Instead of listing individual file paths, use wildcard patterns:
+  ```json
+  "Bash(git add *)"
+  "Bash(git commit:*)"
+  "Read(//tmp/**)"
+  ```
+- Consolidation example: 173 individual permissions → 22 wildcard permissions (87% reduction)
+- Keep permissions in alphabetical order for easier maintenance
+
+**Remove personal references** from tracked configuration files:
+
+- No home directory paths: `/home/username/...`
+- No GitHub usernames in commands or paths
+- Use relative paths instead of absolute paths
+- Example: `.claude` instead of `/home/username/project/.claude`
+
+**Use `.gitignore` for local settings**:
+
+- Add `.claude/settings.local.json` to `.gitignore` for personal overrides
+- Add `.claude/settings.json.backup` to `.gitignore` for safety backups
+- Only track the shared `.claude/settings.json` file
+
+**Restrict file read permissions** for security:
+
+- Limit `Read()` permissions to specific directories: `Read(//tmp/**)`
+- Avoid overly permissive patterns like `Read(//*)`
+- The `//` prefix in Read permissions indicates paths from repository root
+
+### Settings File Structure
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Read(//tmp/**)",
+      "WebFetch(domain:*)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      ".claude"
+    ]
+  }
+}
+```
+
+### Consolidating Existing Permissions
+
+If you have many individual permissions in `.claude/settings.local.json`:
+
+1. Create a backup: `cp .claude/settings.json .claude/settings.json.backup`
+2. Consolidate using wildcards and merge into `.claude/settings.json`
+3. Sort alphabetically
+4. Remove personal references (paths, usernames)
+5. Clear `.claude/settings.local.json` (keep structure with empty `allow` array)
+6. Add backup and local files to `.gitignore`:
+   ```
+   .claude/settings.local.json
+   .claude/settings.json.backup
+   ```
+7. Remove from git tracking: `git rm --cached .claude/settings.local.json`
+8. Commit the consolidated settings
+
 ## Acceptable Warnings
 
 Some Vale DITA warnings are acceptable and do not block CQA 2.1 compliance:
