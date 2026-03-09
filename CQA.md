@@ -137,16 +137,26 @@ Requirements (CQA 2.1 Acceptance Criteria):
 Process:
 1. Read the main assembly file and all included modules
 2. Run Vale DITA validation to identify issues
-3. Fix all validation errors and warnings:
-   - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
-   - Convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
-   - Fix title patterns (concept modules use noun phrases, not imperative verbs)
-   - Fix grammar issues (parallel structure, verb agreement)
-   - Add context restoration to assemblies
-   - Remove commented-out content
-4. Re-run Vale DITA validation to confirm 0 errors, 0 warnings, 0 suggestions
-5. Verify all 14 acceptance criteria are met
-6. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+3. Fix all validation errors and warnings **in this order**:
+   a. **First, fix titles** to comply with modular docs and style guide:
+      - Procedure modules: Use imperative/present tense (e.g., "Install the Operator" not "Installing the Operator")
+      - Concept modules: Use noun phrases, not imperative verbs (e.g., "High availability" not "Achieve high availability")
+      - Reference modules: Use noun phrases (e.g., "Configuration options" not "Configure options")
+      - Assembly titles: Use gerund for task-based (e.g., "Installing plugins"), noun for non-task (e.g., "API reference")
+   b. **Then, update file names and IDs** to match the corrected titles:
+      - File name: Convert title to lowercase, replace spaces with hyphens, keep module prefix (e.g., `proc-install-the-operator.adoc`)
+      - Module ID: `[id="title-in-lowercase-with-hyphens_{context}"]` (no module prefix in ID)
+      - Update all include statements that reference the renamed file
+   c. **Finally, fix other issues**:
+      - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
+      - Convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
+      - Fix grammar issues (parallel structure, verb agreement)
+      - Add context restoration to assemblies
+      - Remove commented-out content
+4. Re-run Vale DITA validation to confirm 0 errors, only acceptable warnings, 0 suggestions
+5. Run build validation (`build/scripts/build-ccutil.sh`) to verify xrefs still resolve
+6. Verify all 14 acceptance criteria are met
+7. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
 
 Verification checklist after completing work:
 - [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
