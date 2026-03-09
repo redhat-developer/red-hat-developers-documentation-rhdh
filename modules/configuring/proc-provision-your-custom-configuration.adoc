@@ -15,22 +15,11 @@ Your changes on this configuration might get reverted on {product-short} restart
 .Prerequisites
 * By using the {platform-cli-link}, you have access, with developer permissions, to the {platform-generic} cluster aimed at containing your {product-short} instance.
 
-ifeval::["{context}" == "setting-up-and-configuring-your-first-rhdh-instance"]
-include::snip-provisioning-your-custom-configuration-prerequisites-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
-endif::[]
-
 .Procedure
 . For security, store your secrets as environment variables values in an {ocp-short} secret, rather than in plain text in your configuration files.
 Collect all your secrets in the `secrets.txt` file, with one secret per line in `KEY=value` form.
 +
---
-ifeval::["{context}" == "setting-up-and-configuring-your-first-rhdh-instance"]
-include::snip-provisioning-your-custom-configuration-secrets-steps-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
-endif::[]
-ifeval::["{context}" != "setting-up-and-configuring-your-first-rhdh-instance"]
-include::snip-provisioning-your-custom-configuration-secrets-steps-in-default-context.adoc[]
-endif::[]
---
+{authentication-book-link}[Enter your authentication secrets].
 
 . Author your custom `{my-app-config-file}` file.
 This is the main {product-short} configuration file.
@@ -38,7 +27,38 @@ You need a custom `{my-app-config-file}` file to avoid the {product-short} insta
 When your custom `{my-app-config-file}` file is empty, {product-short} is using default values.
 +
 --
-include::snip-provisioning-your-custom-configuration-appconfig-step-with-optional-steps-{optional-steps}d.adoc[]
+** To prepare a deployment with the {product} Operator on {ocp-short}, you can start with an empty file.
+
+** To prepare a deployment with the {product} Helm chart, or on Kubernetes, enter the {product-short} base URL in the relevant fields in your `{my-app-config-file}` file to ensure proper functionality of {product-short}.
+The base URL is what a {product-short} user sees in their browser when accessing {product-short}.
+The relevant fields are `baseUrl` in the `app` and `backend` sections, and `origin` in the `backend.cors` subsection:
++
+Configuring the `baseUrl` in `{my-app-config-file}`:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+app:
+  title: {product}
+  baseUrl: {my-product-url}
+
+backend:
+  auth:
+    externalAccess:
+      - type: legacy
+        options:
+          subject: legacy-default-config
+          secret: "${BACKEND_SECRET}"
+  baseUrl: {my-product-url}
+  cors:
+    origin: {my-product-url}
+----
+
+** Optionally, enter your configuration such as:
+
+*** {authentication-book-link}[{authentication-book-title}].
+*** {authorization-book-link}[{authorization-book-title}].
+*** {customizing-book-link}[Customization].
+*** {customizing-book-link}#configuring-an-rhdh-instance-with-tls-in-kubernetes_{context}[Configure your {ocp-short} integration].
 --
 
 . Author your custom `dynamic-plugins.yaml` file to enable plugins.
@@ -75,8 +95,8 @@ $ oc create configmap {my-app-config-config-map} --from-file={my-app-config-file
 $ oc create configmap dynamic-plugins-rhdh --from-file=dynamic-plugins.yaml --namespace={my-product-namespace}
 ----
 +
-Alternatively,
-link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps[create the config maps using the web console].
+Or,
+link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps[create the config maps by using the web console].
 
 .. Provision your `secrets.txt` file to the `{my-product-secrets}` secret in the _<{my-product-namespace}>_ project.
 +
@@ -85,13 +105,10 @@ link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-
 $ oc create secret generic {my-product-secrets} --from-file=secrets.txt --namespace={my-product-namespace}
 ----
 +
-Alternatively,
-link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets[create the secret using the web console].
+Or,
+link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets[create the secret by using the web console].
 
 .Next steps
-ifeval::["{context}" == "setting-up-and-configuring-your-first-rhdh-instance"]
-include::snip-provisioning-your-custom-configuration-next-steps-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
-endif::[]
-ifeval::["{context}" != "setting-up-and-configuring-your-first-rhdh-instance"]
-include::snip-provisioning-your-custom-configuration-next-steps-in-default-context.adoc[]
-endif::[]
+* {configuring-book-link}#configuring-external-postgresql-databases[Provision your PostgreSQL database secrets]
+* {installing-and-viewing-plugins-book-link}[Provision your dynamic plugins config map]
+* {authorization-book-link}#managing-authorizations-by-using-external-files[Provision your RBAC policies config map]
