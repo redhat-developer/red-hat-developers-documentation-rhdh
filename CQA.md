@@ -154,9 +154,32 @@ Process:
       - Add context restoration to assemblies
       - Remove commented-out content
 4. Re-run Vale DITA validation to confirm 0 errors, only acceptable warnings, 0 suggestions
-5. Run build validation (`build/scripts/build-ccutil.sh`) to verify xrefs still resolve
+5. Run build validation (`build/scripts/build.sh`) to verify xrefs still resolve
 6. Verify all 14 acceptance criteria are met
 7. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+8. Create pull request using the template at `.github/pull_request_template.md`:
+   ```bash
+   gh pr create --title "[RHIDP-XXXXX] Brief description" --body "$(cat <<'EOF'
+   **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
+
+   **Version(s):** <version>
+
+   **Issue:** https://issues.redhat.com/browse/RHIDP-XXXXX
+
+   **Preview:** TBD
+
+   ## Summary
+   Brief summary of changes
+
+   ## Changes
+   - List of key changes
+
+   ## Validation
+   - Vale DITA: 0 errors, X warnings
+   - Build: Success
+   EOF
+   )" --base main
+   ```
 
 Verification checklist after completing work:
 - [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
