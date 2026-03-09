@@ -6,213 +6,34 @@
 [role="_abstract"]
 Provision custom config maps and secrets on {platform-long} to configure {product} before running the application.
 
-[TIP]
-====
-On {ocp-brand-name}, you can skip this step to run {product-short} with the default config map and secret.
-Your changes on this configuration might get reverted on {product-short} restart.
-====
+include::snip-provision-configuration-tip.adoc[]
 
 .Prerequisites
-* By using the {platform-cli-link}, you have access, with developer permissions, to the {platform-generic} cluster aimed at containing your {product-short} instance.
-* You have the connection string to an active Redis server, such as `rediss://user:pass@cache.example.com:6379`.
-For security, consider using a `rediss` secure server connection.
-See xref:preparing-your-external-services[].
-* You have an external PostgreSQL database, with the following details.
-See xref:preparing-your-external-services[].
-
-postgres-host::: Your PostgreSQL instance Domain Name System (DNS) or IP address.
-postgres-port::: Your PostgreSQL instance port number, such as 5432.
-postres-username::: The user name to connect to your PostgreSQL instance.
-postgres-password::: The password to connect to your PostgreSQL instance.
-postgres-ca.pem:::
-postgres-key.key:::
-postgres-crt.pem:::
-TLS certificates to secure the connection to the database.
-
-* You have a GitHub App enabling access to the GitHub API for repository discovery, with the following details.
-See xref:preparing-your-external-services[].
-GITHUB_INTEGRATION_APP_ID:::
-Your GitHub integration App ID.
-GITHUB_INTEGRATION_CLIENT_ID:::
-Your GitHub integration App client ID.
-GITHUB_INTEGRATION_CLIENT_SECRET:::
-Your GitHub integration App client secret.
-GITHUB_INTEGRATION_PRIVATE_KEY_FILE:::
-Your GitHub integration App private key.
+include::snip-provision-configuration-common-prerequisite.adoc[]
+include::snip-provisioning-your-custom-configuration-prerequisites-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
 
 .Procedure
-. For security, store your secrets as environment variables values in an {ocp-short} secret, rather than in plain text in your configuration files.
-Collect all your secrets in the `secrets.txt` file, with one secret per line in `KEY=value` form.
+. include::snip-provision-configuration-secrets-intro.adoc[]
 +
 --
-.. Enter your custom logo.
-+
-[source,subs="+attributes,+quotes"]
-----
-BASE64_EMBEDDED_FULL_LOGO="data:image/svg+xml;base64,<base64_full_logo_data>"
-BASE64_EMBEDDED_ICON_LOGO="data:image/svg+xml;base64,<base64_icon_logo_data>"
-----
-
-`BASE64_EMBEDDED_FULL_LOGO`::
-Enter your logo for the expanded (pinned) sidebar as a base64 encoded SVG image.
-+
-To encode your logo in base64, run:
-+
-[source]
-----
-$ base64 -i logo.svg
-----
-
-`BASE64_EMBEDDED_ICON_LOGO`::
-Enter your logo for the collapsed (unpinned) sidebar as a base64 encoded SVG image.
-
-.. Enter the connection string to your Redis server that caches plugin assets.
-+
-[source]
-----
-REDIS_CONNECTION=rediss://user:pass@cache.example.com:6379
-----
-
-.. Enter your GitHub integration credentials:
-+
-[source,subs="+quotes"]
-----
-GITHUB_INTEGRATION_APP_ID=__<Enter_the_saved_App_ID>_
-GITHUB_INTEGRATION_CLIENT_ID=_<Enter_the_saved_Client_ID>_
-GITHUB_INTEGRATION_CLIENT_SECRET=_<Enter_the_saved_Client_Secret>_
-GITHUB_INTEGRATION_HOST_DOMAIN=github.com
-GITHUB_INTEGRATION_ORGANIZATION=_<Enter_your_github_organization_name>_
-GITHUB_INTEGRATION_PRIVATE_KEY_FILE= _<Enter_the_saved_Private_key>_
-----
-
-.. Enter your PosgreSQL database secrets:
-+
-[source,subs="+quotes"]
-----
-POSTGRES_PASSWORD: <postgres-password>
-POSTGRES_PORT: "<postgres-port>"
-POSTGRES_USER: <postgres-username>
-POSTGRES_HOST: <postgres-host>
-PGSSLMODE: verify-full
-NODE_EXTRA_CA_CERTS: /opt/app-root/src/postgres-crt.pem
-----
-
-.. {authentication-book-link}[Enter your authentication secrets].
+include::snip-provisioning-your-custom-configuration-secrets-steps-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
 --
 
-. Author your custom `{my-app-config-file}` file.
-This is the main {product-short} configuration file.
-You need a custom `{my-app-config-file}` file to avoid the {product-short} installer to revert user edits during upgrades.
-When your custom `{my-app-config-file}` file is empty, {product-short} is using default values.
+. include::snip-provision-configuration-appconfig-intro.adoc[]
 +
 --
-.. For a production environment, start with the following setup:
-+
-.`{my-app-config-file}`
-[source,yaml,subs="+attributes,+quotes"]
-----
-app:
-  title: _<{product}>_
-  branding:
-    fullLogo: ${BASE64_EMBEDDED_FULL_LOGO}
-    fullLogoWidth: 110px
-    iconLogo: ${BASE64_EMBEDDED_ICON_LOGO}
-backend:
-  cache:
-    store: redis
-    connection: ${REDIS_CONNECTION}
-techdocs:
-  cache:
-    ttl: 3600000
-catalog:
-  providers:
-    _<enter_your_provider_configuration>_
-integrations:
-    _<enter_your_integrations_configuration>_
-permission:
-  enabled: true
-  rbac:
-    admin:
-      users:
-        - name: user:default/<your_policy_administrator_name>
-    pluginsWithPermission:
-      - catalog
-      - scaffolder
-      - permission
-----
-Most fields use environment variables that you defined in secrets in the earlier step.
-`app`::
-`title`::: Enter your {product-short} instance display name, such as _<{product}>_.
-`branding`::: Set your custom logo.
-+
-Optionally, customize the width of the branding logo by changing the value for the `fullLogoWidth` field. The following units are supported: integer, `px`, `em`, `rem`, percentage.
-`backend`::
-`cache`::: Enable the plugins assets cache.
-`techdocs`::
-`cache`::: Enable the TechDocs cache.
-`catalog`::
-`provider`:::
-Enter your catalog provider configuration.
-`integrations`::
-Enter your repository discovery configuration.
-[id='enabling-and-giving-access-to-rbac']
-`permissions`:: Enable Role-based access control.
-Enter your policy administrator name.
-
-.. Additionally, {authentication-book-link}[provision users and enable authentication with your external identity provider].
+include::snip-provisioning-your-custom-configuration-appconfig-step-with-optional-steps-disabled.adoc[]
 --
 
-. Author your custom `dynamic-plugins.yaml` file to enable plugins.
-By default, {product-short} enables a minimal plugin set, and disables plugins that require configuration or secrets, such as the GitHub repository discovery plugin and the Role-based access control (RBAC) plugin.
-+
-Enable the GitHub repository discovery and the RBAC features:
-+
-.`dynamic.plugins.yaml`
-[source,yaml]
-----
-includes:
-  - dynamic-plugins.default.yaml
-plugins:
-  - package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github
-    disabled: false
-  - package: ./dynamic-plugins/dist/backstage-community-plugin-rbac
-    disabled: false
-----
+. include::snip-provision-configuration-dynamic-plugins-step.adoc[]
 
 . Provision your custom configuration files to your {platform} cluster.
-
-.. Create the _<{my-product-namespace}>_ {namespace} aimed at containing your {product-short} instance.
 +
-[source,terminal,subs="+attributes,+quotes"]
-----
-$ oc create namespace {my-product-namespace}
-----
-
-.. Create config maps for your `{my-app-config-file}` and `dynamic-plugins.yaml` files in the _<{my-product-namespace}>_ project.
+include::snip-provision-configuration-create-namespace-substep.adoc[]
 +
-[source,terminal,subs="+attributes,+quotes"]
-----
-$ oc create configmap {my-app-config-config-map} --from-file={my-app-config-file} --namespace={my-product-namespace}
-$ oc create configmap dynamic-plugins-rhdh --from-file=dynamic-plugins.yaml --namespace={my-product-namespace}
-----
+include::snip-provision-configuration-create-configmaps-substep.adoc[]
 +
-Or,
-link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps[create the config maps by using the web console].
-
-.. Provision your `secrets.txt` file to the `{my-product-secrets}` secret in the _<{my-product-namespace}>_ project.
-+
-[source,terminal,subs="+attributes,+quotes"]
-----
-$ oc create secret generic {my-product-secrets} --from-file=secrets.txt --namespace={my-product-namespace}
-----
-+
-Or,
-link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets[create the secret by using the web console].
+include::snip-provision-configuration-create-secrets-substep.adoc[]
 
 .Next steps
-.. Provision your PosgreSQL TLS certificates to the `{my-product-database-secrets}` secret in the _<{my-product-namespace}>_ project.
-+
-[source,terminal,subs="+attributes,+quotes"]
-----
-$ oc create secret generic {my-product-secrets} --from-file=postgres-ca.pem --from-file=postgres-crt.pem --from-file=postgres-key.key --namespace={my-product-namespace}
-----
+include::snip-provisioning-your-custom-configuration-next-steps-in-setting-up-and-configuring-your-first-rhdh-instance-context.adoc[]
