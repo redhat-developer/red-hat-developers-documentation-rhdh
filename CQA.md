@@ -468,7 +468,7 @@ When working on a title, you typically need to update:
 * In your `dynamic-plugins.yaml` file, update the value to `true`.
 ```
 
-**Note on title format**: Red Hat modular docs specify gerund phrases (e.g., "Creating tables"), but RHDH uses imperative form (e.g., "Create tables"). Both are acceptable; maintain consistency within the project.
+**Note on title format**: Red Hat modular docs specify gerund phrases (e.g., "Creating tables"), but Style Guide uses imperative form (e.g., "Create tables"). Only imperative form is acceptable.
 
 **Substeps**: Use proper indentation with continuation (+)
 ```asciidoc
