@@ -21,11 +21,11 @@ Make the "[TITLE NAME]" title compliant with CQA 2.1 – Content Quality Assessm
 Background:
 - Target path: [PATH TO ASSEMBLY FILE]
 - All included modules must be updated
-- Changes must pass Vale DITA validation with 0 errors, 0 warnings
+- Changes must pass Vale DITA validation with 0 errors, only acceptable warnings
 
 Requirements (CQA 2.1 Acceptance Criteria):
 
-1. **Vale DITA validation**: Run `vale --config .vale-dita-only.ini` against all AsciiDoc files included in the title. Result must be 0 errors, 0 warnings, 0 suggestions.
+1. **Vale DITA validation**: Run `vale --config .vale-dita-only.ini` against all AsciiDoc files included in the title. Result must be 0 errors, with only acceptable warnings documented (callouts, false positive concept links), 0 suggestions.
 
 2. **Content is modularized following Red Hat modular documentation rules**:
    - Use official templates (assemblies, concept modules, reference modules, procedure modules)
@@ -109,7 +109,7 @@ Process:
 6. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
 
 Verification checklist after completing work:
-- [ ] Vale DITA: 0 errors, 0 warnings, 0 suggestions
+- [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
 - [ ] Modularization with official templates
 - [ ] Assembly structure compliant
 - [ ] Short descriptions (50-300 chars with [role="_abstract"])
@@ -137,7 +137,7 @@ Make the "About Red Hat Developer Hub" title compliant with CQA 2.1 – Content 
 Background:
 - Target path: titles/about/assemblies/assembly-about-rhdh.adoc
 - All included modules must be updated
-- Changes must pass Vale DITA validation with 0 errors, 0 warnings
+- Changes must pass Vale DITA validation with 0 errors, only acceptable warnings
 
 [... rest of requirements as specified in template above ...]
 ```
@@ -194,6 +194,113 @@ When working on a title, you typically need to update:
 - **Symptom**: Vale warning about using "like" instead of "such as"
 - **Fix**: Use "such as" for examples (e.g., "catalog entities (such as components, APIs)")
 - **Note**: Always run Vale with default config after DITA validation to catch style issues
+
+### Issue: Snippet files with structural elements
+- **Symptom**: Vale warning about missing content type, document title, or block titles in snippet files
+- **Root cause**: Snippet files should only contain content (lists, paragraphs, code blocks), not structural elements
+- **Fix**:
+  1. Add `:_mod-docs-content-type: SNIPPET` to the beginning of all snippet files
+  2. Remove structural block titles (`.Prerequisites`, `.Procedure`, `.Verification`, `.Next steps`) from snippet files
+  3. Add those block titles to the parent files before the include statements
+- **Example**:
+  - ✗ Wrong (in snippet):
+    ```asciidoc
+    .Prerequisites
+    * You have installed the Operator.
+    ```
+  - ✓ Correct (in parent file):
+    ```asciidoc
+    .Prerequisites
+    include::snip-prerequisites.adoc[]
+    * Additional prerequisite in parent.
+    ```
+  - ✓ Correct (in snippet):
+    ```asciidoc
+    :_mod-docs-content-type: SNIPPET
+
+    * You have installed the Operator.
+    ```
+
+### Issue: Inline admonitions in procedures
+- **Symptom**: Inconsistent admonition formatting, or `AsciiDocDITA.TaskStep` warnings
+- **Root cause**: Inline format (`TIP:`, `NOTE:`, etc.) is less consistent than block format
+- **Fix**: Convert all inline admonitions to block format with delimiters
+- **Example**:
+  - ✗ Wrong:
+    ```asciidoc
+    TIP: Optionally, enable the cache for unsupported plugins.
+    ```
+  - ✓ Correct:
+    ```asciidoc
+    [TIP]
+    ====
+    Optionally, enable the cache for unsupported plugins.
+    ====
+    ```
+
+### Issue: Admonitions in procedure steps without continuation marks
+- **Symptom**: Vale warning `AsciiDocDITA.TaskStep`: "Content other than a single list cannot be mapped to DITA tasks"
+- **Root cause**: Admonitions, source blocks, or other content after a procedure step need to be attached to that step using a continuation mark
+- **Fix**: Add a line with a single `+` (continuation mark) before the admonition or content block
+- **Example**:
+  - ✗ Wrong:
+    ```asciidoc
+    . Enable the cache in your configuration file.
+
+    [TIP]
+    ====
+    You can also enable caching for other plugins.
+    ====
+    ```
+  - ✓ Correct:
+    ```asciidoc
+    . Enable the cache in your configuration file.
+    +
+    [TIP]
+    ====
+    You can also enable caching for other plugins.
+    ====
+    ```
+
+### Issue: Example blocks nested in other blocks
+- **Symptom**: Vale error `AsciiDocDITA.ExampleBlock`: "Examples can not be inside of other blocks in DITA"
+- **Root cause**: DITA does not support nested example blocks (`.Example` with `====` delimiters)
+- **Fix**: Convert the example block to regular text with a source code block, or move it outside the parent block
+- **Example**:
+  - ✗ Wrong:
+    ```asciidoc
+    ** Configure the base URL:
+    +
+    .Configuring the baseUrl
+    ====
+    [source,yaml]
+    ----
+    app:
+      baseUrl: https://example.com
+    ----
+    ====
+    ```
+  - ✓ Correct:
+    ```asciidoc
+    ** Configure the base URL:
+    +
+    Configuring the baseUrl:
+    +
+    [source,yaml]
+    ----
+    app:
+      baseUrl: https://example.com
+    ----
+    ```
+
+### Issue: Modules in wrong directories
+- **Symptom**: Modules in `modules/configuring/` but not actually used in the Configuring title
+- **Root cause**: Modules should be organized by where they're actually used, not by their topic
+- **Fix**:
+  1. Use `git mv` to relocate modules to directories matching their actual usage
+  2. Update include paths in all titles/assemblies that reference the moved modules
+  3. Run build validation to ensure everything still works
+- **Example**: A module `con-dynamic-plugins-dependencies.adoc` in `modules/configuring/` but only included in the "Installing plugins" title should be moved to `modules/dynamic-plugins/`
 
 ### Issue: Usage of "respective" and "respectively"
 - **Symptom**: Not a Vale error, but poor writing style that makes content harder to understand
@@ -466,7 +573,7 @@ vale --config .vale-dita-only.ini <path-to-assembly-file>
 
 Or to validate all included files at once, run against the directory containing the modules.
 
-**Target**: 0 errors, 0 warnings, 0 suggestions
+**Target**: 0 errors, only acceptable warnings (see Acceptable Warnings section), 0 suggestions
 
 ### Red Hat Style Validation (Recommended)
 
@@ -494,10 +601,33 @@ This validates:
 - All AsciiDoc syntax is valid
 - Content structure is compatible with DocBook XML transformation
 
+## Acceptable Warnings
+
+Some Vale DITA warnings are acceptable and do not block CQA 2.1 compliance:
+
+### Callout Warnings
+- **Warning**: `AsciiDocDITA.CalloutList`: "Callouts are not supported in DITA"
+- **Context**: Callouts (`<1>`, `<2>`, etc.) in code blocks with corresponding explanations
+- **Acceptable**: Yes - this is a known DITA limitation, but callouts are valuable for technical documentation
+- **Note**: Track these warnings but do not remove callouts
+
+### Concept Link False Positives
+- **Warning**: `AsciiDocDITA.ConceptLink`: "Move all links and cross references to Additional resources"
+- **Context**: Vale sometimes detects abbreviations like "CR" (Custom Resource) as cross-references
+- **Acceptable**: Yes - if the warning is on plain text abbreviations, not actual links
+- **Fix**: You can ignore these false positives, or spell out the abbreviation if desired
+
+### Task Step Warnings in Introductory Content
+- **Warning**: `AsciiDocDITA.TaskStep`: "Content other than a single list cannot be mapped to DITA tasks"
+- **Context**: Descriptive content before `.Procedure` section
+- **Acceptable**: Sometimes - if the content is legitimately before the procedure section (like field definitions)
+- **Fix**: If the warning appears AFTER `.Procedure`, add a continuation mark (+). If before, it may be acceptable.
+
 ## Success Criteria
 
 The work is complete when:
-- Vale DITA validation shows: `0 errors, 0 warnings, 0 suggestions`
+- Vale DITA validation shows: `0 errors, 0-15 acceptable warnings, 0 suggestions`
+- Acceptable warnings are documented and verified as false positives or known limitations
 - Vale Red Hat style validation shows: `0 errors, 0 warnings`
 - Build validation (`build/scripts/build-ccutil.sh`) completes successfully with all titles built and no xref errors
 - All 14 CQA 2.1 acceptance criteria are verified and met
