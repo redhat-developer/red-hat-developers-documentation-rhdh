@@ -137,8 +137,10 @@ Requirements (CQA 2.1 Acceptance Criteria):
 
 Process:
 1. Read the main assembly file and all included modules
-2. Run Vale DITA validation to identify issues
-3. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
+2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
+3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
+4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
+5. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
 
    **STEP 1: Fix titles FIRST** - The title is the source of truth
       - See requirement #8 for complete title requirements
@@ -242,11 +244,11 @@ Process:
    = Install the Operator  ✓
    ```
 
-4. Re-run Vale DITA validation to confirm 0 errors, only acceptable warnings, 0 suggestions
-5. Run build validation (`build/scripts/build.sh`) to verify xrefs still resolve
-6. Verify all 14 acceptance criteria are met
-7. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
-8. Create pull request using the template at `.github/pull_request_template.md`:
+6. Re-run Vale DITA validation to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale.
+7. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
+8. Verify all 14 acceptance criteria are met
+9. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+10. Create pull request using the template at `.github/pull_request_template.md`:
    ```bash
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
