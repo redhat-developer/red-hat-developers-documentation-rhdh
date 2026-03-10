@@ -31,7 +31,7 @@ Requirements (CQA 2.1 Acceptance Criteria):
    - Use official templates: assemblies, concept modules, procedure modules, reference modules, snippets
    - Each module has correct `:_mod-docs-content-type:` metadata (ASSEMBLY, CONCEPT, PROCEDURE, REFERENCE, SNIPPET)
    - Proper file naming conventions: `assembly-*.adoc`, `con-*.adoc`, `proc-*.adoc`, `ref-*.adoc`, `snip-*.adoc`
-   - Anchors follow format: `[id="filename_{context}"]` (must match filename without extension, include `{context}` variable)
+   - Anchors follow format: `[id="filename_{context}"]` (must match filename without extension and prefix, include `{context}` variable)
    - **No modules nested within modules** - modules should only be included in assemblies
    - **Snippets** (`:_mod-docs-content-type: SNIPPET`) contain reusable content blocks but NO structural elements (no anchors, H1 headings, or block titles like .Prerequisites)
    - **Module-specific rules**:
@@ -82,6 +82,7 @@ Requirements (CQA 2.1 Acceptance Criteria):
 
 7. **In AsciiDoc, short descriptions must be**:
    - Added as `[role="_abstract"]` immediately after the title
+   - **IMPORTANT**: The `[role="_abstract"]` line cannot be followed by an empty line - the abstract content must start on the very next line
    - Between 50-300 characters
    - Not duplicating existing content—mark the existing intro paragraph when appropriate
 
@@ -334,7 +335,7 @@ When working on a title, you typically need to update:
 
 ### Issue: Incorrect title pattern for content type
 - **Symptom**: Procedure module using gerund verb (e.g., "Achieving high availability")
-- **Fix**: Change to present-tense verb (e.g., "Achieve high availability") 
+- **Fix**: Change to present-tense verb (e.g., "Achieve high availability")
 
 
 ### Issue: Grammar/parallel structure
