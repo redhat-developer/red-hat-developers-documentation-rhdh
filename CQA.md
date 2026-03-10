@@ -244,11 +244,17 @@ Process:
    = Install the Operator  ✓
    ```
 
-6. Re-run Vale DITA validation to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale.
-7. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
-8. Verify all 14 acceptance criteria are met
-9. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
-10. Create pull request using the template at `.github/pull_request_template.md`:
+6. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
+7. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
+8. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
+9. Verify the assembly include statements do not go too deep (see requirement #5).
+
+10. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
+11. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
+12. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
+13. Verify all 14 acceptance criteria are met
+14. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+15. Create pull request using the template at `.github/pull_request_template.md`:
    ```bash
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
