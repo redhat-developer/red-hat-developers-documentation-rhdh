@@ -172,7 +172,14 @@ Process:
       - Update include statements in assemblies: `include::modules/path/old-filename.adoc` → `include::modules/path/new-filename.adoc`
       - Verify no includes remain pointing to the old filename
 
-   **STEP 6: Fix other issues** (only after title/ID/filename are aligned)
+   **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
+      - After reorganizing modules, check for orphaned files left in old directories
+      - Search for modules not referenced anywhere: Compare all module files against include statements
+      - Remove orphaned modules: `git rm modules/old-category/orphaned-module.adoc`
+      - Remove empty directories after cleanup
+      - Example: After moving Customizing modules, remove unreferenced files from old directories
+
+   **STEP 7: Fix other issues** (only after title/ID/filename are aligned)
       - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
       - In concept or reference modules, convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
       - Fix grammar issues (parallel structure, verb agreement)
