@@ -172,7 +172,7 @@ Process:
 
    **STEP 6: Fix other issues** (only after title/ID/filename are aligned)
       - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
-      - Convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
+      - In concept or reference modules, convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
       - Fix grammar issues (parallel structure, verb agreement)
       - Add context restoration to assemblies
       - Remove commented-out content
