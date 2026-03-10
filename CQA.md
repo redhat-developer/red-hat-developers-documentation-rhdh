@@ -856,35 +856,99 @@ This repository uses Claude Code for documentation work. The configuration is st
 
 ### Permission Management Best Practices
 
-**Consolidate permissions using wildcards** to keep settings maintainable:
+**1. Minimize line count through consolidation**
 
-- Instead of listing individual file paths, use wildcard patterns:
-  ```json
-  "Bash(git add *)"
-  "Bash(git commit:*)"
-  "Read(//tmp/**)"
-  ```
+Use wildcard patterns instead of listing individual file paths:
+
+```json
+❌ Wrong (3 separate permissions):
+"Bash(git add assemblies/assembly-customizing.adoc)"
+"Bash(git add assemblies/assembly-configuring.adoc)"
+"Bash(git add modules/customizing/proc-example.adoc)"
+
+✅ Correct (1 wildcard permission):
+"Bash(git add *)"
+```
+
+**Benefits:**
 - Consolidation example: 173 individual permissions → 22 wildcard permissions (87% reduction)
-- Keep permissions in alphabetical order for easier maintenance
+- Easier to review and maintain
+- Reduces merge conflicts in `.claude/settings.json`
 
-**Remove personal references** from tracked configuration files:
+**Common wildcard patterns:**
+```json
+"Bash(git add *)"              // Any git add command
+"Bash(git commit:*)"           // Any git commit command
+"Bash(asciidoctor titles/*)"   // Asciidoctor on any title
+"Read(//tmp/**)"               // Read any file in /tmp
+"Bash(/tmp/*)"                 // Bash operations on /tmp files
+```
 
-- No home directory paths: `/home/username/...`
-- No GitHub usernames in commands or paths
-- Use relative paths instead of absolute paths
-- Example: `.claude` instead of `/home/username/project/.claude`
+**2. Alphabetize all permissions**
 
-**Use `.gitignore` for local settings**:
+Keep the `allow` array in strict alphabetical order for easier maintenance and review:
 
+```json
+✅ Correct (alphabetical):
+"Bash(asciidoctor titles/*)"
+"Bash(build/scripts/build-ccutil.sh)"
+"Bash(git add *)"
+"Bash(git commit:*)"
+"Bash(vale --config .vale-dita-only.ini *)"
+```
+
+**Benefits:**
+- Easy to find specific permissions
+- Reduces duplicate entries
+- Makes diffs clearer when reviewing changes
+
+**3. Remove all sensitive and personal information**
+
+**Never commit sensitive information:**
+- ❌ API keys, tokens, or credentials
+- ❌ Internal URLs or hostnames
+- ❌ Personal email addresses
+- ❌ Database connection strings
+- ❌ SSH keys or certificates
+
+**Never commit personal references:**
+- ❌ Home directory paths: `/home/username/...`
+- ❌ GitHub/GitLab usernames in paths
+- ❌ Personal computer names or hostnames
+- ❌ Absolute paths that include usernames
+
+**Use relative paths instead:**
+```json
+❌ Wrong (personal path):
+"Read(/home/ffloreth/src/gh/project/.claude/**)"
+
+✅ Correct (relative path):
+"Read(//.claude/**)"
+```
+
+**Use `.gitignore` for local settings:**
 - Add `.claude/settings.local.json` to `.gitignore` for personal overrides
 - Add `.claude/settings.json.backup` to `.gitignore` for safety backups
 - Only track the shared `.claude/settings.json` file
 
-**Restrict file read permissions** for security:
+**4. Restrict file read permissions for security**
 
-- Limit `Read()` permissions to specific directories: `Read(//tmp/**)`
-- Avoid overly permissive patterns like `Read(//*)`
-- The `//` prefix in Read permissions indicates paths from repository root
+Limit `Read()` permissions to specific directories needed for documentation work:
+
+```json
+✅ Appropriate (limited scope):
+"Read(//tmp/**)"           // Temporary validation output
+"Read(//.claude/**)"       // Claude Code configuration
+"Read(//titles/**)"        // Documentation titles
+"Read(//modules/**)"       // Documentation modules
+"Read(//assemblies/**)"    // Documentation assemblies
+
+❌ Dangerous (overly permissive):
+"Read(//*)"                // Can read ANY file in repository
+"Read(/home/**)"           // Can read user's entire home directory
+```
+
+**Note:** The `//` prefix in Read permissions indicates paths from repository root.
 
 ### Settings File Structure
 
