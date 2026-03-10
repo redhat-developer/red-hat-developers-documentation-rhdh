@@ -30,8 +30,8 @@ Requirements (CQA 2.1 Acceptance Criteria):
 2. **Content is modularized following Red Hat modular documentation rules** (see link:https://redhat-documentation.github.io/modular-docs/[Red Hat Modular Documentation Reference Guide]):
    - Use official templates: assemblies, concept modules, procedure modules, reference modules, snippets
    - Each module has correct `:_mod-docs-content-type:` metadata (ASSEMBLY, CONCEPT, PROCEDURE, REFERENCE, SNIPPET)
-   - Proper file naming conventions: `assembly-*.adoc`, `con-*.adoc`, `proc-*.adoc`, `ref-*.adoc`, `snip-*.adoc`
-   - Anchors follow format: `[id="filename_{context}"]` (must match filename without extension and prefix, include `{context}` variable)
+   - Proper file naming conventions: `assembly-title.adoc`, `con-title.adoc`, `proc-title.adoc`, `ref-title.adoc`, `snip-*.adoc` (Convert title to lowercase with hyphens: "Install the Operator" → `proc-install-the-operator.adoc`)
+   - Anchors follow format: `[id="title_{context}"]` (Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator_{context}`)
    - **No modules nested within modules** - modules should only be included in assemblies
    - **Snippets** (`:_mod-docs-content-type: SNIPPET`) contain reusable content blocks but NO structural elements (no anchors, H1 headings, or block titles like .Prerequisites)
    - **Module-specific rules**:
