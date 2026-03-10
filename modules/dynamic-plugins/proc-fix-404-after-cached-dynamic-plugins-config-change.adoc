@@ -1,0 +1,57 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="fix-404-after-cached-dynamic-plugins-config-change_{context}"]
+= Fix 404 error after cached dynamic plugins configuration change
+
+[role="_abstract"]
+In rare cases when using the Operator, making changes to the cached dynamic plugins configuration can lead to a temporary `404` error.
+This issue occurs because during the transition period, the application, which shares PVC for caching dynamic plugins,
+handles traffic with inconsistent cache states across old and new pods.
+
+The solution is to use individual cache per pod.
+
+.Prerequisites
+* The API version is `v1alpha5` or newer.
+
+.Procedure
+
+. In the Backstage Custom Resource (CR) file, set `spec.deployment` to use the optional `StatefulSet` as a resource kind as shown in the example below:
++
+[,console]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: <name>
+...
+spec:
+ deployment:
+  kind: StatefulSet
+  patch:
+   spec:
+     replicas: 2
+     template:
+       spec:
+         volumes:
+           - $patch: replace
+             name: dynamic-plugins-root
+             persistentVolumeClaim:
+               claimName: dynamic-plugins-root
+     volumeClaimTemplates:
+       - apiVersion: v1
+         kind: PersistentVolumeClaim
+         metadata:
+           name: dynamic-plugins-root
+         spec:
+           accessModes:
+             - ReadWriteOnce
+           resources:
+             requests:
+               storage: 1Gi
+----
+. Remove the default `kind: Deployment` from the Backstage CR
+
+[NOTE]
+====
+Using `StatefulSet` with a single replica can lead to downtime, as the old pod is deleted and a new pod is created.
+====
