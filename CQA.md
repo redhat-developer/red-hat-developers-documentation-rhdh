@@ -140,23 +140,37 @@ Process:
 2. Run Vale DITA validation to identify issues
 3. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
 
-   a. **STEP 1: Fix titles FIRST** - The title is the source of truth (see requirement #8 for complete title requirements)
+   **STEP 1: Fix titles FIRST** - The title is the source of truth
+      - See requirement #8 for complete title requirements
+      - Procedure modules: Use imperative form (e.g., "Install the Operator")
+      - Concept modules: Use noun phrases (e.g., "High availability")
+      - Reference modules: Use noun phrases (e.g., "Configuration options")
+      - Task-based assemblies: Use imperative form (e.g., "Configure the database")
 
-   b. **STEP 2: Update IDs to match the title** - IDs derive from titles, NOT from filenames:
-      - Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator`
-      - Add `{context}` suffix: `[id="install-the-operator_{context}"]`
+   **STEP 2: Update IDs and context to match the title** - IDs derive from titles, NOT from filenames
+      - Update the `[id="..."]` line: Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator`
+      - Add `_{context}` suffix: `[id="install-the-operator_{context}"]`
       - **Do NOT include the module prefix** (proc-, con-, ref-) in the ID
+      - Update `:context:` variable in assemblies to match the new title (lowercase with hyphens)
       - The ID must match the title exactly (lowercased with hyphens), not the current filename
-      - **IMPORTANT**: After updating an ID, search for and update all references to it in xref statements and links throughout the documentation
 
-   c. **STEP 3: Update filenames to match the title** - Filenames derive from titles:
+   **STEP 3: Update all xrefs and links pointing to the changed ID or context**
+      - Search for all xrefs: `grep -r "xref:old-id" assemblies/ modules/`
+      - Update xref statements: `xref:old-id_{context}` → `xref:new-id_{context}`
+      - Update xref statements with explicit context: `xref:old-id_title-name` → `xref:new-id_title-name`
+      - Update any anchor links in the same file
+
+   **STEP 4: Update filename to match the title** - Filenames derive from titles
       - Keep the module type prefix: `proc-`, `con-`, `ref-`, `assembly-`
       - Convert title to lowercase with hyphens: `proc-install-the-operator.adoc`
       - Use `git mv` to rename the file (preserves git history)
-      - Update all include statements in assemblies that reference the renamed file
-      - Update any xrefs that point to the old ID
 
-   d. **STEP 4: Fix other issues** (only after title/ID/filename are aligned):
+   **STEP 5: Update all include statements pointing to the renamed file**
+      - Search for includes: `grep -r "include::.*old-filename" assemblies/ modules/`
+      - Update include statements in assemblies: `include::modules/path/old-filename.adoc` → `include::modules/path/new-filename.adoc`
+      - Verify no includes remain pointing to the old filename
+
+   **STEP 6: Fix other issues** (only after title/ID/filename are aligned)
       - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
       - Convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
       - Fix grammar issues (parallel structure, verb agreement)
@@ -174,8 +188,8 @@ Process:
 
    **STEP 1 - Fix title:**
    ```asciidoc
-   # File: proc-installing-the-operator.adoc (not renamed yet)
-   [id="proc-installing-the-operator_{context}"]  (not updated yet)
+   # File: proc-installing-the-operator.adoc (not changed yet)
+   [id="proc-installing-the-operator_{context}"]  (not changed yet)
    = Install the Operator  ✓ TITLE FIXED FIRST
    ```
 
@@ -186,10 +200,29 @@ Process:
    = Install the Operator
    ```
 
-   **STEP 3 - Rename file to match title:**
+   **STEP 3 - Update xrefs pointing to this module:**
+   ```bash
+   # Search for xrefs
+   grep -r "xref:proc-installing-the-operator" assemblies/ modules/
+
+   # Update found xrefs
+   xref:proc-installing-the-operator_{context} → xref:install-the-operator_{context}
+   ```
+
+   **STEP 4 - Rename file to match title:**
    ```bash
    git mv proc-installing-the-operator.adoc proc-install-the-operator.adoc
-   # Update include statements in assemblies
+   ```
+
+   **STEP 5 - Update include statements:**
+   ```bash
+   # Search for includes
+   grep -r "proc-installing-the-operator.adoc" assemblies/
+
+   # Update in assembly file
+   include::modules/path/proc-installing-the-operator.adoc[leveloffset=+1]
+   # becomes
+   include::modules/path/proc-install-the-operator.adoc[leveloffset=+1]
    ```
 
    **AFTER (all aligned):**
