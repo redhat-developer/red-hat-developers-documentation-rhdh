@@ -151,6 +151,7 @@ Process:
       - Add `{context}` suffix: `[id="install-the-operator_{context}"]`
       - **Do NOT include the module prefix** (proc-, con-, ref-) in the ID
       - The ID must match the title exactly (lowercased with hyphens), not the current filename
+      - **IMPORTANT**: After updating an ID, search for and update all references to it in xref statements and links throughout the documentation
 
    c. **STEP 3: Update filenames to match the title** - Filenames derive from titles:
       - Keep the module type prefix: `proc-`, `con-`, `ref-`, `assembly-`
