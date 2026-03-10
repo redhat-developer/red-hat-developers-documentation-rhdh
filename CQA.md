@@ -140,11 +140,7 @@ Process:
 2. Run Vale DITA validation to identify issues
 3. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
 
-   a. **STEP 1: Fix titles FIRST** - The title is the source of truth:
-      - Procedure modules: Use imperative/present tense (e.g., "Install the Operator" not "Installing the Operator")
-      - Concept modules: Use noun phrases, not imperative verbs (e.g., "High availability" not "Achieve high availability")
-      - Reference modules: Use noun phrases (e.g., "Configuration options" not "Configure options")
-      - Assembly titles: Use gerund for task-based (e.g., "Installing plugins"), noun for non-task (e.g., "API reference")
+   a. **STEP 1: Fix titles FIRST** - The title is the source of truth (see requirement #8 for complete title requirements)
 
    b. **STEP 2: Update IDs to match the title** - IDs derive from titles, NOT from filenames:
       - Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator`
@@ -330,13 +326,13 @@ When working on a title, you typically need to update:
 - **Fix**: Add `[role="_abstract"]` before intro paragraph, ensure 50-300 chars
 - **Important**: Don't duplicate content—mark existing paragraph when appropriate
 
-### Issue: Incorrect title pattern for content type
+### Issue: Incorrect title pattern - Concept module
 - **Symptom**: Concept module using imperative verb (e.g., "Achieve high availability")
 - **Fix**: Change to noun phrase (e.g., "High availability with database layers")
 
-### Issue: Incorrect title pattern for content type
-- **Symptom**: Procedure module using gerund verb (e.g., "Achieving high availability")
-- **Fix**: Change to present-tense verb (e.g., "Achieve high availability")
+### Issue: Incorrect title pattern - Procedure module
+- **Symptom**: Procedure module using gerund form (e.g., "Achieving high availability")
+- **Fix**: Change to imperative form (e.g., "Achieve high availability")
 
 
 ### Issue: Grammar/parallel structure
