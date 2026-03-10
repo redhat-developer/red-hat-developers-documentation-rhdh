@@ -921,6 +921,48 @@ If you have many individual permissions in `.claude/settings.local.json`:
 7. Remove from git tracking: `git rm --cached .claude/settings.local.json`
 8. Commit the consolidated settings
 
+### Updating Permissions During CQA 2.1 Work
+
+When performing CQA 2.1 compliance work, Claude Code may need to add new permissions to `.claude/settings.json` for validation and build commands. This is expected and should be committed with your CQA changes.
+
+**Expected permission additions during CQA work:**
+
+- Build validation commands:
+  ```json
+  "Bash(build/scripts/build-ccutil.sh)",
+  "Bash(asciidoctor titles/*)"
+  ```
+
+- Vale validation commands:
+  ```json
+  "Bash(vale --config .vale-dita-only.ini *)"
+  ```
+
+- File operations for temporary validation output:
+  ```json
+  "Bash(/tmp/*)"
+  ```
+
+**Policy for permission updates:**
+
+1. **Review but allow**: When Claude Code requests permission to update `.claude/settings.json`, review the new permissions to ensure they're related to documentation validation/build tasks
+2. **Commit permission updates**: Include `.claude/settings.json` changes in your CQA compliance commits
+3. **Use wildcards**: Prefer wildcard patterns over specific paths (e.g., `"Bash(asciidoctor titles/*)"` instead of `"Bash(asciidoctor titles/customizing/master.adoc)"`)
+4. **Document in commit message**: Note permission additions in your commit message when they represent new capabilities needed for validation
+
+**Example commit message:**
+```
+RHIDP-XXXXX: CQA 2.1 compliance for Customizing title
+
+... description of changes ...
+
+Build permissions:
+- Add build-ccutil.sh and asciidoctor commands to allowed Bash operations
+- Enables build validation during CQA 2.1 compliance work
+```
+
+This approach ensures Claude Code has the necessary permissions to perform validation tasks while maintaining security through the approval workflow.
+
 ## Acceptable Warnings
 
 Some Vale DITA warnings are acceptable and do not block CQA 2.1 compliance:
