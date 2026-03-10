@@ -163,7 +163,9 @@ Process:
    **STEP 4: Update filename to match the title** - Filenames derive from titles
       - Keep the module type prefix: `proc-`, `con-`, `ref-`, `assembly-`
       - Convert title to lowercase with hyphens: `proc-install-the-operator.adoc`
-      - Use `git mv` to rename the file (preserves git history)
+      - Organize modules by title: Move all modules to `modules/[title-name]/` subdirectory
+      - Example: For "Customizing" title, all modules go to `modules/customizing/`
+      - Use `git mv` to rename/move the file (preserves git history)
 
    **STEP 5: Update all include statements pointing to the renamed file**
       - Search for includes: `grep -r "include::.*old-filename" assemblies/ modules/`
@@ -209,9 +211,10 @@ Process:
    xref:proc-installing-the-operator_{context} → xref:install-the-operator_{context}
    ```
 
-   **STEP 4 - Rename file to match title:**
+   **STEP 4 - Rename and move file to title directory:**
    ```bash
-   git mv proc-installing-the-operator.adoc proc-install-the-operator.adoc
+   # Assuming this is for the "installation" title
+   git mv modules/old-path/proc-installing-the-operator.adoc modules/installation/proc-install-the-operator.adoc
    ```
 
    **STEP 5 - Update include statements:**
@@ -220,14 +223,14 @@ Process:
    grep -r "proc-installing-the-operator.adoc" assemblies/
 
    # Update in assembly file
-   include::modules/path/proc-installing-the-operator.adoc[leveloffset=+1]
+   include::modules/old-path/proc-installing-the-operator.adoc[leveloffset=+1]
    # becomes
-   include::modules/path/proc-install-the-operator.adoc[leveloffset=+1]
+   include::modules/installation/proc-install-the-operator.adoc[leveloffset=+1]
    ```
 
    **AFTER (all aligned):**
    ```asciidoc
-   # File: proc-install-the-operator.adoc ✓
+   # File: modules/installation/proc-install-the-operator.adoc ✓
    [id="install-the-operator_{context}"]  ✓
    = Install the Operator  ✓
    ```
