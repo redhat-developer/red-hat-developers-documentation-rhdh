@@ -137,22 +137,70 @@ Requirements (CQA 2.1 Acceptance Criteria):
 Process:
 1. Read the main assembly file and all included modules
 2. Run Vale DITA validation to identify issues
-3. Fix all validation errors and warnings **in this order**:
-   a. **First, fix titles** to comply with modular docs and style guide:
+3. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
+
+   a. **STEP 1: Fix titles FIRST** - The title is the source of truth:
       - Procedure modules: Use imperative/present tense (e.g., "Install the Operator" not "Installing the Operator")
       - Concept modules: Use noun phrases, not imperative verbs (e.g., "High availability" not "Achieve high availability")
       - Reference modules: Use noun phrases (e.g., "Configuration options" not "Configure options")
       - Assembly titles: Use gerund for task-based (e.g., "Installing plugins"), noun for non-task (e.g., "API reference")
-   b. **Then, update file names and IDs** to match the corrected titles:
-      - File name: Convert title to lowercase, replace spaces with hyphens, keep module prefix (e.g., `proc-install-the-operator.adoc`)
-      - Module ID: `[id="title-in-lowercase-with-hyphens_{context}"]` (no module prefix in ID)
-      - Update all include statements that reference the renamed file
-   c. **Finally, fix other issues**:
+
+   b. **STEP 2: Update IDs to match the title** - IDs derive from titles, NOT from filenames:
+      - Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator`
+      - Add `{context}` suffix: `[id="install-the-operator_{context}"]`
+      - **Do NOT include the module prefix** (proc-, con-, ref-) in the ID
+      - The ID must match the title exactly (lowercased with hyphens), not the current filename
+
+   c. **STEP 3: Update filenames to match the title** - Filenames derive from titles:
+      - Keep the module type prefix: `proc-`, `con-`, `ref-`, `assembly-`
+      - Convert title to lowercase with hyphens: `proc-install-the-operator.adoc`
+      - Use `git mv` to rename the file (preserves git history)
+      - Update all include statements in assemblies that reference the renamed file
+      - Update any xrefs that point to the old ID
+
+   d. **STEP 4: Fix other issues** (only after title/ID/filename are aligned):
       - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
       - Convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
       - Fix grammar issues (parallel structure, verb agreement)
       - Add context restoration to assemblies
       - Remove commented-out content
+
+   **Example of correct sequence for a procedure module:**
+
+   **BEFORE (incorrect):**
+   ```asciidoc
+   # File: proc-installing-the-operator.adoc
+   [id="proc-installing-the-operator_{context}"]
+   = Installing the Operator
+   ```
+
+   **STEP 1 - Fix title:**
+   ```asciidoc
+   # File: proc-installing-the-operator.adoc (not renamed yet)
+   [id="proc-installing-the-operator_{context}"]  (not updated yet)
+   = Install the Operator  ✓ TITLE FIXED FIRST
+   ```
+
+   **STEP 2 - Update ID to match title:**
+   ```asciidoc
+   # File: proc-installing-the-operator.adoc (still not renamed)
+   [id="install-the-operator_{context}"]  ✓ ID NOW MATCHES TITLE
+   = Install the Operator
+   ```
+
+   **STEP 3 - Rename file to match title:**
+   ```bash
+   git mv proc-installing-the-operator.adoc proc-install-the-operator.adoc
+   # Update include statements in assemblies
+   ```
+
+   **AFTER (all aligned):**
+   ```asciidoc
+   # File: proc-install-the-operator.adoc ✓
+   [id="install-the-operator_{context}"]  ✓
+   = Install the Operator  ✓
+   ```
+
 4. Re-run Vale DITA validation to confirm 0 errors, only acceptable warnings, 0 suggestions
 5. Run build validation (`build/scripts/build.sh`) to verify xrefs still resolve
 6. Verify all 14 acceptance criteria are met
@@ -181,6 +229,33 @@ Process:
    )" --base main
    ```
 
+**CRITICAL: Common Mistakes to Avoid**
+
+❌ **WRONG - Aligning ID to filename first:**
+```asciidoc
+# File: proc-creating-template.adoc (current filename)
+[id="proc-creating-template_{context}"]  ← WRONG: Copying from filename
+= Create a template  ← Title is correct but ID is wrong
+```
+
+❌ **WRONG - Renaming file before fixing title:**
+```bash
+git mv proc-creating-template.adoc proc-create-template.adoc  ← WRONG: Filename still has gerund
+# Title still says "Creating a template"  ← Title not fixed yet
+```
+
+❌ **WRONG - Updating ID and filename in wrong order:**
+```asciidoc
+# Filename already renamed but ID not updated yet
+[id="proc-creating-template_{context}"]  ← WRONG: ID doesn't match title or filename
+= Create a template
+```
+
+✅ **CORRECT - Follow the sequence: Title → ID → Filename**
+1. Fix title FIRST: "Creating" → "Create"
+2. Update ID to match title: `[id="create-a-template_{context}"]`
+3. Rename file to match title: `proc-create-a-template.adoc`
+
 Verification checklist after completing work:
 - [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
 - [ ] Modularization with official templates
@@ -194,6 +269,7 @@ Verification checklist after completing work:
 - [ ] No broken links
 - [ ] Official product names
 - [ ] Tech Preview disclaimers (or N/A)
+- [ ] **Title → ID → Filename sequence followed for all modules**
 ```
 
 ---
@@ -437,17 +513,33 @@ When working on a title, you typically need to update:
 
 ## Procedure Module Style Guidelines
 
-### Titles
-- **Use imperative form** (not gerund): "Enable the plugin" not "Enabling the plugin"
-- **Remove fluff**: "Enable the Adoption Insights plugin" not "Enable the Adoption Insights plugin in {product}"
-- **Do NOT use the proc- prefix in the ID**: `[id="enable-the-adoption-insights-plugin_{context}"]`
-- **ID must match title**: Convert title to lowercase, replace spaces with hyphens, add `_{context}` suffix
+### Title → ID → Filename Sequence (CRITICAL)
 
-### Module ID Naming Convention
+**Always follow this exact order:**
+
+1. **Fix the TITLE first** (the title is the source of truth):
+   - Use imperative form (not gerund): "Enable the plugin" not "Enabling the plugin"
+   - Remove unnecessary context: "Enable the plugin" not "Enable the plugin in {product}"
+   - Example: `= Enable the Adoption Insights plugin`
+
+2. **Update the ID to match the title** (ID derives from title, not filename):
+   - Convert title to lowercase with hyphens
+   - Add `_{context}` suffix
+   - **Do NOT include the proc- prefix** in the ID
+   - Example: `[id="enable-the-adoption-insights-plugin_{context}"]`
+
+3. **Rename the filename to match the title** (filename derives from title):
+   - Keep the `proc-` prefix in the filename
+   - Convert title to lowercase with hyphens
+   - Example: `proc-enable-the-adoption-insights-plugin.adoc`
+
+### Complete Example (Correct Sequence)
 ```asciidoc
-= Enable the Adoption Insights plugin
+# File: proc-enable-the-adoption-insights-plugin.adoc (renamed to match title)
 
-[id="enable-the-adoption-insights-plugin_{context}"]
+[id="enable-the-adoption-insights-plugin_{context}"]  ← Matches title
+
+= Enable the Adoption Insights plugin  ← Source of truth
 ```
 
 ### Procedure Formatting
