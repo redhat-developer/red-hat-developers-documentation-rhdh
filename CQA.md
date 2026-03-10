@@ -784,6 +784,34 @@ Forward audit logs from {product-short} to Splunk by using the {logging-short} O
 
 ## Validation Commands
 
+### Validation Strategy
+
+Use a two-tier approach for efficient validation:
+
+**Fast validation after each change** - Use asciidoctor for quick syntax checks:
+```bash
+asciidoctor titles/<title-name>/master.adoc -o /tmp/test.html 2>&1 | grep -i error
+```
+
+This provides immediate feedback on:
+- AsciiDoc syntax errors
+- Broken include statements
+- Invalid cross-references within the title
+- Missing files or resources
+
+**Comprehensive validation at checkpoints** - Use ccutil to validate all titles:
+```bash
+build/scripts/build-ccutil.sh 2>&1 | grep -E "(Unknown ID|fails to validate|Error)"
+```
+
+This validates:
+- Cross-title xref statements (references from other titles)
+- DITA compatibility
+- Complete build chain
+- All title dependencies
+
+**Why validate all titles:** Cross-references may exist from other titles pointing to the modules/assemblies you changed. The full build ensures these external references still work correctly.
+
 ### DITA Validation (Required)
 
 Always run this command from the repository root to validate DITA compliance:
