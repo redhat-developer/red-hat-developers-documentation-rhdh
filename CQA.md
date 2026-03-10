@@ -21,22 +21,42 @@ Make the "[TITLE NAME]" title compliant with CQA 2.1 – Content Quality Assessm
 Background:
 - Target path: [PATH TO ASSEMBLY FILE]
 - All included modules must be updated
-- Changes must pass Vale DITA validation with 0 errors, 0 warnings
+- Changes must pass Vale DITA validation with 0 errors, only acceptable warnings
 
 Requirements (CQA 2.1 Acceptance Criteria):
 
-1. **Vale DITA validation**: Run `vale --config .vale-dita-only.ini` against all AsciiDoc files included in the title. Result must be 0 errors, 0 warnings, 0 suggestions.
+1. **Vale DITA validation**: Run `vale --config .vale-dita-only.ini` against all AsciiDoc files included in the title. Result must be 0 errors, with only acceptable warnings documented (callouts, false positive concept links), 0 suggestions.
 
-2. **Content is modularized following Red Hat modular documentation rules**:
-   - Use official templates (assemblies, concept modules, reference modules, procedure modules)
-   - Each module has correct `:_mod-docs-content-type:` metadata
-   - Proper file naming conventions (assembly-*.adoc, con-*.adoc, ref-*.adoc, proc-*.adoc)
+2. **Content is modularized following Red Hat modular documentation rules** (see link:https://redhat-documentation.github.io/modular-docs/[Red Hat Modular Documentation Reference Guide]):
+   - Use official templates: assemblies, concept modules, procedure modules, reference modules, snippets
+   - Each module has correct `:_mod-docs-content-type:` metadata (ASSEMBLY, CONCEPT, PROCEDURE, REFERENCE, SNIPPET)
+   - Proper file naming conventions: `assembly-title.adoc`, `con-title.adoc`, `proc-title.adoc`, `ref-title.adoc`, `snip-*.adoc` (Convert title to lowercase with hyphens: "Install the Operator" → `proc-install-the-operator.adoc`)
+   - Anchors follow format: `[id="title_{context}"]` (Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator_{context}`)
+   - **No modules nested within modules** - modules should only be included in assemblies
+   - **Snippets** (`:_mod-docs-content-type: SNIPPET`) contain reusable content blocks but NO structural elements (no anchors, H1 headings, or block titles like .Prerequisites)
+   - **Module-specific rules**:
+     * Concept modules: Explain "what" and "why"; no step-by-step instructions; optional subheadings allowed
+     * Procedure modules: Step-by-step instructions only; NO custom subheadings (only standard: .Prerequisites, .Procedure, .Verification, .Troubleshooting, .Next steps); numbered lists for multi-step, bullets for single-step
+     * Reference modules: Lookup data in lists/tables; optional subheadings allowed for complex content
+     * Assemblies: Introduction + include statements only; no detailed content
 
 3. **Assemblies contain only an introductory section, and then include statements for modules**:
-   - Assemblies have brief introduction (1-3 paragraphs max)
-   - No detailed content in assemblies (move to modules)
-   - Context is set and restored properly using ifdef/ifndef
+   - Assemblies have brief introduction (single concise paragraph required)
+   - No detailed content in assemblies (move to modules) - "a module should not contain another module"
+   - Introduction explains what the user accomplishes
+   - Optional components: Prerequisites (applying to entire assembly), Additional resources (links only, no descriptive text)
+   - Context is set and restored properly when nesting assemblies:
+     ```asciidoc
+     // At top of nested assembly
+     ifdef::context[:parent-context: {context}]
+
+     // At end of nested assembly
+     ifdef::parent-context[:context: {parent-context}]
+     ifndef::parent-context[:!context:]
+     ```
    - No commented-out content
+   - All includes use `leveloffset=+1` (or appropriate level)
+   - All module/assembly titles must be H1 (`= Heading`)
 
 4. **Assemblies are one user story each**:
    - Each assembly addresses a single user goal or task
@@ -47,28 +67,49 @@ Requirements (CQA 2.1 Acceptance Criteria):
    - Count from the title level (assembly = level 1, first include = level 2, etc.)
 
 6. **Modules and assemblies start with a clear short description**:
-   - Every module and assembly has `[role="_abstract"]` before the introductory paragraph
-   - Short description is 50-300 characters
+   - Every module and assembly must have a **single, concise introductory paragraph** (Red Hat modular docs requirement)
+   - Mark with `[role="_abstract"]` immediately after the title for DITA compatibility
+   - Introduction should be 50-300 characters for AEM migration
+   - **Purpose of introduction**:
+     * Concept modules: Answer "What is this?" and "Why should users care?"
+     * Procedure modules: Explain what the user accomplishes
+     * Reference modules: Describe the data being presented
+     * Assemblies: Explain what user story/goal is addressed
+   - Introduction enables users to quickly determine if content is relevant
    - Describes the value/purpose (not just "Learn about X")
    - If an introduction paragraph already exists, add `[role="_abstract"]` to mark it (do NOT duplicate)
-   - Remove self-referential language ("Learn about", "This section describes")
+   - Remove self-referential language ("Learn about", "This section describes", "This module explains")
 
 7. **In AsciiDoc, short descriptions must be**:
    - Added as `[role="_abstract"]` immediately after the title
+   - **IMPORTANT**: The `[role="_abstract"]` line cannot be followed by an empty line - the abstract content must start on the very next line
    - Between 50-300 characters
    - Not duplicating existing content—mark the existing intro paragraph when appropriate
 
-8. **Titles are brief, complete, and descriptive**:
-   - Concept modules: use noun phrases (e.g., "High availability with database and cache layers")
-   - Procedure modules: use present-tense verbs (e.g., "Install the Operator")
-   - Reference modules: use noun phrases (e.g., "Sizing requirements for Red Hat Developer Hub")
-   - Assembly titles: describe the user story/goal
+8. **Titles are brief, complete, and descriptive** (following Red Hat modular documentation guide):
+   - **Concept modules**: Use noun phrases (e.g., "High availability with database and cache layers")
+   - **Procedure modules**: Use imperative form per Style Guide (e.g., "Install the Operator", "Configure the database")
+     * Note: Red Hat modular docs specify gerund phrases (e.g., "Installing the Operator"), but Style Guide requires imperative form. Only imperative form is acceptable.
+   - **Reference modules**: Use noun phrases (e.g., "Sizing requirements for Red Hat Developer Hub", "Configuration options reference")
+   - **Assembly titles**:
+     * Task-based assemblies: Use imperative form per Style Guide (e.g., "Install the Operator", "Configure the database")
+     * Non-task assemblies: Use noun phrases (e.g., "API reference")
    - Avoid imperative verbs in concept/reference titles (bad: "Achieve high availability", good: "High availability")
 
 9. **If a procedure includes prerequisites, they are formatted correctly**:
-   - Use `.Prerequisites` block title (not a section heading)
+   - Use `.Prerequisites` block title (not a section heading `== Prerequisites`)
+   - Always use plural "Prerequisites" even for single item
    - List prerequisites as bulleted items
+   - Prerequisites apply conditions or dependencies for the procedure
    - N/A if no procedures in the title
+   - Standard procedure module sections (all optional except .Procedure):
+     * `.Prerequisites` - conditions that must be met
+     * `.Procedure` - the numbered steps (required)
+     * `.Verification` - how to confirm success
+     * `.Troubleshooting` - brief issue resolution (or link to separate troubleshooting procedure)
+     * `.Next steps` - links to related instructions only
+     * `.Additional resources` - links to related documentation
+   - **No custom subheadings allowed in procedures** - only use the standard sections above
 
 10. **Content is grammatically correct and uses American English**:
     - Parallel structure in lists and phrases
@@ -96,20 +137,176 @@ Requirements (CQA 2.1 Acceptance Criteria):
 
 Process:
 1. Read the main assembly file and all included modules
-2. Run Vale DITA validation to identify issues
-3. Fix all validation errors and warnings:
-   - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
-   - Convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
-   - Fix title patterns (concept modules use noun phrases, not imperative verbs)
-   - Fix grammar issues (parallel structure, verb agreement)
-   - Add context restoration to assemblies
-   - Remove commented-out content
-4. Re-run Vale DITA validation to confirm 0 errors, 0 warnings, 0 suggestions
-5. Verify all 14 acceptance criteria are met
-6. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
+3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
+4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
+5. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
+
+   **STEP 1: Fix titles FIRST** - The title is the source of truth
+      - See requirement #8 for complete title requirements
+      - Procedure modules: Use imperative form (e.g., "Install the Operator")
+      - Concept modules: Use noun phrases (e.g., "High availability")
+      - Reference modules: Use noun phrases (e.g., "Configuration options")
+      - Task-based assemblies: Use imperative form (e.g., "Configure the database")
+
+   **STEP 2: Update IDs and context to match the title** - IDs derive from titles, NOT from filenames
+      - Update the `[id="..."]` line: Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator`
+      - Add `_{context}` suffix: `[id="install-the-operator_{context}"]`
+      - **Do NOT include the module prefix** (proc-, con-, ref-) in the ID
+      - Update `:context:` variable in assemblies to match the new title (lowercase with hyphens)
+      - The ID must match the title exactly (lowercased with hyphens), not the current filename
+
+   **STEP 3: Update all xrefs and links pointing to the changed ID or context**
+      - Search for all xrefs: `grep -r "xref:old-id" assemblies/ modules/`
+      - Update xref statements: `xref:old-id_{context}` → `xref:new-id_{context}`
+      - Update xref statements with explicit context: `xref:old-id_title-name` → `xref:new-id_title-name`
+      - Update any anchor links in the same file
+
+   **STEP 4: Update filename to match the title** - Filenames derive from titles
+      - Keep the module type prefix: `proc-`, `con-`, `ref-`, `assembly-`
+      - Convert title to lowercase with hyphens: `proc-install-the-operator.adoc`
+      - Organize modules by title: Move all modules to `modules/[title-name]/` subdirectory
+      - Example: For "Customizing" title, all modules go to `modules/customizing/`
+      - Use `git mv` to rename/move the file (preserves git history)
+
+   **STEP 5: Update all include statements pointing to the renamed file**
+      - Search for includes: `grep -r "include::.*old-filename" assemblies/ modules/`
+      - Update include statements in assemblies: `include::modules/path/old-filename.adoc` → `include::modules/path/new-filename.adoc`
+      - Verify no includes remain pointing to the old filename
+
+   **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
+      - After reorganizing modules, check for orphaned files left in old directories
+      - Search for modules not referenced anywhere: Compare all module files against include statements
+      - Remove orphaned modules: `git rm modules/old-category/orphaned-module.adoc`
+      - Remove empty directories after cleanup
+      - Example: After moving Customizing modules, remove unreferenced files from old directories
+
+   **STEP 7: Fix other issues** (only after title/ID/filename are aligned)
+      - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
+      - In concept or reference modules, convert DITA-incompatible block titles (`.Title`) to section headings (`== Title`)
+      - Fix grammar issues (parallel structure, verb agreement)
+      - Add context restoration to assemblies
+      - Remove commented-out content
+
+   **Example of correct sequence for a procedure module:**
+
+   **BEFORE (incorrect):**
+   ```asciidoc
+   # File: proc-installing-the-operator.adoc
+   [id="proc-installing-the-operator_{context}"]
+   = Installing the Operator
+   ```
+
+   **STEP 1 - Fix title:**
+   ```asciidoc
+   # File: proc-installing-the-operator.adoc (not changed yet)
+   [id="proc-installing-the-operator_{context}"]  (not changed yet)
+   = Install the Operator  ✓ TITLE FIXED FIRST
+   ```
+
+   **STEP 2 - Update ID to match title:**
+   ```asciidoc
+   # File: proc-installing-the-operator.adoc (still not renamed)
+   [id="install-the-operator_{context}"]  ✓ ID NOW MATCHES TITLE
+   = Install the Operator
+   ```
+
+   **STEP 3 - Update xrefs pointing to this module:**
+   ```bash
+   # Search for xrefs
+   grep -r "xref:proc-installing-the-operator" assemblies/ modules/
+
+   # Update found xrefs
+   xref:proc-installing-the-operator_{context} → xref:install-the-operator_{context}
+   ```
+
+   **STEP 4 - Rename and move file to title directory:**
+   ```bash
+   # Assuming this is for the "installation" title
+   git mv modules/old-path/proc-installing-the-operator.adoc modules/installation/proc-install-the-operator.adoc
+   ```
+
+   **STEP 5 - Update include statements:**
+   ```bash
+   # Search for includes
+   grep -r "proc-installing-the-operator.adoc" assemblies/
+
+   # Update in assembly file
+   include::modules/old-path/proc-installing-the-operator.adoc[leveloffset=+1]
+   # becomes
+   include::modules/installation/proc-install-the-operator.adoc[leveloffset=+1]
+   ```
+
+   **AFTER (all aligned):**
+   ```asciidoc
+   # File: modules/installation/proc-install-the-operator.adoc ✓
+   [id="install-the-operator_{context}"]  ✓
+   = Install the Operator  ✓
+   ```
+
+6. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
+7. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
+8. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
+9. Verify the assembly include statements do not go too deep (see requirement #5).
+
+10. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
+11. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
+12. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
+13. Verify all 14 acceptance criteria are met
+14. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+15. Create pull request using the template at `.github/pull_request_template.md`:
+   ```bash
+   gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
+   **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
+
+   **Version(s):** <version>
+
+   **Issue:** https://issues.redhat.com/browse/RHIDP-XXXXX
+
+   **Preview:** TBD
+
+   ## Summary
+   Brief summary of changes
+
+   ## Changes
+   - List of key changes
+
+   ## Validation
+   - Vale DITA: 0 errors, X warnings
+   - Build: Success
+   EOF
+   )" --base main
+   ```
+
+**CRITICAL: Common Mistakes to Avoid**
+
+❌ **WRONG - Aligning ID to filename first:**
+```asciidoc
+# File: proc-creating-template.adoc (current filename)
+[id="proc-creating-template_{context}"]  ← WRONG: Copying from filename
+= Create a template  ← Title is correct but ID is wrong
+```
+
+❌ **WRONG - Renaming file before fixing title:**
+```bash
+git mv proc-creating-template.adoc proc-create-template.adoc  ← WRONG: Filename still has gerund
+# Title still says "Creating a template"  ← Title not fixed yet
+```
+
+❌ **WRONG - Updating ID and filename in wrong order:**
+```asciidoc
+# Filename already renamed but ID not updated yet
+[id="proc-creating-template_{context}"]  ← WRONG: ID doesn't match title or filename
+= Create a template
+```
+
+✅ **CORRECT - Follow the sequence: Title → ID → Filename**
+1. Fix title FIRST: "Creating" → "Create"
+2. Update ID to match title: `[id="create-a-template_{context}"]`
+3. Rename file to match title: `proc-create-a-template.adoc`
 
 Verification checklist after completing work:
-- [ ] Vale DITA: 0 errors, 0 warnings, 0 suggestions
+- [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
 - [ ] Modularization with official templates
 - [ ] Assembly structure compliant
 - [ ] Short descriptions (50-300 chars with [role="_abstract"])
@@ -121,6 +318,7 @@ Verification checklist after completing work:
 - [ ] No broken links
 - [ ] Official product names
 - [ ] Tech Preview disclaimers (or N/A)
+- [ ] **Title → ID → Filename sequence followed for all modules**
 ```
 
 ---
@@ -137,7 +335,7 @@ Make the "About Red Hat Developer Hub" title compliant with CQA 2.1 – Content 
 Background:
 - Target path: titles/about/assemblies/assembly-about-rhdh.adoc
 - All included modules must be updated
-- Changes must pass Vale DITA validation with 0 errors, 0 warnings
+- Changes must pass Vale DITA validation with 0 errors, only acceptable warnings
 
 [... rest of requirements as specified in template above ...]
 ```
@@ -155,22 +353,37 @@ When working on a title, you typically need to update:
 
 ## Common Issues Found and Fixes
 
+### Issue: Modules nested within modules
+- **Symptom**: Include statements for modules within other modules (not in assemblies)
+- **Root cause**: Violates Red Hat modular documentation rule: "A module should not contain another module"
+- **Fix**:
+  1. Create an assembly to contain the modules
+  2. Move all module includes to the assembly
+  3. Update parent assembly to include the new assembly instead of individual modules
+- **Example**: If `proc-main.adoc` includes `proc-substep.adoc`, create `assembly-main-process.adoc` to include both procedures
+
+### Issue: Custom subheadings in procedure modules
+- **Symptom**: Procedure modules contain section headings (`== Custom Section`) beyond standard ones
+- **Root cause**: Red Hat modular docs restrict procedure subheadings to predefined types only
+- **Fix**: Remove custom subheadings; use only: `.Prerequisites`, `.Procedure`, `.Verification`, `.Troubleshooting`, `.Next steps`, `.Additional resources`
+- **Alternative**: Move content requiring subheadings to concept or reference modules
+
 ### Issue: Block titles incompatible with DITA
-- **Symptom**: Vale warning about block titles (`.Title` format)
-- **Fix**: Convert to section headings (`== Title` format)
+- **Symptom**: Vale warning about block titles (`.Title` format) in unexpected contexts
+- **Fix**: Convert to section headings (`== Title` format) or remove if in snippets
 
 ### Issue: Short description missing or wrong length
 - **Symptom**: Vale error about missing shortdesc or character count
 - **Fix**: Add `[role="_abstract"]` before intro paragraph, ensure 50-300 chars
 - **Important**: Don't duplicate content—mark existing paragraph when appropriate
 
-### Issue: Incorrect title pattern for content type
+### Issue: Incorrect title pattern - Concept module
 - **Symptom**: Concept module using imperative verb (e.g., "Achieve high availability")
 - **Fix**: Change to noun phrase (e.g., "High availability with database layers")
 
-### Issue: Incorrect title pattern for content type
-- **Symptom**: Procedure module using gerund verb (e.g., "Achieving high availability")
-- **Fix**: Change to present-tense verb (e.g., "Achieve high availability") 
+### Issue: Incorrect title pattern - Procedure module
+- **Symptom**: Procedure module using gerund form (e.g., "Achieving high availability")
+- **Fix**: Change to imperative form (e.g., "Achieve high availability")
 
 
 ### Issue: Grammar/parallel structure
@@ -194,6 +407,113 @@ When working on a title, you typically need to update:
 - **Symptom**: Vale warning about using "like" instead of "such as"
 - **Fix**: Use "such as" for examples (e.g., "catalog entities (such as components, APIs)")
 - **Note**: Always run Vale with default config after DITA validation to catch style issues
+
+### Issue: Snippet files with structural elements
+- **Symptom**: Vale warning about missing content type, document title, or block titles in snippet files
+- **Root cause**: Snippet files should only contain content (lists, paragraphs, code blocks), not structural elements
+- **Fix**:
+  1. Add `:_mod-docs-content-type: SNIPPET` to the beginning of all snippet files
+  2. Remove structural block titles (`.Prerequisites`, `.Procedure`, `.Verification`, `.Next steps`) from snippet files
+  3. Add those block titles to the parent files before the include statements
+- **Example**:
+  - ✗ Wrong (in snippet):
+    ```asciidoc
+    .Prerequisites
+    * You have installed the Operator.
+    ```
+  - ✓ Correct (in parent file):
+    ```asciidoc
+    .Prerequisites
+    include::snip-prerequisites.adoc[]
+    * Additional prerequisite in parent.
+    ```
+  - ✓ Correct (in snippet):
+    ```asciidoc
+    :_mod-docs-content-type: SNIPPET
+
+    * You have installed the Operator.
+    ```
+
+### Issue: Inline admonitions in procedures
+- **Symptom**: Inconsistent admonition formatting, or `AsciiDocDITA.TaskStep` warnings
+- **Root cause**: Inline format (`TIP:`, `NOTE:`, etc.) is less consistent than block format
+- **Fix**: Convert all inline admonitions to block format with delimiters
+- **Example**:
+  - ✗ Wrong:
+    ```asciidoc
+    TIP: Optionally, enable the cache for unsupported plugins.
+    ```
+  - ✓ Correct:
+    ```asciidoc
+    [TIP]
+    ====
+    Optionally, enable the cache for unsupported plugins.
+    ====
+    ```
+
+### Issue: Admonitions in procedure steps without continuation marks
+- **Symptom**: Vale warning `AsciiDocDITA.TaskStep`: "Content other than a single list cannot be mapped to DITA tasks"
+- **Root cause**: Admonitions, source blocks, or other content after a procedure step need to be attached to that step using a continuation mark
+- **Fix**: Add a line with a single `+` (continuation mark) before the admonition or content block
+- **Example**:
+  - ✗ Wrong:
+    ```asciidoc
+    . Enable the cache in your configuration file.
+
+    [TIP]
+    ====
+    You can also enable caching for other plugins.
+    ====
+    ```
+  - ✓ Correct:
+    ```asciidoc
+    . Enable the cache in your configuration file.
+    +
+    [TIP]
+    ====
+    You can also enable caching for other plugins.
+    ====
+    ```
+
+### Issue: Example blocks nested in other blocks
+- **Symptom**: Vale error `AsciiDocDITA.ExampleBlock`: "Examples can not be inside of other blocks in DITA"
+- **Root cause**: DITA does not support nested example blocks (`.Example` with `====` delimiters)
+- **Fix**: Convert the example block to regular text with a source code block, or move it outside the parent block
+- **Example**:
+  - ✗ Wrong:
+    ```asciidoc
+    ** Configure the base URL:
+    +
+    .Configuring the baseUrl
+    ====
+    [source,yaml]
+    ----
+    app:
+      baseUrl: https://example.com
+    ----
+    ====
+    ```
+  - ✓ Correct:
+    ```asciidoc
+    ** Configure the base URL:
+    +
+    Configuring the baseUrl:
+    +
+    [source,yaml]
+    ----
+    app:
+      baseUrl: https://example.com
+    ----
+    ```
+
+### Issue: Modules in wrong directories
+- **Symptom**: Modules in `modules/configuring/` but not actually used in the Configuring title
+- **Root cause**: Modules should be organized by where they're actually used, not by their topic
+- **Fix**:
+  1. Use `git mv` to relocate modules to directories matching their actual usage
+  2. Update include paths in all titles/assemblies that reference the moved modules
+  3. Run build validation to ensure everything still works
+- **Example**: A module `con-dynamic-plugins-dependencies.adoc` in `modules/configuring/` but only included in the "Installing plugins" title should be moved to `modules/dynamic-plugins/`
 
 ### Issue: Usage of "respective" and "respectively"
 - **Symptom**: Not a Vale error, but poor writing style that makes content harder to understand
@@ -242,22 +562,38 @@ When working on a title, you typically need to update:
 
 ## Procedure Module Style Guidelines
 
-### Titles
-- **Use imperative form** (not gerund): "Enable the plugin" not "Enabling the plugin"
-- **Remove fluff**: "Enable the Adoption Insights plugin" not "Enable the Adoption Insights plugin in {product}"
-- **Do NOT use the proc- prefix in the ID**: `[id="enable-the-adoption-insights-plugin_{context}"]`
-- **ID must match title**: Convert title to lowercase, replace spaces with hyphens, add `_{context}` suffix
+### Title → ID → Filename Sequence (CRITICAL)
 
-### Module ID Naming Convention
+**Always follow this exact order:**
+
+1. **Fix the TITLE first** (the title is the source of truth):
+   - Use imperative form (not gerund): "Enable the plugin" not "Enabling the plugin"
+   - Remove unnecessary context: "Enable the plugin" not "Enable the plugin in {product}"
+   - Example: `= Enable the Adoption Insights plugin`
+
+2. **Update the ID to match the title** (ID derives from title, not filename):
+   - Convert title to lowercase with hyphens
+   - Add `_{context}` suffix
+   - **Do NOT include the proc- prefix** in the ID
+   - Example: `[id="enable-the-adoption-insights-plugin_{context}"]`
+
+3. **Rename the filename to match the title** (filename derives from title):
+   - Keep the `proc-` prefix in the filename
+   - Convert title to lowercase with hyphens
+   - Example: `proc-enable-the-adoption-insights-plugin.adoc`
+
+### Complete Example (Correct Sequence)
 ```asciidoc
-= Enable the Adoption Insights plugin
+# File: proc-enable-the-adoption-insights-plugin.adoc (renamed to match title)
 
-[id="enable-the-adoption-insights-plugin_{context}"]
+[id="enable-the-adoption-insights-plugin_{context}"]  ← Matches title
+
+= Enable the Adoption Insights plugin  ← Source of truth
 ```
 
 ### Procedure Formatting
 
-**Multi-step procedures**: Use ordered lists (numbered steps)
+**Multi-step procedures**: Use ordered lists (numbered steps) with imperative statements
 ```asciidoc
 .Procedure
 
@@ -266,12 +602,14 @@ When working on a title, you typically need to update:
 . Third step.
 ```
 
-**Single-step procedures**: Use unordered list (single bullet)
+**Single-step procedures**: Use unordered list (single bullet) instead of numbered list
 ```asciidoc
 .Procedure
 
 * In your `dynamic-plugins.yaml` file, update the value to `true`.
 ```
+
+**Note on title format**: Red Hat modular docs specify gerund phrases (e.g., "Creating tables"), but Style Guide uses imperative form (e.g., "Create tables"). Only imperative form is acceptable.
 
 **Substeps**: Use proper indentation with continuation (+)
 ```asciidoc
@@ -289,6 +627,14 @@ code example
 .. Substep 1.
 .. Substep 2.
 ```
+
+**Standard procedure sections** (from Red Hat modular docs):
+- `.Prerequisites` - Bulleted list of conditions (always plural)
+- `.Procedure` - Numbered steps (required) or single bullet for one-step procedures
+- `.Verification` - How to confirm success (show expected output or verification actions)
+- `.Troubleshooting` - Brief issue resolution; link to separate procedures for complex troubleshooting
+- `.Next steps` - Links to related instructions only (not additional instruction sequences)
+- `.Additional resources` - Links to related documentation
 
 ### Content Organization
 
@@ -375,7 +721,114 @@ You can use any of the following options:
 * *Option 3*
 ```
 
+### Source Code Block Types
+
+**Use the correct source type for code blocks**:
+
+- Use `[source,terminal]` for terminal commands (commands you run in a shell)
+- Use `[source,bash]` only for bash scripts (complete scripts with shebang, variables, logic)
+- Use `[source,yaml]`, `[source,json]`, etc. for configuration files
+
+✗ **Wrong**:
+```asciidoc
+[source,bash]
+----
+$ oc project openshift-logging
+----
+```
+
+✓ **Correct**:
+```asciidoc
+[source,terminal]
+----
+$ oc project openshift-logging
+----
+```
+
+### Voice and Tense in Procedures
+
+**Avoid passive voice in procedures (except in prerequisites)**:
+
+✗ **Wrong**:
+```asciidoc
+. Configure outputs to specify where the captured logs are sent.
+. Tuning can be applied per output as needed.
+. Confirm that logs are being forwarded to your Splunk instance.
+```
+
+✓ **Correct**:
+```asciidoc
+. Configure outputs to specify where to send the captured logs.
+. You can apply tuning per output as needed.
+. Verify that your Splunk instance receives logs.
+```
+
+**Use present tense in procedures (except in prerequisites)**:
+
+✗ **Wrong** (past or future tense):
+```asciidoc
+. The forwarder will send logs to the destination.
+. The system was configured to use TLS.
+```
+
+✓ **Correct** (present tense):
+```asciidoc
+. The forwarder sends logs to the destination.
+. The system uses TLS for secure communication.
+```
+
+**Note**: Prerequisites can use past tense (e.g., "You have installed", "You have configured").
+
+### Abstract Guidelines
+
+**Keep abstracts concise and focused**:
+
+- 50-300 characters
+- Focus on the essential action and tools
+- Avoid excessive implementation details
+- Describe the value/purpose, not just "Learn about X"
+
+✗ **Wrong** (217 characters, too detailed):
+```asciidoc
+[role="_abstract"]
+To forward audit logs from {product-short} to Splunk, use the {logging-brand-name} ({logging-short}) Operator and a ClusterLogForwarder instance to capture streamed logs and send them to the HTTPS endpoint of your Splunk instance.
+```
+
+✓ **Correct** (113 characters, focused):
+```asciidoc
+[role="_abstract"]
+Forward audit logs from {product-short} to Splunk by using the {logging-short} Operator and a ClusterLogForwarder instance.
+```
+
 ## Validation Commands
+
+### Validation Strategy
+
+Use a two-tier approach for efficient validation:
+
+**Fast validation after each change** - Use asciidoctor for quick syntax checks:
+```bash
+asciidoctor titles/<title-name>/master.adoc -o /tmp/test.html 2>&1 | grep -i error
+```
+
+This provides immediate feedback on:
+- AsciiDoc syntax errors
+- Broken include statements
+- Invalid cross-references within the title
+- Missing files or resources
+
+**Comprehensive validation at checkpoints** - Use ccutil to validate all titles:
+```bash
+build/scripts/build-ccutil.sh 2>&1 | grep -E "(Unknown ID|fails to validate|Error)"
+```
+
+This validates:
+- Cross-title xref statements (references from other titles)
+- DITA compatibility
+- Complete build chain
+- All title dependencies
+
+**Why validate all titles:** Cross-references may exist from other titles pointing to the modules/assemblies you changed. The full build ensures these external references still work correctly.
 
 ### DITA Validation (Required)
 
@@ -387,7 +840,7 @@ vale --config .vale-dita-only.ini <path-to-assembly-file>
 
 Or to validate all included files at once, run against the directory containing the modules.
 
-**Target**: 0 errors, 0 warnings, 0 suggestions
+**Target**: 0 errors, only acceptable warnings (see Acceptable Warnings section), 0 suggestions
 
 ### Red Hat Style Validation (Recommended)
 
@@ -415,10 +868,210 @@ This validates:
 - All AsciiDoc syntax is valid
 - Content structure is compatible with DocBook XML transformation
 
+## Claude Code Configuration
+
+This repository uses Claude Code for documentation work. The configuration is stored in `.claude/settings.json` with permission rules that control what operations Claude Code can perform.
+
+### Permission Management Best Practices
+
+**1. Minimize line count through consolidation**
+
+Use wildcard patterns instead of listing individual file paths:
+
+```json
+❌ Wrong (3 separate permissions):
+"Bash(git add assemblies/assembly-customizing.adoc)"
+"Bash(git add assemblies/assembly-configuring.adoc)"
+"Bash(git add modules/customizing/proc-example.adoc)"
+
+✅ Correct (1 wildcard permission):
+"Bash(git add *)"
+```
+
+**Benefits:**
+- Consolidation example: 173 individual permissions → 22 wildcard permissions (87% reduction)
+- Easier to review and maintain
+- Reduces merge conflicts in `.claude/settings.json`
+
+**Common wildcard patterns:**
+```json
+"Bash(git add *)"              // Any git add command
+"Bash(git commit:*)"           // Any git commit command
+"Bash(asciidoctor titles/*)"   // Asciidoctor on any title
+"Read(//tmp/**)"               // Read any file in /tmp
+"Bash(/tmp/*)"                 // Bash operations on /tmp files
+```
+
+**2. Alphabetize all permissions**
+
+Keep the `allow` array in strict alphabetical order for easier maintenance and review:
+
+```json
+✅ Correct (alphabetical):
+"Bash(asciidoctor titles/*)"
+"Bash(build/scripts/build-ccutil.sh)"
+"Bash(git add *)"
+"Bash(git commit:*)"
+"Bash(vale --config .vale-dita-only.ini *)"
+```
+
+**Benefits:**
+- Easy to find specific permissions
+- Reduces duplicate entries
+- Makes diffs clearer when reviewing changes
+
+**3. Remove all sensitive and personal information**
+
+**Never commit sensitive information:**
+- ❌ API keys, tokens, or credentials
+- ❌ Internal URLs or hostnames
+- ❌ Personal email addresses
+- ❌ Database connection strings
+- ❌ SSH keys or certificates
+
+**Never commit personal references:**
+- ❌ Home directory paths: `/home/username/...`
+- ❌ GitHub/GitLab usernames in paths
+- ❌ Personal computer names or hostnames
+- ❌ Absolute paths that include usernames
+
+**Use relative paths instead:**
+```json
+❌ Wrong (personal path):
+"Read(/home/ffloreth/src/gh/project/.claude/**)"
+
+✅ Correct (relative path):
+"Read(//.claude/**)"
+```
+
+**Use `.gitignore` for local settings:**
+- Add `.claude/settings.local.json` to `.gitignore` for personal overrides
+- Add `.claude/settings.json.backup` to `.gitignore` for safety backups
+- Only track the shared `.claude/settings.json` file
+
+**4. Restrict file read permissions for security**
+
+Limit `Read()` permissions to specific directories needed for documentation work:
+
+```json
+✅ Appropriate (limited scope):
+"Read(//tmp/**)"           // Temporary validation output
+"Read(//.claude/**)"       // Claude Code configuration
+"Read(//titles/**)"        // Documentation titles
+"Read(//modules/**)"       // Documentation modules
+"Read(//assemblies/**)"    // Documentation assemblies
+
+❌ Dangerous (overly permissive):
+"Read(//*)"                // Can read ANY file in repository
+"Read(/home/**)"           // Can read user's entire home directory
+```
+
+**Note:** The `//` prefix in Read permissions indicates paths from repository root.
+
+### Settings File Structure
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Read(//tmp/**)",
+      "WebFetch(domain:*)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      ".claude"
+    ]
+  }
+}
+```
+
+### Consolidating Existing Permissions
+
+If you have many individual permissions in `.claude/settings.local.json`:
+
+1. Create a backup: `cp .claude/settings.json .claude/settings.json.backup`
+2. Consolidate using wildcards and merge into `.claude/settings.json`
+3. Sort alphabetically
+4. Remove personal references (paths, usernames)
+5. Clear `.claude/settings.local.json` (keep structure with empty `allow` array)
+6. Add backup and local files to `.gitignore`:
+   ```
+   .claude/settings.local.json
+   .claude/settings.json.backup
+   ```
+7. Remove from git tracking: `git rm --cached .claude/settings.local.json`
+8. Commit the consolidated settings
+
+### Updating Permissions During CQA 2.1 Work
+
+When performing CQA 2.1 compliance work, Claude Code may need to add new permissions to `.claude/settings.json` for validation and build commands. This is expected and should be committed with your CQA changes.
+
+**Expected permission additions during CQA work:**
+
+- Build validation commands:
+  ```json
+  "Bash(build/scripts/build-ccutil.sh)",
+  "Bash(asciidoctor titles/*)"
+  ```
+
+- Vale validation commands:
+  ```json
+  "Bash(vale --config .vale-dita-only.ini *)"
+  ```
+
+- File operations for temporary validation output:
+  ```json
+  "Bash(/tmp/*)"
+  ```
+
+**Policy for permission updates:**
+
+1. **Review but allow**: When Claude Code requests permission to update `.claude/settings.json`, review the new permissions to ensure they're related to documentation validation/build tasks
+2. **Commit permission updates**: Include `.claude/settings.json` changes in your CQA compliance commits
+3. **Use wildcards**: Prefer wildcard patterns over specific paths (e.g., `"Bash(asciidoctor titles/*)"` instead of `"Bash(asciidoctor titles/customizing/master.adoc)"`)
+4. **Document in commit message**: Note permission additions in your commit message when they represent new capabilities needed for validation
+
+**Example commit message:**
+```
+RHIDP-XXXXX: CQA 2.1 compliance for Customizing title
+
+... description of changes ...
+
+Build permissions:
+- Add build-ccutil.sh and asciidoctor commands to allowed Bash operations
+- Enables build validation during CQA 2.1 compliance work
+```
+
+This approach ensures Claude Code has the necessary permissions to perform validation tasks while maintaining security through the approval workflow.
+
+## Acceptable Warnings
+
+Some Vale DITA warnings are acceptable and do not block CQA 2.1 compliance:
+
+### Callout Warnings
+- **Warning**: `AsciiDocDITA.CalloutList`: "Callouts are not supported in DITA"
+- **Context**: Callouts (`<1>`, `<2>`, etc.) in code blocks with corresponding explanations
+- **Acceptable**: Yes - this is a known DITA limitation, but callouts are valuable for technical documentation
+- **Note**: Track these warnings but do not remove callouts
+
+### Concept Link False Positives
+- **Warning**: `AsciiDocDITA.ConceptLink`: "Move all links and cross references to Additional resources"
+- **Context**: Vale sometimes detects abbreviations like "CR" (Custom Resource) as cross-references
+- **Acceptable**: Yes - if the warning is on plain text abbreviations, not actual links
+- **Fix**: You can ignore these false positives, or spell out the abbreviation if desired
+
+### Task Step Warnings in Introductory Content
+- **Warning**: `AsciiDocDITA.TaskStep`: "Content other than a single list cannot be mapped to DITA tasks"
+- **Context**: Descriptive content before `.Procedure` section
+- **Acceptable**: Sometimes - if the content is legitimately before the procedure section (like field definitions)
+- **Fix**: If the warning appears AFTER `.Procedure`, add a continuation mark (+). If before, it may be acceptable.
+
 ## Success Criteria
 
 The work is complete when:
-- Vale DITA validation shows: `0 errors, 0 warnings, 0 suggestions`
+- Vale DITA validation shows: `0 errors, 0-15 acceptable warnings, 0 suggestions`
+- Acceptable warnings are documented and verified as false positives or known limitations
 - Vale Red Hat style validation shows: `0 errors, 0 warnings`
 - Build validation (`build/scripts/build-ccutil.sh`) completes successfully with all titles built and no xref errors
 - All 14 CQA 2.1 acceptance criteria are verified and met
