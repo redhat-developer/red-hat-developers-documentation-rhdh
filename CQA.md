@@ -92,7 +92,7 @@ Requirements (CQA 2.1 Acceptance Criteria):
      * Note: Red Hat modular docs specify gerund phrases (e.g., "Installing the Operator"), but Style Guide requires imperative form. Only imperative form is acceptable.
    - **Reference modules**: Use noun phrases (e.g., "Sizing requirements for Red Hat Developer Hub", "Configuration options reference")
    - **Assembly titles**:
-     * Task-based assemblies: Use gerund phrases (e.g., "Encrypting block devices")
+     * Task-based assemblies: Use imperative form per Style Guide (e.g., "Install the Operator", "Configure the database")
      * Non-task assemblies: Use noun phrases (e.g., "API reference")
    - Avoid imperative verbs in concept/reference titles (bad: "Achieve high availability", good: "High availability")
 
