@@ -87,8 +87,8 @@ Requirements (CQA 2.1 Acceptance Criteria):
 
 8. **Titles are brief, complete, and descriptive** (following Red Hat modular documentation guide):
    - **Concept modules**: Use noun phrases (e.g., "High availability with database and cache layers")
-   - **Procedure modules**: Use gerund phrases (e.g., "Creating guided decision tables", "Installing the Operator")
-     * Note: RHDH documentation uses imperative form (e.g., "Install the Operator") which deviates from the official guide but is acceptable within this project
+   - **Procedure modules**: Use imperative form per Style Guide (e.g., "Install the Operator", "Configure the database")
+     * Note: Red Hat modular docs specify gerund phrases (e.g., "Installing the Operator"), but Style Guide requires imperative form. Only imperative form is acceptable.
    - **Reference modules**: Use noun phrases (e.g., "Sizing requirements for Red Hat Developer Hub", "Configuration options reference")
    - **Assembly titles**:
      * Task-based assemblies: Use gerund phrases (e.g., "Encrypting block devices")
