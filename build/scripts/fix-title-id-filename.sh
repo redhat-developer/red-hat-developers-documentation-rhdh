@@ -229,7 +229,7 @@ echo ""
 
 if [ "$CURRENT_ID" = "$EXPECTED_ID" ] && [ "$FILE" = "$NEW_FILE" ]; then
     echo "✓ Already aligned - no changes needed"
-    exit 0
+    return 0
 fi
 
 # STEP 2: Update ID and context to match title
@@ -324,31 +324,42 @@ if [ ! -f "$TARGET_FILE" ]; then
 fi
 
 # Collect all files to process (target + includes)
-FILES_TO_PROCESS=()
-collect_files "$TARGET_FILE" FILES_TO_PROCESS
+ALL_FILES=()
+collect_files "$TARGET_FILE" ALL_FILES
 
-echo "=== Processing ${#FILES_TO_PROCESS[@]} file(s) ==="
-echo ""
+# Separate module files from non-module files
+MODULE_FILES=()
+SKIPPED_FILES=()
 
-# Process each file
-for file in "${FILES_TO_PROCESS[@]}"; do
-    # Skip non-.adoc files (like attributes.adoc might be)
+for file in "${ALL_FILES[@]}"; do
+    # Skip non-.adoc files
     if [[ "$file" != *.adoc ]]; then
         continue
     fi
 
-    # Skip files without module prefixes
+    # Check if file has module prefix
     basename_file=$(basename "$file" .adoc)
-    if [[ ! "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
-        echo "Skipping $file (no module prefix)"
-        echo ""
-        continue
+    if [[ "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
+        MODULE_FILES+=("$file")
+    else
+        SKIPPED_FILES+=("$file")
     fi
+done
 
+# Show what will be processed
+echo "=== Found ${#ALL_FILES[@]} file(s) in include tree ==="
+if [[ ${#SKIPPED_FILES[@]} -gt 0 ]]; then
+    echo "Skipping ${#SKIPPED_FILES[@]} non-module file(s): ${SKIPPED_FILES[*]}"
+fi
+echo "Processing ${#MODULE_FILES[@]} module file(s)"
+echo ""
+
+# Process each module file
+for file in "${MODULE_FILES[@]}"; do
     process_file "$file"
     echo ""
     echo "---"
     echo ""
 done
 
-echo "✓ All files processed successfully"
+echo "✓ All ${#MODULE_FILES[@]} module file(s) processed successfully"
