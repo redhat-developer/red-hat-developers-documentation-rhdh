@@ -116,17 +116,14 @@ else
     exit 1
 fi
 
-echo "=== Processing: $FILE ==="
-echo "Module type:     $MODULE_TYPE"
+# Track if any changes will be made
+WILL_CHANGE=false
 
 # STEP 0: Add content type metadata if missing
+ADDED_METADATA=false
 if ! grep -q "^:_mod-docs-content-type:" "$FILE"; then
-    echo "STEP 0: Adding missing content type metadata..."
-    # Insert at the very beginning of the file
-    sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
-    rm -f "${FILE}.bak"
-    echo "  ✓ Added :_mod-docs-content-type: ${MODULE_TYPE}"
-    echo ""
+    ADDED_METADATA=true
+    WILL_CHANGE=true
 fi
 
 # Extract current title (H1 heading)
@@ -136,22 +133,14 @@ if [ -z "$TITLE" ]; then
     exit 1
 fi
 
-echo "Current title:   $TITLE"
-
-# STEP 1: Fix title to use correct form (for procedures and assemblies only)
+# STEP 1: Check if title needs fixing
 FIXED_TITLE="$TITLE"
+TITLE_CHANGED=false
 if [ "$EXPECTED_FORM" = "imperative" ]; then
-    # Check for gerund forms (ending in -ing) and convert to imperative
-    # Common patterns:
-    # - "Installing" → "Install"
-    # - "Deploying" → "Deploy"
-    # - "Configuring" → "Configure"
-    # - "Creating" → "Create"
-    
     # Extract first word (handling attributes)
     FIRST_WORD=$(echo "$TITLE" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]].*//')
-    
-    if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^{.*}$ ]]; then
+
+    if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^\{.*\}$ ]]; then
         # Convert gerund to imperative
         if [[ "$FIRST_WORD" == "Installing" ]]; then
             FIXED_TITLE=$(echo "$TITLE" | sed 's/^Installing /Install /')
@@ -188,15 +177,9 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
             BASE=$(echo "$FIRST_WORD" | sed 's/ing$//')
             FIXED_TITLE=$(echo "$TITLE" | sed "s/^${FIRST_WORD} /${BASE} /")
         fi
-        
-        echo "STEP 1: Fixing title form..."
-        echo "  Old: $TITLE"
-        echo "  New: $FIXED_TITLE"
-        echo ""
-        
-        # Update title in file
-        sed -i.bak "s/^= ${TITLE}/= ${FIXED_TITLE}/" "$FILE"
-        rm -f "${FILE}.bak"
+
+        TITLE_CHANGED=true
+        WILL_CHANGE=true
         TITLE="$FIXED_TITLE"
     fi
 fi
@@ -220,77 +203,93 @@ EXPECTED_ID=$(echo "$TITLE" | \
 EXPECTED_FILENAME="${PREFIX}${EXPECTED_ID}.adoc"
 NEW_FILE="$(dirname $FILE)/$EXPECTED_FILENAME"
 
-echo "Expected title:  $TITLE ($EXPECTED_FORM form)"
-echo "Current ID:      ${CURRENT_ID}_{context}"
-echo "Expected ID:     ${EXPECTED_ID}_{context}"
-echo "Current file:    $(basename $FILE)"
-echo "Expected file:   $EXPECTED_FILENAME"
-echo ""
+# Check if changes are needed
+if [ "$CURRENT_ID" != "$EXPECTED_ID" ] || [ "$FILE" != "$NEW_FILE" ]; then
+    WILL_CHANGE=true
+fi
 
-if [ "$CURRENT_ID" = "$EXPECTED_ID" ] && [ "$FILE" = "$NEW_FILE" ]; then
-    echo "✓ Already aligned - no changes needed"
+# If no changes needed, just show checkmark and return
+if [ "$WILL_CHANGE" = false ]; then
+    echo "✓ $FILE"
     return 0
 fi
 
-# STEP 2: Update ID and context to match title
-echo "STEP 2: Updating IDs..."
-if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
-    # For assemblies, update both [id=...] and :context:
-    sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-    sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
-    sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
-    echo "  ✓ Updated [id=\"${EXPECTED_ID}_{context}\"]"
-    echo "  ✓ Updated :context: ${EXPECTED_ID}"
-else
-    # For modules, just update [id=...]
-    sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-    sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
-    echo "  ✓ Updated [id=\"${EXPECTED_ID}_{context}\"]"
-fi
-rm -f "${FILE}.bak"
+# Changes needed - show header
+echo ""
+echo "📝 $FILE"
 
-# STEP 3: Update xrefs pointing to changed ID
+# Apply content type metadata if needed
+if [ "$ADDED_METADATA" = true ]; then
+    sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
+    rm -f "${FILE}.bak"
+    echo "  + Added :_mod-docs-content-type: ${MODULE_TYPE}"
+fi
+
+# Apply title changes if needed
+if [ "$TITLE_CHANGED" = true ]; then
+    # Actually update title in file
+    OLD_TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
+    sed -i.bak "s/^= ${OLD_TITLE}/= ${TITLE}/" "$FILE"
+    rm -f "${FILE}.bak"
+    echo "  * Title: ${OLD_TITLE} → ${TITLE}"
+fi
+
+# Update ID and context if changed
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
-    echo "STEP 3: Updating xrefs..."
-    # Find all xrefs to the old ID and update them
-    grep -rl "xref:${CURRENT_ID}_" assemblies/ modules/ titles/ 2>/dev/null | while read xref_file; do
+    if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
+        # For assemblies, update both [id=...] and :context:
+        sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+        sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+        sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
+        echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
+        echo "  * Context: ${CURRENT_ID} → ${EXPECTED_ID}"
+    else
+        # For modules, just update [id=...]
+        sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+        sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+        echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
+    fi
+    rm -f "${FILE}.bak"
+fi
+
+# Update xrefs if ID changed
+if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
+    XREF_COUNT=0
+    while read xref_file; do
         sed -i.bak "s/xref:${CURRENT_ID}_/xref:${EXPECTED_ID}_/g" "$xref_file"
         rm -f "${xref_file}.bak"
-        echo "  ✓ Updated xrefs in $(basename $xref_file)"
-    done
+        XREF_COUNT=$((XREF_COUNT + 1))
+    done < <(grep -rl "xref:${CURRENT_ID}_" assemblies/ modules/ titles/ 2>/dev/null)
+
+    if [ $XREF_COUNT -gt 0 ]; then
+        echo "  * Updated $XREF_COUNT xref(s)"
+    fi
 fi
 
-# STEP 4: Rename file to match title
+# Rename file if needed
 if [ "$FILE" != "$NEW_FILE" ]; then
-    echo "STEP 4: Renaming file..."
-    git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
-    echo "  ✓ Renamed: $(basename $FILE) → $(basename $NEW_FILE)"
-    
-    # STEP 5: Update includes
-    echo "STEP 5: Updating include statements..."
     OLD_BASENAME=$(basename "$FILE")
     NEW_BASENAME=$(basename "$NEW_FILE")
-    
+
+    git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
+    echo "  * File: $(basename $FILE) → $NEW_BASENAME"
+
+    # Update includes
+    INCLUDE_COUNT=0
     find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null | while read include_file; do
         if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
             sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
             rm -f "${include_file}.bak"
-            echo "  ✓ Updated include in $(basename $include_file)"
+            INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
         fi
     done
-    
+
+    if [ $INCLUDE_COUNT -gt 0 ]; then
+        echo "  * Updated $INCLUDE_COUNT include(s)"
+    fi
+
     FILE="$NEW_FILE"
 fi
-
-echo ""
-echo "✓ DONE: $FILE is now CQA-compliant"
-echo "  Content type: ${MODULE_TYPE}"
-echo "  Title: $TITLE ($EXPECTED_FORM form)"
-echo "  ID: ${EXPECTED_ID}_{context}"
-if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
-    echo "  Context: ${EXPECTED_ID}"
-fi
-echo "  File: $(basename $FILE)"
 }
 
 # Main script
@@ -355,11 +354,11 @@ echo "Processing ${#MODULE_FILES[@]} module file(s)"
 echo ""
 
 # Process each module file
+CHANGED_COUNT=0
 for file in "${MODULE_FILES[@]}"; do
     process_file "$file"
-    echo ""
-    echo "---"
-    echo ""
 done
 
-echo "✓ All ${#MODULE_FILES[@]} module file(s) processed successfully"
+echo ""
+echo "=== Summary ==="
+echo "✓ Processed ${#MODULE_FILES[@]} module file(s)"
