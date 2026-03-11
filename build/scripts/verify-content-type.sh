@@ -1,6 +1,10 @@
 #!/bin/bash
 # Verify that information is conveyed using the correct content type (CQA requirement #11)
 #
+# Usage: ./verify-content-type.sh [file]
+#   file: Optional. If provided, verifies that file and all its includes recursively
+#         If not provided, verifies all .adoc files in the repository
+#
 # Requirements per CQA.md:
 # - Concepts: explain what something is, why it matters
 # - Procedures: step-by-step instructions (numbered steps)
@@ -14,6 +18,61 @@ set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
+# Function to extract included files from a given file
+get_includes() {
+    local file="$1"
+    if [[ ! -f "$file" ]]; then
+        return
+    fi
+
+    # Extract include:: statements and resolve relative paths
+    grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
+        # Resolve relative path from file's directory
+        local dir=$(dirname "$file")
+        local resolved_path
+
+        if [[ "$include_path" == /* ]]; then
+            resolved_path="$include_path"
+        elif [[ "$include_path" == ../* ]]; then
+            resolved_path="$dir/$include_path"
+        else
+            resolved_path="$dir/$include_path"
+        fi
+
+        # Normalize and make relative to repo root
+        if [[ -f "$resolved_path" ]]; then
+            # Make path relative to REPO_ROOT
+            resolved_path=$(realpath --relative-to="$REPO_ROOT" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
+            echo "$resolved_path"
+        fi
+    done
+}
+
+# Function to recursively collect all files to process
+collect_files() {
+    local file="$1"
+    local var_name="$2"
+
+    # Use eval to access the array by name
+    local current_files
+    eval "current_files=(\"\${${var_name}[@]}\")"
+
+    # Skip if already processed
+    for existing_file in "${current_files[@]}"; do
+        if [[ "$existing_file" == "$file" ]]; then
+            return
+        fi
+    done
+
+    # Add file to array
+    eval "${var_name}+=('$file')"
+
+    # Get includes and process recursively
+    while IFS= read -r included_file; do
+        collect_files "$included_file" "$var_name"
+    done < <(get_includes "$file")
+}
+
 # Color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -23,11 +82,35 @@ NC='\033[0m' # No Color
 echo "=== CQA Requirement #11: Verify Content Type Usage ==="
 echo ""
 
+# Determine which files to process
+FILES_TO_PROCESS=()
+
+if [[ $# -eq 1 ]]; then
+    # Process specified file and all its includes
+    TARGET_FILE="$1"
+    if [[ ! -f "$TARGET_FILE" ]]; then
+        echo "Error: File not found: $TARGET_FILE"
+        exit 1
+    fi
+    echo "Processing file and includes: $TARGET_FILE"
+    echo ""
+    collect_files "$TARGET_FILE" FILES_TO_PROCESS
+else
+    # Process all .adoc files
+    while IFS= read -r file; do
+        FILES_TO_PROCESS+=("$file")
+    done < <(find . -name "*.adoc" -type f \
+        -not -path "./build/*" \
+        -not -path "./.git/*" \
+        -not -path "./node_modules/*" \
+        | sort)
+fi
+
 # Find all .adoc files with content type metadata
 VIOLATIONS=0
 CHECKED=0
 
-while IFS= read -r file; do
+for file in "${FILES_TO_PROCESS[@]}"; do
     # Extract content type and trim trailing whitespace
     CONTENT_TYPE=$(grep "^:_mod-docs-content-type:" "$file" | sed 's/^:_mod-docs-content-type: *//' | sed 's/ *$//')
 
@@ -98,11 +181,7 @@ while IFS= read -r file; do
             VIOLATIONS=$((VIOLATIONS + 1))
             ;;
     esac
-done < <(find . -name "*.adoc" -type f \
-    -not -path "./build/*" \
-    -not -path "./.git/*" \
-    -not -path "./node_modules/*" \
-    | sort)
+done
 
 echo ""
 echo "=== Summary ==="

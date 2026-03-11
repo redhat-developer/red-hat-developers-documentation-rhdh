@@ -3,6 +3,7 @@
 # Aligns title, ID, context, and filename per CQA.md rules
 #
 # Usage: ./fix-title-id-filename.sh <file-path>
+#   Processes the specified file and all its includes recursively
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
 # STEP 0: Add content type metadata if missing (CQA requirement #2)
@@ -19,28 +20,67 @@
 
 set -e
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <file-path>"
-    echo "Example: $0 modules/installation/proc-installing-the-operator.adoc"
-    echo ""
-    echo "This script aligns title, ID, context, and filename per CQA.md rules."
-    echo "It will:"
-    echo "  STEP 0: Add :_mod-docs-content-type: metadata if missing"
-    echo "  STEP 1: Fix title to use correct form (imperative for procedures/assemblies)"
-    echo "  STEP 2: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
-    echo "  STEP 3: Update [id=\"...\"] to match"
-    echo "  STEP 4: Update :context: for assemblies"
-    echo "  STEP 5: Rename file using git mv"
-    echo "  STEP 6: Update all xrefs and include statements"
-    exit 1
-fi
+# Function to extract included files from a given file
+get_includes() {
+    local file="$1"
+    if [[ ! -f "$file" ]]; then
+        return
+    fi
 
-FILE="$1"
+    # Extract include:: statements and resolve relative paths
+    grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
+        # Get repository root (where .git is)
+        local repo_root=$(cd "$(dirname "$file")" && git rev-parse --show-toplevel 2>/dev/null) || repo_root="."
 
-if [ ! -f "$FILE" ]; then
-    echo "Error: File not found: $FILE"
-    exit 1
-fi
+        # Resolve relative path from file's directory
+        local dir=$(dirname "$file")
+        local resolved_path
+
+        if [[ "$include_path" == /* ]]; then
+            resolved_path="$include_path"
+        elif [[ "$include_path" == ../* ]]; then
+            resolved_path="$dir/$include_path"
+        else
+            resolved_path="$dir/$include_path"
+        fi
+
+        # Normalize and make relative to repo root
+        if [[ -f "$resolved_path" ]]; then
+            # Make path relative to repo root
+            resolved_path=$(realpath --relative-to="$repo_root" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
+            echo "$resolved_path"
+        fi
+    done
+}
+
+# Function to recursively collect all files to process
+collect_files() {
+    local file="$1"
+    local var_name="$2"
+
+    # Use eval to access the array by name
+    local current_files
+    eval "current_files=(\"\${${var_name}[@]}\")"
+
+    # Skip if already processed
+    for existing_file in "${current_files[@]}"; do
+        if [[ "$existing_file" == "$file" ]]; then
+            return
+        fi
+    done
+
+    # Add file to array
+    eval "${var_name}+=('$file')"
+
+    # Get includes and process recursively
+    while IFS= read -r included_file; do
+        collect_files "$included_file" "$var_name"
+    done < <(get_includes "$file")
+}
+
+# Function to process a single file
+process_file() {
+    local FILE="$1"
 
 # Determine module type from filename prefix
 BASENAME=$(basename "$FILE" .adoc)
@@ -249,3 +289,60 @@ if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
     echo "  Context: ${EXPECTED_ID}"
 fi
 echo "  File: $(basename $FILE)"
+}
+
+# Main script
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <file-path>"
+    echo "Example: $0 modules/installation/proc-installing-the-operator.adoc"
+    echo ""
+    echo "This script aligns title, ID, context, and filename per CQA.md rules."
+    echo "It processes the specified file and all its includes recursively."
+    echo ""
+    echo "It will:"
+    echo "  STEP 0: Add :_mod-docs-content-type: metadata if missing"
+    echo "  STEP 1: Fix title to use correct form (imperative for procedures/assemblies)"
+    echo "  STEP 2: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
+    echo "  STEP 3: Update [id=\"...\"] to match"
+    echo "  STEP 4: Update :context: for assemblies"
+    echo "  STEP 5: Rename file using git mv"
+    echo "  STEP 6: Update all xrefs and include statements"
+    exit 1
+fi
+
+TARGET_FILE="$1"
+
+if [ ! -f "$TARGET_FILE" ]; then
+    echo "Error: File not found: $TARGET_FILE"
+    exit 1
+fi
+
+# Collect all files to process (target + includes)
+FILES_TO_PROCESS=()
+collect_files "$TARGET_FILE" FILES_TO_PROCESS
+
+echo "=== Processing ${#FILES_TO_PROCESS[@]} file(s) ==="
+echo ""
+
+# Process each file
+for file in "${FILES_TO_PROCESS[@]}"; do
+    # Skip non-.adoc files (like attributes.adoc might be)
+    if [[ "$file" != *.adoc ]]; then
+        continue
+    fi
+
+    # Skip files without module prefixes
+    basename_file=$(basename "$file" .adoc)
+    if [[ ! "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
+        echo "Skipping $file (no module prefix)"
+        echo ""
+        continue
+    fi
+
+    process_file "$file"
+    echo ""
+    echo "---"
+    echo ""
+done
+
+echo "✓ All files processed successfully"
