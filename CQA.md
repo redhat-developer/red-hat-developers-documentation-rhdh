@@ -140,7 +140,43 @@ Process:
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
-5. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
+5. **TITLE/ID/FILENAME COMPLIANCE - CRITICAL MULTI-STEP PROCESS**
+
+   **IMPORTANT**: You MUST verify ID and filename alignment for ALL modules/assemblies, even if titles are already correct!
+
+   **STEP 0: MANDATORY VERIFICATION FOR ALL FILES**
+
+   For EVERY module and assembly file (regardless of title correctness), verify:
+
+   ```bash
+   # Check each file's title, ID, and filename alignment
+   for file in modules/**/*.adoc assemblies/*.adoc; do
+     title=$(grep "^= " "$file" | head -1 | sed 's/^= //')
+     id=$(grep "\[id=" "$file" | head -1 | sed 's/.*\[id="//' | sed 's/_.*//')
+     filename=$(basename "$file" .adoc | sed 's/^proc-//;s/^con-//;s/^ref-//;s/^assembly-//')
+
+     # Convert title to expected ID (lowercase with hyphens, remove attributes)
+     expected_id=$(echo "$title" | tr 'A-Z' 'a-z' | sed 's/{[^}]*}//g' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+
+     if [ "$id" != "$expected_id" ]; then
+       echo "❌ MISMATCH: $file"
+       echo "   Title: $title"
+       echo "   Current ID: $id"
+       echo "   Expected ID: $expected_id"
+       echo "   Current filename: $(basename $file)"
+     fi
+   done
+   ```
+
+   If ANY mismatches are found, you MUST fix them using STEP 1-5 below, treating the existing title as the source of truth.
+
+   For modules/assemblies with incorrect titles (see requirement #8):
+   - Procedure modules must use imperative form (NOT gerund): "Install" not "Installing"
+   - Concept modules must use noun phrases (NOT imperative verbs): "Configuration options" not "Configure"
+   - Reference modules must use noun phrases (NOT imperative verbs): "API reference" not "Reference API"
+   - Task-based assemblies must use imperative form (NOT gerund): "Deploy the application" not "Deploying"
+
+   For EACH file needing fixes (title wrong OR ID/filename mismatch), complete ALL steps 1-5 in this exact order:
 
    **STEP 1: Fix titles FIRST** - The title is the source of truth
       - See requirement #8 for complete title requirements
@@ -173,6 +209,31 @@ Process:
       - Search for includes: `grep -r "include::.*old-filename" assemblies/ modules/`
       - Update include statements in assemblies: `include::modules/path/old-filename.adoc` → `include::modules/path/new-filename.adoc`
       - Verify no includes remain pointing to the old filename
+
+   **VERIFICATION CHECKPOINT - MANDATORY AFTER STEP 5**
+
+   After completing STEP 1-5 for ALL modules/assemblies with incorrect titles, verify:
+
+   ```bash
+   # 1. Check that git shows file renames (R) not just modifications (M)
+   git status --short
+   # CORRECT: You should see "R  old-filename.adoc -> new-filename.adoc"
+   # WRONG:    If you only see "M  filename.adoc", you forgot STEP 4 (git mv)
+
+   # 2. Verify IDs match titles (no module/assembly prefix in ID)
+   for file in $(git diff --name-only --diff-filter=M); do
+     echo "=== $file ==="
+     head -5 "$file" | grep -E "\[id=|^= "
+   done
+   # CORRECT: [id="install-the-operator_{context}"] for title "Install the Operator"
+   # WRONG:    [id="proc-install-the-operator_{context}"] (has module prefix)
+
+   # 3. Verify all includes point to new filenames
+   grep -r "include::" assemblies/ modules/ | grep -v ".adoc:"
+   # Should NOT show any old filenames
+   ```
+
+   **If verification fails, you MUST go back and complete the missing steps before proceeding.**
 
    **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
       - After reorganizing modules, check for orphaned files left in old directories
@@ -244,17 +305,26 @@ Process:
    = Install the Operator  ✓
    ```
 
-6. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
-7. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
-8. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
-9. Verify the assembly include statements do not go too deep (see requirement #5).
+7. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
+8. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
+9. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
+10. Verify the assembly include statements do not go too deep (see requirement #5).
 
-10. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
-11. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
-12. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
-13. Verify all 14 acceptance criteria are met
-14. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
-15. Create pull request using the template at `.github/pull_request_template.md`:
+11. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
+12. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
+13. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
+14. **If `.claude/settings.json` was updated during this work**, verify it follows all requirements:
+   - ✓ All permissions are alphabetically sorted in the `allow` array
+   - ✓ Uses wildcard patterns instead of individual file paths (e.g., `"Bash(git add *)"` not `"Bash(git add file.adoc)"`)
+   - ✓ Contains no sensitive information (API keys, tokens, credentials)
+   - ✓ Contains no personal references (home directories, usernames, personal paths)
+   - ✓ Uses relative paths with `//` prefix for repository-relative paths (e.g., `"Read(//modules/**)"`)
+   - ✓ File read permissions are restricted to documentation directories only
+   - ✓ Valid JSON structure (run `jq . .claude/settings.json` to verify)
+   - Include settings.json changes in the commit with note in commit message explaining the permission additions
+15. Verify all 14 acceptance criteria are met
+16. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+17. Create pull request using the template at `.github/pull_request_template.md`:
    ```bash
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
@@ -300,10 +370,23 @@ git mv proc-creating-template.adoc proc-create-template.adoc  ← WRONG: Filenam
 = Create a template
 ```
 
-✅ **CORRECT - Follow the sequence: Title → ID → Filename**
-1. Fix title FIRST: "Creating" → "Create"
-2. Update ID to match title: `[id="create-a-template_{context}"]`
-3. Rename file to match title: `proc-create-a-template.adoc`
+❌ **WRONG - Changing title but not completing ALL steps:**
+```asciidoc
+# File: proc-creating-template.adoc (OLD filename - STEP 4 forgotten!)
+[id="create-a-template_{context}"]  ← ID updated (STEP 2 done)
+= Create a template  ← Title fixed (STEP 1 done)
+# But file was NOT renamed with git mv!
+# Include statements still point to old filename!
+# Result: git status shows "M" not "R" - BUILD WILL BREAK!
+```
+
+✅ **CORRECT - Follow the sequence: Title → ID → Xrefs → Filename → Includes**
+1. STEP 1: Fix title FIRST: "Creating a template" → "Create a template"
+2. STEP 2: Update ID to match title: `[id="create-a-template_{context}"]` (remove prefix!)
+3. STEP 3: Update any xrefs pointing to old ID
+4. STEP 4: Rename file: `git mv proc-creating-template.adoc proc-create-a-template.adoc`
+5. STEP 5: Update includes in assemblies to use new filename
+6. Verify: `git status` shows "R" (renamed) not just "M" (modified)
 
 Verification checklist after completing work:
 - [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
