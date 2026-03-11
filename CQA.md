@@ -140,7 +140,8 @@ Process:
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
-5. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
+5. In all included modules, verify the title (see requirement #8).
+6. Fix titles and all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
 
    **STEP 1: Fix titles FIRST** - The title is the source of truth
       - See requirement #8 for complete title requirements
@@ -244,17 +245,17 @@ Process:
    = Install the Operator  ✓
    ```
 
-6. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
-7. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
-8. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
-9. Verify the assembly include statements do not go too deep (see requirement #5).
+7. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
+8. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
+9. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
+10. Verify the assembly include statements do not go too deep (see requirement #5).
 
-10. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
-11. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
-12. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
-13. Verify all 14 acceptance criteria are met
-14. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
-15. Create pull request using the template at `.github/pull_request_template.md`:
+11. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
+12. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
+13. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
+14. Verify all 14 acceptance criteria are met
+15. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+16. Create pull request using the template at `.github/pull_request_template.md`:
    ```bash
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
