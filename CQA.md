@@ -150,8 +150,24 @@ Process:
 **Steps 1-4: Initial Assessment and Validation**
 
 1. Read the main assembly file and all included modules
+
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
+
+   **REQUIRED**: Run the verification script on your target file:
+   ```bash
+   ./build/scripts/verify-content-type.sh titles/<your-title>/master.adoc
+   ```
+
+   **NOTE**: This script is imperative but not entirely sufficient. It verifies:
+   - PROCEDURE modules contain numbered/unnumbered steps or include snippets
+   - ASSEMBLY files include other modules using `include::` directive
+   - SNIPPET files do not have module-level anchor IDs or H1 headings
+   - Content type declarations are valid (ASSEMBLY, PROCEDURE, CONCEPT, REFERENCE, SNIPPET)
+
+   **Manual review still required**: Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why").
+
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
+
 4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
 
 **Step 5: Title/ID/Filename Compliance (Multi-Step Process)**
@@ -160,31 +176,31 @@ Process:
 
    **IMPORTANT**: You MUST verify ID and filename alignment for ALL modules/assemblies, even if titles are already correct!
 
-   **STEP 0: MANDATORY VERIFICATION FOR ALL FILES**
+   **STEP 0: MANDATORY VERIFICATION AND ALIGNMENT**
 
-   For EVERY module and assembly file (regardless of title correctness), verify:
-
+   **REQUIRED**: Run the alignment script on your target file to automatically fix title/ID/filename compliance:
    ```bash
-   # Check each file's title, ID, and filename alignment
-   for file in modules/**/*.adoc assemblies/*.adoc; do
-     title=$(grep "^= " "$file" | head -1 | sed 's/^= //')
-     id=$(grep "\[id=" "$file" | head -1 | sed 's/.*\[id="//' | sed 's/_.*//')
-     filename=$(basename "$file" .adoc | sed 's/^proc-//;s/^con-//;s/^ref-//;s/^assembly-//')
-
-     # Convert title to expected ID (lowercase with hyphens, remove attributes)
-     expected_id=$(echo "$title" | tr 'A-Z' 'a-z' | sed 's/{[^}]*}//g' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
-
-     if [ "$id" != "$expected_id" ]; then
-       echo "❌ MISMATCH: $file"
-       echo "   Title: $title"
-       echo "   Current ID: $id"
-       echo "   Expected ID: $expected_id"
-       echo "   Current filename: $(basename $file)"
-     fi
-   done
+   ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
    ```
 
-   If ANY mismatches are found, you MUST fix them using STEP 1-5 below, treating the existing title as the source of truth.
+   **NOTE**: This script is imperative but not entirely sufficient. It automatically:
+   - Adds `:_mod-docs-content-type:` metadata if missing (CQA req #2)
+   - Fixes title form: gerund → imperative for procedures/assemblies (CQA req #8)
+     * "Installing" → "Install", "Deploying" → "Deploy"
+   - Aligns IDs and contexts to match title (preserving attribute names)
+     * `{product-short}` → `product-short` in IDs, NOT removed or replaced
+   - Renames files using `git mv` to match expected naming
+   - Updates all xrefs and include statements automatically
+   - Processes entire include tree recursively (master.adoc → assemblies → modules)
+
+   **Output**: Shows ✓ for aligned files, 📝 for files being changed with specific changes listed.
+
+   **Manual review still required**:
+   - Verify assembly titles use correct form (imperative if includes procedures, noun phrase otherwise)
+   - Verify attribute names are correctly preserved in IDs (not removed or replaced with values)
+   - Review git changes before committing
+
+   If manual fixes are needed, follow STEP 1-5 below, treating the existing title as the source of truth.
 
    For modules/assemblies with incorrect titles (see requirement #8):
    - Procedure modules must use imperative form (NOT gerund): "Install" not "Installing"
@@ -228,28 +244,13 @@ Process:
 
    **VERIFICATION CHECKPOINT - MANDATORY AFTER STEP 5**
 
-   After completing STEP 1-5 for ALL modules/assemblies with incorrect titles, verify:
+   After completing STEP 1-5 for ALL modules/assemblies with incorrect titles, verify by running the script again:
 
    ```bash
-   # 1. Check that git shows file renames (R) not just modifications (M)
-   git status --short
-   # CORRECT: You should see "R  old-filename.adoc -> new-filename.adoc"
-   # WRONG:    If you only see "M  filename.adoc", you forgot STEP 4 (git mv)
-
-   # 2. Verify IDs match titles (no module/assembly prefix in ID)
-   for file in $(git diff --name-only --diff-filter=M); do
-     echo "=== $file ==="
-     head -5 "$file" | grep -E "\[id=|^= "
-   done
-   # CORRECT: [id="install-the-operator_{context}"] for title "Install the Operator"
-   # WRONG:    [id="proc-install-the-operator_{context}"] (has module prefix)
-
-   # 3. Verify all includes point to new filenames
-   grep -r "include::" assemblies/ modules/ | grep -v ".adoc:"
-   # Should NOT show any old filenames
+   ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
    ```
 
-   **If verification fails, you MUST go back and complete the missing steps before proceeding.**
+   All files should show ✓ (no changes needed). If any files show 📝 (changes made), review the changes and re-run the script until all files are aligned.
 
    **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
       - After reorganizing modules, check for orphaned files left in old directories
@@ -324,6 +325,26 @@ Process:
 **Steps 7-10: Content Structure Verification**
 
 7. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
+
+   **REQUIRED**: Run the verification script on your target file:
+   ```bash
+   ./build/scripts/verify-short-descriptions.sh titles/<your-title>/master.adoc
+   ```
+
+   **NOTE**: This script is imperative but not entirely sufficient. It verifies:
+   - All modules/assemblies have `[role="_abstract"]` marker after the title
+   - No empty line follows `[role="_abstract"]` (abstract must start on next line)
+   - Abstract character count is 50-300 characters (requirement for AEM migration)
+   - Processes entire include tree recursively
+
+   **Manual review still required**:
+   - Verify abstract content is concise and describes what user accomplishes
+   - Ensure no self-referential language ("Learn about", "This section describes")
+   - Confirm abstract explains value/purpose (not just "What is X")
+   - For concepts: Should answer "What is this?" and "Why should users care?"
+   - For procedures: Should explain what the user accomplishes
+   - For references: Should describe the data being presented
+   - For assemblies: Should explain what user story/goal is addressed
 8. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
 9. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
 10. Verify the assembly include statements do not go too deep (see requirement #5).
