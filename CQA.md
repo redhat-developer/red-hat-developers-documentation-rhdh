@@ -136,10 +136,26 @@ Requirements (CQA 2.1 Acceptance Criteria):
     - N/A if no preview features in the title
 
 Process:
+
+**⚠️ CRITICAL: FOLLOW ALL STEPS IN EXACT ORDER - DO NOT SKIP ANY STEP**
+
+- Complete ALL steps 1-17 in the exact order listed below (note: there is no step 6; step 5 contains internal sub-steps)
+- DO NOT skip any step, even if you think it's not needed
+- DO NOT batch multiple steps together - complete each step fully before proceeding
+- DO NOT jump ahead to later steps - follow the sequence precisely
+- If a step says "do not attempt to fix yet", DO NOT fix - just identify
+- Each step builds on previous steps - skipping breaks the process
+- When a step has internal sub-steps (like step 5 with STEP 0-7), complete ALL sub-steps in order
+
+**Steps 1-4: Initial Assessment and Validation**
+
 1. Read the main assembly file and all included modules
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
+
+**Step 5: Title/ID/Filename Compliance (Multi-Step Process)**
+
 5. **TITLE/ID/FILENAME COMPLIANCE - CRITICAL MULTI-STEP PROCESS**
 
    **IMPORTANT**: You MUST verify ID and filename alignment for ALL modules/assemblies, even if titles are already correct!
@@ -305,14 +321,21 @@ Process:
    = Install the Operator  ✓
    ```
 
+**Steps 7-10: Content Structure Verification**
+
 7. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
 8. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
 9. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
 10. Verify the assembly include statements do not go too deep (see requirement #5).
 
+**Steps 11-13: Validation and Build**
+
 11. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
 12. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
 13. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
+
+**Steps 14-17: Final Verification and Submission**
+
 14. **If `.claude/settings.json` was updated during this work**, verify it follows all requirements:
    - ✓ All permissions are alphabetically sorted in the `allow` array
    - ✓ Uses wildcard patterns instead of individual file paths (e.g., `"Bash(git add *)"` not `"Bash(git add file.adoc)"`)
