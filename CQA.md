@@ -244,28 +244,13 @@ Process:
 
    **VERIFICATION CHECKPOINT - MANDATORY AFTER STEP 5**
 
-   After completing STEP 1-5 for ALL modules/assemblies with incorrect titles, verify:
+   After completing STEP 1-5 for ALL modules/assemblies with incorrect titles, verify by running the script again:
 
    ```bash
-   # 1. Check that git shows file renames (R) not just modifications (M)
-   git status --short
-   # CORRECT: You should see "R  old-filename.adoc -> new-filename.adoc"
-   # WRONG:    If you only see "M  filename.adoc", you forgot STEP 4 (git mv)
-
-   # 2. Verify IDs match titles (no module/assembly prefix in ID)
-   for file in $(git diff --name-only --diff-filter=M); do
-     echo "=== $file ==="
-     head -5 "$file" | grep -E "\[id=|^= "
-   done
-   # CORRECT: [id="install-the-operator_{context}"] for title "Install the Operator"
-   # WRONG:    [id="proc-install-the-operator_{context}"] (has module prefix)
-
-   # 3. Verify all includes point to new filenames
-   grep -r "include::" assemblies/ modules/ | grep -v ".adoc:"
-   # Should NOT show any old filenames
+   ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
    ```
 
-   **If verification fails, you MUST go back and complete the missing steps before proceeding.**
+   All files should show ✓ (no changes needed). If any files show 📝 (changes made), review the changes and re-run the script until all files are aligned.
 
    **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
       - After reorganizing modules, check for orphaned files left in old directories
