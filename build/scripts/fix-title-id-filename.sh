@@ -1,12 +1,12 @@
 #!/bin/bash
-# align-id-context-and-file-names.sh
+# fix-title-id-filename.sh
 # Aligns title, ID, context, and filename per CQA.md rules
 #
-# Usage: ./align-id-context-and-file-names.sh <file-path>
+# Usage: ./fix-title-id-filename.sh <file-path>
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
-# STEP 0: Verify alignment needed
-# STEP 1: Fix titles FIRST - Title is source of truth
+# STEP 0: Add content type metadata if missing (CQA requirement #2)
+# STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
 #   - References: Use noun phrases ("Configuration options" not "Configure options")
@@ -24,6 +24,7 @@ if [ $# -ne 1 ]; then
     echo ""
     echo "This script aligns title, ID, context, and filename per CQA.md rules."
     echo "It will:"
+    echo "  STEP 0: Add :_mod-docs-content-type: metadata if missing"
     echo "  STEP 1: Fix title to use correct form (imperative for procedures/assemblies)"
     echo "  STEP 2: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
     echo "  STEP 3: Update [id=\"...\"] to match"
@@ -40,14 +41,7 @@ if [ ! -f "$FILE" ]; then
     exit 1
 fi
 
-# Extract current title (H1 heading)
-TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
-if [ -z "$TITLE" ]; then
-    echo "Error: No title found in $FILE (looking for '= Title')"
-    exit 1
-fi
-
-# Determine module type prefix
+# Determine module type from filename prefix
 BASENAME=$(basename "$FILE" .adoc)
 if [[ "$BASENAME" == proc-* ]]; then
     PREFIX="proc-"
@@ -76,6 +70,24 @@ fi
 
 echo "=== Processing: $FILE ==="
 echo "Module type:     $MODULE_TYPE"
+
+# STEP 0: Add content type metadata if missing
+if ! grep -q "^:_mod-docs-content-type:" "$FILE"; then
+    echo "STEP 0: Adding missing content type metadata..."
+    # Insert at the very beginning of the file
+    sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
+    rm -f "${FILE}.bak"
+    echo "  ✓ Added :_mod-docs-content-type: ${MODULE_TYPE}"
+    echo ""
+fi
+
+# Extract current title (H1 heading)
+TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
+if [ -z "$TITLE" ]; then
+    echo "Error: No title found in $FILE (looking for '= Title')"
+    exit 1
+fi
+
 echo "Current title:   $TITLE"
 
 # STEP 1: Fix title to use correct form (for procedures and assemblies only)
@@ -117,6 +129,12 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
             FIXED_TITLE=$(echo "$TITLE" | sed 's/^Upgrading /Upgrade /')
         elif [[ "$FIRST_WORD" == "Updating" ]]; then
             FIXED_TITLE=$(echo "$TITLE" | sed 's/^Updating /Update /')
+        elif [[ "$FIRST_WORD" == "Adding" ]]; then
+            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Adding /Add /')
+        elif [[ "$FIRST_WORD" == "Removing" ]]; then
+            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Removing /Remove /')
+        elif [[ "$FIRST_WORD" == "Deleting" ]]; then
+            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Deleting /Delete /')
         else
             # Generic gerund removal: remove "ing" suffix
             BASE=$(echo "$FIRST_WORD" | sed 's/ing$//')
@@ -218,6 +236,7 @@ fi
 
 echo ""
 echo "✓ DONE: $FILE is now CQA-compliant"
+echo "  Content type: ${MODULE_TYPE}"
 echo "  Title: $TITLE ($EXPECTED_FORM form)"
 echo "  ID: ${EXPECTED_ID}_{context}"
 if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
