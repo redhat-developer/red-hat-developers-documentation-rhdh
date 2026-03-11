@@ -140,18 +140,43 @@ Process:
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
-5. **TITLE COMPLIANCE - CRITICAL MULTI-STEP PROCESS**
+5. **TITLE/ID/FILENAME COMPLIANCE - CRITICAL MULTI-STEP PROCESS**
 
-   For every module/assembly with an incorrect title, you MUST complete ALL of STEP 1-5 below.
-   **WARNING**: Changing a title in STEP 1 but skipping STEP 2-5 breaks the build and creates broken xrefs.
+   **IMPORTANT**: You MUST verify ID and filename alignment for ALL modules/assemblies, even if titles are already correct!
 
-   First, identify all modules/assemblies with incorrect titles (see requirement #8):
+   **STEP 0: MANDATORY VERIFICATION FOR ALL FILES**
+
+   For EVERY module and assembly file (regardless of title correctness), verify:
+
+   ```bash
+   # Check each file's title, ID, and filename alignment
+   for file in modules/**/*.adoc assemblies/*.adoc; do
+     title=$(grep "^= " "$file" | head -1 | sed 's/^= //')
+     id=$(grep "\[id=" "$file" | head -1 | sed 's/.*\[id="//' | sed 's/_.*//')
+     filename=$(basename "$file" .adoc | sed 's/^proc-//;s/^con-//;s/^ref-//;s/^assembly-//')
+
+     # Convert title to expected ID (lowercase with hyphens, remove attributes)
+     expected_id=$(echo "$title" | tr 'A-Z' 'a-z' | sed 's/{[^}]*}//g' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+
+     if [ "$id" != "$expected_id" ]; then
+       echo "❌ MISMATCH: $file"
+       echo "   Title: $title"
+       echo "   Current ID: $id"
+       echo "   Expected ID: $expected_id"
+       echo "   Current filename: $(basename $file)"
+     fi
+   done
+   ```
+
+   If ANY mismatches are found, you MUST fix them using STEP 1-5 below, treating the existing title as the source of truth.
+
+   For modules/assemblies with incorrect titles (see requirement #8):
    - Procedure modules must use imperative form (NOT gerund): "Install" not "Installing"
    - Concept modules must use noun phrases (NOT imperative verbs): "Configuration options" not "Configure"
    - Reference modules must use noun phrases (NOT imperative verbs): "API reference" not "Reference API"
    - Task-based assemblies must use imperative form (NOT gerund): "Deploy the application" not "Deploying"
 
-   Then, for EACH file with an incorrect title, complete ALL steps 1-5 in this exact order (CRITICAL - do not skip or reorder):
+   For EACH file needing fixes (title wrong OR ID/filename mismatch), complete ALL steps 1-5 in this exact order:
 
    **STEP 1: Fix titles FIRST** - The title is the source of truth
       - See requirement #8 for complete title requirements
