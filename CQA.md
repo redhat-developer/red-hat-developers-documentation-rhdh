@@ -140,8 +140,18 @@ Process:
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
-5. In all included modules, verify the title (see requirement #8).
-6. Fix titles and all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
+5. **TITLE COMPLIANCE - CRITICAL MULTI-STEP PROCESS**
+
+   For every module/assembly with an incorrect title, you MUST complete ALL of STEP 1-5 below.
+   **WARNING**: Changing a title in STEP 1 but skipping STEP 2-5 breaks the build and creates broken xrefs.
+
+   First, identify all modules/assemblies with incorrect titles (see requirement #8):
+   - Procedure modules must use imperative form (NOT gerund): "Install" not "Installing"
+   - Concept modules must use noun phrases (NOT imperative verbs): "Configuration options" not "Configure"
+   - Reference modules must use noun phrases (NOT imperative verbs): "API reference" not "Reference API"
+   - Task-based assemblies must use imperative form (NOT gerund): "Deploy the application" not "Deploying"
+
+   Then, for EACH file with an incorrect title, complete ALL steps 1-5 in this exact order (CRITICAL - do not skip or reorder):
 
    **STEP 1: Fix titles FIRST** - The title is the source of truth
       - See requirement #8 for complete title requirements
@@ -174,6 +184,31 @@ Process:
       - Search for includes: `grep -r "include::.*old-filename" assemblies/ modules/`
       - Update include statements in assemblies: `include::modules/path/old-filename.adoc` → `include::modules/path/new-filename.adoc`
       - Verify no includes remain pointing to the old filename
+
+   **VERIFICATION CHECKPOINT - MANDATORY AFTER STEP 5**
+
+   After completing STEP 1-5 for ALL modules/assemblies with incorrect titles, verify:
+
+   ```bash
+   # 1. Check that git shows file renames (R) not just modifications (M)
+   git status --short
+   # CORRECT: You should see "R  old-filename.adoc -> new-filename.adoc"
+   # WRONG:    If you only see "M  filename.adoc", you forgot STEP 4 (git mv)
+
+   # 2. Verify IDs match titles (no module/assembly prefix in ID)
+   for file in $(git diff --name-only --diff-filter=M); do
+     echo "=== $file ==="
+     head -5 "$file" | grep -E "\[id=|^= "
+   done
+   # CORRECT: [id="install-the-operator_{context}"] for title "Install the Operator"
+   # WRONG:    [id="proc-install-the-operator_{context}"] (has module prefix)
+
+   # 3. Verify all includes point to new filenames
+   grep -r "include::" assemblies/ modules/ | grep -v ".adoc:"
+   # Should NOT show any old filenames
+   ```
+
+   **If verification fails, you MUST go back and complete the missing steps before proceeding.**
 
    **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
       - After reorganizing modules, check for orphaned files left in old directories
@@ -310,10 +345,23 @@ git mv proc-creating-template.adoc proc-create-template.adoc  ← WRONG: Filenam
 = Create a template
 ```
 
-✅ **CORRECT - Follow the sequence: Title → ID → Filename**
-1. Fix title FIRST: "Creating" → "Create"
-2. Update ID to match title: `[id="create-a-template_{context}"]`
-3. Rename file to match title: `proc-create-a-template.adoc`
+❌ **WRONG - Changing title but not completing ALL steps:**
+```asciidoc
+# File: proc-creating-template.adoc (OLD filename - STEP 4 forgotten!)
+[id="create-a-template_{context}"]  ← ID updated (STEP 2 done)
+= Create a template  ← Title fixed (STEP 1 done)
+# But file was NOT renamed with git mv!
+# Include statements still point to old filename!
+# Result: git status shows "M" not "R" - BUILD WILL BREAK!
+```
+
+✅ **CORRECT - Follow the sequence: Title → ID → Xrefs → Filename → Includes**
+1. STEP 1: Fix title FIRST: "Creating a template" → "Create a template"
+2. STEP 2: Update ID to match title: `[id="create-a-template_{context}"]` (remove prefix!)
+3. STEP 3: Update any xrefs pointing to old ID
+4. STEP 4: Rename file: `git mv proc-creating-template.adoc proc-create-a-template.adoc`
+5. STEP 5: Update includes in assemblies to use new filename
+6. Verify: `git status` shows "R" (renamed) not just "M" (modified)
 
 Verification checklist after completing work:
 - [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
