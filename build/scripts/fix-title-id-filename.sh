@@ -4,6 +4,8 @@
 #
 # Usage: ./fix-title-id-filename.sh <file-path>
 #   Processes the specified file and all its includes recursively
+#   Example: ./fix-title-id-filename.sh titles/install-rhdh-ocp/master.adoc
+#     Processes: master.adoc → assemblies → all included modules (recursive)
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
 # STEP 0: Add content type metadata if missing (CQA requirement #2)
@@ -294,7 +296,11 @@ echo "  File: $(basename $FILE)"
 # Main script
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <file-path>"
-    echo "Example: $0 modules/installation/proc-installing-the-operator.adoc"
+    echo ""
+    echo "Examples:"
+    echo "  $0 modules/installation/proc-installing-the-operator.adoc"
+    echo "  $0 titles/install-rhdh-ocp/master.adoc"
+    echo "    (processes master.adoc → assemblies → all included modules recursively)"
     echo ""
     echo "This script aligns title, ID, context, and filename per CQA.md rules."
     echo "It processes the specified file and all its includes recursively."
