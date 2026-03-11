@@ -10,7 +10,8 @@
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
 #   - References: Use noun phrases ("Configuration options" not "Configure options")
-#   - Assemblies (task-based): Use imperative form ("Install" not "Installing")
+#   - Assemblies with procedures: Use imperative form ("Install" not "Installing")
+#   - Assemblies without procedures: Use noun phrases ("API reference" not "Configure API")
 # STEP 2: Update IDs and context to match title
 # STEP 3: Update all xrefs pointing to changed ID
 # STEP 4: Rename file to match title
@@ -58,7 +59,12 @@ elif [[ "$BASENAME" == ref-* ]]; then
 elif [[ "$BASENAME" == assembly-* ]]; then
     PREFIX="assembly-"
     MODULE_TYPE="ASSEMBLY"
-    EXPECTED_FORM="imperative"
+    # Assemblies use imperative form IF they include procedures, otherwise noun phrases
+    if grep -q "include::.*proc-.*\.adoc" "$FILE"; then
+        EXPECTED_FORM="imperative"
+    else
+        EXPECTED_FORM="noun phrase"
+    fi
 elif [[ "$BASENAME" == snip-* ]]; then
     PREFIX="snip-"
     MODULE_TYPE="SNIPPET"
