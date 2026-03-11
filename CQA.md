@@ -253,9 +253,18 @@ Process:
 11. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
 12. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
 13. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
-14. Verify all 14 acceptance criteria are met
-15. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
-16. Create pull request using the template at `.github/pull_request_template.md`:
+14. **If `.claude/settings.json` was updated during this work**, verify it follows all requirements:
+   - ✓ All permissions are alphabetically sorted in the `allow` array
+   - ✓ Uses wildcard patterns instead of individual file paths (e.g., `"Bash(git add *)"` not `"Bash(git add file.adoc)"`)
+   - ✓ Contains no sensitive information (API keys, tokens, credentials)
+   - ✓ Contains no personal references (home directories, usernames, personal paths)
+   - ✓ Uses relative paths with `//` prefix for repository-relative paths (e.g., `"Read(//modules/**)"`)
+   - ✓ File read permissions are restricted to documentation directories only
+   - ✓ Valid JSON structure (run `jq . .claude/settings.json` to verify)
+   - Include settings.json changes in the commit with note in commit message explaining the permission additions
+15. Verify all 14 acceptance criteria are met
+16. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+17. Create pull request using the template at `.github/pull_request_template.md`:
    ```bash
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
