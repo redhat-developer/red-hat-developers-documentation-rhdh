@@ -170,6 +170,48 @@ remove_all_content_type_metadata() {
     return 0
 }
 
+# Function to validate PROCEDURE structure
+validate_procedure_structure() {
+    local file="$1"
+
+    # Check if file has .Procedure section
+    if ! grep -q "^\.Procedure" "$file" 2>/dev/null; then
+        echo "Missing .Procedure section"
+        return 1
+    fi
+
+    # Get content after .Procedure section
+    local after_procedure
+    after_procedure=$(grep -A 50 "^\.Procedure" "$file" 2>/dev/null | tail -n +2)
+
+    # Check for single unnumbered list item (starts with *)
+    local unnumbered_count
+    unnumbered_count=$(echo "$after_procedure" | grep -c "^\* " || true)
+
+    # Check for numbered list items (starts with one or more dots followed by space)
+    local numbered_count
+    numbered_count=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+
+    # Valid patterns:
+    # 1. Exactly one unnumbered item (single bullet)
+    # 2. Two or more numbered items (numbered steps)
+    if [[ $unnumbered_count -eq 1 && $numbered_count -eq 0 ]]; then
+        # Valid: single unnumbered item
+        return 0
+    elif [[ $numbered_count -ge 2 ]]; then
+        # Valid: multiple numbered items (at least 2)
+        return 0
+    elif [[ $numbered_count -eq 1 ]]; then
+        # Invalid: only one numbered item (should be multiple or use unnumbered)
+        echo ".Procedure section has only 1 numbered step (should be multiple numbered steps or 1 unnumbered item)"
+        return 1
+    else
+        # Invalid: no proper list structure after .Procedure
+        echo ".Procedure section not followed by proper list structure (needs 1 unnumbered item or 2+ numbered items)"
+        return 1
+    fi
+}
+
 # Function to process a single file
 process_file() {
     local file="$1"
@@ -222,7 +264,17 @@ process_file() {
     # - Exactly 1 occurrence
     # - It's on the first line (which we already know if current_type is set)
     if [[ "$current_type" == "$detected_type" ]] && [[ "$occurrence_count" -eq 1 ]]; then
-        # Compliant - no output
+        # Compliant - validate PROCEDURE structure if applicable
+        if [[ "$detected_type" == "PROCEDURE" ]]; then
+            local validation_msg
+            validation_msg=$(validate_procedure_structure "$file")
+            if [[ -n "$validation_msg" ]]; then
+                echo ""
+                echo "⚠️  $file"
+                echo "  $validation_msg"
+                echo ""
+            fi
+        fi
         return 0
     fi
 
@@ -267,6 +319,15 @@ process_file() {
             echo "  * $fix"
         fi
     done
+
+    # Validate PROCEDURE structure if applicable
+    if [[ "$detected_type" == "PROCEDURE" ]]; then
+        local validation_msg
+        validation_msg=$(validate_procedure_structure "$file")
+        if [[ -n "$validation_msg" ]]; then
+            echo "  $validation_msg"
+        fi
+    fi
 
     echo ""
 }
@@ -315,6 +376,10 @@ for file in "${FILES_TO_PROCESS[@]}"; do
         echo "$OUTPUT"
     elif [[ "$OUTPUT" == *"?"* ]]; then
         CANNOT_DETERMINE=$((CANNOT_DETERMINE + 1))
+        echo "$OUTPUT"
+    elif [[ "$OUTPUT" == *"⚠️"* ]]; then
+        # Validation warning - still compliant but has structural issues
+        COMPLIANT=$((COMPLIANT + 1))
         echo "$OUTPUT"
     else
         # No output = compliant
