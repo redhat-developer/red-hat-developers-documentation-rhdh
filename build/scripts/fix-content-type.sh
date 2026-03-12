@@ -174,7 +174,7 @@ process_file() {
         OCCURRENCE_COUNT=$(count_content_type_occurrences "$FILE")
 
         if [[ "$OCCURRENCE_COUNT" -eq 0 ]]; then
-            echo "✓ $FILE (master.adoc - no content type needed)"
+            # Compliant - no output
             return 0
         else
             echo ""
@@ -209,7 +209,7 @@ process_file() {
     # - Exactly 1 occurrence
     # - It's on the first line (which we already know if CURRENT_TYPE is set)
     if [[ "$CURRENT_TYPE" == "$DETECTED_TYPE" ]] && [[ "$OCCURRENCE_COUNT" -eq 1 ]]; then
-        echo "✓ $FILE ($DETECTED_TYPE)"
+        # Compliant - no output
         return 0
     fi
 
@@ -287,25 +287,35 @@ fi
 
 # Process each file
 PROCESSED=0
+COMPLIANT=0
 CHANGED=0
+CANNOT_DETERMINE=0
 
 for file in "${FILES_TO_PROCESS[@]}"; do
     PROCESSED=$((PROCESSED + 1))
 
     # Check if file was modified (by checking if it shows a change message)
     OUTPUT=$(process_file "$file")
-    echo "$OUTPUT"
 
     if [[ "$OUTPUT" == *"📝"* ]]; then
         CHANGED=$((CHANGED + 1))
+        echo "$OUTPUT"
+    elif [[ "$OUTPUT" == *"?"* ]]; then
+        CANNOT_DETERMINE=$((CANNOT_DETERMINE + 1))
+        echo "$OUTPUT"
+    else
+        # No output = compliant
+        COMPLIANT=$((COMPLIANT + 1))
     fi
 done
 
 echo ""
 echo "=== Summary ==="
 echo "Files processed: $PROCESSED"
-if [[ $CHANGED -eq 0 ]]; then
-    echo -e "${GREEN}✓ No changes needed${NC}"
-else
+echo "Compliant: $COMPLIANT"
+if [[ $CHANGED -gt 0 ]]; then
     echo -e "${GREEN}✓ Updated $CHANGED file(s)${NC}"
+fi
+if [[ $CANNOT_DETERMINE -gt 0 ]]; then
+    echo "? Cannot determine content type for $CANNOT_DETERMINE file(s)"
 fi
