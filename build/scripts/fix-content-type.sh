@@ -382,9 +382,7 @@ process_file() {
         # Fix and validate PROCEDURE structure if applicable
         if [[ "$detected_type" == "PROCEDURE" ]]; then
             # Try to fix single numbered step issue first
-            local was_fixed=false
             if fix_procedure_structure "$file"; then
-                was_fixed=true
                 echo ""
                 echo "📝 $file"
                 echo "  * Convert single numbered step to unnumbered item"
