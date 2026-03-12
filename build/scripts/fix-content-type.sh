@@ -84,31 +84,51 @@ collect_files() {
 # Function to detect content type from file content
 detect_content_type() {
     local file="$1"
+    local basename_file
+    basename_file=$(basename "$file" .adoc)
+
+    local content_type=""
+    local has_filename_violation=false
 
     # Check if file includes modules with proc-, ref-, or con- prefix
     # This makes it an ASSEMBLY
     if grep "^include::" "$file" 2>/dev/null | grep -qE "include::.*(proc-|ref-|con-)"; then
-        echo "ASSEMBLY"
+        content_type="ASSEMBLY"
+    fi
+
+    # Check if file has .Procedure section (sufficient for content-based detection)
+    # Structure validation (checking for proper list items) is done separately in validate_procedure_structure()
+    if [[ -z "$content_type" ]] && grep -q "^\.Procedure" "$file" 2>/dev/null; then
+        content_type="PROCEDURE"
+    fi
+
+    # If content type detected from content, check filename compliance
+    if [[ -n "$content_type" ]]; then
+        # Check if filename uses alternative prefix for this type
+        if [[ "$content_type" == "PROCEDURE" ]]; then
+            if [[ "$basename_file" == proc_* ]] || [[ "$basename_file" == procedure-* ]] || [[ "$basename_file" == procedure_* ]]; then
+                has_filename_violation=true
+            fi
+        fi
+        # ASSEMBLY and other types don't have alternative prefixes to check
+
+        if [[ "$has_filename_violation" == true ]]; then
+            echo "${content_type}:filename-violation"
+        else
+            echo "$content_type"
+        fi
         return 0
     fi
 
-    # Check if file has .Procedure section followed by steps
-    # Steps are lines starting with one or more dots followed by space (. .. ...)
-    if grep -q "^\.Procedure" "$file" 2>/dev/null && grep -A 50 "^\.Procedure" "$file" | grep -qE "^\.\.* "; then
-        echo "PROCEDURE"
-        return 0
-    fi
-
-    # Fall back to filename-based detection for all module types
+    # No content pattern matched - fall back to filename-based detection
     # These cannot be reliably detected from content patterns alone
-    local basename_file
-    basename_file=$(basename "$file" .adoc)
 
     if [[ "$basename_file" == assembly-* ]]; then
         echo "ASSEMBLY"
         return 0
     fi
 
+    # Standard prefixes (correct naming)
     if [[ "$basename_file" == proc-* ]]; then
         echo "PROCEDURE"
         return 0
@@ -126,6 +146,27 @@ detect_content_type() {
 
     if [[ "$basename_file" == snip-* ]]; then
         echo "SNIPPET"
+        return 0
+    fi
+
+    # Alternative prefixes (filename violations but still detectable)
+    if [[ "$basename_file" == proc_* ]] || [[ "$basename_file" == procedure-* ]] || [[ "$basename_file" == procedure_* ]]; then
+        echo "PROCEDURE:filename-violation"
+        return 0
+    fi
+
+    if [[ "$basename_file" == con_* ]] || [[ "$basename_file" == concept-* ]] || [[ "$basename_file" == concept_* ]]; then
+        echo "CONCEPT:filename-violation"
+        return 0
+    fi
+
+    if [[ "$basename_file" == ref_* ]] || [[ "$basename_file" == reference-* ]] || [[ "$basename_file" == reference_* ]]; then
+        echo "REFERENCE:filename-violation"
+        return 0
+    fi
+
+    if [[ "$basename_file" == snip_* ]]; then
+        echo "SNIPPET:filename-violation"
         return 0
     fi
 
@@ -168,6 +209,38 @@ remove_all_content_type_metadata() {
     sed -i.bak '/^:_mod-docs-content-type:/d' "$file"
     rm -f "${file}.bak"
     return 0
+}
+
+# Function to fix PROCEDURE structure - convert single numbered step to unnumbered
+fix_procedure_structure() {
+    local file="$1"
+
+    # Check if file has .Procedure section
+    if ! grep -q "^\.Procedure" "$file" 2>/dev/null; then
+        return 1
+    fi
+
+    # Get content after .Procedure section
+    local after_procedure
+    after_procedure=$(grep -A 50 "^\.Procedure" "$file" 2>/dev/null | tail -n +2)
+
+    # Check for single unnumbered list item (starts with *)
+    local unnumbered_count
+    unnumbered_count=$(echo "$after_procedure" | grep -c "^\* " || true)
+
+    # Check for numbered list items (starts with one or more dots followed by space)
+    local numbered_count
+    numbered_count=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+
+    # Fix if exactly 1 numbered step (convert to unnumbered)
+    if [[ $numbered_count -eq 1 && $unnumbered_count -eq 0 ]]; then
+        # Find and replace the single numbered step with unnumbered
+        sed -i.bak '/^\.Procedure/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}' "$file"
+        rm -f "${file}.bak"
+        return 0
+    fi
+
+    return 1
 }
 
 # Function to validate PROCEDURE structure
@@ -242,13 +315,23 @@ process_file() {
     fi
 
     # Detect content type from content
-    local detected_type
-    detected_type=$(detect_content_type "$file")
+    local detected_type_raw
+    detected_type_raw=$(detect_content_type "$file")
 
     # Skip if we can't detect a type
-    if [[ -z "$detected_type" ]]; then
+    if [[ -z "$detected_type_raw" ]]; then
         echo "? $file (cannot determine content type)"
         return 0
+    fi
+
+    # Check for filename violation
+    local detected_type
+    local filename_violation=false
+    if [[ "$detected_type_raw" == *":filename-violation" ]]; then
+        detected_type="${detected_type_raw%:filename-violation}"
+        filename_violation=true
+    else
+        detected_type="$detected_type_raw"
     fi
 
     # Get current content type (only from first line)
@@ -264,16 +347,50 @@ process_file() {
     # - Exactly 1 occurrence
     # - It's on the first line (which we already know if current_type is set)
     if [[ "$current_type" == "$detected_type" ]] && [[ "$occurrence_count" -eq 1 ]]; then
-        # Compliant - validate PROCEDURE structure if applicable
+        # Compliant - check for warnings
+        local has_warnings=false
+
+        # Check for filename violation
+        if [[ "$filename_violation" == true ]]; then
+            if [[ "$has_warnings" == false ]]; then
+                echo ""
+                echo "⚠️  $file"
+                has_warnings=true
+            fi
+            local basename_file
+            basename_file=$(basename "$file" .adoc)
+            echo "  Filename violation: Use standard prefix format (e.g., proc- not proc_ or procedure-)"
+            echo "    Current: ${basename_file}.adoc"
+        fi
+
+        # Fix and validate PROCEDURE structure if applicable
         if [[ "$detected_type" == "PROCEDURE" ]]; then
+            # Try to fix single numbered step issue first
+            local was_fixed=false
+            if fix_procedure_structure "$file"; then
+                was_fixed=true
+                echo ""
+                echo "📝 $file"
+                echo "  * Convert single numbered step to unnumbered item"
+                echo ""
+                return 0
+            fi
+
+            # Validate PROCEDURE structure
             local validation_msg
             validation_msg=$(validate_procedure_structure "$file")
             if [[ -n "$validation_msg" ]]; then
-                echo ""
-                echo "⚠️  $file"
+                if [[ "$has_warnings" == false ]]; then
+                    echo ""
+                    echo "⚠️  $file"
+                    has_warnings=true
+                fi
                 echo "  $validation_msg"
-                echo ""
             fi
+        fi
+
+        if [[ "$has_warnings" == true ]]; then
+            echo ""
         fi
         return 0
     fi
@@ -320,8 +437,22 @@ process_file() {
         fi
     done
 
-    # Validate PROCEDURE structure if applicable
+    # Show filename violation warning if applicable
+    if [[ "$filename_violation" == true ]]; then
+        local basename_file
+        basename_file=$(basename "$file" .adoc)
+        echo "  ⚠️  Filename violation: Use standard prefix format (e.g., proc- not proc_ or procedure-)"
+        echo "    Current: ${basename_file}.adoc"
+    fi
+
+    # Fix and validate PROCEDURE structure if applicable
     if [[ "$detected_type" == "PROCEDURE" ]]; then
+        # Try to fix single numbered step issue first
+        if fix_procedure_structure "$file"; then
+            echo "  * Convert single numbered step to unnumbered item"
+        fi
+
+        # Validate PROCEDURE structure
         local validation_msg
         validation_msg=$(validate_procedure_structure "$file")
         if [[ -n "$validation_msg" ]]; then
