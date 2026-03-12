@@ -12,6 +12,7 @@
 # - PROCEDURE: File has .Procedure section followed by steps
 # - CONCEPT: File has con- filename prefix (no distinctive content pattern)
 # - REFERENCE: File has ref- filename prefix (no distinctive content pattern)
+# - SNIPPET: File has snip- filename prefix (no distinctive content pattern)
 #
 # This script automatically:
 # - Adds or updates :_mod-docs-content-type: metadata
@@ -101,7 +102,7 @@ detect_content_type() {
         fi
     fi
 
-    # Fall back to filename-based detection for concepts and references
+    # Fall back to filename-based detection for concepts, references, and snippets
     # These cannot be reliably detected from content patterns
     local basename_file
     basename_file=$(basename "$file" .adoc)
@@ -113,6 +114,11 @@ detect_content_type() {
 
     if [[ "$basename_file" == ref-* ]]; then
         echo "REFERENCE"
+        return
+    fi
+
+    if [[ "$basename_file" == snip-* ]]; then
+        echo "SNIPPET"
         return
     fi
 
@@ -154,6 +160,26 @@ remove_all_content_type_metadata() {
 # Function to process a single file
 process_file() {
     local FILE="$1"
+
+    # master.adoc files are not modular doc modules and should not have content type
+    local basename_file
+    basename_file=$(basename "$FILE")
+    if [[ "$basename_file" == "master.adoc" ]]; then
+        local OCCURRENCE_COUNT
+        OCCURRENCE_COUNT=$(count_content_type_occurrences "$FILE")
+
+        if [[ "$OCCURRENCE_COUNT" -eq 0 ]]; then
+            echo "✓ $FILE (master.adoc - no content type needed)"
+            return 0
+        else
+            echo ""
+            echo "📝 $FILE"
+            echo "  - Remove content type metadata (master.adoc should not have content type)"
+            remove_all_content_type_metadata "$FILE"
+            echo ""
+            return 0
+        fi
+    fi
 
     # Detect content type from content
     local DETECTED_TYPE
