@@ -162,95 +162,95 @@ remove_all_content_type_metadata() {
 
 # Function to process a single file
 process_file() {
-    local FILE="$1"
+    local file="$1"
 
     # Skip attributes.adoc files - they are not modular doc modules
     local basename_file
-    basename_file=$(basename "$FILE")
+    basename_file=$(basename "$file")
     if [[ "$basename_file" == "attributes.adoc" ]]; then
         return 0
     fi
 
     # master.adoc files are not modular doc modules and should not have content type
     if [[ "$basename_file" == "master.adoc" ]]; then
-        local OCCURRENCE_COUNT
-        OCCURRENCE_COUNT=$(count_content_type_occurrences "$FILE")
+        local occurrence_count
+        occurrence_count=$(count_content_type_occurrences "$file")
 
-        if [[ "$OCCURRENCE_COUNT" -eq 0 ]]; then
+        if [[ "$occurrence_count" -eq 0 ]]; then
             # Compliant - no output
             return 0
         else
             echo ""
-            echo "📝 $FILE"
+            echo "📝 $file"
             echo "  - Remove content type metadata (master.adoc should not have content type)"
-            remove_all_content_type_metadata "$FILE"
+            remove_all_content_type_metadata "$file"
             echo ""
             return 0
         fi
     fi
 
     # Detect content type from content
-    local DETECTED_TYPE
-    DETECTED_TYPE=$(detect_content_type "$FILE")
+    local detected_type
+    detected_type=$(detect_content_type "$file")
 
     # Skip if we can't detect a type
-    if [[ -z "$DETECTED_TYPE" ]]; then
-        echo "? $FILE (cannot determine content type)"
+    if [[ -z "$detected_type" ]]; then
+        echo "? $file (cannot determine content type)"
         return 0
     fi
 
     # Get current content type (only from first line)
-    local CURRENT_TYPE
-    CURRENT_TYPE=$(get_current_content_type "$FILE")
+    local current_type
+    current_type=$(get_current_content_type "$file")
 
     # Count total occurrences of content type metadata
-    local OCCURRENCE_COUNT
-    OCCURRENCE_COUNT=$(count_content_type_occurrences "$FILE")
+    local occurrence_count
+    occurrence_count=$(count_content_type_occurrences "$file")
 
     # Check if everything is correct:
     # - Detected type matches current type
     # - Exactly 1 occurrence
-    # - It's on the first line (which we already know if CURRENT_TYPE is set)
-    if [[ "$CURRENT_TYPE" == "$DETECTED_TYPE" ]] && [[ "$OCCURRENCE_COUNT" -eq 1 ]]; then
+    # - It's on the first line (which we already know if current_type is set)
+    if [[ "$current_type" == "$detected_type" ]] && [[ "$occurrence_count" -eq 1 ]]; then
         # Compliant - no output
         return 0
     fi
 
     # Changes needed - show header
     echo ""
-    echo "📝 $FILE"
+    echo "📝 $file"
 
     # Track what we're fixing
-    local FIXES=()
+    local fixes=()
 
     # Determine what needs fixing
-    if [[ -z "$CURRENT_TYPE" ]]; then
-        if [[ "$OCCURRENCE_COUNT" -gt 0 ]]; then
-            FIXES+=("Move content type to first line")
+    if [[ -z "$current_type" ]]; then
+        if [[ "$occurrence_count" -gt 0 ]]; then
+            fixes+=("Move content type to first line")
         else
-            FIXES+=("Add :_mod-docs-content-type: ${DETECTED_TYPE}")
+            fixes+=("Add :_mod-docs-content-type: ${detected_type}")
         fi
     else
-        if [[ "$CURRENT_TYPE" != "$DETECTED_TYPE" ]]; then
-            FIXES+=("Content type: ${CURRENT_TYPE} → ${DETECTED_TYPE}")
+        if [[ "$current_type" != "$detected_type" ]]; then
+            fixes+=("Content type: ${current_type} → ${detected_type}")
         fi
     fi
 
-    if [[ "$OCCURRENCE_COUNT" -gt 1 ]]; then
-        FIXES+=("Remove $((OCCURRENCE_COUNT - 1)) duplicate(s)")
+    if [[ "$occurrence_count" -gt 1 ]]; then
+        fixes+=("Remove $((occurrence_count - 1)) duplicate(s)")
     fi
 
     # Remove all existing content type metadata
-    if [[ "$OCCURRENCE_COUNT" -gt 0 ]]; then
-        remove_all_content_type_metadata "$FILE"
+    if [[ "$occurrence_count" -gt 0 ]]; then
+        remove_all_content_type_metadata "$file"
     fi
 
     # Add correct metadata on first line
-    sed -i.bak "1s/^/:_mod-docs-content-type: ${DETECTED_TYPE}\n\n/" "$FILE"
-    rm -f "${FILE}.bak"
+    sed -i.bak "1s/^/:_mod-docs-content-type: ${detected_type}\n\n/" "$file"
+    rm -f "${file}.bak"
 
     # Show what was fixed
-    for fix in "${FIXES[@]}"; do
+    for fix in "${fixes[@]}"; do
         if [[ "$fix" == "Add"* ]]; then
             echo "  + $fix"
         else
@@ -275,7 +275,7 @@ if [[ $# -eq 1 ]]; then
     # Process specified file and all its includes
     TARGET_FILE="$1"
     if [[ ! -f "$TARGET_FILE" ]]; then
-        echo "Error: File not found: $TARGET_FILE"
+        echo "Error: File not found: $TARGET_FILE" >&2
         exit 1
     fi
     echo "Processing file and includes: $TARGET_FILE"
