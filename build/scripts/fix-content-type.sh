@@ -222,7 +222,7 @@ fix_procedure_structure() {
 
     # Get content after .Procedure section (until next section starting with .)
     local after_procedure
-    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.[A-Z]/{exit} flag' "$file" 2>/dev/null)
+    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
 
     # Check for include statements (don't fix files with includes - they're valid)
     local include_count
@@ -253,14 +253,23 @@ fix_procedure_structure() {
         return 0
     fi
 
+    # Fix if mixed unnumbered and numbered items (multi-step procedure - convert all to numbered)
+    # This handles cases like 1 unnumbered + 1 numbered, which should both be numbered
+    if [[ $unnumbered_count -ge 1 && $numbered_count -ge 1 && $nested_count -eq 0 ]]; then
+        # Convert all unnumbered items to numbered to maintain consistency
+        sed -i.bak '/^\.Procedure$/,/^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
+        rm -f "${file}.bak"
+        return 0
+    fi
+
     # Fix if 2+ unnumbered steps (convert to numbered)
     # BUT: Don't convert if there are nested items - nested structure indicates
     # a complex single step or steps that should stay unnumbered
     if [[ $unnumbered_count -ge 2 && $numbered_count -eq 0 && $nested_count -eq 0 ]]; then
         # Find and replace unnumbered items with numbered (single dot)
-        # Process from .Procedure until the next section (line starting with .)
+        # Process from .Procedure until the next section heading
         # but exclude lines that start with . from replacement
-        sed -i.bak '/^\.Procedure$/,/^\./{/^\./!s/^\* /. /}' "$file"
+        sed -i.bak '/^\.Procedure$/,/^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
         rm -f "${file}.bak"
         return 0
     fi
@@ -280,7 +289,7 @@ validate_procedure_structure() {
 
     # Get content after .Procedure section (until next section starting with .)
     local after_procedure
-    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.[A-Z]/{exit} flag' "$file" 2>/dev/null)
+    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
 
     # Check for include statements (valid pattern - procedure steps in snippets)
     local include_count
@@ -399,7 +408,7 @@ process_file() {
         if [[ "$detected_type" == "PROCEDURE" ]]; then
             # Detect what needs fixing before we fix it
             local after_procedure
-            after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.[A-Z]/{exit} flag' "$file" 2>/dev/null)
+            after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
             local unnumbered_before
             unnumbered_before=$(echo "$after_procedure" | grep -c "^\* " || true)
             local nested_before
@@ -416,6 +425,8 @@ process_file() {
                 # Determine what was fixed based on counts
                 if [[ $numbered_before -eq 1 && $unnumbered_before -eq 0 && $include_before -eq 0 ]]; then
                     echo "  * Convert single numbered step to unnumbered item"
+                elif [[ $unnumbered_before -ge 1 && $numbered_before -ge 1 && $include_before -eq 0 && $nested_before -eq 0 ]]; then
+                    echo "  * Convert mixed list formatting to numbered steps (multi-step procedure)"
                 elif [[ $unnumbered_before -ge 2 && $numbered_before -eq 0 && $include_before -eq 0 && $nested_before -eq 0 ]]; then
                     echo "  * Convert multiple unnumbered items to numbered steps"
                 else
@@ -513,6 +524,8 @@ process_file() {
             # Determine what was fixed based on counts
             if [[ $numbered_before -eq 1 && $unnumbered_before -eq 0 && $include_before -eq 0 ]]; then
                 echo "  * Convert single numbered step to unnumbered item"
+            elif [[ $unnumbered_before -ge 1 && $numbered_before -ge 1 && $include_before -eq 0 && $nested_before -eq 0 ]]; then
+                echo "  * Convert mixed list formatting to numbered steps (multi-step procedure)"
             elif [[ $unnumbered_before -ge 2 && $numbered_before -eq 0 && $include_before -eq 0 && $nested_before -eq 0 ]]; then
                 echo "  * Convert multiple unnumbered items to numbered steps"
             else
