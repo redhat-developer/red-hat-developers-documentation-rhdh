@@ -277,6 +277,69 @@ fix_procedure_structure() {
     return 1
 }
 
+# Function to fix VERIFICATION structure - normalize list formatting
+fix_verification_structure() {
+    local file="$1"
+
+    # Check if file has .Verification section
+    if ! grep -q "^\.Verification" "$file" 2>/dev/null; then
+        return 1
+    fi
+
+    # Get content after .Verification section (until next section heading or end of file)
+    local after_verification
+    after_verification=$(awk '/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+
+    # Check for include statements (don't fix files with includes - they're valid)
+    local include_count
+    include_count=$(echo "$after_verification" | grep -c "^include::" || true)
+
+    if [[ $include_count -gt 0 ]]; then
+        # Has includes - don't try to fix
+        return 1
+    fi
+
+    # Check for top-level unnumbered list items (starts with single * followed by space)
+    local unnumbered_count
+    unnumbered_count=$(echo "$after_verification" | grep -c "^\* " || true)
+
+    # Check for nested unnumbered list items (starts with ** or more)
+    local nested_count
+    nested_count=$(echo "$after_verification" | grep -c "^\*\* " || true)
+
+    # Check for numbered list items (starts with one or more dots followed by space)
+    local numbered_count
+    numbered_count=$(echo "$after_verification" | grep -cE "^\\.+ " || true)
+
+    # Fix if exactly 1 numbered step (convert to unnumbered)
+    if [[ $numbered_count -eq 1 && $unnumbered_count -eq 0 ]]; then
+        # Find and replace the single numbered step with unnumbered
+        sed -i.bak '/^\.Verification/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}' "$file"
+        rm -f "${file}.bak"
+        return 0
+    fi
+
+    # Fix if mixed unnumbered and numbered items (multi-step - convert all to numbered)
+    if [[ $unnumbered_count -ge 1 && $numbered_count -ge 1 && $nested_count -eq 0 ]]; then
+        # Convert all unnumbered items to numbered to maintain consistency
+        sed -i.bak '/^\.Verification$/,/^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
+        rm -f "${file}.bak"
+        return 0
+    fi
+
+    # Fix if 2+ unnumbered steps (convert to numbered)
+    # BUT: Don't convert if there are nested items - nested structure indicates
+    # a complex single step or steps that should stay unnumbered
+    if [[ $unnumbered_count -ge 2 && $numbered_count -eq 0 && $nested_count -eq 0 ]]; then
+        # Find and replace unnumbered items with numbered (single dot)
+        sed -i.bak '/^\.Verification$/,/^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
+        rm -f "${file}.bak"
+        return 0
+    fi
+
+    return 1
+}
+
 # Function to validate PROCEDURE structure
 validate_procedure_structure() {
     local file="$1"
@@ -449,6 +512,40 @@ process_file() {
             fi
         fi
 
+        # Fix VERIFICATION structure if applicable (same rules as PROCEDURE)
+        if grep -q "^\.Verification" "$file" 2>/dev/null; then
+            # Detect what needs fixing before we fix it
+            local after_verification
+            after_verification=$(awk '/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+            local unnumbered_verif_before
+            unnumbered_verif_before=$(echo "$after_verification" | grep -c "^\* " || true)
+            local nested_verif_before
+            nested_verif_before=$(echo "$after_verification" | grep -c "^\*\* " || true)
+            local numbered_verif_before
+            numbered_verif_before=$(echo "$after_verification" | grep -cE "^\\.+ " || true)
+            local include_verif_before
+            include_verif_before=$(echo "$after_verification" | grep -c "^include::" || true)
+
+            # Try to fix VERIFICATION structure issues
+            if fix_verification_structure "$file"; then
+                if [[ "$has_warnings" == false ]]; then
+                    echo ""
+                    echo "📝 $file"
+                    has_warnings=true
+                fi
+                # Determine what was fixed based on counts
+                if [[ $numbered_verif_before -eq 1 && $unnumbered_verif_before -eq 0 && $include_verif_before -eq 0 ]]; then
+                    echo "  * Convert single numbered step in .Verification to unnumbered item"
+                elif [[ $unnumbered_verif_before -ge 1 && $numbered_verif_before -ge 1 && $include_verif_before -eq 0 && $nested_verif_before -eq 0 ]]; then
+                    echo "  * Convert mixed list formatting in .Verification to numbered steps"
+                elif [[ $unnumbered_verif_before -ge 2 && $numbered_verif_before -eq 0 && $include_verif_before -eq 0 && $nested_verif_before -eq 0 ]]; then
+                    echo "  * Convert multiple unnumbered items in .Verification to numbered steps"
+                else
+                    echo "  * Normalize .Verification list formatting"
+                fi
+            fi
+        fi
+
         if [[ "$has_warnings" == true ]]; then
             echo ""
         fi
@@ -509,7 +606,7 @@ process_file() {
     if [[ "$detected_type" == "PROCEDURE" ]]; then
         # Detect what needs fixing before we fix it
         local after_procedure
-        after_procedure=$(grep -A 50 "^\.Procedure" "$file" 2>/dev/null | tail -n +2)
+        after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
         local unnumbered_before
         unnumbered_before=$(echo "$after_procedure" | grep -c "^\* " || true)
         local nested_before
@@ -538,6 +635,35 @@ process_file() {
         validation_msg=$(validate_procedure_structure "$file")
         if [[ -n "$validation_msg" ]]; then
             echo "  $validation_msg"
+        fi
+    fi
+
+    # Fix VERIFICATION structure if applicable (same rules as PROCEDURE)
+    if grep -q "^\.Verification" "$file" 2>/dev/null; then
+        # Detect what needs fixing before we fix it
+        local after_verification
+        after_verification=$(awk '/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+        local unnumbered_verif_before
+        unnumbered_verif_before=$(echo "$after_verification" | grep -c "^\* " || true)
+        local nested_verif_before
+        nested_verif_before=$(echo "$after_verification" | grep -c "^\*\* " || true)
+        local numbered_verif_before
+        numbered_verif_before=$(echo "$after_verification" | grep -cE "^\\.+ " || true)
+        local include_verif_before
+        include_verif_before=$(echo "$after_verification" | grep -c "^include::" || true)
+
+        # Try to fix VERIFICATION structure issues
+        if fix_verification_structure "$file"; then
+            # Determine what was fixed based on counts
+            if [[ $numbered_verif_before -eq 1 && $unnumbered_verif_before -eq 0 && $include_verif_before -eq 0 ]]; then
+                echo "  * Convert single numbered step in .Verification to unnumbered item"
+            elif [[ $unnumbered_verif_before -ge 1 && $numbered_verif_before -ge 1 && $include_verif_before -eq 0 && $nested_verif_before -eq 0 ]]; then
+                echo "  * Convert mixed list formatting in .Verification to numbered steps"
+            elif [[ $unnumbered_verif_before -ge 2 && $numbered_verif_before -eq 0 && $include_verif_before -eq 0 && $nested_verif_before -eq 0 ]]; then
+                echo "  * Convert multiple unnumbered items in .Verification to numbered steps"
+            else
+                echo "  * Normalize .Verification list formatting"
+            fi
         fi
     fi
 
