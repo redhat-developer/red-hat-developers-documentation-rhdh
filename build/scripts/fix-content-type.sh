@@ -24,6 +24,15 @@ set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
+# Constants for content type and pattern matching
+readonly CONTENT_TYPE_PROCEDURE="PROCEDURE"
+readonly PATTERN_PROCEDURE_SECTION="^\.Procedure"
+readonly PATTERN_VERIFICATION_SECTION="^\.Verification"
+readonly PATTERN_NUMBERED_ITEM="^\\.+ "
+readonly PATTERN_UNNUMBERED_ITEM="^\* "
+readonly PATTERN_NESTED_ITEM="^\*\* "
+readonly PATTERN_INCLUDE="^include::"
+
 # Function to extract included files from a given file
 get_includes() {
     local file="$1"
@@ -105,10 +114,8 @@ detect_content_type() {
     # If content type detected from content, check filename compliance
     if [[ -n "$content_type" ]]; then
         # Check if filename uses alternative prefix for this type
-        if [[ "$content_type" == "PROCEDURE" ]]; then
-            if [[ "$basename_file" == proc_* ]] || [[ "$basename_file" == procedure-* ]] || [[ "$basename_file" == procedure_* ]]; then
-                has_filename_violation=true
-            fi
+        if [[ "$content_type" == "$CONTENT_TYPE_PROCEDURE" && ( "$basename_file" == proc_* || "$basename_file" == procedure-* || "$basename_file" == procedure_* ) ]]; then
+            has_filename_violation=true
         fi
         # ASSEMBLY and other types don't have alternative prefixes to check
 
@@ -216,7 +223,7 @@ fix_procedure_structure() {
     local file="$1"
 
     # Check if file has .Procedure section
-    if ! grep -q "^\.Procedure" "$file" 2>/dev/null; then
+    if ! grep -q "$PATTERN_PROCEDURE_SECTION" "$file" 2>/dev/null; then
         return 1
     fi
 
@@ -226,7 +233,7 @@ fix_procedure_structure() {
 
     # Check for include statements (don't fix files with includes - they're valid)
     local include_count
-    include_count=$(echo "$after_procedure" | grep -c "^include::" || true)
+    include_count=$(echo "$after_procedure" | grep -c "$PATTERN_INCLUDE" || true)
 
     if [[ $include_count -gt 0 ]]; then
         # Has includes - don't try to fix
@@ -235,15 +242,15 @@ fix_procedure_structure() {
 
     # Check for top-level unnumbered list items (starts with single * followed by space)
     local unnumbered_count
-    unnumbered_count=$(echo "$after_procedure" | grep -c "^\* " || true)
+    unnumbered_count=$(echo "$after_procedure" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
 
     # Check for nested unnumbered list items (starts with ** or more)
     local nested_count
-    nested_count=$(echo "$after_procedure" | grep -c "^\*\* " || true)
+    nested_count=$(echo "$after_procedure" | grep -c "$PATTERN_NESTED_ITEM" || true)
 
     # Check for numbered list items (starts with one or more dots followed by space)
     local numbered_count
-    numbered_count=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+    numbered_count=$(echo "$after_procedure" | grep -cE "$PATTERN_NUMBERED_ITEM" || true)
 
     # Fix if exactly 1 numbered step (convert to unnumbered)
     if [[ $numbered_count -eq 1 && $unnumbered_count -eq 0 ]]; then
@@ -282,7 +289,7 @@ fix_verification_structure() {
     local file="$1"
 
     # Check if file has .Verification section
-    if ! grep -q "^\.Verification" "$file" 2>/dev/null; then
+    if ! grep -q "$PATTERN_VERIFICATION_SECTION" "$file" 2>/dev/null; then
         return 1
     fi
 
@@ -292,7 +299,7 @@ fix_verification_structure() {
 
     # Check for include statements (don't fix files with includes - they're valid)
     local include_count
-    include_count=$(echo "$after_verification" | grep -c "^include::" || true)
+    include_count=$(echo "$after_verification" | grep -c "$PATTERN_INCLUDE" || true)
 
     if [[ $include_count -gt 0 ]]; then
         # Has includes - don't try to fix
@@ -301,15 +308,15 @@ fix_verification_structure() {
 
     # Check for top-level unnumbered list items (starts with single * followed by space)
     local unnumbered_count
-    unnumbered_count=$(echo "$after_verification" | grep -c "^\* " || true)
+    unnumbered_count=$(echo "$after_verification" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
 
     # Check for nested unnumbered list items (starts with ** or more)
     local nested_count
-    nested_count=$(echo "$after_verification" | grep -c "^\*\* " || true)
+    nested_count=$(echo "$after_verification" | grep -c "$PATTERN_NESTED_ITEM" || true)
 
     # Check for numbered list items (starts with one or more dots followed by space)
     local numbered_count
-    numbered_count=$(echo "$after_verification" | grep -cE "^\\.+ " || true)
+    numbered_count=$(echo "$after_verification" | grep -cE "$PATTERN_NUMBERED_ITEM" || true)
 
     # Fix if exactly 1 numbered step (convert to unnumbered)
     if [[ $numbered_count -eq 1 && $unnumbered_count -eq 0 ]]; then
@@ -356,15 +363,15 @@ validate_procedure_structure() {
 
     # Check for include statements (valid pattern - procedure steps in snippets)
     local include_count
-    include_count=$(echo "$after_procedure" | grep -c "^include::" || true)
+    include_count=$(echo "$after_procedure" | grep -c "$PATTERN_INCLUDE" || true)
 
     # Check for single unnumbered list item (starts with *)
     local unnumbered_count
-    unnumbered_count=$(echo "$after_procedure" | grep -c "^\* " || true)
+    unnumbered_count=$(echo "$after_procedure" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
 
     # Check for numbered list items (starts with one or more dots followed by space)
     local numbered_count
-    numbered_count=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+    numbered_count=$(echo "$after_procedure" | grep -cE "$PATTERN_NUMBERED_ITEM" || true)
 
     # Valid patterns:
     # 1. One or more include statements (procedure steps in snippets, with or without additional steps)
@@ -468,18 +475,18 @@ process_file() {
         fi
 
         # Fix and validate PROCEDURE structure if applicable
-        if [[ "$detected_type" == "PROCEDURE" ]]; then
+        if [[ "$detected_type" == "$CONTENT_TYPE_PROCEDURE" ]]; then
             # Detect what needs fixing before we fix it
             local after_procedure
             after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
             local unnumbered_before
-            unnumbered_before=$(echo "$after_procedure" | grep -c "^\* " || true)
+            unnumbered_before=$(echo "$after_procedure" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
             local nested_before
-            nested_before=$(echo "$after_procedure" | grep -c "^\*\* " || true)
+            nested_before=$(echo "$after_procedure" | grep -c "$PATTERN_NESTED_ITEM" || true)
             local numbered_before
-            numbered_before=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+            numbered_before=$(echo "$after_procedure" | grep -cE "$PATTERN_NUMBERED_ITEM" || true)
             local include_before
-            include_before=$(echo "$after_procedure" | grep -c "^include::" || true)
+            include_before=$(echo "$after_procedure" | grep -c "$PATTERN_INCLUDE" || true)
 
             # Try to fix PROCEDURE structure issues
             if fix_procedure_structure "$file"; then
@@ -513,18 +520,18 @@ process_file() {
         fi
 
         # Fix VERIFICATION structure if applicable (same rules as PROCEDURE)
-        if grep -q "^\.Verification" "$file" 2>/dev/null; then
+        if grep -q "$PATTERN_VERIFICATION_SECTION" "$file" 2>/dev/null; then
             # Detect what needs fixing before we fix it
             local after_verification
             after_verification=$(awk '/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
             local unnumbered_verif_before
-            unnumbered_verif_before=$(echo "$after_verification" | grep -c "^\* " || true)
+            unnumbered_verif_before=$(echo "$after_verification" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
             local nested_verif_before
-            nested_verif_before=$(echo "$after_verification" | grep -c "^\*\* " || true)
+            nested_verif_before=$(echo "$after_verification" | grep -c "$PATTERN_NESTED_ITEM" || true)
             local numbered_verif_before
-            numbered_verif_before=$(echo "$after_verification" | grep -cE "^\\.+ " || true)
+            numbered_verif_before=$(echo "$after_verification" | grep -cE "$PATTERN_NUMBERED_ITEM" || true)
             local include_verif_before
-            include_verif_before=$(echo "$after_verification" | grep -c "^include::" || true)
+            include_verif_before=$(echo "$after_verification" | grep -c "$PATTERN_INCLUDE" || true)
 
             # Try to fix VERIFICATION structure issues
             if fix_verification_structure "$file"; then
@@ -603,18 +610,18 @@ process_file() {
     fi
 
     # Fix and validate PROCEDURE structure if applicable
-    if [[ "$detected_type" == "PROCEDURE" ]]; then
+    if [[ "$detected_type" == "$CONTENT_TYPE_PROCEDURE" ]]; then
         # Detect what needs fixing before we fix it
         local after_procedure
         after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
         local unnumbered_before
-        unnumbered_before=$(echo "$after_procedure" | grep -c "^\* " || true)
+        unnumbered_before=$(echo "$after_procedure" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
         local nested_before
-        nested_before=$(echo "$after_procedure" | grep -c "^\*\* " || true)
+        nested_before=$(echo "$after_procedure" | grep -c "$PATTERN_NESTED_ITEM" || true)
         local numbered_before
-        numbered_before=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+        numbered_before=$(echo "$after_procedure" | grep -cE "$PATTERN_NUMBERED_ITEM" || true)
         local include_before
-        include_before=$(echo "$after_procedure" | grep -c "^include::" || true)
+        include_before=$(echo "$after_procedure" | grep -c "$PATTERN_INCLUDE" || true)
 
         # Try to fix PROCEDURE structure issues
         if fix_procedure_structure "$file"; then
