@@ -89,8 +89,10 @@ get_content_type() {
     first_line=$(head -1 "$file" 2>/dev/null)
     if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
         echo "${BASH_REMATCH[1]}"
+        return 0
     else
         echo ""
+        return 0
     fi
 }
 
@@ -101,7 +103,7 @@ process_file() {
 # Determine module type from content type metadata (not filename)
 CONTENT_TYPE=$(get_content_type "$FILE")
 
-if [ -z "$CONTENT_TYPE" ]; then
+if [[ -z "$CONTENT_TYPE" ]]; then
     # No content type metadata - try to detect from filename as fallback
     BASENAME=$(basename "$FILE" .adoc)
     if [[ "$BASENAME" == proc-* ]]; then

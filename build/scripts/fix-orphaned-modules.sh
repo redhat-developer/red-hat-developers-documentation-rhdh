@@ -76,10 +76,8 @@ is_file_included() {
     pattern=$(echo "$pattern" | sed 's/-\(eks\|aks\|gke\|ocp\|ocp-short\|osd-gcp\)-/-{[^}]*}-/g')
 
     # If pattern is different from basename, search for it
-    if [[ "$pattern" != "$basename" ]]; then
-        if grep -r "^include::" . --include="*.adoc" 2>/dev/null | grep -E "$pattern" | grep -qv "^//" ; then
-            return 0  # File is included with attribute substitution
-        fi
+    if [[ "$pattern" != "$basename" ]] && grep -r "^include::" . --include="*.adoc" 2>/dev/null | grep -E "$pattern" | grep -qv "^//" ; then
+        return 0  # File is included with attribute substitution
     fi
 
     return 1  # File is not included
