@@ -9,6 +9,8 @@
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
 # STEP 0: Add content type metadata if missing (CQA requirement #2)
+# - Detects module type from :_mod-docs-content-type: metadata (not filename)
+# - Falls back to filename prefix detection if no metadata present
 # STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
@@ -17,7 +19,7 @@
 #   - Assemblies without procedures: Use noun phrases ("API reference" not "Configure API")
 # STEP 2: Update IDs and context to match title
 # STEP 3: Update all xrefs pointing to changed ID
-# STEP 4: Rename file to match title
+# STEP 4: Rename file to match title (using prefix from content type)
 # STEP 5: Update all include statements
 
 set -e
@@ -80,41 +82,75 @@ collect_files() {
     done < <(get_includes "$file")
 }
 
+# Function to get content type from file
+get_content_type() {
+    local file="$1"
+    grep "^:_mod-docs-content-type:" "$file" 2>/dev/null | sed 's/^:_mod-docs-content-type: *//' | sed 's/ *$//' || echo ""
+}
+
 # Function to process a single file
 process_file() {
     local FILE="$1"
 
-# Determine module type from filename prefix
-BASENAME=$(basename "$FILE" .adoc)
-if [[ "$BASENAME" == proc-* ]]; then
-    PREFIX="proc-"
-    MODULE_TYPE="PROCEDURE"
-    EXPECTED_FORM="imperative"
-elif [[ "$BASENAME" == con-* ]]; then
-    PREFIX="con-"
-    MODULE_TYPE="CONCEPT"
-    EXPECTED_FORM="noun phrase"
-elif [[ "$BASENAME" == ref-* ]]; then
-    PREFIX="ref-"
-    MODULE_TYPE="REFERENCE"
-    EXPECTED_FORM="noun phrase"
-elif [[ "$BASENAME" == assembly-* ]]; then
-    PREFIX="assembly-"
-    MODULE_TYPE="ASSEMBLY"
-    # Assemblies use imperative form IF they include procedures, otherwise noun phrases
-    if grep -q "include::.*proc-.*\.adoc" "$FILE"; then
-        EXPECTED_FORM="imperative"
+# Determine module type from content type metadata (not filename)
+CONTENT_TYPE=$(get_content_type "$FILE")
+
+if [ -z "$CONTENT_TYPE" ]; then
+    # No content type metadata - try to detect from filename as fallback
+    BASENAME=$(basename "$FILE" .adoc)
+    if [[ "$BASENAME" == proc-* ]]; then
+        CONTENT_TYPE="PROCEDURE"
+    elif [[ "$BASENAME" == con-* ]]; then
+        CONTENT_TYPE="CONCEPT"
+    elif [[ "$BASENAME" == ref-* ]]; then
+        CONTENT_TYPE="REFERENCE"
+    elif [[ "$BASENAME" == assembly-* ]]; then
+        CONTENT_TYPE="ASSEMBLY"
+    elif [[ "$BASENAME" == snip-* ]]; then
+        CONTENT_TYPE="SNIPPET"
     else
-        EXPECTED_FORM="noun phrase"
+        echo "? $FILE (no content type metadata and unknown filename prefix)"
+        return 0
     fi
-elif [[ "$BASENAME" == snip-* ]]; then
-    PREFIX="snip-"
-    MODULE_TYPE="SNIPPET"
-    EXPECTED_FORM="any"
-else
-    echo "Error: Unknown module type for $FILE (filename must start with proc-, con-, ref-, assembly-, or snip-)"
-    exit 1
 fi
+
+# Determine prefix and expected form based on content type
+case "$CONTENT_TYPE" in
+    PROCEDURE)
+        PREFIX="proc-"
+        MODULE_TYPE="PROCEDURE"
+        EXPECTED_FORM="imperative"
+        ;;
+    CONCEPT)
+        PREFIX="con-"
+        MODULE_TYPE="CONCEPT"
+        EXPECTED_FORM="noun phrase"
+        ;;
+    REFERENCE)
+        PREFIX="ref-"
+        MODULE_TYPE="REFERENCE"
+        EXPECTED_FORM="noun phrase"
+        ;;
+    ASSEMBLY)
+        PREFIX="assembly-"
+        MODULE_TYPE="ASSEMBLY"
+        # Assemblies use imperative form IF they include procedures, otherwise noun phrases
+        if grep -q "include::.*proc-.*\.adoc" "$FILE"; then
+            EXPECTED_FORM="imperative"
+        else
+            EXPECTED_FORM="noun phrase"
+        fi
+        ;;
+    SNIPPET)
+        PREFIX="snip-"
+        MODULE_TYPE="SNIPPET"
+        EXPECTED_FORM="any"
+        ;;
+    *)
+        echo "? $FILE (unknown content type: $CONTENT_TYPE)"
+        return 0
+        ;;
+esac
 
 # Track if any changes will be made
 WILL_CHANGE=false
@@ -305,13 +341,15 @@ if [ $# -ne 1 ]; then
     echo "It processes the specified file and all its includes recursively."
     echo ""
     echo "It will:"
-    echo "  STEP 0: Add :_mod-docs-content-type: metadata if missing"
-    echo "  STEP 1: Fix title to use correct form (imperative for procedures/assemblies)"
-    echo "  STEP 2: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
-    echo "  STEP 3: Update [id=\"...\"] to match"
-    echo "  STEP 4: Update :context: for assemblies"
-    echo "  STEP 5: Rename file using git mv"
-    echo "  STEP 6: Update all xrefs and include statements"
+    echo "  STEP 0: Detect module type from :_mod-docs-content-type: metadata"
+    echo "          (falls back to filename prefix if no metadata present)"
+    echo "  STEP 1: Add :_mod-docs-content-type: metadata if missing"
+    echo "  STEP 2: Fix title to use correct form (imperative for procedures/assemblies)"
+    echo "  STEP 3: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
+    echo "  STEP 4: Update [id=\"...\"] to match"
+    echo "  STEP 5: Update :context: for assemblies"
+    echo "  STEP 6: Rename file using git mv (with prefix from content type)"
+    echo "  STEP 7: Update all xrefs and include statements"
     exit 1
 fi
 
@@ -336,9 +374,11 @@ for file in "${ALL_FILES[@]}"; do
         continue
     fi
 
-    # Check if file has module prefix
+    # Check if file has content type metadata or module prefix
+    content_type=$(get_content_type "$file")
     basename_file=$(basename "$file" .adoc)
-    if [[ "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
+
+    if [[ -n "$content_type" ]] || [[ "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
         MODULE_FILES+=("$file")
     else
         SKIPPED_FILES+=("$file")
