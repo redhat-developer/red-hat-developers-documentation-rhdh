@@ -82,10 +82,16 @@ collect_files() {
     done < <(get_includes "$file")
 }
 
-# Function to get content type from file
+# Function to get content type from file (always first line)
 get_content_type() {
     local file="$1"
-    grep "^:_mod-docs-content-type:" "$file" 2>/dev/null | sed 's/^:_mod-docs-content-type: *//' | sed 's/ *$//' || echo ""
+    local first_line
+    first_line=$(head -1 "$file" 2>/dev/null)
+    if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        echo ""
+    fi
 }
 
 # Function to process a single file
