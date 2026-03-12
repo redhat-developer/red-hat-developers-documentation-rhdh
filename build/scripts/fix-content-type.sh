@@ -161,9 +161,14 @@ remove_all_content_type_metadata() {
 process_file() {
     local FILE="$1"
 
-    # master.adoc files are not modular doc modules and should not have content type
+    # Skip attributes.adoc files - they are not modular doc modules
     local basename_file
     basename_file=$(basename "$FILE")
+    if [[ "$basename_file" == "attributes.adoc" ]]; then
+        return 0
+    fi
+
+    # master.adoc files are not modular doc modules and should not have content type
     if [[ "$basename_file" == "master.adoc" ]]; then
         local OCCURRENCE_COUNT
         OCCURRENCE_COUNT=$(count_content_type_occurrences "$FILE")
