@@ -537,7 +537,7 @@ done
 echo ""
 echo "=== Summary ==="
 echo "Files processed: $PROCESSED"
-echo "Compliant: $COMPLIANT"
+echo "Compliant content type attribute: $COMPLIANT"
 if [[ $CHANGED -gt 0 ]]; then
     echo -e "${GREEN}✓ Updated $CHANGED file(s)${NC}"
 fi
