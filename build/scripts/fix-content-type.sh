@@ -10,6 +10,8 @@
 # Content type detection logic:
 # - ASSEMBLY: File includes one or more modules with proc-, ref-, or con- prefix
 # - PROCEDURE: File has .Procedure section followed by steps
+# - CONCEPT: File has con- filename prefix (no distinctive content pattern)
+# - REFERENCE: File has ref- filename prefix (no distinctive content pattern)
 #
 # This script automatically:
 # - Adds or updates :_mod-docs-content-type: metadata
@@ -97,6 +99,21 @@ detect_content_type() {
             echo "PROCEDURE"
             return
         fi
+    fi
+
+    # Fall back to filename-based detection for concepts and references
+    # These cannot be reliably detected from content patterns
+    local basename_file
+    basename_file=$(basename "$file" .adoc)
+
+    if [[ "$basename_file" == con-* ]]; then
+        echo "CONCEPT"
+        return
+    fi
+
+    if [[ "$basename_file" == ref-* ]]; then
+        echo "REFERENCE"
+        return
     fi
 
     # Cannot determine - return empty

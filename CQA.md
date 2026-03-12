@@ -159,10 +159,12 @@ Process:
    ```
 
    **NOTE**: This script is imperative but not entirely sufficient. It automatically:
-   - Detects content type from file content analysis (not from filename or existing metadata)
+   - Detects content type from file content analysis and filename
    - Adds or updates `:_mod-docs-content-type:` metadata based on detection:
      * Files including `proc-`, `ref-`, or `con-` modules → ASSEMBLY
      * Files with `.Procedure` section followed by steps → PROCEDURE
+     * Files with `con-` filename prefix → CONCEPT
+     * Files with `ref-` filename prefix → REFERENCE
    - Ensures metadata is on the first line of the file (moves it if elsewhere)
    - Removes duplicate occurrences of the metadata
    - Processes entire include tree recursively (master.adoc → assemblies → modules)
@@ -170,8 +172,8 @@ Process:
 
    **Manual review still required**:
    - Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why")
-   - Files that cannot be auto-detected (CONCEPT, REFERENCE, SNIPPET) must be manually verified and corrected
-   - The script detects patterns, not semantic meaning - you must verify correctness
+   - Files that cannot be auto-detected (SNIPPET, or files without standard naming) must be manually verified and corrected
+   - The script detects patterns and filenames, not semantic meaning - you must verify correctness
 
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 
