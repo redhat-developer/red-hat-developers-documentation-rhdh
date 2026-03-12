@@ -9,7 +9,7 @@
 #
 # Content type detection logic:
 # - ASSEMBLY: File includes one or more modules with proc-, ref-, or con- prefix
-# - PROCEDURE: File has .Procedure section followed by steps
+# - PROCEDURE: File has .Procedure section followed by steps, OR proc- filename prefix
 # - CONCEPT: File has con- filename prefix (no distinctive content pattern)
 # - REFERENCE: File has ref- filename prefix (no distinctive content pattern)
 # - SNIPPET: File has snip- filename prefix (no distinctive content pattern)
@@ -99,10 +99,15 @@ detect_content_type() {
         return 0
     fi
 
-    # Fall back to filename-based detection for concepts, references, and snippets
+    # Fall back to filename-based detection for procedures, concepts, references, and snippets
     # These cannot be reliably detected from content patterns
     local basename_file
     basename_file=$(basename "$file" .adoc)
+
+    if [[ "$basename_file" == proc-* ]]; then
+        echo "PROCEDURE"
+        return 0
+    fi
 
     if [[ "$basename_file" == con-* ]]; then
         echo "CONCEPT"
