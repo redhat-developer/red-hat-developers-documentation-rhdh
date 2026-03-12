@@ -1,0 +1,208 @@
+---
+name: Content Quality Assessment
+on:
+  pull_request:
+    paths:
+      - '**.adoc'
+      - 'assemblies/**'
+      - 'modules/**'
+      - 'artifacts/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cqa-check:
+    name: CQA Automated Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed .adoc files
+        id: changed-files
+        run: |
+          # Get list of changed .adoc files
+          git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.adoc$' || echo "")
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Count changed files
+          if [ -n "$CHANGED_FILES" ]; then
+            COUNT=$(echo "$CHANGED_FILES" | wc -l)
+          else
+            COUNT=0
+          fi
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Run orphaned modules check
+        id: orphaned-check
+        run: |
+          chmod +x build/scripts/fix-orphaned-modules.sh
+
+          # Capture output
+          OUTPUT=$(./build/scripts/fix-orphaned-modules.sh 2>&1)
+
+          # Extract orphaned files count
+          ORPHANED_COUNT=$(echo "$OUTPUT" | grep "Orphaned files found:" | awk '{print $4}')
+          echo "orphaned_count=$ORPHANED_COUNT" >> $GITHUB_OUTPUT
+
+          # Save full output for comment
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run content type check on changed files
+        id: content-type-check
+        if: steps.changed-files.outputs.count > 0
+        run: |
+          chmod +x build/scripts/fix-content-type.sh
+
+          # Run on each changed file and collect output
+          OVERALL_OUTPUT=""
+          FILES_CHANGED=0
+
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              OUTPUT=$(./build/scripts/fix-content-type.sh "$file" 2>&1 || true)
+
+              # Check if file would be changed (contains 📝)
+              if echo "$OUTPUT" | grep -q "📝"; then
+                FILES_CHANGED=$((FILES_CHANGED + 1))
+                OVERALL_OUTPUT="${OVERALL_OUTPUT}\n\n### $(basename $(dirname $file))/$(basename $file)\n${OUTPUT}"
+              fi
+            fi
+          done <<< "${{ steps.changed-files.outputs.changed_files }}"
+
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$OVERALL_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run title/ID/filename alignment check on changed files
+        id: title-check
+        if: steps.changed-files.outputs.count > 0
+        run: |
+          chmod +x build/scripts/fix-title-id-filename.sh
+
+          # Run on each changed file that is a master.adoc, assembly, or module
+          OVERALL_OUTPUT=""
+          FILES_CHANGED=0
+
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              # Only process assemblies, modules, and titles
+              if [[ "$file" =~ (assemblies|modules|titles) ]]; then
+                OUTPUT=$(./build/scripts/fix-title-id-filename.sh "$file" 2>&1 || true)
+
+                # Check if file would be changed (contains 📝)
+                if echo "$OUTPUT" | grep -q "📝"; then
+                  FILES_CHANGED=$((FILES_CHANGED + 1))
+                  OVERALL_OUTPUT="${OVERALL_OUTPUT}\n\n### $(basename $(dirname $file))/$(basename $file)\n${OUTPUT}"
+                fi
+              fi
+            fi
+          done <<< "${{ steps.changed-files.outputs.changed_files }}"
+
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "output<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$OVERALL_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post CQA results as PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const orphanedCount = '${{ steps.orphaned-check.outputs.orphaned_count }}' || '0';
+            const contentTypeChanged = '${{ steps.content-type-check.outputs.files_changed }}' || '0';
+            const titleChanged = '${{ steps.title-check.outputs.files_changed }}' || '0';
+            const changedFilesCount = '${{ steps.changed-files.outputs.count }}';
+
+            let comment = '## 📋 Content Quality Assessment Results\n\n';
+
+            // Changed files summary
+            comment += `**Changed .adoc files in this PR:** ${changedFilesCount}\n\n`;
+
+            // Orphaned modules check
+            comment += '### 🗑️ Orphaned Modules Check\n';
+            if (orphanedCount === '0') {
+              comment += '✅ No orphaned files found\n\n';
+            } else {
+              comment += `⚠️ Found **${orphanedCount}** orphaned file(s)\n\n`;
+              comment += '<details>\n<summary>Click to view orphaned files</summary>\n\n```\n';
+              comment += `${{ steps.orphaned-check.outputs.output }}`;
+              comment += '\n```\n</details>\n\n';
+              comment += '**Action required:** Review the orphaned files and run:\n';
+              comment += '```bash\n./build/scripts/fix-orphaned-modules.sh --execute\n```\n\n';
+            }
+
+            // Content type check
+            comment += '### 📝 Content Type Validation\n';
+            if (changedFilesCount === '0') {
+              comment += 'ℹ️ No .adoc files changed in this PR\n\n';
+            } else if (contentTypeChanged === '0') {
+              comment += '✅ All changed files have correct content type metadata\n\n';
+            } else {
+              comment += `⚠️ **${contentTypeChanged}** file(s) need content type updates\n\n`;
+              comment += '<details>\n<summary>Click to view suggested changes</summary>\n\n';
+              comment += `${{ steps.content-type-check.outputs.output }}`;
+              comment += '\n</details>\n\n';
+              comment += '**Action required:** Review and apply changes by running:\n';
+              comment += '```bash\n./build/scripts/fix-content-type.sh <file>\n```\n\n';
+            }
+
+            // Title/ID/filename alignment check
+            comment += '### 🏷️ Title/ID/Filename Alignment\n';
+            if (changedFilesCount === '0') {
+              comment += 'ℹ️ No .adoc files changed in this PR\n\n';
+            } else if (titleChanged === '0') {
+              comment += '✅ All changed files have aligned title/ID/filename\n\n';
+            } else {
+              comment += `⚠️ **${titleChanged}** file(s) need title/ID/filename alignment\n\n`;
+              comment += '<details>\n<summary>Click to view suggested changes</summary>\n\n';
+              comment += `${{ steps.title-check.outputs.output }}`;
+              comment += '\n</details>\n\n';
+              comment += '**Action required:** Review and apply changes by running:\n';
+              comment += '```bash\n./build/scripts/fix-title-id-filename.sh <file>\n```\n\n';
+            }
+
+            // Footer
+            comment += '---\n';
+            comment += '*This is an automated check. See [CQA.md](../blob/main/CQA.md) for manual verification steps.*\n';
+
+            // Find existing CQA comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Content Quality Assessment Results')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
