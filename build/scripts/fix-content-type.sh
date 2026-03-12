@@ -145,8 +145,10 @@ count_content_type_occurrences() {
     count=$(grep -c "^:_mod-docs-content-type:" "$file" 2>/dev/null || true)
     if [[ -z "$count" ]]; then
         echo "0"
+        return 0
     else
         echo "$count"
+        return 0
     fi
 }
 
@@ -155,6 +157,7 @@ remove_all_content_type_metadata() {
     local file="$1"
     sed -i.bak '/^:_mod-docs-content-type:/d' "$file"
     rm -f "${file}.bak"
+    return 0
 }
 
 # Function to process a single file
