@@ -48,12 +48,14 @@ Requirements (CQA 2.1 Acceptance Criteria):
    - Use official templates: assemblies, concept modules, procedure modules, reference modules, snippets
    - Each module has correct `:_mod-docs-content-type:` metadata (ASSEMBLY, CONCEPT, PROCEDURE, REFERENCE, SNIPPET)
    - Proper file naming conventions: `assembly-title.adoc`, `con-title.adoc`, `proc-title.adoc`, `ref-title.adoc`, `snip-*.adoc` (Convert title to lowercase with hyphens: "Install the Operator" → `proc-install-the-operator.adoc`)
+     * Standard prefixes required: `assembly-`, `con-`, `proc-`, `ref-`, `snip-`
+     * Alternative prefixes detected as violations: `concept-`, `procedure-`, `reference-`, `con_`, `proc_`, `ref_`, `snip_` (use `git mv` to rename)
    - Anchors follow format: `[id="title_{context}"]` (Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator_{context}`)
    - **No modules nested within modules** - modules should only be included in assemblies
    - **Snippets** (`:_mod-docs-content-type: SNIPPET`) contain reusable content blocks but NO structural elements (no anchors, H1 headings, or block titles like .Prerequisites)
    - **Module-specific rules**:
      * Concept modules: Explain "what" and "why"; no step-by-step instructions; optional subheadings allowed
-     * Procedure modules: Step-by-step instructions only; NO custom subheadings (only standard: .Prerequisites, .Procedure, .Verification, .Troubleshooting, .Next steps); numbered lists for multi-step, bullets for single-step
+     * Procedure modules: Step-by-step instructions only; NO custom subheadings (only standard: .Prerequisites, .Procedure, .Verification, .Troubleshooting, .Next steps); `.Procedure` section required; numbered lists (`. step`) for multi-step (2+), unnumbered list (`* step`) for single-step (fix-content-type.sh auto-converts single numbered steps to unnumbered)
      * Reference modules: Lookup data in lists/tables; optional subheadings allowed for complex content
      * Assemblies: Introduction + include statements only; no detailed content
 
@@ -176,20 +178,35 @@ Process:
    ```
 
    **NOTE**: This script is imperative but not entirely sufficient. It automatically:
-   - Detects content type from file content analysis and filename
-   - Adds or updates `:_mod-docs-content-type:` metadata based on detection:
-     * Files including `proc-`, `ref-`, or `con-` modules → ASSEMBLY
-     * Files with `.Procedure` section followed by steps → PROCEDURE
-     * Files with `con-` filename prefix → CONCEPT
-     * Files with `ref-` filename prefix → REFERENCE
-   - Ensures metadata is on the first line of the file (moves it if elsewhere)
-   - Removes duplicate occurrences of the metadata
+   - **Detects content type from file content analysis and filename**:
+     * **Content analysis first** (most reliable):
+       - Files including `proc-`, `ref-`, or `con-` modules → ASSEMBLY
+       - Files with `.Procedure` section → PROCEDURE
+     * **Filename-based fallback detection**:
+       - Standard prefixes: `assembly-`, `proc-`, `con-`, `ref-`, `snip-`
+       - Alternative prefixes (detected with warnings): `proc_`, `procedure-`, `procedure_`, `con_`, `concept-`, `concept_`, `ref_`, `reference-`, `reference_`, `snip_`
+   - **Auto-fixes common issues**:
+     * Converts single numbered steps in `.Procedure` sections to unnumbered items (modular docs requirement)
+     * Adds or updates `:_mod-docs-content-type:` metadata
+     * Ensures metadata is on the first line of the file
+     * Removes duplicate metadata occurrences
+   - **PROCEDURE structure validation**:
+     * Validates `.Procedure` section presence
+     * Accepts include statements, 1 unnumbered item, or 2+ numbered items
+     * Flags missing sections or invalid structures
+   - **Summary output with violation breakdown**:
+     * Shows compliant files count
+     * Lists filename violations (require manual `git mv`)
+     * Lists missing `.Procedure` sections (require manual addition)
+     * Shows auto-fixed files count
    - Processes entire include tree recursively (master.adoc → assemblies → modules)
-   - Shows ✓ for files with correct type, 📝 for files being changed
+   - Shows ✓ for compliant files, 📝 for files being auto-fixed, ⚠️ for files with warnings
 
    **Manual review still required**:
    - Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why")
-   - Files that cannot be auto-detected (SNIPPET, or files without standard naming) must be manually verified and corrected
+   - Fix filename violations (use `git mv` to rename files with alternative prefixes to standard prefixes)
+   - Add missing `.Procedure` sections to PROCEDURE files flagged by the script
+   - Files that cannot be auto-detected must be manually verified and corrected
    - The script detects patterns and filenames, not semantic meaning - you must verify correctness
 
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
@@ -210,14 +227,17 @@ Process:
    ```
 
    **NOTE**: This script is imperative but not entirely sufficient. It automatically:
-   - Adds `:_mod-docs-content-type:` metadata if missing (CQA req #2)
-   - Fixes title form: gerund → imperative for procedures/assemblies (CQA req #8)
+   - **Ensures content type metadata exists** (CQA req #2):
+     * Reads `:_mod-docs-content-type:` metadata from first line
+     * If missing, automatically runs `fix-content-type.sh` to add it
+     * Always relies on metadata, never guesses from filename
+   - **Fixes title form**: gerund → imperative for procedures/assemblies (CQA req #8)
      * "Installing" → "Install", "Deploying" → "Deploy"
-   - Aligns IDs and contexts to match title (preserving attribute names)
+   - **Aligns IDs and contexts to match title** (preserving attribute names)
      * `{product-short}` → `product-short` in IDs, NOT removed or replaced
-   - Renames files using `git mv` to match expected naming
-   - Updates all xrefs and include statements automatically
-   - Processes entire include tree recursively (master.adoc → assemblies → modules)
+   - **Renames files** using `git mv` to match expected naming
+   - **Updates all xrefs and include statements** automatically
+   - **Processes entire include tree** recursively (master.adoc → assemblies → modules)
 
    **Output**: Shows ✓ for aligned files, 📝 for files being changed with specific changes listed.
 
