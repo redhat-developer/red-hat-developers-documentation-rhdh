@@ -211,7 +211,7 @@ remove_all_content_type_metadata() {
     return 0
 }
 
-# Function to fix PROCEDURE structure - convert single numbered step to unnumbered
+# Function to fix PROCEDURE structure - normalize list formatting
 fix_procedure_structure() {
     local file="$1"
 
@@ -220,9 +220,9 @@ fix_procedure_structure() {
         return 1
     fi
 
-    # Get content after .Procedure section
+    # Get content after .Procedure section (until next section starting with .)
     local after_procedure
-    after_procedure=$(grep -A 50 "^\.Procedure" "$file" 2>/dev/null | tail -n +2)
+    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\./{exit} flag' "$file" 2>/dev/null)
 
     # Check for include statements (don't fix files with includes - they're valid)
     local include_count
@@ -233,9 +233,13 @@ fix_procedure_structure() {
         return 1
     fi
 
-    # Check for single unnumbered list item (starts with *)
+    # Check for top-level unnumbered list items (starts with single * followed by space)
     local unnumbered_count
     unnumbered_count=$(echo "$after_procedure" | grep -c "^\* " || true)
+
+    # Check for nested unnumbered list items (starts with ** or more)
+    local nested_count
+    nested_count=$(echo "$after_procedure" | grep -c "^\*\* " || true)
 
     # Check for numbered list items (starts with one or more dots followed by space)
     local numbered_count
@@ -245,6 +249,18 @@ fix_procedure_structure() {
     if [[ $numbered_count -eq 1 && $unnumbered_count -eq 0 ]]; then
         # Find and replace the single numbered step with unnumbered
         sed -i.bak '/^\.Procedure/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}' "$file"
+        rm -f "${file}.bak"
+        return 0
+    fi
+
+    # Fix if 2+ unnumbered steps (convert to numbered)
+    # BUT: Don't convert if there are nested items - nested structure indicates
+    # a complex single step or steps that should stay unnumbered
+    if [[ $unnumbered_count -ge 2 && $numbered_count -eq 0 && $nested_count -eq 0 ]]; then
+        # Find and replace unnumbered items with numbered (single dot)
+        # Process from .Procedure until the next section (line starting with .)
+        # but exclude lines that start with . from replacement
+        sed -i.bak '/^\.Procedure$/,/^\./{/^\./!s/^\* /. /}' "$file"
         rm -f "${file}.bak"
         return 0
     fi
@@ -262,9 +278,9 @@ validate_procedure_structure() {
         return 1
     fi
 
-    # Get content after .Procedure section
+    # Get content after .Procedure section (until next section starting with .)
     local after_procedure
-    after_procedure=$(grep -A 50 "^\.Procedure" "$file" 2>/dev/null | tail -n +2)
+    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\./{exit} flag' "$file" 2>/dev/null)
 
     # Check for include statements (valid pattern - procedure steps in snippets)
     local include_count
@@ -381,11 +397,30 @@ process_file() {
 
         # Fix and validate PROCEDURE structure if applicable
         if [[ "$detected_type" == "PROCEDURE" ]]; then
-            # Try to fix single numbered step issue first
+            # Detect what needs fixing before we fix it
+            local after_procedure
+            after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\./{exit} flag' "$file" 2>/dev/null)
+            local unnumbered_before
+            unnumbered_before=$(echo "$after_procedure" | grep -c "^\* " || true)
+            local nested_before
+            nested_before=$(echo "$after_procedure" | grep -c "^\*\* " || true)
+            local numbered_before
+            numbered_before=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+            local include_before
+            include_before=$(echo "$after_procedure" | grep -c "^include::" || true)
+
+            # Try to fix PROCEDURE structure issues
             if fix_procedure_structure "$file"; then
                 echo ""
                 echo "📝 $file"
-                echo "  * Convert single numbered step to unnumbered item"
+                # Determine what was fixed based on counts
+                if [[ $numbered_before -eq 1 && $unnumbered_before -eq 0 && $include_before -eq 0 ]]; then
+                    echo "  * Convert single numbered step to unnumbered item"
+                elif [[ $unnumbered_before -ge 2 && $numbered_before -eq 0 && $include_before -eq 0 && $nested_before -eq 0 ]]; then
+                    echo "  * Convert multiple unnumbered items to numbered steps"
+                else
+                    echo "  * Normalize .Procedure list formatting"
+                fi
                 echo ""
                 return 0
             fi
@@ -461,9 +496,28 @@ process_file() {
 
     # Fix and validate PROCEDURE structure if applicable
     if [[ "$detected_type" == "PROCEDURE" ]]; then
-        # Try to fix single numbered step issue first
+        # Detect what needs fixing before we fix it
+        local after_procedure
+        after_procedure=$(grep -A 50 "^\.Procedure" "$file" 2>/dev/null | tail -n +2)
+        local unnumbered_before
+        unnumbered_before=$(echo "$after_procedure" | grep -c "^\* " || true)
+        local nested_before
+        nested_before=$(echo "$after_procedure" | grep -c "^\*\* " || true)
+        local numbered_before
+        numbered_before=$(echo "$after_procedure" | grep -cE "^\\.+ " || true)
+        local include_before
+        include_before=$(echo "$after_procedure" | grep -c "^include::" || true)
+
+        # Try to fix PROCEDURE structure issues
         if fix_procedure_structure "$file"; then
-            echo "  * Convert single numbered step to unnumbered item"
+            # Determine what was fixed based on counts
+            if [[ $numbered_before -eq 1 && $unnumbered_before -eq 0 && $include_before -eq 0 ]]; then
+                echo "  * Convert single numbered step to unnumbered item"
+            elif [[ $unnumbered_before -ge 2 && $numbered_before -eq 0 && $include_before -eq 0 && $nested_before -eq 0 ]]; then
+                echo "  * Convert multiple unnumbered items to numbered steps"
+            else
+                echo "  * Normalize .Procedure list formatting"
+            fi
         fi
 
         # Validate PROCEDURE structure
