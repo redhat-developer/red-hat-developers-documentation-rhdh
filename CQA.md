@@ -153,18 +153,23 @@ Process:
 
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
 
-   **REQUIRED**: Run the verification script on your target file:
+   **REQUIRED**: Run the content type fix script on your target file:
    ```bash
-   ./build/scripts/verify-content-type.sh titles/<your-title>/master.adoc
+   ./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
    ```
 
-   **NOTE**: This script is imperative but not entirely sufficient. It verifies:
-   - PROCEDURE modules contain numbered/unnumbered steps or include snippets
-   - ASSEMBLY files include other modules using `include::` directive
-   - SNIPPET files do not have module-level anchor IDs or H1 headings
-   - Content type declarations are valid (ASSEMBLY, PROCEDURE, CONCEPT, REFERENCE, SNIPPET)
+   **NOTE**: This script is imperative but not entirely sufficient. It automatically:
+   - Detects content type from file content analysis (not from filename or existing metadata)
+   - Adds or updates `:_mod-docs-content-type:` metadata based on detection:
+     * Files including `proc-`, `ref-`, or `con-` modules → ASSEMBLY
+     * Files with `.Procedure` section followed by steps → PROCEDURE
+   - Processes entire include tree recursively (master.adoc → assemblies → modules)
+   - Shows ✓ for files with correct type, 📝 for files being changed
 
-   **Manual review still required**: Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why").
+   **Manual review still required**:
+   - Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why")
+   - Files that cannot be auto-detected (CONCEPT, REFERENCE, SNIPPET) must be manually verified and corrected
+   - The script detects patterns, not semantic meaning - you must verify correctness
 
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 
@@ -253,11 +258,31 @@ Process:
    All files should show ✓ (no changes needed). If any files show 📝 (changes made), review the changes and re-run the script until all files are aligned.
 
    **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
-      - After reorganizing modules, check for orphaned files left in old directories
-      - Search for modules not referenced anywhere: Compare all module files against include statements
-      - Remove orphaned modules: `git rm modules/old-category/orphaned-module.adoc`
-      - Remove empty directories after cleanup
-      - Example: After moving Customizing modules, remove unreferenced files from old directories
+
+   **REQUIRED**: Run the orphaned modules detection script:
+   ```bash
+   ./build/scripts/fix-orphaned-modules.sh
+   ```
+
+   **NOTE**: This script is imperative but not entirely sufficient. It automatically:
+   - Scans all .adoc files in `artifacts/`, `assemblies/`, and `modules/` directories
+   - Searches for `include::` statements referencing each file
+   - Handles attribute substitution patterns (e.g., `{platform-id}`, `{docdir}`)
+   - Lists orphaned files (not referenced by any include statement)
+   - Runs in dry-run mode by default (use `--execute` flag to delete files)
+
+   **Output**: Shows count of orphaned files and their paths. Review the list before deleting.
+
+   To delete orphaned files after review:
+   ```bash
+   ./build/scripts/fix-orphaned-modules.sh --execute
+   ```
+
+   **Manual review still required**:
+   - Verify listed files are truly orphaned (not referenced via complex attribute substitution)
+   - Check if any files should be kept for future use or other titles
+   - Review git changes after deletion
+   - Remove empty directories after cleanup if needed
 
    **STEP 7: Fix other issues** (only after title/ID/filename are aligned)
       - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
