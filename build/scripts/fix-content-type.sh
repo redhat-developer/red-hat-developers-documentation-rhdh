@@ -511,6 +511,9 @@ PROCESSED=0
 COMPLIANT=0
 CHANGED=0
 CANNOT_DETERMINE=0
+FILENAME_VIOLATIONS=0
+MISSING_PROCEDURE_SECTION=0
+INVALID_PROCEDURE_STRUCTURE=0
 
 for file in "${FILES_TO_PROCESS[@]}"; do
     PROCESSED=$((PROCESSED + 1))
@@ -527,6 +530,18 @@ for file in "${FILES_TO_PROCESS[@]}"; do
     elif [[ "$OUTPUT" == *"⚠️"* ]]; then
         # Validation warning - still compliant but has structural issues
         COMPLIANT=$((COMPLIANT + 1))
+
+        # Track violation types
+        if [[ "$OUTPUT" == *"Filename violation"* ]]; then
+            FILENAME_VIOLATIONS=$((FILENAME_VIOLATIONS + 1))
+        fi
+        if [[ "$OUTPUT" == *"Missing .Procedure section"* ]]; then
+            MISSING_PROCEDURE_SECTION=$((MISSING_PROCEDURE_SECTION + 1))
+        fi
+        if [[ "$OUTPUT" == *".Procedure section has only 1 numbered step"* ]] || [[ "$OUTPUT" == *".Procedure section not followed by proper list structure"* ]]; then
+            INVALID_PROCEDURE_STRUCTURE=$((INVALID_PROCEDURE_STRUCTURE + 1))
+        fi
+
         echo "$OUTPUT"
     else
         # No output = compliant
@@ -538,9 +553,28 @@ echo ""
 echo "=== Summary ==="
 echo "Files processed: $PROCESSED"
 echo "Compliant content type attribute: $COMPLIANT"
+
+# Show violation breakdown if any violations found
+TOTAL_VIOLATIONS=$((FILENAME_VIOLATIONS + MISSING_PROCEDURE_SECTION + INVALID_PROCEDURE_STRUCTURE))
+if [[ $TOTAL_VIOLATIONS -gt 0 ]]; then
+    echo ""
+    echo "Violation breakdown:"
+    if [[ $FILENAME_VIOLATIONS -gt 0 ]]; then
+        echo "  - Filename violations: $FILENAME_VIOLATIONS"
+    fi
+    if [[ $MISSING_PROCEDURE_SECTION -gt 0 ]]; then
+        echo "  - Missing .Procedure section: $MISSING_PROCEDURE_SECTION"
+    fi
+    if [[ $INVALID_PROCEDURE_STRUCTURE -gt 0 ]]; then
+        echo "  - Invalid .Procedure structure: $INVALID_PROCEDURE_STRUCTURE"
+    fi
+fi
+
 if [[ $CHANGED -gt 0 ]]; then
+    echo ""
     echo -e "${GREEN}✓ Updated $CHANGED file(s)${NC}"
 fi
 if [[ $CANNOT_DETERMINE -gt 0 ]]; then
+    echo ""
     echo "? Cannot determine content type for $CANNOT_DETERMINE file(s)"
 fi
