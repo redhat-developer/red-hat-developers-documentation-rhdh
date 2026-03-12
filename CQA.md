@@ -439,7 +439,7 @@ Process:
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
 
-   **Version(s):** <version>
+   **Version(s):** main
 
    **Issue:** https://issues.redhat.com/browse/RHIDP-XXXXX
 
