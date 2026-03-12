@@ -8,9 +8,9 @@
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
-# STEP 0: Add content type metadata if missing (CQA requirement #2)
-# - Detects module type from :_mod-docs-content-type: metadata (not filename)
-# - Falls back to filename prefix detection if no metadata present
+# STEP 0: Ensure content type metadata exists (CQA requirement #2)
+# - Reads module type from :_mod-docs-content-type: metadata (first line)
+# - If metadata is missing, runs fix-content-type.sh to add it automatically
 # STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
@@ -103,24 +103,21 @@ get_content_type() {
 process_file() {
     local FILE="$1"
 
-# Determine module type from content type metadata (not filename)
+# Determine module type from content type metadata (always)
 CONTENT_TYPE=$(get_content_type "$FILE")
 
 if [[ -z "$CONTENT_TYPE" ]]; then
-    # No content type metadata - try to detect from filename as fallback
-    BASENAME=$(basename "$FILE" .adoc)
-    if [[ "$BASENAME" == proc-* ]]; then
-        CONTENT_TYPE="PROCEDURE"
-    elif [[ "$BASENAME" == con-* ]]; then
-        CONTENT_TYPE="CONCEPT"
-    elif [[ "$BASENAME" == ref-* ]]; then
-        CONTENT_TYPE="REFERENCE"
-    elif [[ "$BASENAME" == assembly-* ]]; then
-        CONTENT_TYPE="ASSEMBLY"
-    elif [[ "$BASENAME" == snip-* ]]; then
-        CONTENT_TYPE="SNIPPET"
-    else
-        echo "? $FILE (no content type metadata and unknown filename prefix)"
+    # No content type metadata - run fix-content-type.sh to add it
+    SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    echo "  ! Running fix-content-type.sh to add missing metadata..."
+    "$SCRIPT_DIR/fix-content-type.sh" "$FILE" > /dev/null 2>&1 || true
+
+    # Re-read content type after fixing
+    CONTENT_TYPE=$(get_content_type "$FILE")
+
+    # If still no content type, skip this file
+    if [[ -z "$CONTENT_TYPE" ]]; then
+        echo "? $FILE (cannot determine content type even after running fix-content-type.sh)"
         return 0
     fi
 fi
