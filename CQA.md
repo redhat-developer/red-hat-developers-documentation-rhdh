@@ -9,6 +9,23 @@ Use this prompt to request CQA 2.1 (Content Quality Assessment) compliance work 
 3. Replace `[PATH TO ASSEMBLY FILE]` with the actual path to the main assembly file for that title
 4. Submit the prompt to Claude Code
 
+## Automated Workflows
+
+When you create a pull request, the following automated workflows will run:
+
+1. **Content Quality Assessment** (`.github/workflows/content-quality-assessment.yml`)
+   - Checks content type metadata compliance
+   - Validates title/ID/filename alignment
+   - Detects orphaned modules
+   - Posts actionable PR comments with fix suggestions
+
+2. **Shellcheck** (`.github/workflows/shellcheck.yml`)
+   - Validates all modified shell scripts
+   - Posts code review comments for any issues found
+   - All findings reported as warnings (non-blocking)
+
+These workflows help catch issues early and provide automated suggestions. All findings should be reviewed and addressed before merge.
+
 ---
 
 ## Prompt Template
