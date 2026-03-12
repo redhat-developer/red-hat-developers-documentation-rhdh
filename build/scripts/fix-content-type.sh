@@ -9,9 +9,12 @@
 #
 # Content type detection logic:
 # - ASSEMBLY: File includes one or more modules with proc-, ref-, or con- prefix
-# - PROCEDURE: File has .Procedure section followed by one or more steps
+# - PROCEDURE: File has .Procedure section followed by steps
 #
-# This script automatically adds or updates :_mod-docs-content-type: metadata
+# This script automatically:
+# - Adds or updates :_mod-docs-content-type: metadata
+# - Ensures metadata is on the first line of the file
+# - Removes duplicate occurrences of the metadata
 
 set -e
 
@@ -100,10 +103,35 @@ detect_content_type() {
     echo ""
 }
 
-# Function to get current content type from file
+# Function to get current content type from file (must be on first line)
 get_current_content_type() {
     local file="$1"
-    grep "^:_mod-docs-content-type:" "$file" 2>/dev/null | sed 's/^:_mod-docs-content-type: *//' | sed 's/ *$//' || echo ""
+    local first_line
+    first_line=$(head -1 "$file" 2>/dev/null)
+    if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        echo ""
+    fi
+}
+
+# Function to count total occurrences of content type metadata in file
+count_content_type_occurrences() {
+    local file="$1"
+    local count
+    count=$(grep -c "^:_mod-docs-content-type:" "$file" 2>/dev/null || true)
+    if [[ -z "$count" ]]; then
+        echo "0"
+    else
+        echo "$count"
+    fi
+}
+
+# Function to remove all content type metadata from file
+remove_all_content_type_metadata() {
+    local file="$1"
+    sed -i.bak '/^:_mod-docs-content-type:/d' "$file"
+    rm -f "${file}.bak"
 }
 
 # Function to process a single file
@@ -120,12 +148,19 @@ process_file() {
         return 0
     fi
 
-    # Get current content type
+    # Get current content type (only from first line)
     local CURRENT_TYPE
     CURRENT_TYPE=$(get_current_content_type "$FILE")
 
-    # Check if change is needed
-    if [[ "$CURRENT_TYPE" == "$DETECTED_TYPE" ]]; then
+    # Count total occurrences of content type metadata
+    local OCCURRENCE_COUNT
+    OCCURRENCE_COUNT=$(count_content_type_occurrences "$FILE")
+
+    # Check if everything is correct:
+    # - Detected type matches current type
+    # - Exactly 1 occurrence
+    # - It's on the first line (which we already know if CURRENT_TYPE is set)
+    if [[ "$CURRENT_TYPE" == "$DETECTED_TYPE" ]] && [[ "$OCCURRENCE_COUNT" -eq 1 ]]; then
         echo "✓ $FILE ($DETECTED_TYPE)"
         return 0
     fi
@@ -134,18 +169,43 @@ process_file() {
     echo ""
     echo "📝 $FILE"
 
-    # Apply content type metadata
+    # Track what we're fixing
+    local FIXES=()
+
+    # Determine what needs fixing
     if [[ -z "$CURRENT_TYPE" ]]; then
-        # Add new metadata at the beginning
-        sed -i.bak "1s/^/:_mod-docs-content-type: ${DETECTED_TYPE}\n\n/" "$FILE"
-        rm -f "${FILE}.bak"
-        echo "  + Added :_mod-docs-content-type: ${DETECTED_TYPE}"
+        if [[ "$OCCURRENCE_COUNT" -gt 0 ]]; then
+            FIXES+=("Move content type to first line")
+        else
+            FIXES+=("Add :_mod-docs-content-type: ${DETECTED_TYPE}")
+        fi
     else
-        # Update existing metadata
-        sed -i.bak "s/^:_mod-docs-content-type:.*/:_mod-docs-content-type: ${DETECTED_TYPE}/" "$FILE"
-        rm -f "${FILE}.bak"
-        echo "  * Content type: ${CURRENT_TYPE} → ${DETECTED_TYPE}"
+        if [[ "$CURRENT_TYPE" != "$DETECTED_TYPE" ]]; then
+            FIXES+=("Content type: ${CURRENT_TYPE} → ${DETECTED_TYPE}")
+        fi
     fi
+
+    if [[ "$OCCURRENCE_COUNT" -gt 1 ]]; then
+        FIXES+=("Remove $((OCCURRENCE_COUNT - 1)) duplicate(s)")
+    fi
+
+    # Remove all existing content type metadata
+    if [[ "$OCCURRENCE_COUNT" -gt 0 ]]; then
+        remove_all_content_type_metadata "$FILE"
+    fi
+
+    # Add correct metadata on first line
+    sed -i.bak "1s/^/:_mod-docs-content-type: ${DETECTED_TYPE}\n\n/" "$FILE"
+    rm -f "${FILE}.bak"
+
+    # Show what was fixed
+    for fix in "${FIXES[@]}"; do
+        if [[ "$fix" == "Add"* ]]; then
+            echo "  + $fix"
+        else
+            echo "  * $fix"
+        fi
+    done
 
     echo ""
 }
