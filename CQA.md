@@ -163,6 +163,8 @@ Process:
    - Adds or updates `:_mod-docs-content-type:` metadata based on detection:
      * Files including `proc-`, `ref-`, or `con-` modules → ASSEMBLY
      * Files with `.Procedure` section followed by steps → PROCEDURE
+   - Ensures metadata is on the first line of the file (moves it if elsewhere)
+   - Removes duplicate occurrences of the metadata
    - Processes entire include tree recursively (master.adoc → assemblies → modules)
    - Shows ✓ for files with correct type, 📝 for files being changed
 
