@@ -89,17 +89,14 @@ detect_content_type() {
     # This makes it an ASSEMBLY
     if grep "^include::" "$file" 2>/dev/null | grep -qE "include::.*(proc-|ref-|con-)"; then
         echo "ASSEMBLY"
-        return
+        return 0
     fi
 
     # Check if file has .Procedure section followed by steps
     # Steps are lines starting with one or more dots followed by space (. .. ...)
-    if grep -q "^\.Procedure" "$file" 2>/dev/null; then
-        # Check for steps after .Procedure section
-        if grep -A 50 "^\.Procedure" "$file" | grep -qE "^\.\.* "; then
-            echo "PROCEDURE"
-            return
-        fi
+    if grep -q "^\.Procedure" "$file" 2>/dev/null && grep -A 50 "^\.Procedure" "$file" | grep -qE "^\.\.* "; then
+        echo "PROCEDURE"
+        return 0
     fi
 
     # Fall back to filename-based detection for concepts, references, and snippets
@@ -109,21 +106,22 @@ detect_content_type() {
 
     if [[ "$basename_file" == con-* ]]; then
         echo "CONCEPT"
-        return
+        return 0
     fi
 
     if [[ "$basename_file" == ref-* ]]; then
         echo "REFERENCE"
-        return
+        return 0
     fi
 
     if [[ "$basename_file" == snip-* ]]; then
         echo "SNIPPET"
-        return
+        return 0
     fi
 
     # Cannot determine - return empty
     echo ""
+    return 0
 }
 
 # Function to get current content type from file (must be on first line)
@@ -133,8 +131,10 @@ get_current_content_type() {
     first_line=$(head -1 "$file" 2>/dev/null)
     if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
         echo "${BASH_REMATCH[1]}"
+        return 0
     else
         echo ""
+        return 0
     fi
 }
 
