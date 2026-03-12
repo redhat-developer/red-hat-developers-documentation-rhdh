@@ -32,6 +32,14 @@ debug() {
   fi
 }
 
+  if ! command -v yq >/dev/null 2>&1; then
+    echo -e "${red}[ERROR] yq is required but not found. Please install yq (jq wrapper, NOT the mikefarah version) from https://kislyuk.github.io/yq/${norm}"
+    exit 1
+  elif yq --help 2>&1 | grep -q mikefarah; then
+    echo -e "${red}[ERROR] mikefarah version of yq found. Please install the jq wrapper from https://kislyuk.github.io/yq/ ${norm}"
+    exit 1
+  fi
+
 usage() {
   cat <<EOF
 
@@ -668,7 +676,7 @@ generate_migration_table() {
     echo -e "|*Quay*\n|1.28.1|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "|*Scaffolder Backend Module Quay*\n|2.14.0|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "|*Tekton*\n|3.33.3|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Roadie ArgoCD Backend*\n|4.6.0|\`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"    
+    echo -e "|*Roadie ArgoCD Backend*\n|4.6.0|\`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "|*Scaffolder Backend ArgoCD*\n|1.8.1|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "${green}Found $migration_count community plugins to migrate${norm}"
 
