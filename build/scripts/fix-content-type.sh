@@ -8,7 +8,7 @@
 #         If not provided, processes all .adoc files in artifacts/, assemblies/, modules/, and titles/
 #
 # Content type detection logic:
-# - ASSEMBLY: File includes one or more modules with proc-, ref-, or con- prefix
+# - ASSEMBLY: File includes one or more modules with proc-, ref-, or con- prefix, OR assembly- filename prefix
 # - PROCEDURE: File has .Procedure section followed by steps, OR proc- filename prefix
 # - CONCEPT: File has con- filename prefix (no distinctive content pattern)
 # - REFERENCE: File has ref- filename prefix (no distinctive content pattern)
@@ -99,10 +99,15 @@ detect_content_type() {
         return 0
     fi
 
-    # Fall back to filename-based detection for procedures, concepts, references, and snippets
-    # These cannot be reliably detected from content patterns
+    # Fall back to filename-based detection for all module types
+    # These cannot be reliably detected from content patterns alone
     local basename_file
     basename_file=$(basename "$file" .adoc)
+
+    if [[ "$basename_file" == assembly-* ]]; then
+        echo "ASSEMBLY"
+        return 0
+    fi
 
     if [[ "$basename_file" == proc-* ]]; then
         echo "PROCEDURE"
