@@ -34,8 +34,8 @@ for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TIT
     dest=${d/titles/titles-generated\/${BRANCH}};
     rm -rf "$d/build" || true
     CMD="podman run --interactive --rm --tty \
-          --volume "$(pwd)":/docs:Z \
-          --workdir "/docs/$d" \
+          --volume $(pwd):/docs:Z \
+          --workdir /docs/$d \
           quay.io/ivanhorvath/ccutil:amazing ccutil compile --format html-single --lang en-US --doctype article";
     echo -e -n "\nBuilding $t into $dest ...\n  ";
     echo "${CMD}" | sed -r -e "s/\  +/ \\\\\n    /g"

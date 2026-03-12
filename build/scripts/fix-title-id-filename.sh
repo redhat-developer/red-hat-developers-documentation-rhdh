@@ -34,10 +34,12 @@ get_includes() {
     # Extract include:: statements and resolve relative paths
     grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
         # Get repository root (where .git is)
-        local repo_root=$(cd "$(dirname "$file")" && git rev-parse --show-toplevel 2>/dev/null) || repo_root="."
+        local repo_root
+        repo_root=$(cd "$(dirname "$file")" && git rev-parse --show-toplevel 2>/dev/null) || repo_root="."
 
         # Resolve relative path from file's directory
-        local dir=$(dirname "$file")
+        local dir
+        dir=$(dirname "$file")
         local resolved_path
 
         if [[ "$include_path" == /* ]]; then
@@ -51,6 +53,7 @@ get_includes() {
         # Normalize and make relative to repo root
         if [[ -f "$resolved_path" ]]; then
             # Make path relative to repo root
+            # shellcheck disable=SC2269  # Intentional fallback to original path if realpath fails
             resolved_path=$(realpath --relative-to="$repo_root" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
             echo "$resolved_path"
         fi
@@ -186,6 +189,7 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
 
     if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^\{.*\}$ ]]; then
         # Convert gerund to imperative
+        # shellcheck disable=SC2001  # sed is appropriate for title transformations
         if [[ "$FIRST_WORD" == "Installing" ]]; then
             FIXED_TITLE=$(echo "$TITLE" | sed 's/^Installing /Install /')
         elif [[ "$FIRST_WORD" == "Deploying" ]]; then
@@ -238,14 +242,14 @@ CURRENT_ID=$(grep "\[id=" "$FILE" | head -1 | sed 's/.*\[id="//;s/.*\[id='"'"'//
 # 4. Clean up multiple/leading/trailing hyphens
 EXPECTED_ID=$(echo "$TITLE" | \
     sed 's/{/ /g; s/}/ /g' | \
-    tr 'A-Z' 'a-z' | \
+    tr '[:upper:]' '[:lower:]' | \
     sed 's/[^a-z0-9-]/-/g' | \
     sed 's/--*/-/g' | \
     sed 's/^-//;s/-$//')
 
 # Expected filename
 EXPECTED_FILENAME="${PREFIX}${EXPECTED_ID}.adoc"
-NEW_FILE="$(dirname $FILE)/$EXPECTED_FILENAME"
+NEW_FILE="$(dirname "$FILE")/$EXPECTED_FILENAME"
 
 # Check if changes are needed
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ] || [ "$FILE" != "$NEW_FILE" ]; then
@@ -299,7 +303,7 @@ fi
 # Update xrefs if ID changed
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
     XREF_COUNT=0
-    while read xref_file; do
+    while read -r xref_file; do
         sed -i.bak "s/xref:${CURRENT_ID}_/xref:${EXPECTED_ID}_/g" "$xref_file"
         rm -f "${xref_file}.bak"
         XREF_COUNT=$((XREF_COUNT + 1))
@@ -316,17 +320,17 @@ if [ "$FILE" != "$NEW_FILE" ]; then
     NEW_BASENAME=$(basename "$NEW_FILE")
 
     git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
-    echo "  * File: $(basename $FILE) → $NEW_BASENAME"
+    echo "  * File: $(basename "$FILE") → $NEW_BASENAME"
 
-    # Update includes
+    # Update includes - use process substitution to avoid subshell
     INCLUDE_COUNT=0
-    find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null | while read include_file; do
+    while read -r include_file; do
         if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
             sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
             rm -f "${include_file}.bak"
             INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
         fi
-    done
+    done < <(find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null)
 
     if [ $INCLUDE_COUNT -gt 0 ]; then
         echo "  * Updated $INCLUDE_COUNT include(s)"
@@ -402,7 +406,6 @@ echo "Processing ${#MODULE_FILES[@]} module file(s)"
 echo ""
 
 # Process each module file
-CHANGED_COUNT=0
 for file in "${MODULE_FILES[@]}"; do
     process_file "$file"
 done
