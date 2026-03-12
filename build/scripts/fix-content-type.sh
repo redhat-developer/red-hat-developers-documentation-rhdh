@@ -222,7 +222,7 @@ fix_procedure_structure() {
 
     # Get content after .Procedure section (until next section starting with .)
     local after_procedure
-    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\./{exit} flag' "$file" 2>/dev/null)
+    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.[A-Z]/{exit} flag' "$file" 2>/dev/null)
 
     # Check for include statements (don't fix files with includes - they're valid)
     local include_count
@@ -280,7 +280,7 @@ validate_procedure_structure() {
 
     # Get content after .Procedure section (until next section starting with .)
     local after_procedure
-    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\./{exit} flag' "$file" 2>/dev/null)
+    after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.[A-Z]/{exit} flag' "$file" 2>/dev/null)
 
     # Check for include statements (valid pattern - procedure steps in snippets)
     local include_count
@@ -399,7 +399,7 @@ process_file() {
         if [[ "$detected_type" == "PROCEDURE" ]]; then
             # Detect what needs fixing before we fix it
             local after_procedure
-            after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\./{exit} flag' "$file" 2>/dev/null)
+            after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.[A-Z]/{exit} flag' "$file" 2>/dev/null)
             local unnumbered_before
             unnumbered_before=$(echo "$after_procedure" | grep -c "^\* " || true)
             local nested_before
