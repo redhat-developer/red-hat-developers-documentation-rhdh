@@ -5,7 +5,7 @@
 #   file: Optional. If provided, fixes that file and all its includes recursively
 #         Example: ./fix-content-type.sh titles/install-rhdh-ocp/master.adoc
 #           Processes: master.adoc → assemblies → all included modules (recursive)
-#         If not provided, processes all .adoc files in artifacts/, assemblies/, and modules/
+#         If not provided, processes all .adoc files in artifacts/, assemblies/, modules/, and titles/
 #
 # Content type detection logic:
 # - ASSEMBLY: File includes one or more modules with proc-, ref-, or con- prefix
@@ -274,10 +274,10 @@ if [[ $# -eq 1 ]]; then
     echo ""
     collect_files "$TARGET_FILE" FILES_TO_PROCESS
 else
-    # Process all .adoc files in artifacts/, assemblies/, and modules/ directories
+    # Process all .adoc files in artifacts/, assemblies/, modules/, and titles/ directories
     while IFS= read -r file; do
         FILES_TO_PROCESS+=("$file")
-    done < <(find artifacts assemblies modules -name "*.adoc" -type f 2>/dev/null | sort)
+    done < <(find artifacts assemblies modules titles -name "*.adoc" -type f 2>/dev/null | sort)
 fi
 
 # Process each file
