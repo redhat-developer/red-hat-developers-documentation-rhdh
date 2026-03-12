@@ -28,7 +28,8 @@ get_includes() {
     # Extract include:: statements and resolve relative paths
     grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
         # Resolve relative path from file's directory
-        local dir=$(dirname "$file")
+        local dir
+        dir=$(dirname "$file")
         local resolved_path
 
         if [[ "$include_path" == /* ]]; then
@@ -42,8 +43,9 @@ get_includes() {
         # Normalize and make relative to repo root
         if [[ -f "$resolved_path" ]]; then
             # Make path relative to REPO_ROOT
-            resolved_path=$(realpath --relative-to="$REPO_ROOT" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
-            echo "$resolved_path"
+            local normalized_path
+            normalized_path=$(realpath --relative-to="$REPO_ROOT" "$resolved_path" 2>/dev/null) || normalized_path="$resolved_path"
+            echo "$normalized_path"
         fi
     done
 }
@@ -109,7 +111,8 @@ process_file() {
     local FILE="$1"
 
     # Detect content type from content
-    local DETECTED_TYPE=$(detect_content_type "$FILE")
+    local DETECTED_TYPE
+    DETECTED_TYPE=$(detect_content_type "$FILE")
 
     # Skip if we can't detect a type
     if [[ -z "$DETECTED_TYPE" ]]; then
@@ -118,7 +121,8 @@ process_file() {
     fi
 
     # Get current content type
-    local CURRENT_TYPE=$(get_current_content_type "$FILE")
+    local CURRENT_TYPE
+    CURRENT_TYPE=$(get_current_content_type "$FILE")
 
     # Check if change is needed
     if [[ "$CURRENT_TYPE" == "$DETECTED_TYPE" ]]; then
@@ -147,7 +151,6 @@ process_file() {
 }
 
 # Color codes for summary
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 

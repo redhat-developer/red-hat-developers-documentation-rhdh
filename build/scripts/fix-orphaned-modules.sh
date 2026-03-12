@@ -25,7 +25,6 @@ fi
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo "=== Find Orphaned Modules and Resources ==="
@@ -52,7 +51,8 @@ echo ""
 # Function to check if a file is included anywhere
 is_file_included() {
     local target_file="$1"
-    local basename=$(basename "$target_file")
+    local basename
+    basename=$(basename "$target_file")
 
     # Search for include:: statements that reference this file
     # We need to check:
@@ -72,6 +72,7 @@ is_file_included() {
     local pattern="$basename"
 
     # Replace common platform identifiers with {platform-id} pattern
+    # shellcheck disable=SC2001  # sed is appropriate here for complex multi-pattern replacement
     pattern=$(echo "$pattern" | sed 's/-\(eks\|aks\|gke\|ocp\|ocp-short\|osd-gcp\)-/-{[^}]*}-/g')
 
     # If pattern is different from basename, search for it
