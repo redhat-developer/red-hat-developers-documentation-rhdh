@@ -136,11 +136,79 @@ Requirements (CQA 2.1 Acceptance Criteria):
     - N/A if no preview features in the title
 
 Process:
+
+**⚠️ CRITICAL: FOLLOW ALL STEPS IN EXACT ORDER - DO NOT SKIP ANY STEP**
+
+- Complete ALL steps 1-17 in the exact order listed below (note: there is no step 6; step 5 contains internal sub-steps)
+- DO NOT skip any step, even if you think it's not needed
+- DO NOT batch multiple steps together - complete each step fully before proceeding
+- DO NOT jump ahead to later steps - follow the sequence precisely
+- If a step says "do not attempt to fix yet", DO NOT fix - just identify
+- Each step builds on previous steps - skipping breaks the process
+- When a step has internal sub-steps (like step 5 with STEP 0-7), complete ALL sub-steps in order
+
+**Steps 1-4: Initial Assessment and Validation**
+
 1. Read the main assembly file and all included modules
+
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
+
+   **REQUIRED**: Run the verification script on your target file:
+   ```bash
+   ./build/scripts/verify-content-type.sh titles/<your-title>/master.adoc
+   ```
+
+   **NOTE**: This script is imperative but not entirely sufficient. It verifies:
+   - PROCEDURE modules contain numbered/unnumbered steps or include snippets
+   - ASSEMBLY files include other modules using `include::` directive
+   - SNIPPET files do not have module-level anchor IDs or H1 headings
+   - Content type declarations are valid (ASSEMBLY, PROCEDURE, CONCEPT, REFERENCE, SNIPPET)
+
+   **Manual review still required**: Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why").
+
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
+
 4. Run Vale DITA validation to identify issues. Do not attempt to fix the issues yet.
-5. Fix all validation errors and warnings **in this exact order** (CRITICAL - do not skip or reorder):
+
+**Step 5: Title/ID/Filename Compliance (Multi-Step Process)**
+
+5. **TITLE/ID/FILENAME COMPLIANCE - CRITICAL MULTI-STEP PROCESS**
+
+   **IMPORTANT**: You MUST verify ID and filename alignment for ALL modules/assemblies, even if titles are already correct!
+
+   **STEP 0: MANDATORY VERIFICATION AND ALIGNMENT**
+
+   **REQUIRED**: Run the alignment script on your target file to automatically fix title/ID/filename compliance:
+   ```bash
+   ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
+   ```
+
+   **NOTE**: This script is imperative but not entirely sufficient. It automatically:
+   - Adds `:_mod-docs-content-type:` metadata if missing (CQA req #2)
+   - Fixes title form: gerund → imperative for procedures/assemblies (CQA req #8)
+     * "Installing" → "Install", "Deploying" → "Deploy"
+   - Aligns IDs and contexts to match title (preserving attribute names)
+     * `{product-short}` → `product-short` in IDs, NOT removed or replaced
+   - Renames files using `git mv` to match expected naming
+   - Updates all xrefs and include statements automatically
+   - Processes entire include tree recursively (master.adoc → assemblies → modules)
+
+   **Output**: Shows ✓ for aligned files, 📝 for files being changed with specific changes listed.
+
+   **Manual review still required**:
+   - Verify assembly titles use correct form (imperative if includes procedures, noun phrase otherwise)
+   - Verify attribute names are correctly preserved in IDs (not removed or replaced with values)
+   - Review git changes before committing
+
+   If manual fixes are needed, follow STEP 1-5 below, treating the existing title as the source of truth.
+
+   For modules/assemblies with incorrect titles (see requirement #8):
+   - Procedure modules must use imperative form (NOT gerund): "Install" not "Installing"
+   - Concept modules must use noun phrases (NOT imperative verbs): "Configuration options" not "Configure"
+   - Reference modules must use noun phrases (NOT imperative verbs): "API reference" not "Reference API"
+   - Task-based assemblies must use imperative form (NOT gerund): "Deploy the application" not "Deploying"
+
+   For EACH file needing fixes (title wrong OR ID/filename mismatch), complete ALL steps 1-5 in this exact order:
 
    **STEP 1: Fix titles FIRST** - The title is the source of truth
       - See requirement #8 for complete title requirements
@@ -173,6 +241,16 @@ Process:
       - Search for includes: `grep -r "include::.*old-filename" assemblies/ modules/`
       - Update include statements in assemblies: `include::modules/path/old-filename.adoc` → `include::modules/path/new-filename.adoc`
       - Verify no includes remain pointing to the old filename
+
+   **VERIFICATION CHECKPOINT - MANDATORY AFTER STEP 5**
+
+   After completing STEP 1-5 for ALL modules/assemblies with incorrect titles, verify by running the script again:
+
+   ```bash
+   ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
+   ```
+
+   All files should show ✓ (no changes needed). If any files show 📝 (changes made), review the changes and re-run the script until all files are aligned.
 
    **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
       - After reorganizing modules, check for orphaned files left in old directories
@@ -244,17 +322,53 @@ Process:
    = Install the Operator  ✓
    ```
 
-6. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
-7. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
-8. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
-9. Verify the assembly include statements do not go too deep (see requirement #5).
+**Steps 7-10: Content Structure Verification**
 
-10. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
-11. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
-12. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
-13. Verify all 14 acceptance criteria are met
-14. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
-15. Create pull request using the template at `.github/pull_request_template.md`:
+7. For all modules included in the title, verify short descriptions (see requirements #6, #7 and #10).
+
+   **REQUIRED**: Run the verification script on your target file:
+   ```bash
+   ./build/scripts/verify-short-descriptions.sh titles/<your-title>/master.adoc
+   ```
+
+   **NOTE**: This script is imperative but not entirely sufficient. It verifies:
+   - All modules/assemblies have `[role="_abstract"]` marker after the title
+   - No empty line follows `[role="_abstract"]` (abstract must start on next line)
+   - Abstract character count is 50-300 characters (requirement for AEM migration)
+   - Processes entire include tree recursively
+
+   **Manual review still required**:
+   - Verify abstract content is concise and describes what user accomplishes
+   - Ensure no self-referential language ("Learn about", "This section describes")
+   - Confirm abstract explains value/purpose (not just "What is X")
+   - For concepts: Should answer "What is this?" and "Why should users care?"
+   - For procedures: Should explain what the user accomplishes
+   - For references: Should describe the data being presented
+   - For assemblies: Should explain what user story/goal is addressed
+8. For all assemblies included in the title, verify the internal structure and content (see requirement #3).
+9. For all assemblies included in the title, verify it includes one unique story (see requirement #4).
+10. Verify the assembly include statements do not go too deep (see requirement #5).
+
+**Steps 11-13: Validation and Build**
+
+11. Re-run Vale DITA validation (vale --config .vale-dita-only.ini) to confirm 0 errors, only acceptable warnings, 0 suggestions. Fix the remaining alerts, and re-run Vale again.
+12. Run Vale default (vale --config .vale.ini) to verify language compliance (see requirement #10). Fix the errors and warnings.
+13. Run build validation on all titles (`build/scripts/build.sh`) to verify xrefs still resolve
+
+**Steps 14-17: Final Verification and Submission**
+
+14. **If `.claude/settings.json` was updated during this work**, verify it follows all requirements:
+   - ✓ All permissions are alphabetically sorted in the `allow` array
+   - ✓ Uses wildcard patterns instead of individual file paths (e.g., `"Bash(git add *)"` not `"Bash(git add file.adoc)"`)
+   - ✓ Contains no sensitive information (API keys, tokens, credentials)
+   - ✓ Contains no personal references (home directories, usernames, personal paths)
+   - ✓ Uses relative paths with `//` prefix for repository-relative paths (e.g., `"Read(//modules/**)"`)
+   - ✓ File read permissions are restricted to documentation directories only
+   - ✓ Valid JSON structure (run `jq . .claude/settings.json` to verify)
+   - Include settings.json changes in the commit with note in commit message explaining the permission additions
+15. Verify all 14 acceptance criteria are met
+16. Commit changes with message format: "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]"
+17. Create pull request using the template at `.github/pull_request_template.md`:
    ```bash
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
@@ -300,10 +414,23 @@ git mv proc-creating-template.adoc proc-create-template.adoc  ← WRONG: Filenam
 = Create a template
 ```
 
-✅ **CORRECT - Follow the sequence: Title → ID → Filename**
-1. Fix title FIRST: "Creating" → "Create"
-2. Update ID to match title: `[id="create-a-template_{context}"]`
-3. Rename file to match title: `proc-create-a-template.adoc`
+❌ **WRONG - Changing title but not completing ALL steps:**
+```asciidoc
+# File: proc-creating-template.adoc (OLD filename - STEP 4 forgotten!)
+[id="create-a-template_{context}"]  ← ID updated (STEP 2 done)
+= Create a template  ← Title fixed (STEP 1 done)
+# But file was NOT renamed with git mv!
+# Include statements still point to old filename!
+# Result: git status shows "M" not "R" - BUILD WILL BREAK!
+```
+
+✅ **CORRECT - Follow the sequence: Title → ID → Xrefs → Filename → Includes**
+1. STEP 1: Fix title FIRST: "Creating a template" → "Create a template"
+2. STEP 2: Update ID to match title: `[id="create-a-template_{context}"]` (remove prefix!)
+3. STEP 3: Update any xrefs pointing to old ID
+4. STEP 4: Rename file: `git mv proc-creating-template.adoc proc-create-a-template.adoc`
+5. STEP 5: Update includes in assemblies to use new filename
+6. Verify: `git status` shows "R" (renamed) not just "M" (modified)
 
 Verification checklist after completing work:
 - [ ] Vale DITA: 0 errors, only acceptable warnings, 0 suggestions
