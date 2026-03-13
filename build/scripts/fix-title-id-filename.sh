@@ -8,7 +8,9 @@
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
-# STEP 0: Add content type metadata if missing (CQA requirement #2)
+# STEP 0: Ensure content type metadata exists (CQA requirement #2)
+# - Reads module type from :_mod-docs-content-type: metadata (first line)
+# - If metadata is missing, runs fix-content-type.sh to add it automatically
 # STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
@@ -17,7 +19,7 @@
 #   - Assemblies without procedures: Use noun phrases ("API reference" not "Configure API")
 # STEP 2: Update IDs and context to match title
 # STEP 3: Update all xrefs pointing to changed ID
-# STEP 4: Rename file to match title
+# STEP 4: Rename file to match title (using prefix from content type)
 # STEP 5: Update all include statements
 
 set -e
@@ -32,10 +34,12 @@ get_includes() {
     # Extract include:: statements and resolve relative paths
     grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
         # Get repository root (where .git is)
-        local repo_root=$(cd "$(dirname "$file")" && git rev-parse --show-toplevel 2>/dev/null) || repo_root="."
+        local repo_root
+        repo_root=$(cd "$(dirname "$file")" && git rev-parse --show-toplevel 2>/dev/null) || repo_root="."
 
         # Resolve relative path from file's directory
-        local dir=$(dirname "$file")
+        local dir
+        dir=$(dirname "$file")
         local resolved_path
 
         if [[ "$include_path" == /* ]]; then
@@ -49,6 +53,7 @@ get_includes() {
         # Normalize and make relative to repo root
         if [[ -f "$resolved_path" ]]; then
             # Make path relative to repo root
+            # shellcheck disable=SC2269  # Intentional fallback to original path if realpath fails
             resolved_path=$(realpath --relative-to="$repo_root" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
             echo "$resolved_path"
         fi
@@ -80,41 +85,80 @@ collect_files() {
     done < <(get_includes "$file")
 }
 
+# Function to get content type from file (always first line)
+get_content_type() {
+    local file="$1"
+    local first_line
+    first_line=$(head -1 "$file" 2>/dev/null)
+    if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return 0
+    else
+        echo ""
+        return 0
+    fi
+}
+
 # Function to process a single file
 process_file() {
     local FILE="$1"
 
-# Determine module type from filename prefix
-BASENAME=$(basename "$FILE" .adoc)
-if [[ "$BASENAME" == proc-* ]]; then
-    PREFIX="proc-"
-    MODULE_TYPE="PROCEDURE"
-    EXPECTED_FORM="imperative"
-elif [[ "$BASENAME" == con-* ]]; then
-    PREFIX="con-"
-    MODULE_TYPE="CONCEPT"
-    EXPECTED_FORM="noun phrase"
-elif [[ "$BASENAME" == ref-* ]]; then
-    PREFIX="ref-"
-    MODULE_TYPE="REFERENCE"
-    EXPECTED_FORM="noun phrase"
-elif [[ "$BASENAME" == assembly-* ]]; then
-    PREFIX="assembly-"
-    MODULE_TYPE="ASSEMBLY"
-    # Assemblies use imperative form IF they include procedures, otherwise noun phrases
-    if grep -q "include::.*proc-.*\.adoc" "$FILE"; then
-        EXPECTED_FORM="imperative"
-    else
-        EXPECTED_FORM="noun phrase"
+# Determine module type from content type metadata (always)
+CONTENT_TYPE=$(get_content_type "$FILE")
+
+if [[ -z "$CONTENT_TYPE" ]]; then
+    # No content type metadata - run fix-content-type.sh to add it
+    SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    echo "  ! Running fix-content-type.sh to add missing metadata..."
+    "$SCRIPT_DIR/fix-content-type.sh" "$FILE" > /dev/null 2>&1 || true
+
+    # Re-read content type after fixing
+    CONTENT_TYPE=$(get_content_type "$FILE")
+
+    # If still no content type, skip this file
+    if [[ -z "$CONTENT_TYPE" ]]; then
+        echo "? $FILE (cannot determine content type even after running fix-content-type.sh)"
+        return 0
     fi
-elif [[ "$BASENAME" == snip-* ]]; then
-    PREFIX="snip-"
-    MODULE_TYPE="SNIPPET"
-    EXPECTED_FORM="any"
-else
-    echo "Error: Unknown module type for $FILE (filename must start with proc-, con-, ref-, assembly-, or snip-)"
-    exit 1
 fi
+
+# Determine prefix and expected form based on content type
+case "$CONTENT_TYPE" in
+    PROCEDURE)
+        PREFIX="proc-"
+        MODULE_TYPE="PROCEDURE"
+        EXPECTED_FORM="imperative"
+        ;;
+    CONCEPT)
+        PREFIX="con-"
+        MODULE_TYPE="CONCEPT"
+        EXPECTED_FORM="noun phrase"
+        ;;
+    REFERENCE)
+        PREFIX="ref-"
+        MODULE_TYPE="REFERENCE"
+        EXPECTED_FORM="noun phrase"
+        ;;
+    ASSEMBLY)
+        PREFIX="assembly-"
+        MODULE_TYPE="ASSEMBLY"
+        # Assemblies use imperative form IF they include procedures, otherwise noun phrases
+        if grep -q "include::.*proc-.*\.adoc" "$FILE"; then
+            EXPECTED_FORM="imperative"
+        else
+            EXPECTED_FORM="noun phrase"
+        fi
+        ;;
+    SNIPPET)
+        PREFIX="snip-"
+        MODULE_TYPE="SNIPPET"
+        EXPECTED_FORM="any"
+        ;;
+    *)
+        echo "? $FILE (unknown content type: $CONTENT_TYPE)"
+        return 0
+        ;;
+esac
 
 # Track if any changes will be made
 WILL_CHANGE=false
@@ -142,6 +186,7 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
 
     if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^\{.*\}$ ]]; then
         # Convert gerund to imperative
+        # shellcheck disable=SC2001  # sed is appropriate for title transformations
         if [[ "$FIRST_WORD" == "Installing" ]]; then
             FIXED_TITLE=$(echo "$TITLE" | sed 's/^Installing /Install /')
         elif [[ "$FIRST_WORD" == "Deploying" ]]; then
@@ -194,14 +239,14 @@ CURRENT_ID=$(grep "\[id=" "$FILE" | head -1 | sed 's/.*\[id="//;s/.*\[id='"'"'//
 # 4. Clean up multiple/leading/trailing hyphens
 EXPECTED_ID=$(echo "$TITLE" | \
     sed 's/{/ /g; s/}/ /g' | \
-    tr 'A-Z' 'a-z' | \
+    tr '[:upper:]' '[:lower:]' | \
     sed 's/[^a-z0-9-]/-/g' | \
     sed 's/--*/-/g' | \
     sed 's/^-//;s/-$//')
 
 # Expected filename
 EXPECTED_FILENAME="${PREFIX}${EXPECTED_ID}.adoc"
-NEW_FILE="$(dirname $FILE)/$EXPECTED_FILENAME"
+NEW_FILE="$(dirname "$FILE")/$EXPECTED_FILENAME"
 
 # Check if changes are needed
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ] || [ "$FILE" != "$NEW_FILE" ]; then
@@ -255,7 +300,7 @@ fi
 # Update xrefs if ID changed
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
     XREF_COUNT=0
-    while read xref_file; do
+    while read -r xref_file; do
         sed -i.bak "s/xref:${CURRENT_ID}_/xref:${EXPECTED_ID}_/g" "$xref_file"
         rm -f "${xref_file}.bak"
         XREF_COUNT=$((XREF_COUNT + 1))
@@ -272,17 +317,17 @@ if [ "$FILE" != "$NEW_FILE" ]; then
     NEW_BASENAME=$(basename "$NEW_FILE")
 
     git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
-    echo "  * File: $(basename $FILE) → $NEW_BASENAME"
+    echo "  * File: $(basename "$FILE") → $NEW_BASENAME"
 
-    # Update includes
+    # Update includes - use process substitution to avoid subshell
     INCLUDE_COUNT=0
-    find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null | while read include_file; do
+    while read -r include_file; do
         if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
             sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
             rm -f "${include_file}.bak"
             INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
         fi
-    done
+    done < <(find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null)
 
     if [ $INCLUDE_COUNT -gt 0 ]; then
         echo "  * Updated $INCLUDE_COUNT include(s)"
@@ -305,13 +350,15 @@ if [ $# -ne 1 ]; then
     echo "It processes the specified file and all its includes recursively."
     echo ""
     echo "It will:"
-    echo "  STEP 0: Add :_mod-docs-content-type: metadata if missing"
-    echo "  STEP 1: Fix title to use correct form (imperative for procedures/assemblies)"
-    echo "  STEP 2: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
-    echo "  STEP 3: Update [id=\"...\"] to match"
-    echo "  STEP 4: Update :context: for assemblies"
-    echo "  STEP 5: Rename file using git mv"
-    echo "  STEP 6: Update all xrefs and include statements"
+    echo "  STEP 0: Detect module type from :_mod-docs-content-type: metadata"
+    echo "          (falls back to filename prefix if no metadata present)"
+    echo "  STEP 1: Add :_mod-docs-content-type: metadata if missing"
+    echo "  STEP 2: Fix title to use correct form (imperative for procedures/assemblies)"
+    echo "  STEP 3: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
+    echo "  STEP 4: Update [id=\"...\"] to match"
+    echo "  STEP 5: Update :context: for assemblies"
+    echo "  STEP 6: Rename file using git mv (with prefix from content type)"
+    echo "  STEP 7: Update all xrefs and include statements"
     exit 1
 fi
 
@@ -336,9 +383,11 @@ for file in "${ALL_FILES[@]}"; do
         continue
     fi
 
-    # Check if file has module prefix
+    # Check if file has content type metadata or module prefix
+    content_type=$(get_content_type "$file")
     basename_file=$(basename "$file" .adoc)
-    if [[ "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
+
+    if [[ -n "$content_type" ]] || [[ "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
         MODULE_FILES+=("$file")
     else
         SKIPPED_FILES+=("$file")
@@ -354,7 +403,6 @@ echo "Processing ${#MODULE_FILES[@]} module file(s)"
 echo ""
 
 # Process each module file
-CHANGED_COUNT=0
 for file in "${MODULE_FILES[@]}"; do
     process_file "$file"
 done
