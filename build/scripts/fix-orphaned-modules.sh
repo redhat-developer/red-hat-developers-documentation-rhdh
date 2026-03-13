@@ -57,31 +57,41 @@ is_file_included() {
     # Search for include:: statements that reference this file
     # We need to check:
     # 1. Direct filename match
-    # 2. Relative path matches with exact filename
-    # 3. Includes using attributes in path (like {docdir}/file.adoc)
-    # 4. Includes using attributes in filename (like proc-something-{platform-id}-etc.adoc)
+    # 2. Includes using attributes (like proc-something-{platform-id}.adoc or {docdir}/file.adoc)
 
-    # First, try direct basename match (handles most cases)
+    # First, try direct basename match (handles most cases without attributes)
     # Use cut to extract only the include path, not the filename prefix from grep output
     if grep -r "^include::" . --include="*.adoc" 2>/dev/null | cut -d: -f2- | grep -q "$basename"; then
         return 0  # File is included
     fi
 
-    # Handle attribute substitution in filename (e.g., {platform-id}, {context})
-    # Common patterns: eks/aks/gke/ocp for platform-id, various contexts
-    # Create a regex pattern by replacing potential attribute values with attribute pattern
-    local pattern="$basename"
+    # Handle attribute substitution dynamically
+    # Find all include:: statements that contain {...} attributes
+    # Convert each to a regex pattern and check if our file matches any of them
+    while IFS= read -r include_line; do
+        # Extract the path from include::path[...]
+        local include_path
+        # Remove "include::" prefix and everything from "[" onwards
+        # shellcheck disable=SC2001  # sed is appropriate for regex capture groups
+        include_path=$(echo "$include_line" | sed 's/^include::\([^[]*\).*/\1/')
 
-    # Replace common platform identifiers with {platform-id} pattern
-    # Match platform ID with or without trailing hyphen (handles both -aks- and -aks.adoc)
-    # shellcheck disable=SC2001  # sed is appropriate here for complex multi-pattern replacement
-    pattern=$(echo "$pattern" | sed 's/-\(eks\|aks\|gke\|ocp\|ocp-short\|osd-gcp\)/-{[^}]*}/g')
+        # Get just the basename from the include path
+        local include_basename
+        include_basename=$(basename "$include_path")
 
-    # If pattern is different from basename, search for it
-    # Use cut to extract only the include path, not the filename prefix from grep output
-    if [[ "$pattern" != "$basename" ]] && grep -r "^include::" . --include="*.adoc" 2>/dev/null | cut -d: -f2- | grep -E "$pattern" | grep -qv "^//" ; then
-        return 0  # File is included with attribute substitution
-    fi
+        # Convert include pattern to regex by replacing {attribute} with wildcard
+        local regex_pattern
+        # Escape dots for regex matching (use [.] instead of \. for bash compatibility)
+        # shellcheck disable=SC2001  # sed is appropriate for complex global replacements
+        regex_pattern=$(echo "$include_basename" | sed 's/\./[.]/g')
+        # shellcheck disable=SC2001  # sed is appropriate for complex pattern replacement
+        regex_pattern=$(echo "$regex_pattern" | sed 's/{[^}]*}/.*/g')  # Replace {...} with .*
+
+        # Check if our file matches this pattern
+        if [[ "$basename" =~ ^${regex_pattern}$ ]]; then
+            return 0  # File matches an include with attribute substitution
+        fi
+    done < <(grep -r "^include::" . --include="*.adoc" 2>/dev/null | cut -d: -f2- | grep '{')
 
     return 1  # File is not included
 }
