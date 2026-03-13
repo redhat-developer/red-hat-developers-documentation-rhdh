@@ -97,16 +97,16 @@ Use these scripts for systematic tasks:
 
 5. **Build and Preview Generation:**
    ```bash
-   ./build/scripts/build-ccutil.sh              # Build all titles for current branch
-   ./build/scripts/build-ccutil.sh -b <branch>  # Build for specific branch
+   ./build/scripts/build-ccutil.sh              # ALWAYS run without arguments
    ```
+   - **IMPORTANT:** Always run without arguments (builds all titles for current branch)
    - Uses Podman to run ccutil container (quay.io/ivanhorvath/ccutil:amazing)
    - Processes all titles/*/master.adoc files (excludes rhdh-plugins-reference)
    - Generates HTML single-page output in titles-generated/${BRANCH}/
    - Copies referenced images to output directory
    - Creates navigation index.html
    - Runs htmltest for link validation
-   - Supports branch-specific builds and PR previews
+   - Supports branch-specific builds with `-b <branch>` flag (rarely needed)
 
 ### Reference Materials
 
