@@ -65,7 +65,7 @@ if [ -f "$VALE_TIMESTAMP" ]; then
   elif [ $days -ge 7 ]; then
     echo "[Vale] Syncing (${days} days since last sync)..."
     vale sync
-    echo $(date +%s) > "$VALE_TIMESTAMP"
+    date +%s > "$VALE_TIMESTAMP"
     echo "[Vale] Synced"
   else
     echo "[Vale] Skip (${days} days since last sync, < 7 days threshold)"
@@ -73,7 +73,7 @@ if [ -f "$VALE_TIMESTAMP" ]; then
 else
   echo "[Vale] Syncing (never synced before)..."
   vale sync
-  echo $(date +%s) > "$VALE_TIMESTAMP"
+  date +%s > "$VALE_TIMESTAMP"
   echo "[Vale] Synced"
 fi
 
