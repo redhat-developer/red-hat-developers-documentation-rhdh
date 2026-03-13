@@ -10,90 +10,60 @@ Many CQA requirements need to validate or process ALL files that make up a docum
 - All modules included by those assemblies
 - Recursively, all nested includes
 
-This helper extracts that complete file list for use in CQA validation commands.
+This helper provides a dedicated script to extract that complete file list for use in CQA validation commands.
 
-## Command
+## Script
 
+**Location:** [build/scripts/list-all-included-files-starting-from](../../build/scripts/list-all-included-files-starting-from)
+
+**Usage:**
 ```bash
-# Get all files included in a title
-grep -r "^include::" titles/<title-name>/ --include="*.adoc" \
-  | cut -d: -f2- \
-  | sed 's/^include::\([^[]*\).*/\1/' \
-  | sed 's|^\.\./|\1|' \
-  | sort -u
+./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc
 ```
 
-**Or using a more robust approach with the master.adoc as starting point:**
+**Output:** Space-separated list of all files (master.adoc + all recursively included files) on a single line
 
-```bash
-# Function to recursively find all included files
-find_includes() {
-  local file=$1
-  local dir=$(dirname "$file")
-
-  # Print the file itself
-  echo "$file"
-
-  # Find and process includes
-  grep "^include::" "$file" 2>/dev/null | while read -r line; do
-    # Extract include path
-    local include_path=$(echo "$line" | sed 's/^include::\([^[]*\).*/\1/')
-
-    # Resolve relative paths
-    if [[ "$include_path" == ../* ]]; then
-      include_path="$dir/$include_path"
-    elif [[ "$include_path" != /* ]]; then
-      include_path="$dir/$include_path"
-    fi
-
-    # Normalize path and recurse
-    include_path=$(realpath -m "$include_path" 2>/dev/null || echo "$include_path")
-    if [[ -f "$include_path" ]]; then
-      find_includes "$include_path"
-    fi
-  done
-}
-
-# Get all files for a title
-find_includes titles/<title-name>/master.adoc | sort -u
-```
+**How it works:**
+1. Starts from the specified file (e.g., master.adoc)
+2. Recursively extracts all `include::` statements
+3. Resolves relative paths (../) correctly
+4. Avoids infinite loops by tracking processed files
+5. Returns sorted, deduplicated list on a single line
 
 ## Example Usage
 
 **For titles/install-rhdh-osd-gcp/master.adoc:**
 
 ```bash
-# Simple approach - get files from directory
-grep -r "^include::" titles/install-rhdh-osd-gcp/ --include="*.adoc" \
-  | cut -d: -f2- \
-  | sed 's/^include::\([^[]*\).*/\1/' \
-  | sort -u
+./build/scripts/list-all-included-files-starting-from titles/install-rhdh-osd-gcp/master.adoc
+```
 
-# Example output:
-# assemblies/assembly-install-rhdh-osd-gcp.adoc
-# modules/install-rhdh-osd-gcp/proc-install-product-on-osd-short-on-gcp-short-using-the-operator.adoc
-# modules/install-rhdh-osd-gcp/proc-install-product-on-osd-short-on-gcp-short-using-the-helm-chart.adoc
+**Example output:**
+```
+/path/to/artifacts/attributes.adoc /path/to/modules/install-rhdh-osd-gcp/proc-install-product-on-osd-short-on-gcp-short-using-the-helm-chart.adoc /path/to/modules/install-rhdh-osd-gcp/proc-install-product-on-osd-short-on-gcp-short-using-the-operator.adoc titles/install-rhdh-osd-gcp/master.adoc
 ```
 
 ## Using with Vale
 
 **Vale DITA validation on title files:**
 ```bash
-vale --config .vale-dita-only.ini titles/<title-name>/master.adoc $(grep -r "^include::" titles/<title-name>/ --include="*.adoc" | cut -d: -f2- | sed 's/^include::\([^[]*\).*/\1/' | sed 's|^\.\./||' | sort -u)
+vale --config .vale-dita-only.ini \
+  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
 ```
 
 **Vale style validation on title files:**
 ```bash
-vale --config .vale.ini titles/<title-name>/master.adoc $(grep -r "^include::" titles/<title-name>/ --include="*.adoc" | cut -d: -f2- | sed 's/^include::\([^[]*\).*/\1/' | sed 's|^\.\./||' | sort -u)
+vale --config .vale.ini \
+  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
 ```
 
 ## Notes
 
-- The simple directory-based approach is usually sufficient for CQA work
-- It includes all .adoc files referenced within the title directory
-- Handles relative paths (../) for assemblies and modules
-- Removes duplicates with `sort -u`
-- Works with attribute substitution (Vale will expand attributes when processing)
+- Recursively follows all `include::` statements
+- Handles relative paths (../) and absolute paths correctly
+- Avoids infinite loops by tracking already-processed files
+- Returns sorted, deduplicated list
+- Works with attribute substitution in include paths (dynamically resolves {platform-id}, {context}, etc.)
 
 ## When to Use
 

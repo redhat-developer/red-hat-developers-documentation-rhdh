@@ -27,26 +27,16 @@ DAYS_OLD=$(( ($(date +%s) - $LAST_SYNC) / 86400 ))
 ```bash
 # For a specific title (recommended approach)
 vale --config .vale.ini \
-  titles/<title-name>/master.adoc \
-  $(grep -r "^include::" titles/<title-name>/ --include="*.adoc" | \
-    cut -d: -f2- | \
-    sed 's/^include::\([^[]*\).*/\1/' | \
-    sed 's|^\.\./||' | \
-    sort -u)
+  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
 ```
 
 **Example for install-rhdh-osd-gcp:**
 ```bash
 vale --config .vale.ini \
-  titles/install-rhdh-osd-gcp/master.adoc \
-  $(grep -r "^include::" titles/install-rhdh-osd-gcp/ --include="*.adoc" | \
-    cut -d: -f2- | \
-    sed 's/^include::\([^[]*\).*/\1/' | \
-    sed 's|^\.\./||' | \
-    sort -u)
+  $(./build/scripts/list-all-included-files-starting-from titles/install-rhdh-osd-gcp/master.adoc)
 ```
 
-**See also:** [get-title-files.md](get-title-files.md) for detailed explanation of file list extraction.
+**See also:** [get-title-files.md](get-title-files.md) for detailed explanation of the file list extraction script.
 
 **What .vale.ini validates:**
 ✅ Grammar (RedHat), Spelling, Terminology, Style (Google/Microsoft), Conscious language, Capitalization
