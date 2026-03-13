@@ -22,18 +22,37 @@ DAYS_OLD=$(( ($(date +%s) - $LAST_SYNC) / 86400 ))
 
 ### Step 2: Run Vale Grammar and Style Validation
 
-```bash
-# Validate title
-vale --config .vale.ini titles/<your-title>/
+**Validate title master.adoc and ALL included files:**
 
-# Validate specific directories
-vale --config .vale.ini assemblies/
-vale --config .vale.ini modules/admin/
+```bash
+# For a specific title (recommended approach)
+vale --config .vale.ini \
+  titles/<title-name>/master.adoc \
+  $(grep -r "^include::" titles/<title-name>/ --include="*.adoc" | \
+    cut -d: -f2- | \
+    sed 's/^include::\([^[]*\).*/\1/' | \
+    sed 's|^\.\./||' | \
+    sort -u)
 ```
+
+**Example for install-rhdh-osd-gcp:**
+```bash
+vale --config .vale.ini \
+  titles/install-rhdh-osd-gcp/master.adoc \
+  $(grep -r "^include::" titles/install-rhdh-osd-gcp/ --include="*.adoc" | \
+    cut -d: -f2- | \
+    sed 's/^include::\([^[]*\).*/\1/' | \
+    sed 's|^\.\./||' | \
+    sort -u)
+```
+
+**See also:** [get-title-files.md](get-title-files.md) for detailed explanation of file list extraction.
 
 **What .vale.ini validates:**
 ✅ Grammar (RedHat), Spelling, Terminology, Style (Google/Microsoft), Conscious language, Capitalization
 ❌ DITA compatibility (use .vale-dita-only.ini for CQA #1)
+
+**IMPORTANT:** Do NOT run `vale titles/<title>/` on the entire directory - this validates files NOT part of the title and produces misleading results. Always specify master.adoc and its includes.
 
 ### Step 3: Review Vale Alerts
 

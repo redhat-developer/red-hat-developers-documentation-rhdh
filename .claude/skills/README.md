@@ -15,7 +15,7 @@ This master workflow orchestrates the individual skills below in the correct seq
 
 ## Asciidoc
 
-1. [Content passes this Vale asciidoctor-dita-vale tool check with no errors or warn](cqa-01-content-passes-this-vale-asciidoctor-dita-vale-too.md)
+1. [Content passes AsciiDoc DITA Vale validation](cqa-01-asciidoctor-dita-vale.md)
 
 2. [Assembly structure](cqa-02-assembly-structure.md)
 
@@ -67,6 +67,10 @@ This master workflow orchestrates the individual skills below in the correct seq
 ---
 
 ## Utility Skills
+
+**Helper Functions:**
+
+- [Get Title Files](get-title-files.md) - Extract master.adoc and all included files for validation
 
 **Reference Updates:**
 

@@ -119,9 +119,12 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
   - [ ] Follow Red Hat OPL (Official Product List)
   - [ ] No hardcoded product names
 
-- [ ] **CQA #1: Vale DITA** - [Skill](skills/cqa-01-content-passes-this-vale-asciidoctor-dita-vale-too.md)
+- [ ] **CQA #1: Vale DITA** - [Skill](skills/cqa-01-asciidoctor-dita-vale.md)
   ```bash
-  vale --config .vale-dita-only.ini titles/<your-title>/
+  vale --config .vale-dita-only.ini \
+    titles/<your-title>/master.adoc \
+    $(grep -r "^include::" titles/<your-title>/ --include="*.adoc" | \
+      cut -d: -f2- | sed 's/^include::\([^[]*\).*/\1/' | sed 's|^\.\./||' | sort -u)
   ```
   - [ ] 0 errors
   - [ ] Only acceptable warnings (callouts, false positives)
@@ -131,7 +134,10 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
 
 - [ ] **CQA #12: Grammar** - [Skill](skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md)
   ```bash
-  vale --config .vale.ini titles/<your-title>/
+  vale --config .vale.ini \
+    titles/<your-title>/master.adoc \
+    $(grep -r "^include::" titles/<your-title>/ --include="*.adoc" | \
+      cut -d: -f2- | sed 's/^include::\([^[]*\).*/\1/' | sed 's|^\.\./||' | sort -u)
   ```
   - [ ] 0 errors
   - [ ] American English

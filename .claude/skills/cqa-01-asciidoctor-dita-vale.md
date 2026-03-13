@@ -1,6 +1,6 @@
-# CQA #1 - Asciidoc
+# CQA #1 - AsciiDoc DITA Vale
 
-## Content passes this Vale asciidoctor-dita-vale tool check with no errors or warnings
+## Content passes Vale asciidoctor-dita-vale tool check with no errors
 
 **Reference:** https://github.com/jhradilek/asciidoctor-dita-vale
 
@@ -8,20 +8,38 @@
 
 ## Command
 
-**Run Vale DITA validation:**
+**Run Vale DITA validation on title master.adoc and ALL included files:**
+
 ```bash
-vale --config .vale-dita-only.ini titles/<your-title>/
+# For a specific title (recommended approach)
+vale --config .vale-dita-only.ini \
+  titles/<title-name>/master.adoc \
+  $(grep -r "^include::" titles/<title-name>/ --include="*.adoc" | \
+    cut -d: -f2- | \
+    sed 's/^include::\([^[]*\).*/\1/' | \
+    sed 's|^\.\./||' | \
+    sort -u)
 ```
 
-**Or for specific files:**
+**Example for install-rhdh-osd-gcp:**
 ```bash
-vale --config .vale-dita-only.ini assemblies/assembly-*.adoc modules/*/proc-*.adoc
+vale --config .vale-dita-only.ini \
+  titles/install-rhdh-osd-gcp/master.adoc \
+  $(grep -r "^include::" titles/install-rhdh-osd-gcp/ --include="*.adoc" | \
+    cut -d: -f2- | \
+    sed 's/^include::\([^[]*\).*/\1/' | \
+    sed 's|^\.\./||' | \
+    sort -u)
 ```
+
+**See also:** [get-title-files.md](get-title-files.md) for detailed explanation of file list extraction.
 
 **Target Results:**
 - ✅ 0 errors
-- ✅ Only acceptable warnings (callouts, false positive concept links)
+- ✅ Only acceptable warnings (see below)
 - ✅ 0 suggestions
+
+**IMPORTANT:** Do NOT run `vale titles/<title>/` on the entire directory - this validates files NOT part of the title and produces misleading results. Always specify master.adoc and its includes.
 
 ## Notes
 
