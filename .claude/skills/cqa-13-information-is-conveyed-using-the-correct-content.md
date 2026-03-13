@@ -62,14 +62,15 @@ While RHDH documentation primarily uses Product documentation with modular struc
 
 **See [content-types.md](../resources/content-types.md) for complete definitions and guidance on choosing content types.**
 
-## Command
+## Validation
 
-**Run content type detection and validation:**
-```bash
-./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
-```
+**Note:** Content type metadata is automatically validated by CQA #3. This requirement focuses on manual verification that content matches declared types.
 
-This script validates that declared content types match actual content structure.
+**Manual checks:**
+- Review each module to ensure content aligns with its declared type
+- Verify PROCEDURE modules contain actual numbered steps (not just explanations)
+- Verify CONCEPT modules don't include step-by-step instructions
+- Verify REFERENCE modules contain lookup data (not lengthy explanations)
 
 ## Assessment Checklist
 
