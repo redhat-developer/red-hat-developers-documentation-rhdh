@@ -99,6 +99,52 @@ get_content_type() {
     fi
 }
 
+# Function to resolve an attribute value
+# Args: $1 = attribute name (without braces), $2 = file to search first
+# Returns: resolved value or original attribute name if not found
+resolve_attribute() {
+    local attr_name="$1"
+    local search_file="$2"
+    local attr_value=""
+
+    # First, try to find in the current file
+    if [[ -f "$search_file" ]]; then
+        attr_value=$(grep "^:${attr_name}:" "$search_file" 2>/dev/null | head -1 | sed "s/^:${attr_name}:[[:space:]]*//" | sed 's/[[:space:]]*$//')
+    fi
+
+    # If not found, try artifacts/attributes.adoc
+    if [[ -z "$attr_value" ]] && [[ -f "artifacts/attributes.adoc" ]]; then
+        attr_value=$(grep "^:${attr_name}:" "artifacts/attributes.adoc" 2>/dev/null | head -1 | sed "s/^:${attr_name}:[[:space:]]*//" | sed 's/[[:space:]]*$//')
+    fi
+
+    # If still not found, return the attribute name
+    if [[ -z "$attr_value" ]]; then
+        echo "$attr_name"
+    else
+        echo "$attr_value"
+    fi
+}
+
+# Function to expand all attributes in a string
+# Args: $1 = string with attributes, $2 = file to search first
+expand_attributes() {
+    local input="$1"
+    local search_file="$2"
+    local output="$input"
+
+    # Find all {attribute} patterns and expand them iteratively
+    while [[ "$output" =~ \{([^}]+)\} ]]; do
+        local attr_name="${BASH_REMATCH[1]}"
+        local attr_value
+        attr_value=$(resolve_attribute "$attr_name" "$search_file")
+
+        # Replace {attribute} with its value
+        output="${output//\{$attr_name\}/$attr_value}"
+    done
+
+    echo "$output"
+}
+
 # Function to process a single file
 process_file() {
     local FILE="$1"
@@ -170,12 +216,15 @@ if ! grep -q "^:_mod-docs-content-type:" "$FILE"; then
     WILL_CHANGE=true
 fi
 
-# Extract current title (H1 heading)
-TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
-if [ -z "$TITLE" ]; then
+# Extract current title (H1 heading) and expand attributes
+TITLE_RAW=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
+if [ -z "$TITLE_RAW" ]; then
     echo "Error: No title found in $FILE (looking for '= Title')"
     exit 1
 fi
+
+# Expand any attributes in the title (e.g., {title} → actual title value)
+TITLE=$(expand_attributes "$TITLE_RAW" "$FILE")
 
 # STEP 1: Check if title needs fixing
 FIXED_TITLE="$TITLE"
@@ -383,11 +432,18 @@ for file in "${ALL_FILES[@]}"; do
         continue
     fi
 
+    # Skip attributes.adoc and master.adoc files (special files)
+    basename_file=$(basename "$file")
+    if [[ "$basename_file" == "attributes.adoc" ]] || [[ "$basename_file" == "master.adoc" ]]; then
+        SKIPPED_FILES+=("$file")
+        continue
+    fi
+
     # Check if file has content type metadata or module prefix
     content_type=$(get_content_type "$file")
-    basename_file=$(basename "$file" .adoc)
+    basename_no_ext=$(basename "$file" .adoc)
 
-    if [[ -n "$content_type" ]] || [[ "$basename_file" =~ ^(proc|con|ref|assembly|snip)- ]]; then
+    if [[ -n "$content_type" ]] || [[ "$basename_no_ext" =~ ^(proc|con|ref|assembly|snip)- ]]; then
         MODULE_FILES+=("$file")
     else
         SKIPPED_FILES+=("$file")
