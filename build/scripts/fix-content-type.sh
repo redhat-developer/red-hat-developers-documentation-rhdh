@@ -400,26 +400,55 @@ validate_procedure_structure() {
 process_file() {
     local file="$1"
 
-    # Skip attributes.adoc files - they are not modular doc modules
+    # Handle special files with fixed content types
     local basename_file
     basename_file=$(basename "$file")
-    if [[ "$basename_file" == "attributes.adoc" ]]; then
-        return 0
-    fi
 
-    # master.adoc files are not modular doc modules and should not have content type
-    if [[ "$basename_file" == "master.adoc" ]]; then
+    # attributes.adoc files are SNIPPET type
+    if [[ "$basename_file" == "attributes.adoc" ]]; then
+        local current_type
+        current_type=$(get_current_content_type "$file")
         local occurrence_count
         occurrence_count=$(count_content_type_occurrences "$file")
 
-        if [[ "$occurrence_count" -eq 0 ]]; then
+        if [[ "$current_type" == "SNIPPET" ]] && [[ "$occurrence_count" -eq 1 ]]; then
             # Compliant - no output
             return 0
         else
+            # Fix needed
             echo ""
             echo "📝 $file"
-            echo "  - Remove content type metadata (master.adoc should not have content type)"
-            remove_all_content_type_metadata "$file"
+            if [[ "$occurrence_count" -gt 0 ]]; then
+                remove_all_content_type_metadata "$file"
+            fi
+            sed -i.bak "1s/^/:_mod-docs-content-type: SNIPPET\n\n/" "$file"
+            rm -f "${file}.bak"
+            echo "  + Add :_mod-docs-content-type: SNIPPET"
+            echo ""
+            return 0
+        fi
+    fi
+
+    # master.adoc files are ASSEMBLY type
+    if [[ "$basename_file" == "master.adoc" ]]; then
+        local current_type
+        current_type=$(get_current_content_type "$file")
+        local occurrence_count
+        occurrence_count=$(count_content_type_occurrences "$file")
+
+        if [[ "$current_type" == "ASSEMBLY" ]] && [[ "$occurrence_count" -eq 1 ]]; then
+            # Compliant - no output
+            return 0
+        else
+            # Fix needed
+            echo ""
+            echo "📝 $file"
+            if [[ "$occurrence_count" -gt 0 ]]; then
+                remove_all_content_type_metadata "$file"
+            fi
+            sed -i.bak "1s/^/:_mod-docs-content-type: ASSEMBLY\n\n/" "$file"
+            rm -f "${file}.bak"
+            echo "  + Add :_mod-docs-content-type: ASSEMBLY"
             echo ""
             return 0
         fi
