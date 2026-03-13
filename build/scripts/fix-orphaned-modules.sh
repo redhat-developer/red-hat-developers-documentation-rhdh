@@ -62,7 +62,8 @@ is_file_included() {
     # 4. Includes using attributes in filename (like proc-something-{platform-id}-etc.adoc)
 
     # First, try direct basename match (handles most cases)
-    if grep -r "^include::" . --include="*.adoc" 2>/dev/null | grep -q "$basename"; then
+    # Use cut to extract only the include path, not the filename prefix from grep output
+    if grep -r "^include::" . --include="*.adoc" 2>/dev/null | cut -d: -f2- | grep -q "$basename"; then
         return 0  # File is included
     fi
 
@@ -76,7 +77,8 @@ is_file_included() {
     pattern=$(echo "$pattern" | sed 's/-\(eks\|aks\|gke\|ocp\|ocp-short\|osd-gcp\)-/-{[^}]*}-/g')
 
     # If pattern is different from basename, search for it
-    if [[ "$pattern" != "$basename" ]] && grep -r "^include::" . --include="*.adoc" 2>/dev/null | grep -E "$pattern" | grep -qv "^//" ; then
+    # Use cut to extract only the include path, not the filename prefix from grep output
+    if [[ "$pattern" != "$basename" ]] && grep -r "^include::" . --include="*.adoc" 2>/dev/null | cut -d: -f2- | grep -E "$pattern" | grep -qv "^//" ; then
         return 0  # File is included with attribute substitution
     fi
 
