@@ -110,6 +110,11 @@ for file in "${FILES_TO_CHECK[@]}"; do
         continue
     fi
 
+    # Skip template files (*.template.adoc) - these are source files for generation, not meant to be included
+    if [[ "$file" == *.template.adoc ]]; then
+        continue
+    fi
+
     CHECKED=$((CHECKED + 1))
 
     # Show progress every 50 files
