@@ -28,7 +28,8 @@ get_includes() {
     # Extract include:: statements and resolve relative paths
     grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
         # Resolve relative path from file's directory
-        local dir=$(dirname "$file")
+        local dir
+        dir=$(dirname "$file")
         local resolved_path
 
         if [[ "$include_path" == /* ]]; then
@@ -42,6 +43,7 @@ get_includes() {
         # Normalize and make relative to repo root
         if [[ -f "$resolved_path" ]]; then
             # Make path relative to REPO_ROOT
+            # shellcheck disable=SC2269  # Intentional fallback to original path if realpath fails
             resolved_path=$(realpath --relative-to="$REPO_ROOT" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
             echo "$resolved_path"
         fi

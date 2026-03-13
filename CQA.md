@@ -9,6 +9,23 @@ Use this prompt to request CQA 2.1 (Content Quality Assessment) compliance work 
 3. Replace `[PATH TO ASSEMBLY FILE]` with the actual path to the main assembly file for that title
 4. Submit the prompt to Claude Code
 
+## Automated Workflows
+
+When you create a pull request, the following automated workflows will run:
+
+1. **Content Quality Assessment** (`.github/workflows/content-quality-assessment.yml`)
+   - Checks content type metadata compliance
+   - Validates title/ID/filename alignment
+   - Detects orphaned modules
+   - Posts actionable PR comments with fix suggestions
+
+2. **Shellcheck** (`.github/workflows/shellcheck.yml`)
+   - Validates all modified shell scripts
+   - Posts code review comments for any issues found
+   - All findings reported as warnings (non-blocking)
+
+These workflows help catch issues early and provide automated suggestions. All findings should be reviewed and addressed before merge.
+
 ---
 
 ## Prompt Template
@@ -31,12 +48,14 @@ Requirements (CQA 2.1 Acceptance Criteria):
    - Use official templates: assemblies, concept modules, procedure modules, reference modules, snippets
    - Each module has correct `:_mod-docs-content-type:` metadata (ASSEMBLY, CONCEPT, PROCEDURE, REFERENCE, SNIPPET)
    - Proper file naming conventions: `assembly-title.adoc`, `con-title.adoc`, `proc-title.adoc`, `ref-title.adoc`, `snip-*.adoc` (Convert title to lowercase with hyphens: "Install the Operator" → `proc-install-the-operator.adoc`)
+     * Standard prefixes required: `assembly-`, `con-`, `proc-`, `ref-`, `snip-`
+     * Alternative prefixes detected as violations: `concept-`, `procedure-`, `reference-`, `con_`, `proc_`, `ref_`, `snip_` (use `git mv` to rename)
    - Anchors follow format: `[id="title_{context}"]` (Convert title to lowercase with hyphens: "Install the Operator" → `install-the-operator_{context}`)
    - **No modules nested within modules** - modules should only be included in assemblies
    - **Snippets** (`:_mod-docs-content-type: SNIPPET`) contain reusable content blocks but NO structural elements (no anchors, H1 headings, or block titles like .Prerequisites)
    - **Module-specific rules**:
      * Concept modules: Explain "what" and "why"; no step-by-step instructions; optional subheadings allowed
-     * Procedure modules: Step-by-step instructions only; NO custom subheadings (only standard: .Prerequisites, .Procedure, .Verification, .Troubleshooting, .Next steps); numbered lists for multi-step, bullets for single-step
+     * Procedure modules: Step-by-step instructions only; NO custom subheadings (only standard: .Prerequisites, .Procedure, .Verification, .Troubleshooting, .Next steps); `.Procedure` section required; numbered lists (`. step`) for multi-step (2+), unnumbered list (`* step`) for single-step (fix-content-type.sh auto-converts single numbered steps to unnumbered)
      * Reference modules: Lookup data in lists/tables; optional subheadings allowed for complex content
      * Assemblies: Introduction + include statements only; no detailed content
 
@@ -153,18 +172,42 @@ Process:
 
 2. Verify that the information is conveyed using the correct content type (See requirement #11). Adapt the content type accordingly.
 
-   **REQUIRED**: Run the verification script on your target file:
+   **REQUIRED**: Run the content type fix script on your target file:
    ```bash
-   ./build/scripts/verify-content-type.sh titles/<your-title>/master.adoc
+   ./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
    ```
 
-   **NOTE**: This script is imperative but not entirely sufficient. It verifies:
-   - PROCEDURE modules contain numbered/unnumbered steps or include snippets
-   - ASSEMBLY files include other modules using `include::` directive
-   - SNIPPET files do not have module-level anchor IDs or H1 headings
-   - Content type declarations are valid (ASSEMBLY, PROCEDURE, CONCEPT, REFERENCE, SNIPPET)
+   **NOTE**: This script is imperative but not entirely sufficient. It automatically:
+   - **Detects content type from file content analysis and filename**:
+     * **Content analysis first** (most reliable):
+       - Files including `proc-`, `ref-`, or `con-` modules → ASSEMBLY
+       - Files with `.Procedure` section → PROCEDURE
+     * **Filename-based fallback detection**:
+       - Standard prefixes: `assembly-`, `proc-`, `con-`, `ref-`, `snip-`
+       - Alternative prefixes (detected with warnings): `proc_`, `procedure-`, `procedure_`, `con_`, `concept-`, `concept_`, `ref_`, `reference-`, `reference_`, `snip_`
+   - **Auto-fixes common issues**:
+     * Converts single numbered steps in `.Procedure` sections to unnumbered items (modular docs requirement)
+     * Adds or updates `:_mod-docs-content-type:` metadata
+     * Ensures metadata is on the first line of the file
+     * Removes duplicate metadata occurrences
+   - **PROCEDURE structure validation**:
+     * Validates `.Procedure` section presence
+     * Accepts include statements, 1 unnumbered item, or 2+ numbered items
+     * Flags missing sections or invalid structures
+   - **Summary output with violation breakdown**:
+     * Shows compliant files count
+     * Lists filename violations (require manual `git mv`)
+     * Lists missing `.Procedure` sections (require manual addition)
+     * Shows auto-fixed files count
+   - Processes entire include tree recursively (master.adoc → assemblies → modules)
+   - Shows ✓ for compliant files, 📝 for files being auto-fixed, ⚠️ for files with warnings
 
-   **Manual review still required**: Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why").
+   **Manual review still required**:
+   - Verify the content semantically matches the declared type (e.g., procedures actually describe step-by-step instructions, concepts explain "what" and "why")
+   - Fix filename violations (use `git mv` to rename files with alternative prefixes to standard prefixes)
+   - Add missing `.Procedure` sections to PROCEDURE files flagged by the script
+   - Files that cannot be auto-detected must be manually verified and corrected
+   - The script detects patterns and filenames, not semantic meaning - you must verify correctness
 
 3. Verify that the content type metadata is present (See requirement #2). Add missing content type metadata.
 
@@ -184,14 +227,17 @@ Process:
    ```
 
    **NOTE**: This script is imperative but not entirely sufficient. It automatically:
-   - Adds `:_mod-docs-content-type:` metadata if missing (CQA req #2)
-   - Fixes title form: gerund → imperative for procedures/assemblies (CQA req #8)
+   - **Ensures content type metadata exists** (CQA req #2):
+     * Reads `:_mod-docs-content-type:` metadata from first line
+     * If missing, automatically runs `fix-content-type.sh` to add it
+     * Always relies on metadata, never guesses from filename
+   - **Fixes title form**: gerund → imperative for procedures/assemblies (CQA req #8)
      * "Installing" → "Install", "Deploying" → "Deploy"
-   - Aligns IDs and contexts to match title (preserving attribute names)
+   - **Aligns IDs and contexts to match title** (preserving attribute names)
      * `{product-short}` → `product-short` in IDs, NOT removed or replaced
-   - Renames files using `git mv` to match expected naming
-   - Updates all xrefs and include statements automatically
-   - Processes entire include tree recursively (master.adoc → assemblies → modules)
+   - **Renames files** using `git mv` to match expected naming
+   - **Updates all xrefs and include statements** automatically
+   - **Processes entire include tree** recursively (master.adoc → assemblies → modules)
 
    **Output**: Shows ✓ for aligned files, 📝 for files being changed with specific changes listed.
 
@@ -253,11 +299,31 @@ Process:
    All files should show ✓ (no changes needed). If any files show 📝 (changes made), review the changes and re-run the script until all files are aligned.
 
    **STEP 6: Remove orphaned modules** - Clean up modules not included in any title
-      - After reorganizing modules, check for orphaned files left in old directories
-      - Search for modules not referenced anywhere: Compare all module files against include statements
-      - Remove orphaned modules: `git rm modules/old-category/orphaned-module.adoc`
-      - Remove empty directories after cleanup
-      - Example: After moving Customizing modules, remove unreferenced files from old directories
+
+   **REQUIRED**: Run the orphaned modules detection script:
+   ```bash
+   ./build/scripts/fix-orphaned-modules.sh
+   ```
+
+   **NOTE**: This script is imperative but not entirely sufficient. It automatically:
+   - Scans all .adoc files in `artifacts/`, `assemblies/`, and `modules/` directories
+   - Searches for `include::` statements referencing each file
+   - Handles attribute substitution patterns (e.g., `{platform-id}`, `{docdir}`)
+   - Lists orphaned files (not referenced by any include statement)
+   - Runs in dry-run mode by default (use `--execute` flag to delete files)
+
+   **Output**: Shows count of orphaned files and their paths. Review the list before deleting.
+
+   To delete orphaned files after review:
+   ```bash
+   ./build/scripts/fix-orphaned-modules.sh --execute
+   ```
+
+   **Manual review still required**:
+   - Verify listed files are truly orphaned (not referenced via complex attribute substitution)
+   - Check if any files should be kept for future use or other titles
+   - Review git changes after deletion
+   - Remove empty directories after cleanup if needed
 
    **STEP 7: Fix other issues** (only after title/ID/filename are aligned)
       - Add `[role="_abstract"]` short descriptions (50-300 chars) to all modules
@@ -373,7 +439,7 @@ Process:
    gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
    **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
 
-   **Version(s):** <version>
+   **Version(s):** main
 
    **Issue:** https://issues.redhat.com/browse/RHIDP-XXXXX
 
