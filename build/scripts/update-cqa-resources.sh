@@ -12,7 +12,7 @@ VALE_TIMESTAMP="$PROJECT_ROOT/.claude/.vale-sync-timestamp"
 update_if_old() {
   local file=$1 url=$2 name=$3
 
-  if [ ! -f "$file" ]; then
+  if [[ ! -f "$file" ]]; then
     echo "[$name] Creating..."
     curl -sL "$url" -o "$file"
     echo "[$name] Created"
@@ -21,12 +21,12 @@ update_if_old() {
 
   local days=$(( ($(date +%s) - $(stat -c %Y "$file")) / 86400 ))
 
-  if [ $days -lt 1 ]; then
+  if [[ $days -lt 1 ]]; then
     echo "[$name] Skip (updated today)"
     return
   fi
 
-  if [ $days -ge 7 ]; then
+  if [[ $days -ge 7 ]]; then
     echo "[$name] Updating (${days} days old)..."
     curl -sL "$url" -o "$file"
     echo "[$name] Updated"
@@ -57,12 +57,12 @@ update_if_old \
   "Modular Docs"
 
 # Update Vale styles
-if [ -f "$VALE_TIMESTAMP" ]; then
+if [[ -f "$VALE_TIMESTAMP" ]]; then
   days=$(( ($(date +%s) - $(cat "$VALE_TIMESTAMP")) / 86400 ))
 
-  if [ $days -lt 1 ]; then
+  if [[ $days -lt 1 ]]; then
     echo "[Vale] Skip (synced today)"
-  elif [ $days -ge 7 ]; then
+  elif [[ $days -ge 7 ]]; then
     echo "[Vale] Syncing (${days} days since last sync)..."
     vale sync
     date +%s > "$VALE_TIMESTAMP"
