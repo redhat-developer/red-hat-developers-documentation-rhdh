@@ -73,8 +73,9 @@ is_file_included() {
     local pattern="$basename"
 
     # Replace common platform identifiers with {platform-id} pattern
+    # Match platform ID with or without trailing hyphen (handles both -aks- and -aks.adoc)
     # shellcheck disable=SC2001  # sed is appropriate here for complex multi-pattern replacement
-    pattern=$(echo "$pattern" | sed 's/-\(eks\|aks\|gke\|ocp\|ocp-short\|osd-gcp\)-/-{[^}]*}-/g')
+    pattern=$(echo "$pattern" | sed 's/-\(eks\|aks\|gke\|ocp\|ocp-short\|osd-gcp\)/-{[^}]*}/g')
 
     # If pattern is different from basename, search for it
     # Use cut to extract only the include path, not the filename prefix from grep output
