@@ -15,7 +15,8 @@ When starting CQA 2.1 compliance for any title:
    Read .claude/skills/cqa-master-workflow.md, .claude/cqa-checklist.md, .claude/MEMORY.md
    ```
    - The master workflow orchestrates all 17 CQA requirements in optimal order
-   - It aligns with the checklist workflow phases
+   - The checklist follows the same 5-phase structure (updated 2026-03-13)
+   - **Idempotency requirement:** Re-execute each requirement until no changes, then re-run entire workflow until stable
 
 2. **VERIFY required information** - If any are missing, ASK the user:
    - JIRA ticket number (e.g., RHIDP-12345)
@@ -24,7 +25,13 @@ When starting CQA 2.1 compliance for any title:
 
 3. **THEN:** Use the master workflow as the guide
    - Create a TodoWrite with items from cqa-master-workflow.md
-   - Follow the 6 phases in sequence
+   - Follow the 5 phases in sequence:
+     - Phase 0: Resources
+     - Phase 1: Structure & Content Type (CQA #3, #13)
+     - Phase 2: Short Descriptions & Titles (CQA #8, #9, #10, #11)
+     - Phase 3: Assembly Structure (CQA #2, #5, #4, #6, #7)
+     - Phase 4: Names & Validation (CQA #16, #1, #12, #17)
+     - Phase 5: Links & Build (CQA #14, #15)
    - Use individual CQA skills (.claude/skills/cqa-##-*.md) for detailed assessment
 
 4. **IMPORTANT:** Fill in the checklist header:
@@ -34,6 +41,7 @@ When starting CQA 2.1 compliance for any title:
 
 5. **NEVER claim completion unless:**
    - ALL checkbox items are marked ✓
+   - Idempotency verified (re-running workflow produces no changes)
    - TodoWrite shows all tasks complete
    - User has explicitly verified completion
 
@@ -71,8 +79,13 @@ Use these scripts for systematic tasks:
    ./build/scripts/fix-orphaned-modules.sh          # Dry-run (lists only)
    ./build/scripts/fix-orphaned-modules.sh --execute # Actually deletes
    ```
-   - Finds files not referenced by any include
-   - Handles attribute substitution patterns
+   - Finds files not referenced by any include statement
+   - **Dynamic attribute detection** (updated 2026-03-13):
+     - Automatically detects ANY `{...}` attribute substitution
+     - No hardcoded patterns - works with {platform-id}, {context}, {product}, future attributes
+     - Converts include patterns to regex (e.g., `proc-install-on-{platform-id}.adoc` → `proc-install-on-.*[.]adoc`)
+   - Excludes template files (*.template.adoc) - these are code generation sources
+   - Uses `cut -d: -f2-` to extract only include paths (not grep filename prefixes)
 
 4. **Short Description Verification:**
    ```bash
@@ -137,6 +150,13 @@ See `.claude/skills/update-all-resources.md` for details.
 5. **Update includes last:** Fix filenames before updating include statements
 6. **Check SSG currency:** Before style-related CQA work, ensure SSG is current (within 7 days)
 7. **Sync Vale styles:** Before Vale validation (CQA #1, #12), ensure Vale is synced (within 7 days)
+8. **Idempotency:** Re-run each CQA requirement until no changes, then re-run full workflow until stable
+9. **Settings.json hygiene:**
+   - Use wildcard patterns (e.g., `Bash(find *)`) not specific commands
+   - Never commit sensitive information (usernames, API keys, absolute paths with usernames)
+   - Use relative paths (.claude, .claude/resources) not absolute paths
+   - Alphabetize permissions for maintainability
+   - Verify with `jq . .claude/settings.json` before committing
 
 ### Common Pitfalls to Avoid
 
