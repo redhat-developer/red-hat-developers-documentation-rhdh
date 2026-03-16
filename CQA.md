@@ -166,7 +166,7 @@ Available scripts for CQA 2.1 compliance:
 ./build/scripts/fix-orphaned-modules.sh --execute # Delete
 
 # Short description verification
-./build/scripts/verify-short-descriptions.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-09-verify-short-description-format.sh titles/<your-title>/master.adoc
 
 # Build and preview generation
 ./build/scripts/build-ccutil.sh              # Build all titles

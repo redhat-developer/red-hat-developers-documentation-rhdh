@@ -89,7 +89,7 @@ Use these scripts for systematic tasks:
 
 4. **Short Description Verification:**
    ```bash
-   ./build/scripts/verify-short-descriptions.sh titles/<title>/master.adoc
+   ./build/scripts/cqa-09-verify-short-description-format.sh titles/<title>/master.adoc
    ```
    - Verifies [role="_abstract"] presence
    - Checks 50-300 character requirement

@@ -48,7 +48,7 @@
 
 - [ ] **CQA #9: Short description format** - [Skill](skills/cqa-09-short-description-format.md)
   ```bash
-  ./build/scripts/verify-short-descriptions.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-09-verify-short-description-format.sh titles/<your-title>/master.adoc
   ```
   - [ ] `[role="_abstract"]` marker present
   - [ ] 50-300 characters
