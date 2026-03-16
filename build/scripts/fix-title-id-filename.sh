@@ -276,6 +276,47 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
         WILL_CHANGE=true
         TITLE="$FIXED_TITLE"
     fi
+
+    # Check for additional gerunds in the rest of the title (e.g., "Enable and authorizing")
+    # Look for " and <word>ing " patterns and convert them to imperative
+    while [[ "$FIXED_TITLE" =~ (.*[[:space:]]and[[:space:]])([A-Za-z]+ing)([[:space:]].*)$ ]]; do
+        PREFIX="${BASH_REMATCH[1]}"
+        GERUND="${BASH_REMATCH[2]}"
+        SUFFIX="${BASH_REMATCH[3]}"
+
+        # Convert common gerunds to imperative
+        case "$GERUND" in
+            "installing") IMPERATIVE="install" ;;
+            "deploying") IMPERATIVE="deploy" ;;
+            "configuring") IMPERATIVE="configure" ;;
+            "creating") IMPERATIVE="create" ;;
+            "setting") IMPERATIVE="set" ;;
+            "enabling") IMPERATIVE="enable" ;;
+            "disabling") IMPERATIVE="disable" ;;
+            "building") IMPERATIVE="build" ;;
+            "running") IMPERATIVE="run" ;;
+            "managing") IMPERATIVE="manage" ;;
+            "upgrading") IMPERATIVE="upgrade" ;;
+            "updating") IMPERATIVE="update" ;;
+            "adding") IMPERATIVE="add" ;;
+            "removing") IMPERATIVE="remove" ;;
+            "deleting") IMPERATIVE="delete" ;;
+            "authorizing") IMPERATIVE="authorize" ;;
+            "validating") IMPERATIVE="validate" ;;
+            "testing") IMPERATIVE="test" ;;
+            "monitoring") IMPERATIVE="monitor" ;;
+            *)
+                # Generic: remove "ing" suffix
+                IMPERATIVE=$(echo "$GERUND" | sed 's/ing$//')
+                ;;
+        esac
+
+        FIXED_TITLE="${PREFIX}${IMPERATIVE}${SUFFIX}"
+        TITLE_CHANGED=true
+        WILL_CHANGE=true
+    done
+
+    TITLE="$FIXED_TITLE"
 fi
 
 # Extract current ID (before _{context})
