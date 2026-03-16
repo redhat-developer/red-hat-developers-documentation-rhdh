@@ -54,7 +54,7 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || REPO_ROOT="."
 # Function to get all included files
 get_all_files() {
     local file="$1"
-    "$REPO_ROOT/build/scripts/list-all-included-files-starting-from" "$file"
+    "$REPO_ROOT/build/scripts/list-all-included-files-starting-from.sh" "$file"
 }
 
 # Get all files

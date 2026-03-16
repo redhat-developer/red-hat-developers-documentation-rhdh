@@ -14,11 +14,11 @@ This helper provides a dedicated script to extract that complete file list for u
 
 ## Script
 
-**Location:** [build/scripts/list-all-included-files-starting-from](../../build/scripts/list-all-included-files-starting-from)
+**Location:** [build/scripts/list-all-included-files-starting-from.sh](../../build/scripts/list-all-included-files-starting-from.sh)
 
 **Usage:**
 ```bash
-./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc
+./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc
 ```
 
 **Output:** Space-separated list of all files (master.adoc + all recursively included files) on a single line
@@ -35,7 +35,7 @@ This helper provides a dedicated script to extract that complete file list for u
 **For titles/install-rhdh-osd-gcp/master.adoc:**
 
 ```bash
-./build/scripts/list-all-included-files-starting-from titles/install-rhdh-osd-gcp/master.adoc
+./build/scripts/list-all-included-files-starting-from.sh titles/install-rhdh-osd-gcp/master.adoc
 ```
 
 **Example output:**
@@ -48,13 +48,13 @@ This helper provides a dedicated script to extract that complete file list for u
 **Vale DITA validation on title files:**
 ```bash
 vale --config .vale-dita-only.ini \
-  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
+  $(./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc)
 ```
 
 **Vale style validation on title files:**
 ```bash
 vale --config .vale.ini \
-  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
+  $(./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc)
 ```
 
 ## Notes

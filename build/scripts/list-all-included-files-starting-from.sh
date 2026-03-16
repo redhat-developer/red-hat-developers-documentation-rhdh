@@ -1,6 +1,6 @@
 #!/bin/bash
 # List all files recursively included from a starting file
-# Usage: list-all-included-files-starting-from <file>
+# Usage: list-all-included-files-starting-from.sh <file>
 # Output: space-separated list of files on a single line
 
 set -e
