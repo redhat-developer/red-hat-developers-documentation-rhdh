@@ -4,25 +4,23 @@
 = Fix 404 error after cached dynamic plugins configuration change
 
 [role="_abstract"]
-In rare cases when using the Operator, making changes to the cached dynamic plugins configuration can lead to a temporary `404` error.
-This issue occurs because during the transition period, the application, which shares PVC for caching dynamic plugins,
-handles traffic with inconsistent cache states across old and new pods.
+In rare cases, using the Operator to change the cached dynamic plugin resource kind from `Deployment` to `StatefulSet` can cause temporary 404 errors. This occurs because the application handles traffic across both resource types simultaneously, leading to inconsistent cache states while sharing a single PVC.
 
-The solution is to use individual cache per pod.
+The solution is to use an individual cache per pod.
 
 .Prerequisites
 * The API version is `v1alpha5` or newer.
 
 .Procedure
 
-. In the Backstage Custom Resource (CR) file, set `spec.deployment` to use the optional `StatefulSet` as a resource kind as shown in the example below:
+. In the Backstage Custom Resource (CR) file, set `spec.deployment` to use the optional `StatefulSet` as a resource kind:
 +
-[,console]
+[source,terminal,subs="+attributes,+quotes"]
 ----
 apiVersion: rhdh.redhat.com/v1alpha5
 kind: Backstage
 metadata:
-  name: <name>
+  name: _<CR_name>_
 ...
 spec:
  deployment:
@@ -49,9 +47,21 @@ spec:
              requests:
                storage: 1Gi
 ----
-. Remove the default `kind: Deployment` from the Backstage CR
-
++
 [NOTE]
 ====
 Using `StatefulSet` with a single replica can lead to downtime, as the old pod is deleted and a new pod is created.
 ====
+
+. Remove the default `kind: Deployment` from the cluster:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+oc delete deployment -l app.kubernetes.io/instance=_<CR_name>_
+----
+
+[NOTE]
+====
+The same requirement applies for changing the resource kind from `StatefulSet` to `Deployment`. You must manually delete the previously created resource from the cluster, because the Operator does not automatically remove the legacy resource.
+====
+
