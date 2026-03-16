@@ -1,10 +1,13 @@
 # CQA 2.1 Compliance Checklist
 
-Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md](skills/cqa-master-workflow.md) for skill links.
+**IMPORTANT:** This checklist implements the workflow defined in [cqa-master-workflow.md](skills/cqa-master-workflow.md).
 
-**Idempotency requirement:**
-- Re-execute each requirement until it produces no new changes (idempotent state)
-- Re-execute the entire sequence until the full workflow reaches idempotency (no changes across all requirements)
+**Before starting:**
+1. Read [cqa-master-workflow.md](skills/cqa-master-workflow.md) for execution rules and skill order
+2. Follow the CRITICAL EXECUTION RULES defined in the workflow
+3. Execute all requirements in the exact order listed below
+4. Re-run each requirement until idempotent (no changes)
+5. Re-run entire workflow until stable
 
 ## Prerequisites
 
@@ -14,22 +17,16 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
 
 ---
 
-## Process
+## Execution Workflow
 
-**For each requirement below:** Run validation/fixes until no new changes occur. **For the entire sequence:** Re-run all requirements until the full workflow is stable.
+**IMPORTANT:** Execute in this exact order (follows [cqa-master-workflow.md](skills/cqa-master-workflow.md) Process section).
 
-### Phase 0: Resources
-
-- [ ] **Update all resources** - [Skill](skills/update-all-resources.md)
+- [ ] **Resources current** - [Update all resources](skills/update-all-resources.md)
   ```bash
   ./build/scripts/update-cqa-resources.sh
   ```
   - [ ] Vale styles synced
   - [ ] Red Hat style guides current
-
----
-
-### Phase 1: Structure & Content Type
 
 - [ ] **CQA #3: Content is modularized** - [Skill](skills/cqa-03-content-is-modularized.md)
   - [ ] Modular structure (assemblies include modules)
@@ -38,15 +35,11 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
 
 - [ ] **CQA #13: Correct content type** - [Skill](skills/cqa-13-information-is-conveyed-using-the-correct-content.md)
   ```bash
-  ./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
   ```
   - [ ] Content matches declared type (PROCEDURE/CONCEPT/REFERENCE/ASSEMBLY)
   - [ ] Procedures have `.Procedure` sections
   - [ ] No violations found
-
----
-
-### Phase 2: Short Descriptions & Titles
 
 - [ ] **CQA #8: Short description content** - [Skill](skills/cqa-08-short-description-content.md)
   - [ ] WHY user should read (benefit-focused)
@@ -55,7 +48,7 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
 
 - [ ] **CQA #9: Short description format** - [Skill](skills/cqa-09-short-description-format.md)
   ```bash
-  ./build/scripts/verify-short-descriptions.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-09-verify-short-description-format.sh titles/<your-title>/master.adoc
   ```
   - [ ] `[role="_abstract"]` marker present
   - [ ] 50-300 characters
@@ -78,10 +71,6 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
   - [ ] Max 10 items
   - [ ] Use completed states ("You have installed...")
   - [ ] Link to procedures when possible
-
----
-
-### Phase 3: Assembly Structure
 
 - [ ] **CQA #2: Assembly structure** - [Skill](skills/cqa-02-assembly-structure.md)
   - [ ] Introduction paragraph (context)
@@ -109,10 +98,6 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
   - [ ] Maximum 3 heading levels
   - [ ] No excessive nesting
   - [ ] Proper leveloffset usage
-
----
-
-### Phase 4: Names & Validation
 
 - [ ] **CQA #16: Official product names** - [Skill](skills/cqa-16-official-product-names-are-used.md)
   - [ ] Use attributes ({product}, {ocp-short}, etc.)
@@ -147,13 +132,9 @@ Execute all 17 CQA requirements in optimal order. Follow [cqa-master-workflow.md
   - [ ] Developer Preview disclaimer if applicable
   - [ ] Legal-approved text used
 
----
-
-### Phase 5: Links & Build
-
 - [ ] **CQA #14: No broken links** - [Skill](skills/cqa-14-no-broken-links.md)
   ```bash
-  build/scripts/build.sh
+  ./build/scripts/build-ccutil.sh
   ```
   - [ ] All xrefs resolve
   - [ ] All external links valid

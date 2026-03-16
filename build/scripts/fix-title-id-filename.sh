@@ -10,7 +10,7 @@
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
 # STEP 0: Ensure content type metadata exists (CQA requirement #2)
 # - Reads module type from :_mod-docs-content-type: metadata (first line)
-# - If metadata is missing, runs fix-content-type.sh to add it automatically
+# - If metadata is missing, runs cqa-03-fix-content-type.sh to add it automatically
 # STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
@@ -153,17 +153,17 @@ process_file() {
 CONTENT_TYPE=$(get_content_type "$FILE")
 
 if [[ -z "$CONTENT_TYPE" ]]; then
-    # No content type metadata - run fix-content-type.sh to add it
+    # No content type metadata - run cqa-03-fix-content-type.sh to add it
     SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    echo "  ! Running fix-content-type.sh to add missing metadata..."
-    "$SCRIPT_DIR/fix-content-type.sh" "$FILE" > /dev/null 2>&1 || true
+    echo "  ! Running cqa-03-fix-content-type.sh to add missing metadata..."
+    "$SCRIPT_DIR/cqa-03-fix-content-type.sh" "$FILE" > /dev/null 2>&1 || true
 
     # Re-read content type after fixing
     CONTENT_TYPE=$(get_content_type "$FILE")
 
     # If still no content type, skip this file
     if [[ -z "$CONTENT_TYPE" ]]; then
-        echo "? $FILE (cannot determine content type even after running fix-content-type.sh)"
+        echo "? $FILE (cannot determine content type even after running cqa-03-fix-content-type.sh)"
         return 0
     fi
 fi
@@ -276,6 +276,47 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
         WILL_CHANGE=true
         TITLE="$FIXED_TITLE"
     fi
+
+    # Check for additional gerunds in the rest of the title (e.g., "Enable and authorizing")
+    # Look for " and <word>ing " patterns and convert them to imperative
+    while [[ "$FIXED_TITLE" =~ (.*[[:space:]]and[[:space:]])([A-Za-z]+ing)([[:space:]].*)$ ]]; do
+        PREFIX="${BASH_REMATCH[1]}"
+        GERUND="${BASH_REMATCH[2]}"
+        SUFFIX="${BASH_REMATCH[3]}"
+
+        # Convert common gerunds to imperative
+        case "$GERUND" in
+            "installing") IMPERATIVE="install" ;;
+            "deploying") IMPERATIVE="deploy" ;;
+            "configuring") IMPERATIVE="configure" ;;
+            "creating") IMPERATIVE="create" ;;
+            "setting") IMPERATIVE="set" ;;
+            "enabling") IMPERATIVE="enable" ;;
+            "disabling") IMPERATIVE="disable" ;;
+            "building") IMPERATIVE="build" ;;
+            "running") IMPERATIVE="run" ;;
+            "managing") IMPERATIVE="manage" ;;
+            "upgrading") IMPERATIVE="upgrade" ;;
+            "updating") IMPERATIVE="update" ;;
+            "adding") IMPERATIVE="add" ;;
+            "removing") IMPERATIVE="remove" ;;
+            "deleting") IMPERATIVE="delete" ;;
+            "authorizing") IMPERATIVE="authorize" ;;
+            "validating") IMPERATIVE="validate" ;;
+            "testing") IMPERATIVE="test" ;;
+            "monitoring") IMPERATIVE="monitor" ;;
+            *)
+                # Generic: remove "ing" suffix
+                IMPERATIVE=$(echo "$GERUND" | sed 's/ing$//')
+                ;;
+        esac
+
+        FIXED_TITLE="${PREFIX}${IMPERATIVE}${SUFFIX}"
+        TITLE_CHANGED=true
+        WILL_CHANGE=true
+    done
+
+    TITLE="$FIXED_TITLE"
 fi
 
 # Extract current ID (before _{context})

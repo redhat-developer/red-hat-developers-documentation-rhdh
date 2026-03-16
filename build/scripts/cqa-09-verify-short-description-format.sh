@@ -1,9 +1,9 @@
 #!/bin/bash
 # Verify short descriptions (abstracts) per CQA requirements #6 and #7
 #
-# Usage: ./verify-short-descriptions.sh [file]
+# Usage: ./cqa-09-verify-short-description-format.sh [file]
 #   file: Optional. If provided, verifies that file and all its includes recursively
-#         Example: ./verify-short-descriptions.sh titles/install-rhdh-ocp/master.adoc
+#         Example: ./cqa-09-verify-short-description-format.sh titles/install-rhdh-ocp/master.adoc
 #           Processes: master.adoc → assemblies → all included modules (recursive)
 #         If not provided, verifies all .adoc files in the repository
 #
@@ -91,7 +91,7 @@ if [[ $# -eq 1 ]]; then
     # Process specified file and all its includes
     TARGET_FILE="$1"
     if [[ ! -f "$TARGET_FILE" ]]; then
-        echo "Error: File not found: $TARGET_FILE"
+        echo "Error: File not found: $TARGET_FILE" >&2
         exit 1
     fi
     echo "Processing file and includes: $TARGET_FILE"

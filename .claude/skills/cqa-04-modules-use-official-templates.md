@@ -12,7 +12,7 @@ All modules must follow official Red Hat modular documentation templates for the
 
 ```bash
 # Verify content type metadata and template structure
-./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
 
 # Find PROCEDURE modules with custom subheadings (violation)
 grep -rn "^===" modules/proc-*.adoc
@@ -93,7 +93,7 @@ Brief intro to reference data.
 
 ## Validation Workflow
 
-1. Run: `./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc`
+1. Run: `./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc`
 2. Check violations:
    - PROCEDURE: `grep -rn "^===" modules/proc-*.adoc` (should be empty)
    - All: Verify intro paragraph present

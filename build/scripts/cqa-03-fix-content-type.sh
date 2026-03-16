@@ -1,9 +1,9 @@
 #!/bin/bash
 # Fix content type metadata based on file content analysis (CQA requirement #11)
 #
-# Usage: ./fix-content-type.sh [file]
+# Usage: ./cqa-03-fix-content-type.sh [file]
 #   file: Optional. If provided, fixes that file and all its includes recursively
-#         Example: ./fix-content-type.sh titles/install-rhdh-ocp/master.adoc
+#         Example: ./cqa-03-fix-content-type.sh titles/install-rhdh-ocp/master.adoc
 #           Processes: master.adoc → assemblies → all included modules (recursive)
 #         If not provided, processes all .adoc files in artifacts/, assemblies/, modules/, and titles/
 #
@@ -32,6 +32,10 @@ readonly PATTERN_NUMBERED_ITEM="^\\.+ "
 readonly PATTERN_UNNUMBERED_ITEM="^\* "
 readonly PATTERN_NESTED_ITEM="^\*\* "
 readonly PATTERN_INCLUDE="^include::"
+
+# AWK patterns for extracting content after section blocks
+readonly AWK_AFTER_PROCEDURE='/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag'
+readonly AWK_AFTER_VERIFICATION='/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag'
 
 # Function to extract included files from a given file
 get_includes() {
@@ -642,7 +646,7 @@ process_file() {
     if [[ "$detected_type" == "$CONTENT_TYPE_PROCEDURE" ]]; then
         # Detect what needs fixing before we fix it
         local after_procedure
-        after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+        after_procedure=$(awk "$AWK_AFTER_PROCEDURE" "$file" 2>/dev/null)
         local unnumbered_before
         unnumbered_before=$(echo "$after_procedure" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
         local nested_before
@@ -678,7 +682,7 @@ process_file() {
     if grep -q "^\.Verification" "$file" 2>/dev/null; then
         # Detect what needs fixing before we fix it
         local after_verification
-        after_verification=$(awk '/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+        after_verification=$(awk "$AWK_AFTER_VERIFICATION" "$file" 2>/dev/null)
         local unnumbered_verif_before
         unnumbered_verif_before=$(echo "$after_verification" | grep -c "^\* " || true)
         local nested_verif_before

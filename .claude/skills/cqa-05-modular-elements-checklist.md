@@ -8,52 +8,59 @@
 
 All modules and assemblies must include required structural elements per the Red Hat modular documentation templates.
 
-## Commands
+**IMPORTANT:** This requirement validates against the official checklist at [.claude/resources/modular-documentation-templates-checklist.md](../resources/modular-documentation-templates-checklist.md). Review that checklist before running validation.
 
-### Check Required Elements in All Files
+## Automated Validation
 
-```bash
-# Check for :_mod-docs-content-type: metadata
-grep -L ":_mod-docs-content-type:" modules/**/*.adoc assemblies/*.adoc
-
-# Check for topic IDs with {context}
-grep -L '\[id=".*_{context}"\]' modules/**/*.adoc
-
-# Check for single H1 title (should have exactly 1 per file)
-for file in modules/**/*.adoc assemblies/*.adoc; do
-  count=$(grep -c "^= " "$file")
-  [ $count -ne 1 ] && echo "$file: $count H1 titles (should be 1)"
-done
-
-# Check for blank line after H1 title
-grep -A 1 "^= " modules/**/*.adoc assemblies/*.adoc | grep -B 1 "^--$" | grep "^= "
-```
-
-### Check Assembly-Specific Elements
+### Run Complete Validation Script
 
 ```bash
-# Find assemblies with level 2+ subheadings (violation)
-grep -rn "^===" assemblies/
-
-# Find assemblies with block titles (violation, except .Additional resources)
-grep -rn "^\." assemblies/ | grep -v "\.Additional resources"
-
-# Check nested assemblies for context preservation
-grep -L "ifdef::context\[:parent-context:" assemblies/*.adoc
+./build/scripts/cqa-05-verify-modular-elements.sh titles/<your-title>/master.adoc
 ```
 
-### Check Module-Specific Elements
+**What the script validates:**
+
+The script checks all requirements from [modular-documentation-templates-checklist.md](../resources/modular-documentation-templates-checklist.md):
+
+**All modules and assemblies:**
+- Has `:_mod-docs-content-type:` metadata
+- Has topic ID with `_{context}` suffix
+- Has exactly one H1 title
+- Has short introduction (`[role="_abstract"]`)
+- Has blank line between H1 and introduction
+- Images have alt text in quotes
+- Admonitions do not have titles
+
+**Nested assemblies:**
+- Parent-context preservation at top
+- Context restoration at bottom
+- Context variable declared
+
+**All assemblies:**
+- Blank lines between includes
+- No level 2+ subheadings
+- No block titles (except `.Additional resources`)
+
+**Concepts and references:**
+- No imperative instructions
+- No inappropriate block titles
+
+**Procedures:**
+- Has `.Procedure` block title
+- Only one `.Procedure` block
+- No embellishments on `.Procedure`
+- Only standard block titles allowed
+
+### Manual Verification
+
+For detailed manual verification, use the official checklist:
 
 ```bash
-# Find CONCEPT/REFERENCE modules with imperative instructions (violation)
-grep -rn "^\." modules/con-*.adoc modules/ref-*.adoc | grep -v "\.Additional"
-
-# Find PROCEDURE modules missing .Procedure block title
-grep -L "^\.Procedure$" modules/proc-*.adoc
-
-# Find PROCEDURE modules with custom block titles (violation)
-grep -rn "^\." modules/proc-*.adoc | grep -v "^\.Prerequisites\|^\.Procedure\|^\.Verification\|^\.Troubleshooting\|^\.Next steps\|^\.Additional resources"
+# Open the checklist
+cat .claude/resources/modular-documentation-templates-checklist.md
 ```
+
+Work through each checkbox in the checklist for thorough validation.
 
 ## Required Elements by File Type
 
@@ -116,7 +123,7 @@ grep -rn "^\." modules/proc-*.adoc | grep -v "^\.Prerequisites\|^\.Procedure\|^\
 
 1. **Run content type validation:**
    ```bash
-   ./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
+   ./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
    ```
 
 2. **Check all required elements present:**
