@@ -14,18 +14,18 @@
 
 set -e
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <path-to-master.adoc>"
-    echo ""
-    echo "Example:"
-    echo "  $0 titles/integrating-with-github/master.adoc"
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <path-to-master.adoc>" >&2
+    echo "" >&2
+    echo "Example:" >&2
+    echo "  $0 titles/integrating-with-github/master.adoc" >&2
     exit 1
 fi
 
 TARGET_FILE="$1"
 
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "Error: File not found: $TARGET_FILE"
+if [[ ! -f "$TARGET_FILE" ]]; then
+    echo "Error: File not found: $TARGET_FILE" >&2
     exit 1
 fi
 
@@ -44,7 +44,7 @@ ALL_FILES=$(get_all_files "$TARGET_FILE")
 # Filter to only assembly files
 ASSEMBLY_FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | grep -E "assemblies/.*\.adoc$|titles/.*/master\.adoc$" || true)
 
-if [ -z "$ASSEMBLY_FILES" ]; then
+if [[ -z "$ASSEMBLY_FILES" ]]; then
     echo "No assembly files found."
     exit 0
 fi
@@ -66,7 +66,7 @@ VIOLATIONS=0
 
 # Check each assembly
 while IFS= read -r file; do
-    if [ ! -f "$file" ]; then
+    if [[ ! -f "$file" ]]; then
         continue
     fi
 
@@ -98,7 +98,7 @@ while IFS= read -r file; do
     # after first include and before last line
     FIRST_INCLUDE_LINE=$(grep -n "^include::" "$file" | head -1 | cut -d: -f1 || echo "0")
 
-    if [ "$FIRST_INCLUDE_LINE" != "0" ]; then
+    if [[ "$FIRST_INCLUDE_LINE" != "0" ]]; then
         # Get content after first include
         CONTENT_AFTER_INCLUDES=$(tail -n +$((FIRST_INCLUDE_LINE + 1)) "$file")
 
@@ -120,9 +120,9 @@ while IFS= read -r file; do
                                                          grep -v "^----$" | \
                                                          grep -v "^====$" || true)
 
-        if [ -n "$SUSPECT_LINES" ]; then
+        if [[ -n "$SUSPECT_LINES" ]]; then
             SUSPECT_COUNT=$(echo "$SUSPECT_LINES" | wc -l)
-            if [ "$SUSPECT_COUNT" -gt 0 ]; then
+            if [[ "$SUSPECT_COUNT" -gt 0 ]]; then
                 echo "  ⚠ Warning: May contain content between includes ($SUSPECT_COUNT lines)"
                 echo "    Review for paragraphs/text between include statements"
             fi
@@ -132,8 +132,8 @@ while IFS= read -r file; do
     # Check 3: Prerequisites location (should be before first include if present)
     PREREQ_LINE=$(grep -n "^\.Prerequisites" "$file" | cut -d: -f1 || true)
     PREREQ_LINE=${PREREQ_LINE:-0}
-    if [ "$PREREQ_LINE" != "0" ] && [ "$FIRST_INCLUDE_LINE" != "0" ]; then
-        if [ "$PREREQ_LINE" -gt "$FIRST_INCLUDE_LINE" ]; then
+    if [[ "$PREREQ_LINE" != "0" && "$FIRST_INCLUDE_LINE" != "0" ]]; then
+        if [[ "$PREREQ_LINE" -gt "$FIRST_INCLUDE_LINE" ]]; then
             echo "  ✗ .Prerequisites appears after include statements"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
         fi
@@ -145,8 +145,8 @@ while IFS= read -r file; do
     LAST_INCLUDE_LINE=$(grep -n "^include::" "$file" | tail -1 | cut -d: -f1 || true)
     LAST_INCLUDE_LINE=${LAST_INCLUDE_LINE:-0}
 
-    if [ "$RESOURCES_LINE" != "0" ] && [ "$LAST_INCLUDE_LINE" != "0" ]; then
-        if [ "$RESOURCES_LINE" -lt "$LAST_INCLUDE_LINE" ]; then
+    if [[ "$RESOURCES_LINE" != "0" && "$LAST_INCLUDE_LINE" != "0" ]]; then
+        if [[ "$RESOURCES_LINE" -lt "$LAST_INCLUDE_LINE" ]]; then
             echo "  ✗ .Additional resources appears before include statements"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
         fi
@@ -154,7 +154,7 @@ while IFS= read -r file; do
 
     # Check 5: Content type should be ASSEMBLY
     CONTENT_TYPE=$(head -20 "$file" | grep ":_mod-docs-content-type:" | sed 's/:_mod-docs-content-type:[[:space:]]*//' | sed 's/[[:space:]]*$//' || echo "")
-    if [ -n "$CONTENT_TYPE" ] && [ "$CONTENT_TYPE" != "ASSEMBLY" ]; then
+    if [[ -n "$CONTENT_TYPE" && "$CONTENT_TYPE" != "ASSEMBLY" ]]; then
         echo "  ⚠ Warning: Content type is '$CONTENT_TYPE' (expected ASSEMBLY)"
     fi
 
@@ -167,7 +167,7 @@ while IFS= read -r file; do
     # Check 7: No detailed lists/content after abstract (before first include)
     ABSTRACT_LINE=$(grep -n '\[role="_abstract"\]' "$file" | head -1 | cut -d: -f1 || echo "0")
 
-    if [ "$ABSTRACT_LINE" != "0" ] && [ "$FIRST_INCLUDE_LINE" != "0" ]; then
+    if [[ "$ABSTRACT_LINE" != "0" && "$FIRST_INCLUDE_LINE" != "0" ]]; then
         # Extract content between abstract and first include
         BETWEEN_ABSTRACT_AND_INCLUDE=$(sed -n "$((ABSTRACT_LINE + 2)),$((FIRST_INCLUDE_LINE - 1))p" "$file")
 
@@ -181,9 +181,9 @@ while IFS= read -r file; do
                   grep -v "^:" | \
                   grep -v "^//" || true)
 
-        if [ -n "$FILTERED" ]; then
+        if [[ -n "$FILTERED" ]]; then
             NON_EMPTY=$(echo "$FILTERED" | grep -v "^$" || true)
-            if [ -n "$NON_EMPTY" ]; then
+            if [[ -n "$NON_EMPTY" ]]; then
                 echo "  ⚠ Warning: May contain detailed content between abstract and includes"
                 echo "    Review for explanatory text that should be in a concept module"
             fi
@@ -191,7 +191,7 @@ while IFS= read -r file; do
     fi
 
     # Summary for this file
-    if [ $FILE_VIOLATIONS -eq 0 ]; then
+    if [[ $FILE_VIOLATIONS -eq 0 ]]; then
         echo "  ✓ Structure compliant"
     else
         VIOLATIONS=$((VIOLATIONS + FILE_VIOLATIONS))
@@ -203,7 +203,7 @@ done <<< "$ASSEMBLY_FILES"
 echo "=== Summary ==="
 echo "Assemblies checked: $TOTAL_ASSEMBLIES"
 
-if [ $VIOLATIONS -eq 0 ]; then
+if [[ $VIOLATIONS -eq 0 ]]; then
     echo "✓ All assemblies have compliant structure"
     echo ""
     echo "Note: Warnings indicate potential issues that require manual review"

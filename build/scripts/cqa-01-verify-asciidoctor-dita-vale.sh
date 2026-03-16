@@ -8,23 +8,23 @@
 
 set -e
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <path-to-master.adoc>"
-    echo ""
-    echo "Example:"
-    echo "  $0 titles/integrating-with-github/master.adoc"
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <path-to-master.adoc>" >&2
+    echo "" >&2
+    echo "Example:" >&2
+    echo "  $0 titles/integrating-with-github/master.adoc" >&2
     exit 1
 fi
 
 TARGET_FILE="$1"
 
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "Error: File not found: $TARGET_FILE"
+if [[ ! -f "$TARGET_FILE" ]]; then
+    echo "Error: File not found: $TARGET_FILE" >&2
     exit 1
 fi
 
-if [ ! -f ".vale-dita-only.ini" ]; then
-    echo "Error: .vale-dita-only.ini configuration file not found"
+if [[ ! -f ".vale-dita-only.ini" ]]; then
+    echo "Error: .vale-dita-only.ini configuration file not found" >&2
     exit 1
 fi
 
@@ -46,8 +46,8 @@ echo ""
 # Get all files
 ALL_FILES=$(get_all_files "$TARGET_FILE")
 
-if [ -z "$ALL_FILES" ]; then
-    echo "Error: No files found to validate"
+if [[ -z "$ALL_FILES" ]]; then
+    echo "Error: No files found to validate" >&2
     exit 1
 fi
 
@@ -61,19 +61,20 @@ echo ""
 #   0 = no errors
 #   1 = errors found
 #   2 = usage error
+# shellcheck disable=SC2086
 vale --config .vale-dita-only.ini $ALL_FILES
 VALE_EXIT=$?
 
 echo ""
 echo "=== Summary ==="
 
-if [ $VALE_EXIT -eq 0 ]; then
+if [[ $VALE_EXIT -eq 0 ]]; then
     echo "✓ All files pass AsciiDoc DITA validation"
     echo ""
     echo "Target: 0 errors, acceptable warnings only"
     echo "See .claude/skills/cqa-01-asciidoctor-dita-vale.md for acceptable warning types"
     exit 0
-elif [ $VALE_EXIT -eq 1 ]; then
+elif [[ $VALE_EXIT -eq 1 ]]; then
     echo "✗ Vale found issues (see output above)"
     echo ""
     echo "Required: 0 errors"
