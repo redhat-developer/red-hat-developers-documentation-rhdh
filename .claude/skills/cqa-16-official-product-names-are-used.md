@@ -49,9 +49,31 @@
 - `{gcp-short}` → GCP
 - `{azure-brand-name}` → Microsoft Azure
 
-## Validation
+## Automated Validation
 
-### Check for Hardcoded Product Names
+### Run Complete Validation Script
+
+```bash
+./build/scripts/cqa-16-verify-product-names.sh titles/<your-title>/master.adoc
+```
+
+**What the script validates:**
+- Hardcoded "Red Hat Developer Hub" (should use `{product}` or `{product-short}`)
+- Hardcoded "Developer Hub" (should use `{product-short}`)
+- Hardcoded "Backstage" (should use `{backstage}`)
+- Hardcoded "Red Hat OpenShift Container Platform" (should use `{ocp-brand-name}`)
+- Hardcoded "OpenShift Container Platform" (should use `{ocp-short}`)
+
+**Skips:** source blocks, attribute definitions, comments, attributes.adoc, snippets
+
+**Fix mode:**
+```bash
+./build/scripts/cqa-16-verify-product-names.sh --fix titles/<your-title>/master.adoc
+```
+
+After fixing, manually verify first occurrence in abstract uses `{product}` (not `{product-short}`).
+
+### Manual Check for Hardcoded Product Names
 
 ```bash
 # Find hardcoded "Red Hat Developer Hub"
