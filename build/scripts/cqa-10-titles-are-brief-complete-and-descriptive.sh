@@ -10,7 +10,7 @@
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
 # STEP 0: Ensure content type metadata exists (CQA requirement #2)
 # - Reads module type from :_mod-docs-content-type: metadata (first line)
-# - If metadata is missing, runs cqa-03-content-is-modularized.sh to add it automatically
+# - If metadata is missing, skips the file (run cqa-03-content-is-modularized.sh first)
 # STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
@@ -320,19 +320,8 @@ process_file() {
 CONTENT_TYPE=$(get_content_type "$FILE")
 
 if [[ -z "$CONTENT_TYPE" ]]; then
-    # No content type metadata - run cqa-03-content-is-modularized.sh to add it
-    SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    echo "  ! Running cqa-03-content-is-modularized.sh to add missing metadata..."
-    "$SCRIPT_DIR/cqa-03-content-is-modularized.sh" "$FILE" > /dev/null 2>&1 || true
-
-    # Re-read content type after fixing
-    CONTENT_TYPE=$(get_content_type "$FILE")
-
-    # If still no content type, skip this file
-    if [[ -z "$CONTENT_TYPE" ]]; then
-        echo "? $FILE (cannot determine content type even after running cqa-03-content-is-modularized.sh)"
-        return 0
-    fi
+    echo "? $FILE (no content type metadata - run cqa-03-content-is-modularized.sh first)"
+    return 0
 fi
 
 # Determine prefix and expected form based on content type
