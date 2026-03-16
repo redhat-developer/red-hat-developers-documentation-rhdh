@@ -172,6 +172,41 @@ See `.claude/skills/update-all-resources.md` for details.
 ❌ **Don't:** Batch steps together ("I'll do 2-4 at once")
 ✅ **Do:** Complete each step fully, mark it ✓, then proceed
 
+### Pull Request Guidelines
+
+**CRITICAL:** When creating PR descriptions, **never use `#` notation for CQA numbers** (e.g., avoid "CQA #1", "CQA #2").
+
+❌ **Don't write:** "CQA #1", "CQA #2", "CQA #17"
+✅ **Do write:** "CQA 1", "CQA 2", "CQA 17"
+
+**Reason:** GitHub automatically creates links for `#number` patterns, linking to unrelated issues/PRs and creating noise.
+
+**PR Description Format for CQA Work:**
+```markdown
+## Summary
+
+Completed CQA 2.1 validation for `titles/<title-name>/master.adoc`:
+
+### Validation Results
+- ✅ **CQA 1**: Vale DITA validation (0 errors, acceptable warnings)
+- ✅ **CQA 2**: Assembly structure compliance
+- ✅ **CQA 3**: Content modularization verified
+...
+- ✅ **CQA 17**: Disclaimers not applicable (no preview features)
+
+### Key Changes
+- List of major changes made
+- File renames, content updates, etc.
+
+### Files Changed
+- List of modified files
+
+## Test Plan
+- [x] All CQA automation scripts pass
+- [x] Vale validations pass
+- [x] Build successful
+```
+
 ## Repository Structure
 
 - `titles/` - Top-level documentation titles (master.adoc files)
