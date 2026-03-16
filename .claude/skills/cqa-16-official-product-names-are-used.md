@@ -116,19 +116,6 @@ The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded pr
 
 After fixing, manually verify first occurrence in abstract uses `{product}` (not `{product-short}`).
 
-### Manual Check for Hardcoded Product Names
-
-```bash
-# Find hardcoded "Red Hat Developer Hub"
-grep -rn "Red Hat Developer Hub" modules/ assemblies/ titles/ --include="*.adoc"
-
-# Find hardcoded "Developer Hub" (should use {product-short})
-grep -rn "Developer Hub" modules/ assemblies/ titles/ --include="*.adoc" | grep -v "{product"
-
-# Find hardcoded "RHDH" (should use {product-very-short})
-grep -rn "RHDH" modules/ assemblies/ titles/ --include="*.adoc" | grep -v "{product"
-```
-
 ### Check for Missing First Occurrence
 
 ```bash
