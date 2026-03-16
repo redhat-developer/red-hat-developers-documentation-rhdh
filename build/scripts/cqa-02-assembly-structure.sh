@@ -114,11 +114,16 @@ while IFS= read -r file; do
     # Look for non-empty, non-include, non-metadata content between includes
 
     # Simple heuristic: Count paragraphs (non-empty lines that aren't special syntax)
-    # after first include and before last line
-    FIRST_INCLUDE_LINE=$(grep -n "^include::" "$file" | head -1 | cut -d: -f1 || echo "0")
+    # Only check includes after the = title line (preamble includes like
+    # include::artifacts/attributes.adoc[] are not subject to this rule)
+    TITLE_LINE=$(grep -n "^= " "$file" | head -1 | cut -d: -f1 || echo "0")
+    FIRST_INCLUDE_LINE=$(tail -n +"${TITLE_LINE:-1}" "$file" | grep -n "^include::" | head -1 | cut -d: -f1 || echo "0")
+    if [[ "$FIRST_INCLUDE_LINE" != "0" && "$TITLE_LINE" != "0" ]]; then
+        FIRST_INCLUDE_LINE=$((TITLE_LINE + FIRST_INCLUDE_LINE - 1))
+    fi
 
     if [[ "$FIRST_INCLUDE_LINE" != "0" ]]; then
-        # Get content after first include
+        # Get content after first include (post-title)
         CONTENT_AFTER_INCLUDES=$(tail -n +$((FIRST_INCLUDE_LINE + 1)) "$file")
 
         # Check for problematic content between includes
