@@ -35,7 +35,7 @@
 
 - [ ] **CQA #13: Correct content type** - [Skill](skills/cqa-13-information-is-conveyed-using-the-correct-content.md)
   ```bash
-  ./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Content matches declared type (PROCEDURE/CONCEPT/REFERENCE/ASSEMBLY)
   - [ ] Procedures have `.Procedure` sections
@@ -48,7 +48,7 @@
 
 - [ ] **CQA #9: Short description format** - [Skill](skills/cqa-09-short-description-format.md)
   ```bash
-  ./build/scripts/cqa-09-verify-short-description-format.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-09-short-description-format.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] `[role="_abstract"]` marker present
   - [ ] 50-300 characters
@@ -56,7 +56,7 @@
 
 - [ ] **CQA #10: Titles are brief, complete, and descriptive** - [Skill](skills/cqa-10-titles-are-brief-complete-and-descriptive.md)
   ```bash
-  ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Procedures: imperative form ("Install" not "Installing")
   - [ ] Concepts: noun phrases ("Configuration options")

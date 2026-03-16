@@ -20,7 +20,7 @@ Short descriptions must follow AsciiDoc/DITA format requirements:
 
 **Run short description format verification:**
 ```bash
-./build/scripts/cqa-09-verify-short-description-format.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-09-short-description-format.sh [--fix] titles/<your-title>/master.adoc
 ```
 
 **What the script does:**
@@ -47,6 +47,8 @@ For each module and assembly:
 
 ## Correct Format Structure
 
+### Regular Modules and Assemblies
+
 ```asciidoc
 = Module or Assembly Title
 
@@ -63,6 +65,41 @@ Abstract text goes here as a single paragraph between 50-300 characters.
 4. Abstract text (50-300 chars, single paragraph)
 5. Blank line after abstract
 6. First section/content begins
+
+### master.adoc Files (EXCEPTION)
+
+**IMPORTANT:** master.adoc files require special format for docinfo.xml compatibility.
+
+```asciidoc
+:_mod-docs-content-type: ASSEMBLY
+
+include::artifacts/attributes.adoc[]
+:context: title-<name>
+:imagesdir: images
+:title: <The title content>
+:subtitle: <The subtitle content>
+:abstract: <The abstract content>
+
+[id="{context}"]
+= {title}
+
+[role="_abstract"]
+{abstract}
+
+include::assemblies/assembly-<name>.adoc[leveloffset=+1]
+```
+
+**Why this format:**
+- docinfo.xml requires `{title}`, `{product}`, `{product-version}`, `{subtitle}`, `{abstract}`, `{company-name}` attributes
+- master.adoc must define: `{title}`, `{subtitle}`, `{abstract}`
+- The `:abstract:` attribute is then referenced with `{abstract}` after `[role="_abstract"]`
+- This allows the abstract to be used both in the document and in metadata
+
+**Critical differences from regular files:**
+- `:abstract:` attribute MUST be defined before the title
+- `[role="_abstract"]` uses `{abstract}` reference, not inline text
+- `[id="{context}"]` appears before title (master.adoc exception)
+- Uses `= {title}` instead of literal title text
 
 ## Format Violations and Fixes
 

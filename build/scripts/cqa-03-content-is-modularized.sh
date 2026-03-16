@@ -1,11 +1,10 @@
 #!/bin/bash
 # Fix content type metadata based on file content analysis (CQA requirement #11)
 #
-# Usage: ./cqa-03-fix-content-type.sh [file]
-#   file: Optional. If provided, fixes that file and all its includes recursively
-#         Example: ./cqa-03-fix-content-type.sh titles/install-rhdh-ocp/master.adoc
-#           Processes: master.adoc → assemblies → all included modules (recursive)
-#         If not provided, processes all .adoc files in artifacts/, assemblies/, modules/, and titles/
+# Usage: ./cqa-03-content-is-modularized.sh [--fix] <file-path>
+#   --fix:  Apply automatic fixes (add/update metadata, normalize list formatting)
+#   file:   Processes the specified file and all its includes recursively
+#   Example: ./cqa-03-content-is-modularized.sh titles/install-rhdh-ocp/master.adoc
 #
 # Content type detection logic:
 # - ASSEMBLY: File includes one or more modules with proc-, ref-, or con- prefix, OR assembly- filename prefix
@@ -217,8 +216,10 @@ count_content_type_occurrences() {
 # Function to remove all content type metadata from file
 remove_all_content_type_metadata() {
     local file="$1"
-    sed -i.bak '/^:_mod-docs-content-type:/d' "$file"
-    rm -f "${file}.bak"
+    if [[ "$FIX_MODE" == true ]]; then
+        sed -i.bak '/^:_mod-docs-content-type:/d' "$file"
+        rm -f "${file}.bak"
+    fi
     return 0
 }
 
@@ -258,18 +259,20 @@ fix_procedure_structure() {
 
     # Fix if exactly 1 numbered step (convert to unnumbered)
     if [[ $numbered_count -eq 1 && $unnumbered_count -eq 0 ]]; then
-        # Find and replace the single numbered step with unnumbered
-        sed -i.bak '/^\.Procedure/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}' "$file"
-        rm -f "${file}.bak"
+        if [[ "$FIX_MODE" == true ]]; then
+            sed -i.bak '/^\.Procedure/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}' "$file"
+            rm -f "${file}.bak"
+        fi
         return 0
     fi
 
     # Fix if mixed unnumbered and numbered items (multi-step procedure - convert all to numbered)
     # This handles cases like 1 unnumbered + 1 numbered, which should both be numbered
     if [[ $unnumbered_count -ge 1 && $numbered_count -ge 1 && $nested_count -eq 0 ]]; then
-        # Convert all unnumbered items to numbered to maintain consistency
-        sed -i.bak '/^\.Procedure$/,/^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
-        rm -f "${file}.bak"
+        if [[ "$FIX_MODE" == true ]]; then
+            sed -i.bak '/^\.Procedure$/,/^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
+            rm -f "${file}.bak"
+        fi
         return 0
     fi
 
@@ -277,11 +280,10 @@ fix_procedure_structure() {
     # BUT: Don't convert if there are nested items - nested structure indicates
     # a complex single step or steps that should stay unnumbered
     if [[ $unnumbered_count -ge 2 && $numbered_count -eq 0 && $nested_count -eq 0 ]]; then
-        # Find and replace unnumbered items with numbered (single dot)
-        # Process from .Procedure until the next section heading
-        # but exclude lines that start with . from replacement
-        sed -i.bak '/^\.Procedure$/,/^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
-        rm -f "${file}.bak"
+        if [[ "$FIX_MODE" == true ]]; then
+            sed -i.bak '/^\.Procedure$/,/^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
+            rm -f "${file}.bak"
+        fi
         return 0
     fi
 
@@ -324,17 +326,19 @@ fix_verification_structure() {
 
     # Fix if exactly 1 numbered step (convert to unnumbered)
     if [[ $numbered_count -eq 1 && $unnumbered_count -eq 0 ]]; then
-        # Find and replace the single numbered step with unnumbered
-        sed -i.bak '/^\.Verification/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}' "$file"
-        rm -f "${file}.bak"
+        if [[ "$FIX_MODE" == true ]]; then
+            sed -i.bak '/^\.Verification/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}' "$file"
+            rm -f "${file}.bak"
+        fi
         return 0
     fi
 
     # Fix if mixed unnumbered and numbered items (multi-step - convert all to numbered)
     if [[ $unnumbered_count -ge 1 && $numbered_count -ge 1 && $nested_count -eq 0 ]]; then
-        # Convert all unnumbered items to numbered to maintain consistency
-        sed -i.bak '/^\.Verification$/,/^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
-        rm -f "${file}.bak"
+        if [[ "$FIX_MODE" == true ]]; then
+            sed -i.bak '/^\.Verification$/,/^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
+            rm -f "${file}.bak"
+        fi
         return 0
     fi
 
@@ -342,9 +346,10 @@ fix_verification_structure() {
     # BUT: Don't convert if there are nested items - nested structure indicates
     # a complex single step or steps that should stay unnumbered
     if [[ $unnumbered_count -ge 2 && $numbered_count -eq 0 && $nested_count -eq 0 ]]; then
-        # Find and replace unnumbered items with numbered (single dot)
-        sed -i.bak '/^\.Verification$/,/^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
-        rm -f "${file}.bak"
+        if [[ "$FIX_MODE" == true ]]; then
+            sed -i.bak '/^\.Verification$/,/^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}' "$file"
+            rm -f "${file}.bak"
+        fi
         return 0
     fi
 
@@ -421,12 +426,16 @@ process_file() {
         else
             # Fix needed
             echo ""
-            echo "📝 $file"
-            if [[ "$occurrence_count" -gt 0 ]]; then
-                remove_all_content_type_metadata "$file"
+            if [[ "$FIX_MODE" == true ]]; then
+                echo "📝 $file"
+                if [[ "$occurrence_count" -gt 0 ]]; then
+                    remove_all_content_type_metadata "$file"
+                fi
+                sed -i.bak "1s/^/:_mod-docs-content-type: SNIPPET\n\n/" "$file"
+                rm -f "${file}.bak"
+            else
+                echo "✗ $file"
             fi
-            sed -i.bak "1s/^/:_mod-docs-content-type: SNIPPET\n\n/" "$file"
-            rm -f "${file}.bak"
             echo "  + Add :_mod-docs-content-type: SNIPPET"
             echo ""
             return 0
@@ -446,12 +455,16 @@ process_file() {
         else
             # Fix needed
             echo ""
-            echo "📝 $file"
-            if [[ "$occurrence_count" -gt 0 ]]; then
-                remove_all_content_type_metadata "$file"
+            if [[ "$FIX_MODE" == true ]]; then
+                echo "📝 $file"
+                if [[ "$occurrence_count" -gt 0 ]]; then
+                    remove_all_content_type_metadata "$file"
+                fi
+                sed -i.bak "1s/^/:_mod-docs-content-type: ASSEMBLY\n\n/" "$file"
+                rm -f "${file}.bak"
+            else
+                echo "✗ $file"
             fi
-            sed -i.bak "1s/^/:_mod-docs-content-type: ASSEMBLY\n\n/" "$file"
-            rm -f "${file}.bak"
             echo "  + Add :_mod-docs-content-type: ASSEMBLY"
             echo ""
             return 0
@@ -524,7 +537,11 @@ process_file() {
             # Try to fix PROCEDURE structure issues
             if fix_procedure_structure "$file"; then
                 echo ""
-                echo "📝 $file"
+                if [[ "$FIX_MODE" == true ]]; then
+                    echo "📝 $file"
+                else
+                    echo "✗ $file"
+                fi
                 # Determine what was fixed based on counts
                 if [[ $numbered_before -eq 1 && $unnumbered_before -eq 0 && $include_before -eq 0 ]]; then
                     echo "  * Convert single numbered step to unnumbered item"
@@ -594,7 +611,11 @@ process_file() {
 
     # Changes needed - show header
     echo ""
-    echo "📝 $file"
+    if [[ "$FIX_MODE" == true ]]; then
+        echo "📝 $file"
+    else
+        echo "✗ $file"
+    fi
 
     # Track what we're fixing
     local fixes=()
@@ -616,16 +637,16 @@ process_file() {
         fixes+=("Remove $((occurrence_count - 1)) duplicate(s)")
     fi
 
-    # Remove all existing content type metadata
-    if [[ "$occurrence_count" -gt 0 ]]; then
-        remove_all_content_type_metadata "$file"
+    # Apply fixes if in fix mode
+    if [[ "$FIX_MODE" == true ]]; then
+        if [[ "$occurrence_count" -gt 0 ]]; then
+            remove_all_content_type_metadata "$file"
+        fi
+        sed -i.bak "1s/^/:_mod-docs-content-type: ${detected_type}\n\n/" "$file"
+        rm -f "${file}.bak"
     fi
 
-    # Add correct metadata on first line
-    sed -i.bak "1s/^/:_mod-docs-content-type: ${detected_type}\n\n/" "$file"
-    rm -f "${file}.bak"
-
-    # Show what was fixed
+    # Show what was fixed/found
     for fix in "${fixes[@]}"; do
         if [[ "$fix" == "Add"* ]]; then
             echo "  + $fix"
@@ -712,30 +733,55 @@ process_file() {
 
 # Color codes for summary
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo "=== Fix Content Type Metadata Based on File Content ==="
-echo ""
+# Parse arguments
+FIX_MODE=false
+TARGET_FILE=""
 
-# Determine which files to process
-FILES_TO_PROCESS=()
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
 
-if [[ $# -eq 1 ]]; then
-    # Process specified file and all its includes
-    TARGET_FILE="$1"
-    if [[ ! -f "$TARGET_FILE" ]]; then
-        echo "Error: File not found: $TARGET_FILE" >&2
-        exit 1
-    fi
-    echo "Processing file and includes: $TARGET_FILE"
-    echo ""
-    collect_files "$TARGET_FILE" FILES_TO_PROCESS
-else
-    # Process all .adoc files in artifacts/, assemblies/, modules/, and titles/ directories
-    while IFS= read -r file; do
-        FILES_TO_PROCESS+=("$file")
-    done < <(find artifacts assemblies modules titles -name "*.adoc" -type f 2>/dev/null | sort)
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
+    exit 1
 fi
+
+if [[ ! -f "$TARGET_FILE" ]]; then
+    echo "Error: File not found: $TARGET_FILE" >&2
+    exit 1
+fi
+
+echo "=== CQA #3: Verify Content Type Metadata ==="
+echo ""
+if [[ "$FIX_MODE" == true ]]; then
+    echo -e "${YELLOW}FIX MODE${NC} - Will apply automatic fixes"
+    echo ""
+fi
+
+# Collect files to process
+FILES_TO_PROCESS=()
+echo "Processing file and includes: $TARGET_FILE"
+echo ""
+collect_files "$TARGET_FILE" FILES_TO_PROCESS
 
 # Process each file
 PROCESSED=0
@@ -752,7 +798,7 @@ for file in "${FILES_TO_PROCESS[@]}"; do
     # Check if file was modified (by checking if it shows a change message)
     OUTPUT=$(process_file "$file")
 
-    if [[ "$OUTPUT" == *"📝"* ]]; then
+    if [[ "$OUTPUT" == *"📝"* ]] || [[ "$OUTPUT" == *"✗"* ]]; then
         CHANGED=$((CHANGED + 1))
         echo "$OUTPUT"
     elif [[ "$OUTPUT" == *"?"* ]]; then
@@ -803,7 +849,14 @@ fi
 
 if [[ $CHANGED -gt 0 ]]; then
     echo ""
-    echo -e "${GREEN}✓ Updated $CHANGED file(s)${NC}"
+    if [[ "$FIX_MODE" == true ]]; then
+        echo -e "${GREEN}✓ Updated $CHANGED file(s)${NC}"
+    else
+        echo -e "${RED}✗ Found $CHANGED file(s) with issues${NC}"
+        echo ""
+        echo "Run with --fix to apply automatic fixes:"
+        echo "  $0 --fix $TARGET_FILE"
+    fi
 fi
 if [[ $CANNOT_DETERMINE -gt 0 ]]; then
     echo ""

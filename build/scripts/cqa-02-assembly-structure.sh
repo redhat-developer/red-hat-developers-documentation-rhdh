@@ -1,5 +1,5 @@
 #!/bin/bash
-# cqa-02-verify-assembly-structure.sh
+# cqa-02-assembly-structure.sh
 # Validates assembly structure compliance (CQA #2)
 #
 # Reference: .claude/skills/cqa-02-assembly-structure.md
@@ -10,19 +10,38 @@
 # 3. Optional .Prerequisites before includes
 # 4. Optional .Additional resources at end
 #
-# Usage: ./cqa-02-verify-assembly-structure.sh <path-to-master.adoc>
+# Usage: ./cqa-02-assembly-structure.sh [--fix] <file-path>
 
 set -e
 
-if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <path-to-master.adoc>" >&2
+# Parse arguments
+FIX_MODE=false
+TARGET_FILE=""
+
+# shellcheck disable=SC2034
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
     echo "" >&2
-    echo "Example:" >&2
-    echo "  $0 titles/integrating-with-github/master.adoc" >&2
+    echo "Examples:" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
     exit 1
 fi
-
-TARGET_FILE="$1"
 
 if [[ ! -f "$TARGET_FILE" ]]; then
     echo "Error: File not found: $TARGET_FILE" >&2
@@ -95,11 +114,16 @@ while IFS= read -r file; do
     # Look for non-empty, non-include, non-metadata content between includes
 
     # Simple heuristic: Count paragraphs (non-empty lines that aren't special syntax)
-    # after first include and before last line
-    FIRST_INCLUDE_LINE=$(grep -n "^include::" "$file" | head -1 | cut -d: -f1 || echo "0")
+    # Only check includes after the = title line (preamble includes like
+    # include::artifacts/attributes.adoc[] are not subject to this rule)
+    TITLE_LINE=$(grep -n "^= " "$file" | head -1 | cut -d: -f1 || echo "0")
+    FIRST_INCLUDE_LINE=$(tail -n +"${TITLE_LINE:-1}" "$file" | grep -n "^include::" | head -1 | cut -d: -f1 || echo "0")
+    if [[ "$FIRST_INCLUDE_LINE" != "0" && "$TITLE_LINE" != "0" ]]; then
+        FIRST_INCLUDE_LINE=$((TITLE_LINE + FIRST_INCLUDE_LINE - 1))
+    fi
 
     if [[ "$FIRST_INCLUDE_LINE" != "0" ]]; then
-        # Get content after first include
+        # Get content after first include (post-title)
         CONTENT_AFTER_INCLUDES=$(tail -n +$((FIRST_INCLUDE_LINE + 1)) "$file")
 
         # Check for problematic content between includes

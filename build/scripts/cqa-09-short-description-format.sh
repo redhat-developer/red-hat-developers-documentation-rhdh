@@ -1,11 +1,10 @@
 #!/bin/bash
 # Verify short descriptions (abstracts) per CQA requirements #6 and #7
 #
-# Usage: ./cqa-09-verify-short-description-format.sh [file]
-#   file: Optional. If provided, verifies that file and all its includes recursively
-#         Example: ./cqa-09-verify-short-description-format.sh titles/install-rhdh-ocp/master.adoc
-#           Processes: master.adoc → assemblies → all included modules (recursive)
-#         If not provided, verifies all .adoc files in the repository
+# Usage: ./cqa-09-short-description-format.sh [--fix] <file-path>
+#   --fix:  Currently no automatic fixes available (validation only)
+#   file:   Processes the specified file and all its includes recursively
+#   Example: ./cqa-09-short-description-format.sh titles/install-rhdh-ocp/master.adoc
 #
 # Requirements:
 # - Every module and assembly must have a single, concise introductory paragraph
@@ -81,32 +80,48 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Parse arguments
+FIX_MODE=false
+TARGET_FILE=""
+
+# shellcheck disable=SC2034
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
+    exit 1
+fi
+
+if [[ ! -f "$TARGET_FILE" ]]; then
+    echo "Error: File not found: $TARGET_FILE" >&2
+    exit 1
+fi
+
 echo "=== CQA Requirements #6 & #7: Verify Short Descriptions ==="
 echo ""
 
-# Determine which files to process
+# Collect files to process
 FILES_TO_PROCESS=()
-
-if [[ $# -eq 1 ]]; then
-    # Process specified file and all its includes
-    TARGET_FILE="$1"
-    if [[ ! -f "$TARGET_FILE" ]]; then
-        echo "Error: File not found: $TARGET_FILE" >&2
-        exit 1
-    fi
-    echo "Processing file and includes: $TARGET_FILE"
-    echo ""
-    collect_files "$TARGET_FILE" FILES_TO_PROCESS
-else
-    # Process all .adoc files
-    while IFS= read -r file; do
-        FILES_TO_PROCESS+=("$file")
-    done < <(find . -name "*.adoc" -type f \
-        -not -path "./build/*" \
-        -not -path "./.git/*" \
-        -not -path "./node_modules/*" \
-        | sort)
-fi
+echo "Processing file and includes: $TARGET_FILE"
+echo ""
+collect_files "$TARGET_FILE" FILES_TO_PROCESS
 
 VIOLATIONS=0
 CHECKED=0

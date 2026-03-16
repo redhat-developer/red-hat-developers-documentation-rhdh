@@ -1,16 +1,17 @@
 #!/bin/bash
-# fix-title-id-filename.sh
+# cqa-10-titles-are-brief-complete-and-descriptive.sh
 # Aligns title, ID, context, and filename per CQA.md rules
 #
-# Usage: ./fix-title-id-filename.sh <file-path>
-#   Processes the specified file and all its includes recursively
-#   Example: ./fix-title-id-filename.sh titles/install-rhdh-ocp/master.adoc
+# Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] <file-path>
+#   --fix:  Apply automatic fixes (title form, IDs, filenames, xrefs)
+#   file:   Processes the specified file and all its includes recursively
+#   Example: ./cqa-10-titles-are-brief-complete-and-descriptive.sh titles/install-rhdh-ocp/master.adoc
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
 # STEP 0: Ensure content type metadata exists (CQA requirement #2)
 # - Reads module type from :_mod-docs-content-type: metadata (first line)
-# - If metadata is missing, runs cqa-03-fix-content-type.sh to add it automatically
+# - If metadata is missing, skips the file (run cqa-03-content-is-modularized.sh first)
 # STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
@@ -23,6 +24,173 @@
 # STEP 5: Update all include statements
 
 set -e
+
+# Convert a gerund to imperative form (e.g., "Installing" → "Install")
+# Handles three patterns:
+#   1. Doubled consonant: "Running" → "Run" (remove doubled consonant)
+#   2. Silent 'e' dropped: "Configuring" → "Configure" (add 'e' back)
+#   3. Simple '-ing': "Deploying" → "Deploy" (just strip)
+# Args: $1 = gerund word (e.g., "Installing" or "installing")
+# Returns: imperative form preserving original capitalization
+gerund_to_imperative() {
+    local word="$1"
+    local lower
+    lower=$(echo "$word" | tr '[:upper:]' '[:lower:]')
+
+    # Remove 'ing' suffix to get stem
+    local stem="${lower%ing}"
+    local result=""
+
+    case "$lower" in
+        # Explicit mappings for common documentation verbs
+        # -- Doubled consonant verbs --
+        running) result="run" ;;
+        setting) result="set" ;;
+        getting) result="get" ;;
+        putting) result="put" ;;
+        cutting) result="cut" ;;
+        stopping) result="stop" ;;
+        dropping) result="drop" ;;
+        mapping) result="map" ;;
+        planning) result="plan" ;;
+        scanning) result="scan" ;;
+        shipping) result="ship" ;;
+        shopping) result="shop" ;;
+        skipping) result="skip" ;;
+        snapping) result="snap" ;;
+        spinning) result="spin" ;;
+        splitting) result="split" ;;
+        stepping) result="step" ;;
+        stripping) result="strip" ;;
+        swapping) result="swap" ;;
+        tapping) result="tap" ;;
+        trimming) result="trim" ;;
+        wrapping) result="wrap" ;;
+        beginning) result="begin" ;;
+        # -- Silent 'e' verbs --
+        configuring) result="configure" ;;
+        creating) result="create" ;;
+        enabling) result="enable" ;;
+        disabling) result="disable" ;;
+        managing) result="manage" ;;
+        upgrading) result="upgrade" ;;
+        updating) result="update" ;;
+        removing) result="remove" ;;
+        deleting) result="delete" ;;
+        resolving) result="resolve" ;;
+        authorizing) result="authorize" ;;
+        validating) result="validate" ;;
+        customizing) result="customize" ;;
+        integrating) result="integrate" ;;
+        migrating) result="migrate" ;;
+        generating) result="generate" ;;
+        defining) result="define" ;;
+        overriding) result="override" ;;
+        retrieving) result="retrieve" ;;
+        preparing) result="prepare" ;;
+        scaling) result="scale" ;;
+        securing) result="secure" ;;
+        authenticating) result="authenticate" ;;
+        restoring) result="restore" ;;
+        replacing) result="replace" ;;
+        browsing) result="browse" ;;
+        closing) result="close" ;;
+        composing) result="compose" ;;
+        describing) result="describe" ;;
+        ensuring) result="ensure" ;;
+        using) result="use" ;;
+        including) result="include" ;;
+        invoking) result="invoke" ;;
+        providing) result="provide" ;;
+        producing) result="produce" ;;
+        reducing) result="reduce" ;;
+        releasing) result="release" ;;
+        requiring) result="require" ;;
+        subscribing) result="subscribe" ;;
+        changing) result="change" ;;
+        locating) result="locate" ;;
+        navigating) result="navigate" ;;
+        operating) result="operate" ;;
+        isolating) result="isolate" ;;
+        # -- Simple '-ing' removal verbs --
+        installing) result="install" ;;
+        deploying) result="deploy" ;;
+        building) result="build" ;;
+        adding) result="add" ;;
+        testing) result="test" ;;
+        monitoring) result="monitor" ;;
+        checking) result="check" ;;
+        importing) result="import" ;;
+        exporting) result="export" ;;
+        connecting) result="connect" ;;
+        disconnecting) result="disconnect" ;;
+        adjusting) result="adjust" ;;
+        restarting) result="restart" ;;
+        starting) result="start" ;;
+        registering) result="register" ;;
+        unregistering) result="unregister" ;;
+        assigning) result="assign" ;;
+        reviewing) result="review" ;;
+        accessing) result="access" ;;
+        fetching) result="fetch" ;;
+        searching) result="search" ;;
+        finding) result="find" ;;
+        provisioning) result="provision" ;;
+        encrypting) result="encrypt" ;;
+        mounting) result="mount" ;;
+        unmounting) result="unmount" ;;
+        attaching) result="attach" ;;
+        detaching) result="detach" ;;
+        extending) result="extend" ;;
+        limiting) result="limit" ;;
+        inspecting) result="inspect" ;;
+        troubleshooting) result="troubleshoot" ;;
+        understanding) result="understand" ;;
+        publishing) result="publish" ;;
+        selecting) result="select" ;;
+        tracking) result="track" ;;
+        transforming) result="transform" ;;
+        viewing) result="view" ;;
+        verifying) result="verify" ;;
+        modifying) result="modify" ;;
+        specifying) result="specify" ;;
+        applying) result="apply" ;;
+        *)
+            # Generic fallback with heuristic rules
+            local last_two="${stem: -2}"
+
+            # Rule 1: Doubled consonant (not ll/ss/ff/zz) → remove one
+            # e.g., "runn" → "run", "sett" → "set"
+            if [[ ${#stem} -ge 3 ]] && [[ "${last_two:0:1}" == "${last_two:1:1}" ]] && \
+               [[ "${last_two:0:1}" =~ [bcdfghjkmnpqrtvwxyz] ]]; then
+                result="${stem%?}"
+            # Rule 2: Stem ends in 'v' → add 'e' (English words rarely end in bare 'v')
+            # e.g., "resolv" → "resolve", "remov" → "remove"
+            elif [[ "$stem" =~ [v]$ ]]; then
+                result="${stem}e"
+            # Rule 3: Stem ends in vowel+'z' → add 'e'
+            # e.g., "authoriz" → "authorize", "customiz" → "customize"
+            elif [[ "$stem" =~ [aeiou]z$ ]]; then
+                result="${stem}e"
+            # Rule 4: Stem ends in vowel+'c' → add 'e'
+            # e.g., "replac" → "replace", "produc" → "produce"
+            elif [[ "$stem" =~ [aeiou]c$ ]]; then
+                result="${stem}e"
+            # Rule 5: Otherwise just strip 'ing'
+            else
+                result="$stem"
+            fi
+            echo "  ⚠ Unknown gerund '${word}' → '${result}' (consider adding to gerund_to_imperative)" >&2
+            ;;
+    esac
+
+    # Preserve original capitalization
+    if [[ "$word" =~ ^[A-Z] ]]; then
+        result="$(echo "${result:0:1}" | tr '[:lower:]' '[:upper:]')${result:1}"
+    fi
+
+    echo "$result"
+}
 
 # Function to extract included files from a given file
 get_includes() {
@@ -153,19 +321,8 @@ process_file() {
 CONTENT_TYPE=$(get_content_type "$FILE")
 
 if [[ -z "$CONTENT_TYPE" ]]; then
-    # No content type metadata - run cqa-03-fix-content-type.sh to add it
-    SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    echo "  ! Running cqa-03-fix-content-type.sh to add missing metadata..."
-    "$SCRIPT_DIR/cqa-03-fix-content-type.sh" "$FILE" > /dev/null 2>&1 || true
-
-    # Re-read content type after fixing
-    CONTENT_TYPE=$(get_content_type "$FILE")
-
-    # If still no content type, skip this file
-    if [[ -z "$CONTENT_TYPE" ]]; then
-        echo "? $FILE (cannot determine content type even after running cqa-03-fix-content-type.sh)"
-        return 0
-    fi
+    echo "? $FILE (no content type metadata - run cqa-03-content-is-modularized.sh first)"
+    return 0
 fi
 
 # Determine prefix and expected form based on content type
@@ -234,43 +391,10 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
     FIRST_WORD=$(echo "$TITLE" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]].*//')
 
     if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^\{.*\}$ ]]; then
-        # Convert gerund to imperative
+        # Convert gerund to imperative using shared function
+        IMPERATIVE_WORD=$(gerund_to_imperative "$FIRST_WORD")
         # shellcheck disable=SC2001  # sed is appropriate for title transformations
-        if [[ "$FIRST_WORD" == "Installing" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Installing /Install /')
-        elif [[ "$FIRST_WORD" == "Deploying" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Deploying /Deploy /')
-        elif [[ "$FIRST_WORD" == "Configuring" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Configuring /Configure /')
-        elif [[ "$FIRST_WORD" == "Creating" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Creating /Create /')
-        elif [[ "$FIRST_WORD" == "Setting" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Setting /Set /')
-        elif [[ "$FIRST_WORD" == "Enabling" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Enabling /Enable /')
-        elif [[ "$FIRST_WORD" == "Disabling" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Disabling /Disable /')
-        elif [[ "$FIRST_WORD" == "Building" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Building /Build /')
-        elif [[ "$FIRST_WORD" == "Running" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Running /Run /')
-        elif [[ "$FIRST_WORD" == "Managing" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Managing /Manage /')
-        elif [[ "$FIRST_WORD" == "Upgrading" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Upgrading /Upgrade /')
-        elif [[ "$FIRST_WORD" == "Updating" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Updating /Update /')
-        elif [[ "$FIRST_WORD" == "Adding" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Adding /Add /')
-        elif [[ "$FIRST_WORD" == "Removing" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Removing /Remove /')
-        elif [[ "$FIRST_WORD" == "Deleting" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Deleting /Delete /')
-        else
-            # Generic gerund removal: remove "ing" suffix
-            BASE=$(echo "$FIRST_WORD" | sed 's/ing$//')
-            FIXED_TITLE=$(echo "$TITLE" | sed "s/^${FIRST_WORD} /${BASE} /")
-        fi
+        FIXED_TITLE=$(echo "$TITLE" | sed "s/^${FIRST_WORD}/${IMPERATIVE_WORD}/")
 
         TITLE_CHANGED=true
         WILL_CHANGE=true
@@ -280,38 +404,13 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
     # Check for additional gerunds in the rest of the title (e.g., "Enable and authorizing")
     # Look for " and <word>ing " patterns and convert them to imperative
     while [[ "$FIXED_TITLE" =~ (.*[[:space:]]and[[:space:]])([A-Za-z]+ing)([[:space:]].*)$ ]]; do
-        PREFIX="${BASH_REMATCH[1]}"
+        TITLE_PREFIX="${BASH_REMATCH[1]}"
         GERUND="${BASH_REMATCH[2]}"
-        SUFFIX="${BASH_REMATCH[3]}"
+        TITLE_SUFFIX="${BASH_REMATCH[3]}"
 
-        # Convert common gerunds to imperative
-        case "$GERUND" in
-            "installing") IMPERATIVE="install" ;;
-            "deploying") IMPERATIVE="deploy" ;;
-            "configuring") IMPERATIVE="configure" ;;
-            "creating") IMPERATIVE="create" ;;
-            "setting") IMPERATIVE="set" ;;
-            "enabling") IMPERATIVE="enable" ;;
-            "disabling") IMPERATIVE="disable" ;;
-            "building") IMPERATIVE="build" ;;
-            "running") IMPERATIVE="run" ;;
-            "managing") IMPERATIVE="manage" ;;
-            "upgrading") IMPERATIVE="upgrade" ;;
-            "updating") IMPERATIVE="update" ;;
-            "adding") IMPERATIVE="add" ;;
-            "removing") IMPERATIVE="remove" ;;
-            "deleting") IMPERATIVE="delete" ;;
-            "authorizing") IMPERATIVE="authorize" ;;
-            "validating") IMPERATIVE="validate" ;;
-            "testing") IMPERATIVE="test" ;;
-            "monitoring") IMPERATIVE="monitor" ;;
-            *)
-                # Generic: remove "ing" suffix
-                IMPERATIVE=$(echo "$GERUND" | sed 's/ing$//')
-                ;;
-        esac
+        IMPERATIVE=$(gerund_to_imperative "$GERUND")
 
-        FIXED_TITLE="${PREFIX}${IMPERATIVE}${SUFFIX}"
+        FIXED_TITLE="${TITLE_PREFIX}${IMPERATIVE}${TITLE_SUFFIX}"
         TITLE_CHANGED=true
         WILL_CHANGE=true
     done
@@ -351,44 +450,51 @@ fi
 
 # Changes needed - show header
 echo ""
-echo "📝 $FILE"
+if [ "$FIX_MODE" = true ]; then
+    echo "📝 $FILE"
+else
+    echo "✗ $FILE"
+fi
 
-# Apply content type metadata if needed
+# Report and optionally apply changes
 if [ "$ADDED_METADATA" = true ]; then
-    sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
-    rm -f "${FILE}.bak"
+    if [ "$FIX_MODE" = true ]; then
+        sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
+        rm -f "${FILE}.bak"
+    fi
     echo "  + Added :_mod-docs-content-type: ${MODULE_TYPE}"
 fi
 
-# Apply title changes if needed
 if [ "$TITLE_CHANGED" = true ]; then
-    # Actually update title in file
     OLD_TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
-    sed -i.bak "s/^= ${OLD_TITLE}/= ${TITLE}/" "$FILE"
-    rm -f "${FILE}.bak"
+    if [ "$FIX_MODE" = true ]; then
+        sed -i.bak "s/^= ${OLD_TITLE}/= ${TITLE}/" "$FILE"
+        rm -f "${FILE}.bak"
+    fi
     echo "  * Title: ${OLD_TITLE} → ${TITLE}"
 fi
 
-# Update ID and context if changed
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
+    if [ "$FIX_MODE" = true ]; then
+        if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
+            sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+            sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
+        else
+            sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+        fi
+        rm -f "${FILE}.bak"
+    fi
     if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
-        # For assemblies, update both [id=...] and :context:
-        sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-        sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
-        sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
         echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
         echo "  * Context: ${CURRENT_ID} → ${EXPECTED_ID}"
     else
-        # For modules, just update [id=...]
-        sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-        sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
         echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
     fi
-    rm -f "${FILE}.bak"
 fi
 
-# Update xrefs if ID changed
-if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
+if [ "$CURRENT_ID" != "$EXPECTED_ID" ] && [ "$FIX_MODE" = true ]; then
     XREF_COUNT=0
     while read -r xref_file; do
         sed -i.bak "s/xref:${CURRENT_ID}_/xref:${EXPECTED_ID}_/g" "$xref_file"
@@ -401,58 +507,59 @@ if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
     fi
 fi
 
-# Rename file if needed
 if [ "$FILE" != "$NEW_FILE" ]; then
     OLD_BASENAME=$(basename "$FILE")
     NEW_BASENAME=$(basename "$NEW_FILE")
-
-    git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
     echo "  * File: $(basename "$FILE") → $NEW_BASENAME"
 
-    # Update includes - use process substitution to avoid subshell
-    INCLUDE_COUNT=0
-    while read -r include_file; do
-        if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
-            sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
-            rm -f "${include_file}.bak"
-            INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
+    if [ "$FIX_MODE" = true ]; then
+        git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
+
+        INCLUDE_COUNT=0
+        while read -r include_file; do
+            if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
+                sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
+                rm -f "${include_file}.bak"
+                INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
+            fi
+        done < <(find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null)
+
+        if [ $INCLUDE_COUNT -gt 0 ]; then
+            echo "  * Updated $INCLUDE_COUNT include(s)"
         fi
-    done < <(find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null)
 
-    if [ $INCLUDE_COUNT -gt 0 ]; then
-        echo "  * Updated $INCLUDE_COUNT include(s)"
+        FILE="$NEW_FILE"
     fi
-
-    FILE="$NEW_FILE"
 fi
 }
 
 # Main script
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <file-path>"
-    echo ""
-    echo "Examples:"
-    echo "  $0 modules/installation/proc-installing-the-operator.adoc"
-    echo "  $0 titles/install-rhdh-ocp/master.adoc"
-    echo "    (processes master.adoc → assemblies → all included modules recursively)"
-    echo ""
-    echo "This script aligns title, ID, context, and filename per CQA.md rules."
-    echo "It processes the specified file and all its includes recursively."
-    echo ""
-    echo "It will:"
-    echo "  STEP 0: Detect module type from :_mod-docs-content-type: metadata"
-    echo "          (falls back to filename prefix if no metadata present)"
-    echo "  STEP 1: Add :_mod-docs-content-type: metadata if missing"
-    echo "  STEP 2: Fix title to use correct form (imperative for procedures/assemblies)"
-    echo "  STEP 3: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
-    echo "  STEP 4: Update [id=\"...\"] to match"
-    echo "  STEP 5: Update :context: for assemblies"
-    echo "  STEP 6: Rename file using git mv (with prefix from content type)"
-    echo "  STEP 7: Update all xrefs and include statements"
+FIX_MODE=false
+TARGET_FILE=""
+
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
     exit 1
 fi
-
-TARGET_FILE="$1"
 
 if [ ! -f "$TARGET_FILE" ]; then
     echo "Error: File not found: $TARGET_FILE"
