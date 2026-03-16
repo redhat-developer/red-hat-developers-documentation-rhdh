@@ -53,7 +53,7 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || REPO_ROOT="."
 # Function to get all included files
 get_all_files() {
     local file="$1"
-    "$REPO_ROOT/build/scripts/list-all-included-files-starting-from" "$file"
+    "$REPO_ROOT/build/scripts/list-all-included-files-starting-from.sh" "$file"
 }
 
 echo "=== CQA #1: Validate AsciiDoc DITA Compliance with Vale ==="
@@ -98,11 +98,14 @@ elif [[ $VALE_EXIT -eq 1 ]]; then
     echo "✗ Vale found issues (see output above)"
     echo ""
     echo "Required: 0 errors"
-    echo "Acceptable: DITA-specific warnings for callouts, false positives"
     echo ""
-    echo "Common fixes:"
-    echo "  - Fix DITA violations (missing abstracts, incorrect structure)"
-    echo "  - Review warnings to determine if they are acceptable"
+    echo "All warnings must be fixed. Common fixes:"
+    echo "  - AsciiDocDITA.BlockTitle: In ref modules use == headings; in procs restructure"
+    echo "  - AsciiDocDITA.CalloutList: Replace callouts with inline comments"
+    echo "  - AsciiDocDITA.ConceptLink: Move inline links to .Additional resources"
+    echo "  - AsciiDocDITA.DocumentId: Add [id=\"{context}\"] before heading in master.adoc"
+    echo "  - AsciiDocDITA.RelatedLinks: .Additional resources must be link-only (no prose)"
+    echo "  - AsciiDocDITA.TaskStep: Split description lists into separate procedures"
     echo ""
     echo "See .claude/skills/cqa-01-asciidoctor-dita-vale.md for details"
     exit 1

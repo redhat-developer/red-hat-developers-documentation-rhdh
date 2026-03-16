@@ -67,7 +67,7 @@ echo ""
 
 # Get all included files, excluding attributes.adoc (defines attribute values
 # using literal product names, which intentionally triggers DeveloperHub.Attributes rules)
-ALL_FILES=$("$REPO_ROOT/build/scripts/list-all-included-files-starting-from" "$TARGET_FILE" | tr ' ' '\n' | grep -v '/attributes\.adoc$' | tr '\n' ' ')
+ALL_FILES=$("$REPO_ROOT/build/scripts/list-all-included-files-starting-from.sh" "$TARGET_FILE" | tr ' ' '\n' | grep -v '/attributes\.adoc$' | tr '\n' ' ')
 
 if [[ -z "$ALL_FILES" ]]; then
     echo "Error: No files found to validate" >&2

@@ -43,13 +43,13 @@ DAYS_OLD=$(( ($(date +%s) - $LAST_SYNC) / 86400 ))
 ```bash
 # For a specific title (recommended approach)
 vale --config .vale.ini \
-  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
+  $(./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc)
 ```
 
 **Example for install-rhdh-osd-gcp:**
 ```bash
 vale --config .vale.ini \
-  $(./build/scripts/list-all-included-files-starting-from titles/install-rhdh-osd-gcp/master.adoc)
+  $(./build/scripts/list-all-included-files-starting-from.sh titles/install-rhdh-osd-gcp/master.adoc)
 ```
 
 **See also:** [get-title-files.md](get-title-files.md) for detailed explanation of the file list extraction script.

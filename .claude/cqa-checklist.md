@@ -107,7 +107,7 @@
 - [ ] **CQA #1: Vale DITA** - [Skill](skills/cqa-01-asciidoctor-dita-vale.md)
   ```bash
   vale --config .vale-dita-only.ini \
-    $(./build/scripts/list-all-included-files-starting-from titles/<your-title>/master.adoc)
+    $(./build/scripts/list-all-included-files-starting-from.sh titles/<your-title>/master.adoc)
   ```
   - [ ] 0 errors
   - [ ] Only acceptable warnings (callouts, false positives)
@@ -118,7 +118,7 @@
 - [ ] **CQA #12: Grammar** - [Skill](skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md)
   ```bash
   vale --config .vale.ini \
-    $(./build/scripts/list-all-included-files-starting-from titles/<your-title>/master.adoc)
+    $(./build/scripts/list-all-included-files-starting-from.sh titles/<your-title>/master.adoc)
   ```
   - [ ] 0 errors
   - [ ] American English
