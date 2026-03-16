@@ -52,7 +52,7 @@ The AsciiDocDITA tool identifies markup that does not have a direct equivalent i
 **Reference:** https://github.com/jhradilek/asciidoctor-dita-vale
 
 **NOT acceptable warnings (must be fixed):**
-- `AsciiDocDITA.BlockTitle`: Block titles (e.g. `.Prerequisites`) — restructure content to avoid block titles in non-assembly contexts
+- `AsciiDocDITA.BlockTitle`: Block titles (e.g. `.Prerequisites`) — in reference modules, convert to second-level headings (`==`); in procedures/assemblies, restructure to avoid block titles
 - `AsciiDocDITA.CalloutList`: Callouts in code blocks — replace with inline comments or numbered annotations
 - `AsciiDocDITA.ConceptLink`: Inline links in prerequisites/concept content — move links to `.Additional resources` section
 - `AsciiDocDITA.RelatedLinks`: `.Additional resources` items contain explanatory text — must be link-only (no surrounding prose)

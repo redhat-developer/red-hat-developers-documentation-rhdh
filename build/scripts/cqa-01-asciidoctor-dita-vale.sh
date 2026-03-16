@@ -100,7 +100,7 @@ elif [[ $VALE_EXIT -eq 1 ]]; then
     echo "Required: 0 errors"
     echo ""
     echo "All warnings must be fixed. Common fixes:"
-    echo "  - AsciiDocDITA.BlockTitle: Restructure to avoid block titles"
+    echo "  - AsciiDocDITA.BlockTitle: In ref modules use == headings; in procs restructure"
     echo "  - AsciiDocDITA.CalloutList: Replace callouts with inline comments"
     echo "  - AsciiDocDITA.ConceptLink: Move inline links to .Additional resources"
     echo "  - AsciiDocDITA.DocumentId: Add [id=\"{context}\"] before heading in master.adoc"
