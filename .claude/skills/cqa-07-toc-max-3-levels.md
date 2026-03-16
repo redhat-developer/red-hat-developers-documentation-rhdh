@@ -13,7 +13,7 @@ Content hierarchy should not exceed 3 levels in TOC to improve navigation and pr
 ### Run Complete Validation Script
 
 ```bash
-./build/scripts/cqa-07-toc-max-3-levels.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-07-toc-max-3-levels.sh [--fix] titles/<your-title>/master.adoc
 ```
 
 **What the script validates:**

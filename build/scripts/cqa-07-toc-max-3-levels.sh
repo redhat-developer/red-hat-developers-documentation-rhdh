@@ -2,7 +2,7 @@
 # cqa-07-toc-max-3-levels.sh
 # Validates TOC depth does not exceed 3 levels (CQA #7)
 #
-# Usage: ./cqa-07-toc-max-3-levels.sh <file-path>
+# Usage: ./cqa-07-toc-max-3-levels.sh [--fix] <file-path>
 #   file:   Processes the specified file and all its includes recursively
 #   Example: ./cqa-07-toc-max-3-levels.sh titles/install-rhdh-ocp/master.adoc
 #
@@ -19,15 +19,34 @@ set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <file-path>" >&2
+# Parse arguments
+FIX_MODE=false
+TARGET_FILE=""
+
+# shellcheck disable=SC2034
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
     echo "" >&2
-    echo "Example:" >&2
+    echo "Examples:" >&2
     echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
     exit 1
 fi
-
-TARGET_FILE="$1"
 
 if [[ ! -f "$TARGET_FILE" ]]; then
     echo "Error: File not found: $TARGET_FILE" >&2

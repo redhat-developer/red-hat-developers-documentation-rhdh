@@ -156,17 +156,17 @@ Available scripts for CQA 2.1 compliance:
 
 ```bash
 # Content type detection and fixing
-./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
 
 # Title/ID/filename alignment
-./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] titles/<your-title>/master.adoc
 
 # Orphaned module detection
 ./build/scripts/fix-orphaned-modules.sh          # List only
 ./build/scripts/fix-orphaned-modules.sh --execute # Delete
 
 # Short description verification
-./build/scripts/cqa-09-short-description-format.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-09-short-description-format.sh [--fix] titles/<your-title>/master.adoc
 
 # Build and preview generation
 ./build/scripts/build-ccutil.sh              # Build all titles

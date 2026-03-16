@@ -20,7 +20,7 @@ Short descriptions must follow AsciiDoc/DITA format requirements:
 
 **Run short description format verification:**
 ```bash
-./build/scripts/cqa-09-short-description-format.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-09-short-description-format.sh [--fix] titles/<your-title>/master.adoc
 ```
 
 **What the script does:**

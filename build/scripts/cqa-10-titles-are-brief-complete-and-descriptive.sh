@@ -2,8 +2,9 @@
 # cqa-10-titles-are-brief-complete-and-descriptive.sh
 # Aligns title, ID, context, and filename per CQA.md rules
 #
-# Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh <file-path>
-#   Processes the specified file and all its includes recursively
+# Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] <file-path>
+#   --fix:  Apply automatic fixes (title form, IDs, filenames, xrefs)
+#   file:   Processes the specified file and all its includes recursively
 #   Example: ./cqa-10-titles-are-brief-complete-and-descriptive.sh titles/install-rhdh-ocp/master.adoc
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
@@ -449,44 +450,51 @@ fi
 
 # Changes needed - show header
 echo ""
-echo "📝 $FILE"
+if [ "$FIX_MODE" = true ]; then
+    echo "📝 $FILE"
+else
+    echo "✗ $FILE"
+fi
 
-# Apply content type metadata if needed
+# Report and optionally apply changes
 if [ "$ADDED_METADATA" = true ]; then
-    sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
-    rm -f "${FILE}.bak"
+    if [ "$FIX_MODE" = true ]; then
+        sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
+        rm -f "${FILE}.bak"
+    fi
     echo "  + Added :_mod-docs-content-type: ${MODULE_TYPE}"
 fi
 
-# Apply title changes if needed
 if [ "$TITLE_CHANGED" = true ]; then
-    # Actually update title in file
     OLD_TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
-    sed -i.bak "s/^= ${OLD_TITLE}/= ${TITLE}/" "$FILE"
-    rm -f "${FILE}.bak"
+    if [ "$FIX_MODE" = true ]; then
+        sed -i.bak "s/^= ${OLD_TITLE}/= ${TITLE}/" "$FILE"
+        rm -f "${FILE}.bak"
+    fi
     echo "  * Title: ${OLD_TITLE} → ${TITLE}"
 fi
 
-# Update ID and context if changed
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
+    if [ "$FIX_MODE" = true ]; then
+        if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
+            sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+            sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
+        else
+            sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+        fi
+        rm -f "${FILE}.bak"
+    fi
     if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
-        # For assemblies, update both [id=...] and :context:
-        sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-        sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
-        sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
         echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
         echo "  * Context: ${CURRENT_ID} → ${EXPECTED_ID}"
     else
-        # For modules, just update [id=...]
-        sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-        sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
         echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
     fi
-    rm -f "${FILE}.bak"
 fi
 
-# Update xrefs if ID changed
-if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
+if [ "$CURRENT_ID" != "$EXPECTED_ID" ] && [ "$FIX_MODE" = true ]; then
     XREF_COUNT=0
     while read -r xref_file; do
         sed -i.bak "s/xref:${CURRENT_ID}_/xref:${EXPECTED_ID}_/g" "$xref_file"
@@ -499,58 +507,59 @@ if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
     fi
 fi
 
-# Rename file if needed
 if [ "$FILE" != "$NEW_FILE" ]; then
     OLD_BASENAME=$(basename "$FILE")
     NEW_BASENAME=$(basename "$NEW_FILE")
-
-    git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
     echo "  * File: $(basename "$FILE") → $NEW_BASENAME"
 
-    # Update includes - use process substitution to avoid subshell
-    INCLUDE_COUNT=0
-    while read -r include_file; do
-        if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
-            sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
-            rm -f "${include_file}.bak"
-            INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
+    if [ "$FIX_MODE" = true ]; then
+        git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
+
+        INCLUDE_COUNT=0
+        while read -r include_file; do
+            if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
+                sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
+                rm -f "${include_file}.bak"
+                INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
+            fi
+        done < <(find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null)
+
+        if [ $INCLUDE_COUNT -gt 0 ]; then
+            echo "  * Updated $INCLUDE_COUNT include(s)"
         fi
-    done < <(find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null)
 
-    if [ $INCLUDE_COUNT -gt 0 ]; then
-        echo "  * Updated $INCLUDE_COUNT include(s)"
+        FILE="$NEW_FILE"
     fi
-
-    FILE="$NEW_FILE"
 fi
 }
 
 # Main script
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <file-path>"
-    echo ""
-    echo "Examples:"
-    echo "  $0 modules/installation/proc-installing-the-operator.adoc"
-    echo "  $0 titles/install-rhdh-ocp/master.adoc"
-    echo "    (processes master.adoc → assemblies → all included modules recursively)"
-    echo ""
-    echo "This script aligns title, ID, context, and filename per CQA.md rules."
-    echo "It processes the specified file and all its includes recursively."
-    echo ""
-    echo "It will:"
-    echo "  STEP 0: Detect module type from :_mod-docs-content-type: metadata"
-    echo "          (falls back to filename prefix if no metadata present)"
-    echo "  STEP 1: Add :_mod-docs-content-type: metadata if missing"
-    echo "  STEP 2: Fix title to use correct form (imperative for procedures/assemblies)"
-    echo "  STEP 3: Calculate expected ID (title → lowercase, extract attribute names, hyphens)"
-    echo "  STEP 4: Update [id=\"...\"] to match"
-    echo "  STEP 5: Update :context: for assemblies"
-    echo "  STEP 6: Rename file using git mv (with prefix from content type)"
-    echo "  STEP 7: Update all xrefs and include statements"
+FIX_MODE=false
+TARGET_FILE=""
+
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
     exit 1
 fi
-
-TARGET_FILE="$1"
 
 if [ ! -f "$TARGET_FILE" ]; then
     echo "Error: File not found: $TARGET_FILE"

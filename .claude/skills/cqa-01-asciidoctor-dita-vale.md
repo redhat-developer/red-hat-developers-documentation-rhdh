@@ -11,7 +11,7 @@
 ### Run Complete Validation Script
 
 ```bash
-./build/scripts/cqa-01-asciidoctor-dita-vale.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-01-asciidoctor-dita-vale.sh [--fix] titles/<your-title>/master.adoc
 ```
 
 **What the script validates:**

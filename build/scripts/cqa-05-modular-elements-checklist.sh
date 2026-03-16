@@ -4,22 +4,41 @@
 #
 # Reference: .claude/resources/modular-documentation-templates-checklist.md
 #
-# Usage: ./cqa-05-modular-elements-checklist.sh <path-to-master.adoc>
+# Usage: ./cqa-05-modular-elements-checklist.sh [--fix] <file-path>
 
 set -e
 
 # Constants for pattern matching
 readonly PATTERN_BLOCK_TITLE='^\.[A-Z]'
 
-if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <path-to-master.adoc>" >&2
+# Parse arguments
+FIX_MODE=false
+TARGET_FILE=""
+
+# shellcheck disable=SC2034
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
     echo "" >&2
-    echo "Example:" >&2
-    echo "  $0 titles/integrating-with-github/master.adoc" >&2
+    echo "Examples:" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
     exit 1
 fi
-
-TARGET_FILE="$1"
 
 if [[ ! -f "$TARGET_FILE" ]]; then
     echo "Error: File not found: $TARGET_FILE" >&2

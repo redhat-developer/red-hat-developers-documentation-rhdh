@@ -18,7 +18,7 @@ Assemblies must have this structure:
 ### Run Complete Validation Script
 
 ```bash
-./build/scripts/cqa-02-assembly-structure.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-02-assembly-structure.sh [--fix] titles/<your-title>/master.adoc
 ```
 
 **What the script validates:**
