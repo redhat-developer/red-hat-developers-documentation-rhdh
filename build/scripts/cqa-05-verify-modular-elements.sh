@@ -1,10 +1,10 @@
 #!/bin/bash
-# verify-modular-elements.sh
+# cqa-05-verify-modular-elements.sh
 # Validates all required modular elements per CQA #5
 #
 # Reference: .claude/resources/modular-documentation-templates-checklist.md
 #
-# Usage: ./verify-modular-elements.sh <path-to-master.adoc>
+# Usage: ./cqa-05-verify-modular-elements.sh <path-to-master.adoc>
 
 set -e
 

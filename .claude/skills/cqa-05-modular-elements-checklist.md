@@ -15,7 +15,7 @@ All modules and assemblies must include required structural elements per the Red
 ### Run Complete Validation Script
 
 ```bash
-./build/scripts/verify-modular-elements.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-05-verify-modular-elements.sh titles/<your-title>/master.adoc
 ```
 
 **What the script validates:**
