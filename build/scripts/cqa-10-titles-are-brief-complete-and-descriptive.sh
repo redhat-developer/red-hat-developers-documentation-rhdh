@@ -91,6 +91,8 @@ gerund_to_imperative() {
         scaling) result="scale" ;;
         securing) result="secure" ;;
         authenticating) result="authenticate" ;;
+        automating) result="automate" ;;
+        bootstrapping) result="bootstrap" ;;
         restoring) result="restore" ;;
         replacing) result="replace" ;;
         browsing) result="browse" ;;
@@ -144,6 +146,7 @@ gerund_to_imperative() {
         extending) result="extend" ;;
         limiting) result="limit" ;;
         inspecting) result="inspect" ;;
+        triggering) result="trigger" ;;
         troubleshooting) result="troubleshoot" ;;
         understanding) result="understand" ;;
         publishing) result="publish" ;;
@@ -376,8 +379,21 @@ fi
 # Extract current title (H1 heading) and expand attributes
 TITLE_RAW=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
 if [ -z "$TITLE_RAW" ]; then
-    echo "Error: No title found in $FILE (looking for '= Title')"
-    exit 1
+    if [ "$MODULE_TYPE" = "SNIPPET" ]; then
+        # Snippets must NOT have a title - validate absence
+        echo "✓ $FILE (snippet: no title, as expected)"
+        return 0
+    else
+        echo "Error: No title found in $FILE (looking for '= Title')"
+        exit 1
+    fi
+fi
+
+# Snippets should NOT have titles
+if [ "$MODULE_TYPE" = "SNIPPET" ] && [ -n "$TITLE_RAW" ]; then
+    echo "✗ $FILE"
+    echo "  * Snippet has a title '= ${TITLE_RAW}' - snippets must not have titles"
+    return 0
 fi
 
 # Expand any attributes in the title (e.g., {title} → actual title value)
