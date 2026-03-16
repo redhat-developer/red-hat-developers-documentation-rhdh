@@ -99,7 +99,7 @@ The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded pr
 ### Run Complete Validation Script
 
 ```bash
-./build/scripts/cqa-16-verify-product-names.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-16-official-product-names-are-used.sh titles/<your-title>/master.adoc
 ```
 
 **What the script validates:**
@@ -111,7 +111,7 @@ The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded pr
 
 **Fix mode:**
 ```bash
-./build/scripts/cqa-16-verify-product-names.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-16-official-product-names-are-used.sh --fix titles/<your-title>/master.adoc
 ```
 
 After fixing, manually verify first occurrence in abstract uses `{product}` (not `{product-short}`).

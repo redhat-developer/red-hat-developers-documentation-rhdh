@@ -1,9 +1,9 @@
 #!/bin/bash
 # Fix content type metadata based on file content analysis (CQA requirement #11)
 #
-# Usage: ./cqa-03-fix-content-type.sh [file]
+# Usage: ./cqa-03-content-is-modularized.sh [file]
 #   file: Optional. If provided, fixes that file and all its includes recursively
-#         Example: ./cqa-03-fix-content-type.sh titles/install-rhdh-ocp/master.adoc
+#         Example: ./cqa-03-content-is-modularized.sh titles/install-rhdh-ocp/master.adoc
 #           Processes: master.adoc → assemblies → all included modules (recursive)
 #         If not provided, processes all .adoc files in artifacts/, assemblies/, modules/, and titles/
 #

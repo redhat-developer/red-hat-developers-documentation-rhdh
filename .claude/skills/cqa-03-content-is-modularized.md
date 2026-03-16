@@ -10,7 +10,7 @@
 
 **Run content type detection and validation:**
 ```bash
-./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
 ```
 
 **What the script does:**

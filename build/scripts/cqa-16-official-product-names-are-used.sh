@@ -1,11 +1,11 @@
 #!/bin/bash
-# cqa-16-verify-product-names.sh
+# cqa-16-official-product-names-are-used.sh
 # Verify and fix official product name usage per CQA requirement #16
 #
-# Usage: ./cqa-16-verify-product-names.sh [--fix] <file-path>
+# Usage: ./cqa-16-official-product-names-are-used.sh [--fix] <file-path>
 #   --fix:  Apply automatic fixes (replace hardcoded names with attributes)
 #   file:   Processes the specified file and all its includes recursively
-#   Example: ./cqa-16-verify-product-names.sh titles/install-rhdh-ocp/master.adoc
+#   Example: ./cqa-16-official-product-names-are-used.sh titles/install-rhdh-ocp/master.adoc
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
 # Checks for hardcoded product names that should use AsciiDoc attributes.

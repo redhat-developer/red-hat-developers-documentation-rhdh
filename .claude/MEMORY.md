@@ -57,7 +57,7 @@ Use these scripts for systematic tasks:
 
 1. **Content Type Detection/Fixing:**
    ```bash
-   ./build/scripts/cqa-03-fix-content-type.sh titles/<title>/master.adoc
+   ./build/scripts/cqa-03-content-is-modularized.sh titles/<title>/master.adoc
    ```
    - Auto-detects and fixes content type metadata
    - Normalizes .Procedure and .Verification list formatting
@@ -66,9 +66,9 @@ Use these scripts for systematic tasks:
 
 2. **Title/ID/Filename Alignment:**
    ```bash
-   ./build/scripts/cqa-10-fix-title-id-filename.sh titles/<title>/master.adoc
+   ./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<title>/master.adoc
    ```
-   - Ensures content type metadata exists (calls cqa-03-fix-content-type.sh if needed)
+   - Ensures content type metadata exists (calls cqa-03-content-is-modularized.sh if needed)
    - Fixes title forms (gerund → imperative)
    - Aligns IDs to match titles
    - Renames files with git mv
@@ -89,7 +89,7 @@ Use these scripts for systematic tasks:
 
 4. **Short Description Verification:**
    ```bash
-   ./build/scripts/cqa-09-verify-short-description-format.sh titles/<title>/master.adoc
+   ./build/scripts/cqa-09-short-description-format.sh titles/<title>/master.adoc
    ```
    - Verifies [role="_abstract"] presence
    - Checks 50-300 character requirement

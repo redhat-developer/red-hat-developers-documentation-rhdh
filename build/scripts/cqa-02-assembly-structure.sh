@@ -1,5 +1,5 @@
 #!/bin/bash
-# cqa-02-verify-assembly-structure.sh
+# cqa-02-assembly-structure.sh
 # Validates assembly structure compliance (CQA #2)
 #
 # Reference: .claude/skills/cqa-02-assembly-structure.md
@@ -10,7 +10,7 @@
 # 3. Optional .Prerequisites before includes
 # 4. Optional .Additional resources at end
 #
-# Usage: ./cqa-02-verify-assembly-structure.sh <path-to-master.adoc>
+# Usage: ./cqa-02-assembly-structure.sh <path-to-master.adoc>
 
 set -e
 

@@ -98,7 +98,7 @@ done | sort -n
 The title/ID/filename alignment script helps enforce title correctness:
 
 ```bash
-./build/scripts/cqa-10-fix-title-id-filename.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
 ```
 
 This script:

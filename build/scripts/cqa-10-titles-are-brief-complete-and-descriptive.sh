@@ -1,16 +1,16 @@
 #!/bin/bash
-# cqa-10-fix-title-id-filename.sh
+# cqa-10-titles-are-brief-complete-and-descriptive.sh
 # Aligns title, ID, context, and filename per CQA.md rules
 #
-# Usage: ./cqa-10-fix-title-id-filename.sh <file-path>
+# Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh <file-path>
 #   Processes the specified file and all its includes recursively
-#   Example: ./cqa-10-fix-title-id-filename.sh titles/install-rhdh-ocp/master.adoc
+#   Example: ./cqa-10-titles-are-brief-complete-and-descriptive.sh titles/install-rhdh-ocp/master.adoc
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
 # STEP 0: Ensure content type metadata exists (CQA requirement #2)
 # - Reads module type from :_mod-docs-content-type: metadata (first line)
-# - If metadata is missing, runs cqa-03-fix-content-type.sh to add it automatically
+# - If metadata is missing, runs cqa-03-content-is-modularized.sh to add it automatically
 # STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
 #   - Procedures: Use imperative form ("Install" not "Installing")
 #   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
@@ -320,17 +320,17 @@ process_file() {
 CONTENT_TYPE=$(get_content_type "$FILE")
 
 if [[ -z "$CONTENT_TYPE" ]]; then
-    # No content type metadata - run cqa-03-fix-content-type.sh to add it
+    # No content type metadata - run cqa-03-content-is-modularized.sh to add it
     SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    echo "  ! Running cqa-03-fix-content-type.sh to add missing metadata..."
-    "$SCRIPT_DIR/cqa-03-fix-content-type.sh" "$FILE" > /dev/null 2>&1 || true
+    echo "  ! Running cqa-03-content-is-modularized.sh to add missing metadata..."
+    "$SCRIPT_DIR/cqa-03-content-is-modularized.sh" "$FILE" > /dev/null 2>&1 || true
 
     # Re-read content type after fixing
     CONTENT_TYPE=$(get_content_type "$FILE")
 
     # If still no content type, skip this file
     if [[ -z "$CONTENT_TYPE" ]]; then
-        echo "? $FILE (cannot determine content type even after running cqa-03-fix-content-type.sh)"
+        echo "? $FILE (cannot determine content type even after running cqa-03-content-is-modularized.sh)"
         return 0
     fi
 fi

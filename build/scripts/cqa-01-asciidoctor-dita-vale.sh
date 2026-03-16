@@ -1,10 +1,10 @@
 #!/bin/bash
-# cqa-01-verify-asciidoctor-dita-vale.sh
+# cqa-01-asciidoctor-dita-vale.sh
 # Validates AsciiDoc DITA compliance using Vale (CQA #1)
 #
 # Reference: .claude/skills/cqa-01-asciidoctor-dita-vale.md
 #
-# Usage: ./cqa-01-verify-asciidoctor-dita-vale.sh <path-to-master.adoc>
+# Usage: ./cqa-01-asciidoctor-dita-vale.sh <path-to-master.adoc>
 
 set -e
 

@@ -1,11 +1,11 @@
 #!/bin/bash
-# cqa-04-verify-module-templates.sh
+# cqa-04-modules-use-official-templates.sh
 # Verify modules use official Red Hat modular documentation templates (CQA requirement #4)
 #
-# Usage: ./cqa-04-verify-module-templates.sh [--fix] <file-path>
+# Usage: ./cqa-04-modules-use-official-templates.sh [--fix] <file-path>
 #   --fix:  Apply automatic fixes where possible
 #   file:   Processes the specified file and all its includes recursively
-#   Example: ./cqa-04-verify-module-templates.sh titles/install-rhdh-ocp/master.adoc
+#   Example: ./cqa-04-modules-use-official-templates.sh titles/install-rhdh-ocp/master.adoc
 #
 # Checks:
 #   - PROCEDURE modules must not have custom subheadings (===)

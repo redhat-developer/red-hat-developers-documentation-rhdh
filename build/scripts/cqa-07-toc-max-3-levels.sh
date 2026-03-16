@@ -1,10 +1,10 @@
 #!/bin/bash
-# cqa-07-verify-toc-depth.sh
+# cqa-07-toc-max-3-levels.sh
 # Validates TOC depth does not exceed 3 levels (CQA #7)
 #
-# Usage: ./cqa-07-verify-toc-depth.sh <file-path>
+# Usage: ./cqa-07-toc-max-3-levels.sh <file-path>
 #   file:   Processes the specified file and all its includes recursively
-#   Example: ./cqa-07-verify-toc-depth.sh titles/install-rhdh-ocp/master.adoc
+#   Example: ./cqa-07-toc-max-3-levels.sh titles/install-rhdh-ocp/master.adoc
 #
 # Checks:
 #   - Heading depth must not exceed 3 levels (= == ===)
