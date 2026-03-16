@@ -2,17 +2,28 @@
 # cqa-07-verify-toc-depth.sh
 # Validates TOC depth does not exceed 3 levels (CQA #7)
 #
-# Reference: .claude/skills/cqa-07-toc-max-3-levels.md
+# Usage: ./cqa-07-verify-toc-depth.sh <file-path>
+#   file:   Processes the specified file and all its includes recursively
+#   Example: ./cqa-07-verify-toc-depth.sh titles/install-rhdh-ocp/master.adoc
 #
-# Usage: ./cqa-07-verify-toc-depth.sh <path-to-master.adoc>
+# Checks:
+#   - Heading depth must not exceed 3 levels (= == ===)
+#   - Level 4+ (==== or deeper) is a violation
+#
+# Skips:
+#   - Content inside source/listing blocks (----, ....)
+#   - attributes.adoc files
 
 set -e
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$REPO_ROOT"
+
 if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <path-to-master.adoc>" >&2
+    echo "Usage: $0 <file-path>" >&2
     echo "" >&2
     echo "Example:" >&2
-    echo "  $0 titles/integrating-with-github/master.adoc" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
     exit 1
 fi
 
@@ -23,93 +34,133 @@ if [[ ! -f "$TARGET_FILE" ]]; then
     exit 1
 fi
 
-# Get repository root
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || REPO_ROOT="."
-
-# Function to get all included files
-get_all_files() {
+# Function to extract included files from a given file
+get_includes() {
     local file="$1"
-    "$REPO_ROOT/build/scripts/list-all-included-files-starting-from" "$file"
-}
+    if [[ ! -f "$file" ]]; then
+        return
+    fi
 
-# Function to count max heading depth in a file
-get_max_depth() {
-    local file="$1"
-    local max_depth=0
+    grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
+        local dir
+        dir=$(dirname "$file")
+        local resolved_path
 
-    # Find all heading lines (starting with =)
-    while IFS= read -r line; do
-        if [[ "$line" =~ ^(=+)[[:space:]] ]]; then
-            # Count number of = signs
-            depth=${#BASH_REMATCH[1]}
-            if [[ $depth -gt $max_depth ]]; then
-                max_depth=$depth
-            fi
+        if [[ "$include_path" == /* ]]; then
+            resolved_path="$include_path"
+        elif [[ "$include_path" == ../* ]]; then
+            resolved_path="$dir/$include_path"
+        else
+            resolved_path="$dir/$include_path"
         fi
-    done < "$file"
 
-    echo "$max_depth"
+        if [[ -f "$resolved_path" ]]; then
+            # shellcheck disable=SC2269
+            resolved_path=$(realpath --relative-to="$REPO_ROOT" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
+            echo "$resolved_path"
+        fi
+    done
 }
 
-# Get all files (space-separated list)
-ALL_FILES=$(get_all_files "$TARGET_FILE")
+# Function to recursively collect all files to process
+collect_files() {
+    local file="$1"
+    local var_name="$2"
 
-# Convert space-separated list to newline-separated
-# Filter to .adoc files (modules, assemblies, and master files)
-ADOC_FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | grep "\.adoc$" | grep -v "attributes.adoc" || true)
+    local current_files
+    eval "current_files=(\"\${${var_name}[@]}\")"
 
-if [[ -z "$ADOC_FILES" ]]; then
-    echo "No .adoc files found."
-    exit 0
-fi
+    for existing_file in "${current_files[@]}"; do
+        if [[ "$existing_file" == "$file" ]]; then
+            return
+        fi
+    done
+
+    eval "${var_name}+=('$file')"
+
+    while IFS= read -r included_file; do
+        collect_files "$included_file" "$var_name"
+    done < <(get_includes "$file")
+}
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
 
 echo "=== CQA #7: Verify TOC Depth (Max 3 Levels) ==="
 echo ""
 echo "Reference: .claude/skills/cqa-07-toc-max-3-levels.md"
 echo ""
 
+# Collect files
+FILES_TO_PROCESS=()
+collect_files "$TARGET_FILE" FILES_TO_PROCESS
+
 # Track violations
 TOTAL_FILES=0
 VIOLATIONS=0
 MAX_DEPTH_FOUND=0
 
-# Check each file
-while IFS= read -r file; do
-    if [[ ! -f "$file" ]]; then
-        continue
-    fi
+for file in "${FILES_TO_PROCESS[@]}"; do
+    # Skip non-.adoc files
+    [[ "$file" != *.adoc ]] && continue
+
+    # Skip attributes.adoc
+    [[ "$(basename "$file")" == "attributes.adoc" ]] && continue
 
     TOTAL_FILES=$((TOTAL_FILES + 1))
 
-    # Get max depth in this file
-    DEPTH=$(get_max_depth "$file")
+    # Find max heading depth, skipping source/listing blocks
+    local_max=0
+    in_block=false
+    violation_lines=()
 
-    if [[ $DEPTH -gt $MAX_DEPTH_FOUND ]]; then
-        MAX_DEPTH_FOUND=$DEPTH
+    while IFS= read -r line; do
+        # Track source/listing block boundaries
+        if [[ "$line" =~ ^----+$ ]] || [[ "$line" =~ ^\.\.\.\.+$ ]]; then
+            if [[ "$in_block" == false ]]; then
+                in_block=true
+            else
+                in_block=false
+            fi
+            continue
+        fi
+
+        # Skip content inside blocks
+        if [[ "$in_block" == true ]]; then
+            continue
+        fi
+
+        # Check for headings (= followed by space)
+        if [[ "$line" =~ ^(=+)[[:space:]] ]]; then
+            depth=${#BASH_REMATCH[1]}
+            if [[ $depth -gt $local_max ]]; then
+                local_max=$depth
+            fi
+            if [[ $depth -gt 3 ]]; then
+                violation_lines+=("Level $depth: $line")
+            fi
+        fi
+    done < "$file"
+
+    if [[ $local_max -gt $MAX_DEPTH_FOUND ]]; then
+        MAX_DEPTH_FOUND=$local_max
     fi
 
     # Report status
-    if [[ $DEPTH -eq 0 ]]; then
-        # No headings (probably a snippet or attributes file)
-        echo "  - $(basename "$file"): No headings"
-    elif [[ $DEPTH -le 3 ]]; then
-        # Compliant (= to === allowed)
-        echo "  ✓ $(basename "$file"): Max depth $DEPTH"
+    if [[ $local_max -eq 0 ]]; then
+        echo -e "  - $(basename "$file"): No headings"
+    elif [[ $local_max -le 3 ]]; then
+        echo -e "  ${GREEN}v${NC} $(basename "$file"): Max depth $local_max"
     else
-        # Violation (4+ levels)
-        echo "  ✗ $(basename "$file"): Max depth $DEPTH (exceeds limit of 3)"
+        echo -e "  ${RED}x${NC} $(basename "$file"): Max depth $local_max (exceeds limit of 3)"
         VIOLATIONS=$((VIOLATIONS + 1))
-
-        # Show the violating lines
-        echo "    Violating headings:"
-        grep -n "^====\+ " "$file" | head -3 | while IFS=: read -r line_num heading; do
-            # Count depth
-            depth=$(echo "$heading" | grep -o "^=*" | wc -c)
-            depth=$((depth - 1))
-            echo "      Line $line_num: Level $depth heading"
+        for vline in "${violation_lines[@]}"; do
+            echo "      $vline"
         done
     fi
-done <<< "$ADOC_FILES"
+done
 
 echo ""
 echo "=== Summary ==="
@@ -117,21 +168,18 @@ echo "Files checked: $TOTAL_FILES"
 echo "Maximum heading depth found: $MAX_DEPTH_FOUND"
 
 if [[ $VIOLATIONS -eq 0 && $MAX_DEPTH_FOUND -le 3 ]]; then
-    echo "✓ All files comply with TOC depth requirement (max 3 levels)"
+    echo -e "${GREEN}v All files comply with TOC depth requirement (max 3 levels)${NC}"
     exit 0
 else
     if [[ $VIOLATIONS -gt 0 ]]; then
-        echo "✗ Found $VIOLATIONS file(s) with TOC depth violations"
-    fi
-    if [[ $MAX_DEPTH_FOUND -gt 3 ]]; then
-        echo "✗ Maximum depth of $MAX_DEPTH_FOUND exceeds limit of 3"
+        echo -e "${RED}x Found $VIOLATIONS file(s) with TOC depth violations${NC}"
     fi
     echo ""
     echo "TOC Level Guidelines:"
     echo "  Level 1 (=):   Book/main assembly title"
     echo "  Level 2 (==):  Major sections"
     echo "  Level 3 (===): Sub-sections/procedure headings"
-    echo "  Level 4+ (====): ✗ NOT ALLOWED"
+    echo "  Level 4+ (====): NOT ALLOWED"
     echo ""
     echo "See .claude/skills/cqa-07-toc-max-3-levels.md for restructuring strategies"
     exit 1
