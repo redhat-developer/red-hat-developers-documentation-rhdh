@@ -35,7 +35,7 @@
 
 - [ ] **CQA #13: Correct content type** - [Skill](skills/cqa-13-information-is-conveyed-using-the-correct-content.md)
   ```bash
-  ./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
   ```
   - [ ] Content matches declared type (PROCEDURE/CONCEPT/REFERENCE/ASSEMBLY)
   - [ ] Procedures have `.Procedure` sections

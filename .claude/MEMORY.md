@@ -57,7 +57,7 @@ Use these scripts for systematic tasks:
 
 1. **Content Type Detection/Fixing:**
    ```bash
-   ./build/scripts/fix-content-type.sh titles/<title>/master.adoc
+   ./build/scripts/cqa-03-fix-content-type.sh titles/<title>/master.adoc
    ```
    - Auto-detects and fixes content type metadata
    - Normalizes .Procedure and .Verification list formatting
@@ -68,7 +68,7 @@ Use these scripts for systematic tasks:
    ```bash
    ./build/scripts/fix-title-id-filename.sh titles/<title>/master.adoc
    ```
-   - Ensures content type metadata exists (calls fix-content-type.sh if needed)
+   - Ensures content type metadata exists (calls cqa-03-fix-content-type.sh if needed)
    - Fixes title forms (gerund → imperative)
    - Aligns IDs to match titles
    - Renames files with git mv

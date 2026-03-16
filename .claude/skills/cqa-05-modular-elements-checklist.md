@@ -123,7 +123,7 @@ Work through each checkbox in the checklist for thorough validation.
 
 1. **Run content type validation:**
    ```bash
-   ./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
+   ./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
    ```
 
 2. **Check all required elements present:**
