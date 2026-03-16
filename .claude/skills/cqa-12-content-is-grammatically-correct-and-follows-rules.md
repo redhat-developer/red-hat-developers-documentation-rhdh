@@ -95,6 +95,8 @@ vale --config .vale.ini \
 
 ## Acceptable Exceptions
 
+**`artifacts/attributes.adoc`:** Ignore all errors in this file — it defines attribute values using literal product names, which intentionally triggers `DeveloperHub.Attributes` rules. These are false positives.
+
 **Technical terms:** Add to `.vale/styles/Vocab/RHDH/accept.txt` if legitimate (Keycloak, PostgreSQL, Kubernetes)
 **Code examples:** Ignore alerts in code blocks if syntax is correct
 **Quoted text:** Verify accuracy, ignore style alerts if intentional

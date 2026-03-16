@@ -134,10 +134,16 @@ while IFS= read -r file; do
 
     # Check 5: Has blank line between H1 and intro
     # Extract lines around H1 title
+    # Skip document attributes (lines starting with :) which must follow title immediately
     H1_LINE=$(grep -n "^= " "$file" | head -1 | cut -d: -f1)
     if [[ -n "$H1_LINE" ]]; then
-        NEXT_LINE=$((H1_LINE + 1))
-        NEXT_CONTENT=$(sed -n "${NEXT_LINE}p" "$file")
+        CHECK_LINE=$((H1_LINE + 1))
+        NEXT_CONTENT=$(sed -n "${CHECK_LINE}p" "$file")
+        # Skip past document attribute lines (:key: value)
+        while [[ "$NEXT_CONTENT" =~ ^: ]]; do
+            CHECK_LINE=$((CHECK_LINE + 1))
+            NEXT_CONTENT=$(sed -n "${CHECK_LINE}p" "$file")
+        done
         if [[ -n "$NEXT_CONTENT" ]]; then
             echo "  ✗ Missing blank line after H1 title"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
