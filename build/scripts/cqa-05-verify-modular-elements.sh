@@ -8,18 +8,21 @@
 
 set -e
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <path-to-master.adoc>"
-    echo ""
-    echo "Example:"
-    echo "  $0 titles/integrating-with-github/master.adoc"
+# Constants for pattern matching
+readonly PATTERN_BLOCK_TITLE='^\.[A-Z]'
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <path-to-master.adoc>" >&2
+    echo "" >&2
+    echo "Example:" >&2
+    echo "  $0 titles/integrating-with-github/master.adoc" >&2
     exit 1
 fi
 
 TARGET_FILE="$1"
 
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "Error: File not found: $TARGET_FILE"
+if [[ ! -f "$TARGET_FILE" ]]; then
+    echo "Error: File not found: $TARGET_FILE" >&2
     exit 1
 fi
 
@@ -39,7 +42,7 @@ ALL_FILES=$(get_all_files "$TARGET_FILE")
 # Filter to only .adoc files in assemblies/ or modules/
 MODULE_FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | grep -E "assemblies/|modules/" | grep "\.adoc$" || true)
 
-if [ -z "$MODULE_FILES" ]; then
+if [[ -z "$MODULE_FILES" ]]; then
     echo "No module or assembly files found."
     exit 0
 fi
@@ -55,7 +58,7 @@ VIOLATIONS=0
 
 # Check each file
 while IFS= read -r file; do
-    if [ ! -f "$file" ]; then
+    if [[ ! -f "$file" ]]; then
         continue
     fi
 
@@ -67,7 +70,7 @@ while IFS= read -r file; do
 
     # Determine if this is a nested assembly
     IS_NESTED_ASSEMBLY=false
-    if [ "$CONTENT_TYPE" = "ASSEMBLY" ] && grep -q "ifdef::context\[:parent-context:" "$file"; then
+    if [[ "$CONTENT_TYPE" = "ASSEMBLY" ]] && grep -q "ifdef::context\[:parent-context:" "$file"; then
         IS_NESTED_ASSEMBLY=true
     fi
 
@@ -76,7 +79,7 @@ while IFS= read -r file; do
     # ALL MODULES AND ASSEMBLIES
 
     # Check 1: Has content type metadata
-    if [ -z "$CONTENT_TYPE" ]; then
+    if [[ -z "$CONTENT_TYPE" ]]; then
         echo "  ✗ Missing :_mod-docs-content-type: metadata"
         FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
     fi
@@ -89,7 +92,7 @@ while IFS= read -r file; do
 
     # Check 3: Has exactly one H1 title
     H1_COUNT=$(grep -c "^= " "$file" || echo "0")
-    if [ "$H1_COUNT" -ne 1 ]; then
+    if [[ "$H1_COUNT" -ne 1 ]]; then
         echo "  ✗ Has $H1_COUNT H1 titles (should be exactly 1)"
         FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
     fi
@@ -103,10 +106,10 @@ while IFS= read -r file; do
     # Check 5: Has blank line between H1 and intro
     # Extract lines around H1 title
     H1_LINE=$(grep -n "^= " "$file" | head -1 | cut -d: -f1)
-    if [ -n "$H1_LINE" ]; then
+    if [[ -n "$H1_LINE" ]]; then
         NEXT_LINE=$((H1_LINE + 1))
         NEXT_CONTENT=$(sed -n "${NEXT_LINE}p" "$file")
-        if [ -n "$NEXT_CONTENT" ]; then
+        if [[ -n "$NEXT_CONTENT" ]]; then
             echo "  ✗ Missing blank line after H1 title"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
         fi
@@ -127,7 +130,7 @@ while IFS= read -r file; do
     fi
 
     # NESTED ASSEMBLY FILES
-    if [ "$IS_NESTED_ASSEMBLY" = true ]; then
+    if [[ "$IS_NESTED_ASSEMBLY" = true ]]; then
         # Check 8: Has parent-context at top
         if ! grep -q "ifdef::context\[:parent-context: {context}\]" "$file"; then
             echo "  ✗ Nested assembly missing parent-context preservation at top"
@@ -149,7 +152,7 @@ while IFS= read -r file; do
     fi
 
     # ALL ASSEMBLY FILES
-    if [ "$CONTENT_TYPE" = "ASSEMBLY" ]; then
+    if [[ "$CONTENT_TYPE" = "ASSEMBLY" ]]; then
         # Check 11: Blank lines between includes
         # Look for consecutive include:: lines
         if grep -A 1 "^include::" "$file" | grep -B 1 "^include::" | grep -v "^--$" | grep -v "^include::" > /dev/null 2>&1; then
@@ -164,14 +167,14 @@ while IFS= read -r file; do
 
         # Check 13: No block titles (except .Additional resources)
         # Block titles start with . followed by capital letter
-        if grep -E "^\.[A-Z]" "$file" | grep -v "\.Additional resources" > /dev/null 2>&1; then
+        if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" > /dev/null 2>&1; then
             echo "  ✗ Assembly contains block titles (only .Additional resources allowed)"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
         fi
     fi
 
     # CONCEPT OR REFERENCE MODULE
-    if [ "$CONTENT_TYPE" = "CONCEPT" ] || [ "$CONTENT_TYPE" = "REFERENCE" ]; then
+    if [[ "$CONTENT_TYPE" = "CONCEPT" || "$CONTENT_TYPE" = "REFERENCE" ]]; then
         # Check 14: No imperative instructions (check for numbered lists as proxy)
         if grep -E "^\. [A-Z]" "$file" | grep -v "^\.\." > /dev/null 2>&1; then
             echo "  ⚠ Warning: May contain imperative instructions (numbered list detected)"
@@ -184,13 +187,13 @@ while IFS= read -r file; do
 
         # Check 16: No block titles except .Additional resources or .Next steps
         # Block titles start with . followed by capital letter
-        if grep -E "^\.[A-Z]" "$file" | grep -v "\.Additional resources" | grep -v "\.Additional references" | grep -v "\.Next steps" > /dev/null 2>&1; then
+        if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Additional references" | grep -v "\.Next steps" > /dev/null 2>&1; then
             echo "  ⚠ Warning: Contains block titles other than .Additional resources or .Next steps"
         fi
     fi
 
     # PROCEDURE MODULE
-    if [ "$CONTENT_TYPE" = "PROCEDURE" ]; then
+    if [[ "$CONTENT_TYPE" = "PROCEDURE" ]]; then
         # Check 17: Has .Procedure block title
         if ! grep -q "^\.Procedure$" "$file"; then
             echo "  ✗ Missing .Procedure block title"
@@ -199,7 +202,7 @@ while IFS= read -r file; do
 
         # Check 18: Only one .Procedure block title
         PROCEDURE_COUNT=$(grep -c "^\.Procedure" "$file" || echo "0")
-        if [ "$PROCEDURE_COUNT" -gt 1 ]; then
+        if [[ "$PROCEDURE_COUNT" -gt 1 ]]; then
             echo "  ✗ Has $PROCEDURE_COUNT .Procedure block titles (should be exactly 1)"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
         fi
@@ -215,16 +218,16 @@ while IFS= read -r file; do
         ALLOWED_BLOCKS="^\\.Prerequisites$|^\\.Prerequisite$|^\\.Procedure$|^\\.Verification$|^\\.Results$|^\\.Result$|^\\.Troubleshooting$|^\\.Troubleshooting steps$|^\\.Troubleshooting step$|^\\.Next steps$|^\\.Next step$|^\\.Additional resources$"
         # Match lines starting with . followed by capital letter (block titles)
         # Exclude numbered lists (. followed by space) and nested lists (..)
-        if grep -E "^\.[A-Z]" "$file" | grep -v -E "$ALLOWED_BLOCKS" > /dev/null 2>&1; then
+        if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$ALLOWED_BLOCKS" > /dev/null 2>&1; then
             echo "  ✗ Contains non-standard block titles"
-            VIOLATING_BLOCKS=$(grep -E "^\.[A-Z]" "$file" | grep -v -E "$ALLOWED_BLOCKS" | head -3)
+            VIOLATING_BLOCKS=$(grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$ALLOWED_BLOCKS" | head -3)
             echo "    Examples: $VIOLATING_BLOCKS"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
         fi
     fi
 
     # Summary for this file
-    if [ $FILE_VIOLATIONS -eq 0 ]; then
+    if [[ $FILE_VIOLATIONS -eq 0 ]]; then
         echo "  ✓ All checks passed"
     else
         VIOLATIONS=$((VIOLATIONS + FILE_VIOLATIONS))
@@ -235,7 +238,7 @@ done <<< "$MODULE_FILES"
 # Final summary
 echo "=== Summary ==="
 echo "Files checked: $TOTAL_FILES"
-if [ $VIOLATIONS -eq 0 ]; then
+if [[ $VIOLATIONS -eq 0 ]]; then
     echo "✓ All files pass modular elements validation"
     exit 0
 else

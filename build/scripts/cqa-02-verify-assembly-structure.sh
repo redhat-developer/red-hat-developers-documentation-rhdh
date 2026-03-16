@@ -122,10 +122,8 @@ while IFS= read -r file; do
 
         if [[ -n "$SUSPECT_LINES" ]]; then
             SUSPECT_COUNT=$(echo "$SUSPECT_LINES" | wc -l)
-            if [[ "$SUSPECT_COUNT" -gt 0 ]]; then
-                echo "  ⚠ Warning: May contain content between includes ($SUSPECT_COUNT lines)"
-                echo "    Review for paragraphs/text between include statements"
-            fi
+            echo "  ⚠ Warning: May contain content between includes ($SUSPECT_COUNT lines)"
+            echo "    Review for paragraphs/text between include statements"
         fi
     fi
 

@@ -33,6 +33,10 @@ readonly PATTERN_UNNUMBERED_ITEM="^\* "
 readonly PATTERN_NESTED_ITEM="^\*\* "
 readonly PATTERN_INCLUDE="^include::"
 
+# AWK patterns for extracting content after section blocks
+readonly AWK_AFTER_PROCEDURE='/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag'
+readonly AWK_AFTER_VERIFICATION='/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag'
+
 # Function to extract included files from a given file
 get_includes() {
     local file="$1"
@@ -642,7 +646,7 @@ process_file() {
     if [[ "$detected_type" == "$CONTENT_TYPE_PROCEDURE" ]]; then
         # Detect what needs fixing before we fix it
         local after_procedure
-        after_procedure=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+        after_procedure=$(awk "$AWK_AFTER_PROCEDURE" "$file" 2>/dev/null)
         local unnumbered_before
         unnumbered_before=$(echo "$after_procedure" | grep -c "$PATTERN_UNNUMBERED_ITEM" || true)
         local nested_before
@@ -678,7 +682,7 @@ process_file() {
     if grep -q "^\.Verification" "$file" 2>/dev/null; then
         # Detect what needs fixing before we fix it
         local after_verification
-        after_verification=$(awk '/^\.Verification$/{flag=1; next} flag && /^\.(Prerequisites|Procedure|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+        after_verification=$(awk "$AWK_AFTER_VERIFICATION" "$file" 2>/dev/null)
         local unnumbered_verif_before
         unnumbered_verif_before=$(echo "$after_verification" | grep -c "^\* " || true)
         local nested_verif_before

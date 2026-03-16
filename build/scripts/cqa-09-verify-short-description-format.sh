@@ -91,7 +91,7 @@ if [[ $# -eq 1 ]]; then
     # Process specified file and all its includes
     TARGET_FILE="$1"
     if [[ ! -f "$TARGET_FILE" ]]; then
-        echo "Error: File not found: $TARGET_FILE"
+        echo "Error: File not found: $TARGET_FILE" >&2
         exit 1
     fi
     echo "Processing file and includes: $TARGET_FILE"

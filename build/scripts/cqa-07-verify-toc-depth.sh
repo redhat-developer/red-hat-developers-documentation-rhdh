@@ -8,18 +8,18 @@
 
 set -e
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <path-to-master.adoc>"
-    echo ""
-    echo "Example:"
-    echo "  $0 titles/integrating-with-github/master.adoc"
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <path-to-master.adoc>" >&2
+    echo "" >&2
+    echo "Example:" >&2
+    echo "  $0 titles/integrating-with-github/master.adoc" >&2
     exit 1
 fi
 
 TARGET_FILE="$1"
 
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "Error: File not found: $TARGET_FILE"
+if [[ ! -f "$TARGET_FILE" ]]; then
+    echo "Error: File not found: $TARGET_FILE" >&2
     exit 1
 fi
 
@@ -42,13 +42,13 @@ get_max_depth() {
         if [[ "$line" =~ ^(=+)[[:space:]] ]]; then
             # Count number of = signs
             depth=${#BASH_REMATCH[1]}
-            if [ $depth -gt $max_depth ]; then
+            if [[ $depth -gt $max_depth ]]; then
                 max_depth=$depth
             fi
         fi
     done < "$file"
 
-    echo $max_depth
+    echo "$max_depth"
 }
 
 # Get all files (space-separated list)
@@ -58,7 +58,7 @@ ALL_FILES=$(get_all_files "$TARGET_FILE")
 # Filter to .adoc files (modules, assemblies, and master files)
 ADOC_FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | grep "\.adoc$" | grep -v "attributes.adoc" || true)
 
-if [ -z "$ADOC_FILES" ]; then
+if [[ -z "$ADOC_FILES" ]]; then
     echo "No .adoc files found."
     exit 0
 fi
@@ -75,7 +75,7 @@ MAX_DEPTH_FOUND=0
 
 # Check each file
 while IFS= read -r file; do
-    if [ ! -f "$file" ]; then
+    if [[ ! -f "$file" ]]; then
         continue
     fi
 
@@ -84,15 +84,15 @@ while IFS= read -r file; do
     # Get max depth in this file
     DEPTH=$(get_max_depth "$file")
 
-    if [ $DEPTH -gt $MAX_DEPTH_FOUND ]; then
+    if [[ $DEPTH -gt $MAX_DEPTH_FOUND ]]; then
         MAX_DEPTH_FOUND=$DEPTH
     fi
 
     # Report status
-    if [ $DEPTH -eq 0 ]; then
+    if [[ $DEPTH -eq 0 ]]; then
         # No headings (probably a snippet or attributes file)
         echo "  - $(basename "$file"): No headings"
-    elif [ $DEPTH -le 3 ]; then
+    elif [[ $DEPTH -le 3 ]]; then
         # Compliant (= to === allowed)
         echo "  ✓ $(basename "$file"): Max depth $DEPTH"
     else
@@ -116,14 +116,14 @@ echo "=== Summary ==="
 echo "Files checked: $TOTAL_FILES"
 echo "Maximum heading depth found: $MAX_DEPTH_FOUND"
 
-if [ $VIOLATIONS -eq 0 ] && [ $MAX_DEPTH_FOUND -le 3 ]; then
+if [[ $VIOLATIONS -eq 0 && $MAX_DEPTH_FOUND -le 3 ]]; then
     echo "✓ All files comply with TOC depth requirement (max 3 levels)"
     exit 0
 else
-    if [ $VIOLATIONS -gt 0 ]; then
+    if [[ $VIOLATIONS -gt 0 ]]; then
         echo "✗ Found $VIOLATIONS file(s) with TOC depth violations"
     fi
-    if [ $MAX_DEPTH_FOUND -gt 3 ]; then
+    if [[ $MAX_DEPTH_FOUND -gt 3 ]]; then
         echo "✗ Maximum depth of $MAX_DEPTH_FOUND exceeds limit of 3"
     fi
     echo ""
