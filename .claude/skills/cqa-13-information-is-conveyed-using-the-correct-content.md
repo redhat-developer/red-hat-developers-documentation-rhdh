@@ -62,6 +62,24 @@ While RHDH documentation primarily uses Product documentation with modular struc
 
 **See [content-types.md](../resources/content-types.md) for complete definitions and guidance on choosing content types.**
 
+## Command
+
+**Run content type verification:**
+```bash
+./build/scripts/cqa-13-information-is-conveyed-using-the-correct-content.sh [--fix] titles/<your-title>/master.adoc
+```
+
+**What the script does:**
+- Validates PROCEDURE files have `.Procedure` section with steps
+- Validates CONCEPT files do not have `.Procedure` sections
+- Validates REFERENCE files do not have `.Procedure` sections
+- Validates ASSEMBLY files contain only intro + includes
+- Checks filename prefix matches content type (proc-, con-, ref-, assembly-)
+
+**Target Results:**
+- ✅ All content matches declared type
+- ✅ All filename prefixes match content type
+
 ## Validation
 
 **Note:** Content type metadata is automatically validated by CQA #3. This requirement focuses on manual verification that content matches declared types.

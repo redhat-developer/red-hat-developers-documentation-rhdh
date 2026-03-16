@@ -10,7 +10,23 @@
 
 Content must follow American English grammar, Red Hat style standards: correct grammar/spelling/punctuation, official terminology, consistent voice, proper capitalization, parallel structure.
 
-## Commands
+## Command
+
+**Run grammar and style verification:**
+```bash
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] titles/<your-title>/master.adoc
+```
+
+**What the script does:**
+- Runs Vale with `.vale.ini` config on all included files
+- Reports grammar, spelling, style, and terminology issues
+- Requires `vale` CLI installed and `.vale.ini` config file
+
+**Target Results:**
+- ✅ Zero Vale errors
+- ✅ Minimal Vale warnings
+
+## Reference Commands
 
 ### Step 1: Ensure Vale Styles Current (< 7 Days)
 

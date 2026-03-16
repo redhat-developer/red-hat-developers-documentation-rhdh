@@ -147,6 +147,22 @@ grep -r "The following" modules/ assemblies/
 - References → Describe INFORMATION
 - Assemblies → Summarize GOAL
 
+## Command
+
+**Run short description content verification:**
+```bash
+./build/scripts/cqa-08-short-description-content.sh [--fix] titles/<your-title>/master.adoc
+```
+
+**What the script does:**
+- Checks for self-referential language ("This section...", "This document...", etc.)
+- Detects empty abstracts after `[role="_abstract"]`
+- Reports content quality violations
+
+**Target Results:**
+- ✅ No self-referential phrases in abstracts
+- ✅ No empty abstracts
+
 ## Assessment
 
 ```yaml
