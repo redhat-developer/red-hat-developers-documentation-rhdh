@@ -39,8 +39,8 @@ get_all_files() {
 ALL_FILES=$(get_all_files "$TARGET_FILE")
 
 # Convert space-separated list to newline-separated
-# Filter to only .adoc files in assemblies/ or modules/
-MODULE_FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | grep -E "assemblies/|modules/" | grep "\.adoc$" || true)
+# Filter to only .adoc files in assemblies/, modules/, or master.adoc in titles/
+MODULE_FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | grep -E "assemblies/|modules/|titles/.*master\.adoc$" | grep "\.adoc$" || true)
 
 if [[ -z "$MODULE_FILES" ]]; then
     echo "No module or assembly files found."
@@ -85,9 +85,19 @@ while IFS= read -r file; do
     fi
 
     # Check 2: Has topic ID with {context}
-    if ! grep -q '\[id=".*_{context}"\]' "$file" && ! grep -q "\[id='.*_{context}'\]" "$file"; then
-        echo "  ✗ Missing or incorrect topic ID (must include _{context})"
-        FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
+    # Exception: master.adoc files use [id="{context}"] without underscore prefix
+    if [[ "$(basename "$file")" == "master.adoc" ]]; then
+        # master.adoc: should have [id="{context}"] (no underscore prefix)
+        if ! grep -q '\[id="{context}"\]' "$file" && ! grep -q "\[id='{context}'\]" "$file"; then
+            echo "  ✗ Missing or incorrect topic ID (master.adoc should use [id=\"{context}\"])"
+            FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
+        fi
+    else
+        # Regular assemblies/modules: should have [id="name_{context}"]
+        if ! grep -q '\[id=".*_{context}"\]' "$file" && ! grep -q "\[id='.*_{context}'\]" "$file"; then
+            echo "  ✗ Missing or incorrect topic ID (must include _{context})"
+            FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
+        fi
     fi
 
     # Check 3: Has exactly one H1 title
