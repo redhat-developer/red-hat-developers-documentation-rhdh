@@ -12,7 +12,25 @@ If a procedure includes prerequisites:
 - Do not exceed 10 prerequisites
 - Do not include steps in prerequisites (prerequisites are completed states, not actions)
 
-## Commands
+## Command
+
+**Run procedure prerequisites verification:**
+```bash
+./build/scripts/cqa-11-procedures-prerequisites.sh [--fix] titles/<your-title>/master.adoc
+```
+
+**What the script does:**
+- Checks `.Prerequisites` label uses correct plural form
+- Validates prerequisite count (≤10 per procedure)
+- Detects numbered lists in prerequisites (should be bulleted)
+- `--fix` mode: corrects `.Prerequisite` → `.Prerequisites`
+
+**Target Results:**
+- ✅ All prerequisite sections use `.Prerequisites` (plural)
+- ✅ No procedure exceeds 10 prerequisites
+- ✅ All prerequisites use bulleted lists
+
+## Reference Commands
 
 ### Find All Procedure Prerequisites
 

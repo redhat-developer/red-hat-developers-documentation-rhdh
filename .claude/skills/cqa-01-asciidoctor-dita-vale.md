@@ -6,28 +6,42 @@
 
 **Quality Level:** Required/non-negotiable
 
-## Command
+## Automated Validation
 
-**Run Vale DITA validation on title master.adoc and ALL included files:**
+### Run Complete Validation Script
 
 ```bash
-# For a specific title (recommended approach)
-vale --config .vale-dita-only.ini \
-  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
+./build/scripts/cqa-01-asciidoctor-dita-vale.sh [--fix] titles/<your-title>/master.adoc
 ```
 
-**Example for install-rhdh-osd-gcp:**
-```bash
-vale --config .vale-dita-only.ini \
-  $(./build/scripts/list-all-included-files-starting-from titles/install-rhdh-osd-gcp/master.adoc)
-```
-
-**See also:** [get-title-files.md](get-title-files.md) for detailed explanation of the file list extraction script.
+**What the script validates:**
+- Runs Vale with `.vale-dita-only.ini` configuration
+- Validates all included files (master.adoc + assemblies + modules)
+- Reports errors, warnings, and suggestions
+- Provides clear pass/fail status
 
 **Target Results:**
 - ✅ 0 errors
 - ✅ Only acceptable warnings (see below)
 - ✅ 0 suggestions
+
+**Example output:**
+```
+✓ All files pass AsciiDoc DITA validation
+✔ 0 errors, 0 warnings and 0 suggestions in 13 files.
+```
+
+### Manual Validation
+
+**Run Vale directly on specific title:**
+
+```bash
+# For a specific title
+vale --config .vale-dita-only.ini \
+  $(./build/scripts/list-all-included-files-starting-from titles/<title-name>/master.adoc)
+```
+
+**See also:** [get-title-files.md](get-title-files.md) for detailed explanation of the file list extraction script.
 
 **IMPORTANT:** Do NOT run `vale titles/<title>/` on the entire directory - this validates files NOT part of the title and produces misleading results. Always specify master.adoc and its includes.
 

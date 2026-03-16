@@ -13,6 +13,33 @@ Assemblies must have this structure:
 
 **DITA Constraint:** DITA maps do not accept text between include statements for modules.
 
+## Automated Validation
+
+### Run Complete Validation Script
+
+```bash
+./build/scripts/cqa-02-assembly-structure.sh [--fix] titles/<your-title>/master.adoc
+```
+
+**What the script validates:**
+- Has `[role="_abstract"]` introduction
+- No content between include statements
+- `.Prerequisites` appears before first include (if present)
+- `.Additional resources` at end after all includes (if present)
+- Content type is ASSEMBLY
+- No level 2+ subheadings (=== or deeper)
+- No detailed content between abstract and includes
+
+**Target Results:**
+- ✅ All assemblies have compliant structure
+- ⚠️ Warnings indicate potential issues requiring manual review
+
+**Example output:**
+```
+✓ All assemblies have compliant structure
+Note: Warnings indicate potential issues that require manual review
+```
+
 ## Verification
 
 **Manual inspection of each assembly file:**

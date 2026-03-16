@@ -9,7 +9,24 @@ All links in the documentation must be valid and accessible. This includes:
 - External URLs to Red Hat domains and third-party sites
 - Cross-title links to other RHDH documentation titles
 
-## Commands
+## Command
+
+**Run broken links verification:**
+```bash
+./build/scripts/cqa-14-no-broken-links.sh [--fix] titles/<your-title>/master.adoc
+```
+
+**What the script does:**
+- Checks `include::` references point to existing files
+- Checks `image::` references point to existing files
+- Skips paths with attribute substitutions (`{...}`)
+- For full validation including external URLs, run `build-ccutil.sh`
+
+**Target Results:**
+- ✅ All include references resolve to existing files
+- ✅ All image references resolve to existing files
+
+## Reference Commands
 
 ### Step 1: Build Documentation and Run htmltest
 

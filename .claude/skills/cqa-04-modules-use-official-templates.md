@@ -11,14 +11,11 @@ All modules must follow official Red Hat modular documentation templates for the
 ## Commands
 
 ```bash
-# Verify content type metadata and template structure
-./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
+# Verify module template compliance
+./build/scripts/cqa-04-modules-use-official-templates.sh titles/<your-title>/master.adoc
 
-# Find PROCEDURE modules with custom subheadings (violation)
-grep -rn "^===" modules/proc-*.adoc
-
-# Check for standard sections in PROCEDURE modules
-grep -rn "^\.Procedure\|^\.Prerequisites" modules/proc-*.adoc
+# Fix mode (auto-fixes .Prerequisite → .Prerequisites)
+./build/scripts/cqa-04-modules-use-official-templates.sh --fix titles/<your-title>/master.adoc
 ```
 
 ## Template Requirements by Module Type
@@ -93,7 +90,7 @@ Brief intro to reference data.
 
 ## Validation Workflow
 
-1. Run: `./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc`
+1. Run: `./build/scripts/cqa-04-modules-use-official-templates.sh --fix titles/<your-title>/master.adoc`
 2. Check violations:
    - PROCEDURE: `grep -rn "^===" modules/proc-*.adoc` (should be empty)
    - All: Verify intro paragraph present
