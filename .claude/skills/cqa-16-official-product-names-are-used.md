@@ -26,7 +26,7 @@
 - Example: `{product-very-short}` expands to "RHDH"
 
 **Title usage:**
-- Titles can use `{product}`, `{product-short}`, or `{product-very-short}` as appropriate
+- Titles should use `{product}` (full official product name)
 - Title usage does NOT affect what counts as "first occurrence" in the content
 
 ### Common Product Attributes
