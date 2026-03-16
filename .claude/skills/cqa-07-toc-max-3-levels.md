@@ -8,21 +8,38 @@ Content hierarchy should not exceed 3 levels in TOC to improve navigation and pr
 
 **Level counting:** For AEM migration, count from where your content starts (excluding Pantheon categories/book titles).
 
-## Verification
+## Automated Validation
 
-**Check source structure:**
+### Run Complete Validation Script
+
 ```bash
-# Count heading depth
-grep -E "^(=|==|===|====) " titles/<your-title>/master.adoc assemblies/*.adoc modules/*/*.adoc
+./build/scripts/cqa-07-verify-toc-depth.sh titles/<your-title>/master.adoc
+```
 
-# Find violations (4+ equals)
+**What the script validates:**
+- Scans all included .adoc files for heading depth
+- Identifies any headings deeper than level 3 (====)
+- Reports maximum depth found across all files
+- Shows line numbers of violating headings
+
+**Example output:**
+```
+✓ All files comply with TOC depth requirement (max 3 levels)
+Maximum heading depth found: 3
+```
+
+### Manual Verification
+
+**Check specific files:**
+```bash
+# Find violations (4+ equals) in specific directories
 grep -E "^====" assemblies/*.adoc modules/*/*.adoc
 ```
 
 **Build and review:**
 ```bash
 ./build/scripts/build-ccutil.sh
-# Open build/tmp/<title>/html-single/index.html and check left nav depth
+# Open titles-generated/main/<title>/index.html and check left nav depth
 ```
 
 **Checklist:**
