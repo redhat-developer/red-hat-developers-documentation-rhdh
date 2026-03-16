@@ -1,11 +1,12 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="proc-setting-up-openshift-ai-connector-for-rhdh-with-rhoai_{context}"]
-= Setting up {openshift-ai-connector-name} with {rhoai-brand-name}
+[id="set-up-openshift-ai-connector-for-red-hat-developer-hub-with-red-hat-openshift-ai_{context}"]
+= Set up {openshift-ai-connector-name} with {rhoai-brand-name}
 
+[role="_abstract"]
 The installation of the {openshift-ai-connector-name} requires manual updates to {product-very-short}-related Kubernetes resources.
 
-.{rhoai-short} Prerequisites
+.Prerequisites
 
 * To import model cards from the model catalog into TechDocs, you must use {rhoai-short} 2.25.
 +
@@ -23,9 +24,11 @@ For more details, see {rhoai-docs-link}/enabling_the_model_registry_component/in
 
 .Procedure
 
-* Configure {rhoai-short}-related RBAC and credentials.
+. Configure {rhoai-short}-related RBAC and credentials.
++
 A Kubernetes `ServiceAccount` and a `service-account-token` Secret are required for the connector to retrieve data from {rhoai-short}. The following resources must be created, replacing namespace names (`ai-rhdh` for {product-very-short}, `rhoai-model-registries` for {rhoai-short}) as needed:
-** `ServiceAccount` (`rhdh-rhoai-connector`). For example:
++
+.. `ServiceAccount` (`rhdh-rhoai-connector`). For example:
 +
 [source,yaml]
 ----
@@ -35,7 +38,7 @@ metadata:
   name: rhdh-rhoai-connector
   namespace: ai-rhdh
 ----
-** `ClusterRole` and `ClusterRoleBinding` (`rhdh-rhoai-connector`) to allow access to OCP resources like `routes`, `services`, and `inferenceservices`. For example:
+.. `ClusterRole` and `ClusterRoleBinding` (`rhdh-rhoai-connector`) to allow access to {ocp-short} resources such as `routes`, `services`, and `inferenceservices`. For example:
 +
 [source,yaml]
 ----
@@ -91,7 +94,7 @@ subjects:
     name: rhdh-rhoai-connector
     namespace: ai-rhdh
 ----
-** `Role` and `RoleBinding` to allow ConfigMap updates within the {product-very-short} namespace (`ai-rhdh`). For example:
+.. `Role` and `RoleBinding` to allow ConfigMap updates within the {product-very-short} namespace (`ai-rhdh`). For example:
 +
 [source,yaml]
 ----
@@ -120,7 +123,7 @@ subjects:
     name: rhdh-rhoai-connector
     namespace: ai-rhdh
 ----
-** `RoleBinding` in the {rhoai-short} namespace (`rhoai-model-registries`) to grant the {product-very-short} `ServiceAccount` read permissions to the model registry data (binding to `registry-user-modelregistry-public`).
+.. `RoleBinding` in the {rhoai-short} namespace (`rhoai-model-registries`) to grant the {product-very-short} `ServiceAccount` read permissions to the model registry data (binding to `registry-user-modelregistry-public`).
 +
 [source,yaml]
 ----
@@ -141,7 +144,7 @@ subjects:
     kind: Group
     name: system:serviceaccounts:ai-rhdh
 ----
-** Secret (`rhdh-rhoai-connector-token`) of type `kubernetes.io/service-account-token` that goes along with the `rhdh-rhoai-connector` `ServiceAccount`.
+.. Secret (`rhdh-rhoai-connector-token`) of type `kubernetes.io/service-account-token` that goes along with the `rhdh-rhoai-connector` `ServiceAccount`.
 +
 [source,yaml]
 ----
@@ -169,16 +172,17 @@ plugins:
 ----
 
 . Add the `Connector` sidecar containers to the {product-very-short} Pod.
-** If {product-very-short} was installed using the Operator, modify your {product-very-short} custom resource (CR) instance.
-** If {product-very-short} was installed using the Helm charts, modify the *Deployment* specification.
-
-. The system relies on three sidecar containers ({openshift-ai-connector-name}) running alongside the `backstage-backend` container.
-
++
+* If {product-very-short} was installed by using the Operator, modify your {product-very-short} custom resource (CR) instance.
+* If {product-very-short} was installed by using the Helm charts, modify the *Deployment* specification.
++
+The system relies on three sidecar containers ({openshift-ai-connector-name}) running alongside the `backstage-backend` container.
 Add these sidecar containers to your configuration referencing the `rhdh-rhoai-connector-token` Secret:
-** `location`: Provides the REST API for {product-very-short} plugins to fetch model metadata.
-** `storage-rest`: Maintains a cache of AI Model metadata in a ConfigMap called `bac-import-model`.
-** `rhoai-normalizer`: Acts as a Kubernetes controller and {rhoai-short} client, normalizing {rhoai-short} metadata for the connector. The following code block is an example:
-
++
+* `location`: Provides the REST API for {product-very-short} plugins to fetch model metadata.
+* `storage-rest`: Maintains a cache of AI Model metadata in a ConfigMap called `bac-import-model`.
+* `rhoai-normalizer`: Acts as a Kubernetes controller and {rhoai-short} client, normalizing {rhoai-short} metadata for the connector. The following code block is an example:
++
 [source,yaml]
 ----
 spec:
