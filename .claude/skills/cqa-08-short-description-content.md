@@ -7,6 +7,8 @@
 **Focus:** Content quality of short descriptions (WHAT the abstract says)
 
 All modules and assemblies must have short descriptions that:
+- Are a **complete sentence** ending with a period (`.`)
+- Do **NOT** end mid-sentence with a colon (`:`), semicolon (`;`), or comma (`,`)
 - Describe **WHY** the user should read (not just WHAT it contains)
 - Include searchable keywords (product names, features, technologies)
 - Avoid self-referential language ("This document...", "This section...")
@@ -57,6 +59,26 @@ For each abstract, verify content quality:
 ❌ "This assembly covers authentication configuration."
 
 ## Common Content Issues
+
+### Issue 0: Incomplete sentence
+
+**Detection:** Abstract ends with a colon, semicolon, or comma instead of a period
+
+❌ "The Orchestrator plugin integrates these components:"
+❌ "You can configure the following settings;"
+❌ "To deploy a workflow, follow these main steps,"
+
+✅ "The Orchestrator plugin integrates several components to automate the software development lifecycle."
+✅ "Configure settings to customize the Orchestrator plugin behavior."
+✅ "Deploy a workflow by following these steps to make it available in the Orchestrator plugin."
+
+**Fix:** Rewrite as a complete, self-contained sentence ending with a period. Do not use the abstract to introduce a list or code block that follows it — the abstract must stand alone.
+
+**Check for violations:**
+```bash
+# Find abstracts ending with colon, semicolon, or comma
+grep -A1 '\[role="_abstract"\]' modules/ assemblies/ | grep -E '[,:;]$'
+```
 
 ### Issue 1: Self-referential language
 
