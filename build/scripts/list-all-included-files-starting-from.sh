@@ -47,13 +47,12 @@ find_includes() {
     # Normalize path
     include_path=$(realpath -m "$include_path" 2>/dev/null || echo "$include_path")
 
-    if [[ -f "$include_path" ]]; then
-      # Check if not already in temp file to avoid infinite loops
-      if ! grep -qFx "$include_path" "$TEMP_FILE" 2>/dev/null; then
-        find_includes "$include_path"
-      fi
+    if [[ -f "$include_path" ]] && ! grep -qFx "$include_path" "$TEMP_FILE" 2>/dev/null; then
+      find_includes "$include_path"
     fi
   done < <(grep "^include::" "$file" 2>/dev/null || true)
+
+  return 0
 }
 
 # Get all files
