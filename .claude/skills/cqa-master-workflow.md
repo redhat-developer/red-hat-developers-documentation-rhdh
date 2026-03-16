@@ -2,6 +2,13 @@
 
 Execute all 17 CQA requirements in optimal order. Each links to detailed skill with commands, criteria, and fixes.
 
+**CRITICAL EXECUTION RULES:**
+1. **Run skills in the exact order listed** - The sequence is optimized to minimize conflicts
+2. **Follow each skill precisely** - Read the linked skill file and execute ALL steps as documented
+3. **Never skip steps** - Every command, check, and validation in the skill must be completed
+4. **Never reinvent the skill** - Use the documented commands, don't create alternative approaches
+5. **Mark each checkbox only after completing ALL sub-items** in that skill
+
 **Idempotency requirement:**
 - Re-execute each requirement until it produces no new changes (idempotent state)
 - Re-execute the entire sequence until the full workflow reaches idempotency (no changes across all requirements)
