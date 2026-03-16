@@ -29,27 +29,72 @@
 - Titles should use `{product}` (full official product name)
 - Title usage does NOT affect what counts as "first occurrence" in the content
 
-### Common Product Attributes
+### All Product Attributes
 
 **Red Hat Developer Hub:**
 - `{product}` → Red Hat Developer Hub (first occurrence)
 - `{product-short}` → Developer Hub (subsequent)
 - `{product-very-short}` → RHDH (very short)
+- `{product-local-very-short}` → RHDH Local
+- `{backstage}` or `{product-custom-resource-type}` → Backstage
+- `{rhdeveloper-name}` → Red Hat Developer
 
 **OpenShift:**
-- `{ocp-brand-name}` → Red Hat OpenShift Container Platform (first)
-- `{ocp-short}` → OpenShift Container Platform (subsequent)
+- `{ocp-brand-name}` → Red Hat OpenShift Container Platform
+- `{ocp-short}` → OpenShift Container Platform
+- `{ocp-very-short}` → RHOCP
 - `{osd-brand-name}` → Red Hat OpenShift Dedicated
 - `{osd-short}` → OpenShift Dedicated
+- `{logging-brand-name}` → Red Hat OpenShift Logging
+- `{logging-short}` → OpenShift Logging
+- `{rhoserverless-brand-name}` → Red Hat OpenShift Serverless
+- `{rhoai-brand-name}` → Red Hat OpenShift AI
+- `{rhoai-short}` → RHOAI
+- `{odf-name}` → OpenShift Data Foundation
+- `{openshift-ai-connector-name}` → OpenShift AI Connector for {product}
+- `{openshift-ai-connector-name-short}` → OpenShift AI Connector for {product-very-short}
+
+**Other Red Hat Products:**
+- `{rhads-brand-name}` → Red Hat Advanced Developer Suite - secure supply chain
+- `{rhacs-brand-name}` → Red Hat Advanced Cluster Security
+- `{rhacs-short}` → Advanced Cluster Security
+- `{rhacs-very-short}` → ACS
+- `{ls-brand-name}` → Red Hat Developer Lightspeed for {product}
+- `{ls-short}` → Developer Lightspeed for {product-very-short}
+- `{lcs-name}` → Lightspeed Core Service
+- `{lcs-short}` → LCS
+- `{rhbk-brand-name}` → Red Hat Build of Keycloak
+- `{rhbk}` → RHBK
+- `{rhcr}` → Red Hat Container Registry
+- `{rhec}` → Red Hat Ecosystem Catalog
+- `{rhel}` → Red Hat Enterprise Linux
+- `{rhtas-brand-name}` → Red Hat Trusted Artifact Signer
+- `{rhtas-short}` → Trusted Artifact Signer
+- `{rhtas-very-short}` → TAS
+- `{rhtpa-brand-name}` → Red Hat Trusted Profile Analyzer
+- `{rhtpa-short}` → Trusted Profile Analyzer
+- `{rhtpa-very-short}` → TPA
 
 **Cloud Providers:**
 - `{aws-brand-name}` → Amazon Web Services
 - `{aws-short}` → AWS
-- `{gcp-brand-name}` → Google Cloud Platform
-- `{gcp-short}` → GCP
+- `{eks-brand-name}` → Amazon Elastic Kubernetes Service
+- `{eks-name}` → Elastic Kubernetes Service
+- `{eks-short}` → EKS
+- `{aks-brand-name}` → Microsoft Azure Kubernetes Service
+- `{aks-name}` → Azure Kubernetes Service
+- `{aks-short}` → AKS
 - `{azure-brand-name}` → Microsoft Azure
+- `{azure-short}` → Azure
+- `{gcp-brand-name}` → Google Cloud
+- `{gke-brand-name}` → Google Kubernetes Engine
+- `{gke-short}` → GKE
 
 ## Automated Validation
+
+### Vale Rule
+
+The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded product names inline during editing. It flags the same patterns as the script below.
 
 ### Run Complete Validation Script
 
@@ -58,11 +103,9 @@
 ```
 
 **What the script validates:**
-- Hardcoded "Red Hat Developer Hub" (should use `{product}` or `{product-short}`)
-- Hardcoded "Developer Hub" (should use `{product-short}`)
-- Hardcoded "Backstage" (should use `{backstage}`)
-- Hardcoded "Red Hat OpenShift Container Platform" (should use `{ocp-brand-name}`)
-- Hardcoded "OpenShift Container Platform" (should use `{ocp-short}`)
+- All Red Hat product names (Developer Hub, OpenShift, ACS, Keycloak, RHEL, TAS, TPA, etc.)
+- All partner platform names (AWS, Azure, Google Cloud, EKS, AKS, GKE)
+- Backstage (should use `{backstage}` or `{product-custom-resource-type}`)
 
 **Skips:** source blocks, attribute definitions, comments, attributes.adoc, snippets
 
@@ -114,12 +157,12 @@ done
 
 ```yaml
 
-title: 
+title:
 
 status: No data  # Meets criteria | Mostly meets | Mostly does not meet | Does not meet | Not applicable
 
 notes: |
 
-  
+
 
 ```

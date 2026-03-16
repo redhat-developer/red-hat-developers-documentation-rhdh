@@ -8,13 +8,8 @@
 #   Example: ./cqa-16-verify-product-names.sh titles/install-rhdh-ocp/master.adoc
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
-# Checks for:
-#   - Hardcoded "Red Hat Developer Hub" → should use {product} or {product-short}
-#   - Hardcoded "Developer Hub" → should use {product-short}
-#   - Hardcoded "RHDH" → should use {product-very-short}
-#   - Hardcoded "Backstage" → should use {backstage}
-#   - Hardcoded "OpenShift Container Platform" → should use {ocp-short}
-#   - Hardcoded "Red Hat OpenShift Container Platform" → should use {ocp-brand-name}
+# Checks for hardcoded product names that should use AsciiDoc attributes.
+# See .vale-styles/DeveloperHub/Attributes.yml for the full list.
 #
 # Skips:
 #   - Content inside source/listing blocks (----, ....)
@@ -163,14 +158,68 @@ is_in_block() {
 }
 
 # Define product name patterns and their replacements
-# Format: "pattern|replacement|description"
-# Patterns are checked in order; longer patterns first to avoid partial matches
+# Format: "pattern|replacement|strip_attrs|parent_pattern"
+#   pattern:        Literal text to search for
+#   replacement:    Suggested attribute (for reporting)
+#   strip_attrs:    Comma-separated attribute names to strip when filtering false positives
+#   parent_pattern: Longer pattern that contains this one (to avoid double-flagging)
+#
+# IMPORTANT: Patterns are checked in order. Longer patterns MUST come first
+# to avoid partial matches (e.g., "Red Hat OpenShift Container Platform"
+# before "OpenShift Container Platform").
 PATTERNS=(
-    'Red Hat OpenShift Container Platform|{ocp-brand-name}|Use {ocp-brand-name} attribute'
-    'OpenShift Container Platform|{ocp-short}|Use {ocp-short} attribute'
-    'Red Hat Developer Hub|{product-short}|Use {product} (first occurrence) or {product-short}'
-    'Developer Hub|{product-short}|Use {product-short} attribute'
-    'Backstage|{backstage}|Use {backstage} attribute'
+    # Red Hat Platforms (longest first)
+    'Red Hat Advanced Developer Suite|{rhads-brand-name}|rhads-brand-name|'
+    'Red Hat OpenShift Container Platform|{ocp-brand-name}|ocp-brand-name|'
+    'Red Hat Trusted Profile Analyzer|{rhtpa-brand-name}|rhtpa-brand-name|'
+    'Red Hat Trusted Artifact Signer|{rhtas-brand-name}|rhtas-brand-name|'
+    'Red Hat Advanced Cluster Security|{rhacs-brand-name}|rhacs-brand-name|'
+    'Red Hat Developer Lightspeed|{ls-brand-name}|ls-brand-name|'
+    'Red Hat OpenShift Serverless|{rhoserverless-brand-name}|rhoserverless-brand-name|'
+    'Red Hat OpenShift Dedicated|{osd-brand-name}|osd-brand-name|'
+    'Red Hat OpenShift Logging|{logging-brand-name}|logging-brand-name|'
+    'Red Hat Container Registry|{rhcr}|rhcr|'
+    'Red Hat Ecosystem Catalog|{rhec}|rhec|'
+    'Red Hat Build of Keycloak|{rhbk-brand-name}|rhbk-brand-name|'
+    'Red Hat Enterprise Linux|{rhel}|rhel|'
+    'Red Hat OpenShift AI|{rhoai-brand-name}|rhoai-brand-name|'
+    'Red Hat Developer Hub|{product} or {product-short}|product,product-short|'
+    'OpenShift AI Connector|{openshift-ai-connector-name}|openshift-ai-connector-name,openshift-ai-connector-name-short|'
+    'Red Hat Developer|{rhdeveloper-name}|rhdeveloper-name|Red Hat Developer Hub'
+    'OpenShift Container Platform|{ocp-short}|ocp-short,ocp-brand-name|Red Hat OpenShift Container Platform'
+    'OpenShift Data Foundation|{odf-name}|odf-name|'
+    'Developer Lightspeed|{ls-short}|ls-short,ls-brand-name|Red Hat Developer Lightspeed'
+    'Lightspeed Core Service|{lcs-name}|lcs-name|'
+    'Trusted Profile Analyzer|{rhtpa-short}|rhtpa-short,rhtpa-brand-name|Red Hat Trusted Profile Analyzer'
+    'Trusted Artifact Signer|{rhtas-short}|rhtas-short,rhtas-brand-name|Red Hat Trusted Artifact Signer'
+    'Advanced Cluster Security|{rhacs-short}|rhacs-short,rhacs-brand-name|Red Hat Advanced Cluster Security'
+    'OpenShift Dedicated|{osd-short}|osd-short,osd-brand-name|Red Hat OpenShift Dedicated'
+    'OpenShift Logging|{logging-short}|logging-short,logging-brand-name|Red Hat OpenShift Logging'
+    'Developer Hub|{product-short}|product-short,product,product-very-short|Red Hat Developer Hub'
+    'RHDH Local|{product-local-very-short}|product-local-very-short|'
+    'RHDH|{product-very-short}|product-very-short|'
+    'RHOCP|{ocp-very-short}|ocp-very-short|'
+    'RHOAI|{rhoai-short}|rhoai-short|'
+    'RHBK|{rhbk}|rhbk|'
+    'ACS|{rhacs-very-short}|rhacs-very-short|'
+    'LCS|{lcs-short}|lcs-short|'
+    'TAS|{rhtas-very-short}|rhtas-very-short|'
+    'TPA|{rhtpa-very-short}|rhtpa-very-short|'
+    'Backstage|{backstage} or {product-custom-resource-type}|backstage,product-custom-resource-type|'
+    # Partner Platforms (longest first)
+    'Microsoft Azure Kubernetes Service|{aks-brand-name}|aks-brand-name|'
+    'Amazon Elastic Kubernetes Service|{eks-brand-name}|eks-brand-name|'
+    'Elastic Kubernetes Service|{eks-name}|eks-name,eks-brand-name|Amazon Elastic Kubernetes Service'
+    'Azure Kubernetes Service|{aks-name}|aks-name,aks-brand-name|Microsoft Azure Kubernetes Service'
+    'Google Kubernetes Engine|{gke-brand-name}|gke-brand-name|'
+    'Amazon Web Services|{aws-brand-name}|aws-brand-name|'
+    'AWS|{aws-short}|aws-short|'
+    'Microsoft Azure|{azure-brand-name}|azure-brand-name|Microsoft Azure Kubernetes Service'
+    'Azure|{azure-short}|azure-short|Microsoft Azure'
+    'AKS|{aks-short}|aks-short|'
+    'EKS|{eks-short}|eks-short|'
+    'GKE|{gke-short}|gke-short|'
+    'Google Cloud|{gcp-brand-name}|gcp-brand-name|Google Cloud Platform'
 )
 
 # Color codes
@@ -219,7 +268,7 @@ for file in "${FILES_TO_PROCESS[@]}"; do
 
     # Check each pattern
     for pattern_entry in "${PATTERNS[@]}"; do
-        IFS='|' read -r pattern replacement description <<< "$pattern_entry"
+        IFS='|' read -r pattern replacement strip_attrs parent_pattern <<< "$pattern_entry"
 
         # Search for hardcoded pattern in the file
         while IFS=: read -r line_num line_content; do
@@ -240,65 +289,26 @@ for file in "${FILES_TO_PROCESS[@]}"; do
                 continue
             fi
 
-            # Skip lines where the match is already inside an attribute reference
-            # e.g., {product} contains "Red Hat Developer Hub" when expanded, but
-            # we only flag literal text, not attribute references
-            # Check if the pattern appears outside of { } in the line
-            # Simple heuristic: if the line contains the literal text AND it's not
-            # solely within an attribute reference, flag it.
-
-            # For "Backstage": skip if it appears as {backstage} or in an attribute definition
-            if [[ "$pattern" == "Backstage" ]]; then
-                # Skip if line only has {backstage} references, not bare "Backstage"
-                # Remove all {backstage} occurrences and check if bare "Backstage" remains
-                stripped="${line_content//\{backstage\}/}"
-                stripped="${stripped//\{product-custom-resource-type\}/}"
-                if ! echo "$stripped" | grep -q "$pattern"; then
-                    continue
-                fi
+            # Strip attribute references to avoid false positives
+            # e.g., a line with {product-short} should not flag "Developer Hub"
+            stripped="$line_content"
+            IFS=',' read -ra attrs <<< "$strip_attrs"
+            for attr in "${attrs[@]}"; do
+                stripped="${stripped//\{${attr}\}/}"
+            done
+            if ! echo "$stripped" | grep -q "$pattern"; then
+                continue
             fi
 
-            # For "Developer Hub": skip if it's part of "Red Hat Developer Hub"
-            # (which is handled by a separate pattern)
-            if [[ "$pattern" == "Developer Hub" ]]; then
-                # Check if this "Developer Hub" is part of "Red Hat Developer Hub"
-                if echo "$line_content" | grep -q "Red Hat Developer Hub"; then
-                    # Only flag if there's ALSO a standalone "Developer Hub" not preceded by "Red Hat "
-                    standalone="${line_content//Red Hat Developer Hub/}"
-                    if ! echo "$standalone" | grep -q "Developer Hub"; then
+            # If this pattern is a substring of a parent pattern,
+            # check if the match is actually part of the parent
+            if [[ -n "$parent_pattern" ]]; then
+                if echo "$line_content" | grep -q "$parent_pattern"; then
+                    # Remove parent pattern occurrences and check if standalone match remains
+                    standalone="${line_content//$parent_pattern/}"
+                    if ! echo "$standalone" | grep -q "$pattern"; then
                         continue
                     fi
-                fi
-                # Skip if it appears inside an attribute reference
-                stripped="${line_content//\{product-short\}/}"
-                stripped="${stripped//\{product\}/}"
-                stripped="${stripped//\{product-very-short\}/}"
-                if ! echo "$stripped" | grep -q "Developer Hub"; then
-                    continue
-                fi
-            fi
-
-            # For "Red Hat Developer Hub": skip if inside attribute reference
-            if [[ "$pattern" == "Red Hat Developer Hub" ]]; then
-                stripped="${line_content//\{product\}/}"
-                stripped="${stripped//\{product-short\}/}"
-                if ! echo "$stripped" | grep -q "Red Hat Developer Hub"; then
-                    continue
-                fi
-            fi
-
-            # For OCP patterns: skip if inside attribute reference
-            if [[ "$pattern" == "Red Hat OpenShift Container Platform" ]]; then
-                stripped="${line_content//\{ocp-brand-name\}/}"
-                if ! echo "$stripped" | grep -q "Red Hat OpenShift Container Platform"; then
-                    continue
-                fi
-            fi
-            if [[ "$pattern" == "OpenShift Container Platform" ]]; then
-                stripped="${line_content//\{ocp-short\}/}"
-                stripped="${stripped//\{ocp-brand-name\}/}"
-                if ! echo "$stripped" | grep -q "OpenShift Container Platform"; then
-                    continue
                 fi
             fi
 
@@ -319,54 +329,30 @@ for file in "${FILES_TO_PROCESS[@]}"; do
         TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + file_violations))
 
         if [[ "$FIX_MODE" == false ]]; then
-            echo "  $description"
             echo ""
         fi
 
         if [[ "$FIX_MODE" == true ]]; then
-            # Apply fixes
-            # Process patterns in order (longest first to avoid partial matches)
+            # Apply fixes: process patterns longest first (already ordered)
             cp "$file" "${file}.bak"
-
-            # Build sed commands, skipping lines in source blocks and attribute defs
-            # For simplicity, use sed with address ranges to skip blocks
-            # We'll apply replacements line by line, skipping block content
-
             local_fixed=false
 
-            # Red Hat OpenShift Container Platform → {ocp-brand-name}
-            if grep -q "Red Hat OpenShift Container Platform" "$file"; then
-                sed -i "s/Red Hat OpenShift Container Platform/{ocp-brand-name}/g" "$file"
-                local_fixed=true
-            fi
+            for pattern_entry in "${PATTERNS[@]}"; do
+                IFS='|' read -r pattern replacement _ _ <<< "$pattern_entry"
 
-            # OpenShift Container Platform → {ocp-short} (after the above, remaining instances)
-            if grep -q "OpenShift Container Platform" "$file"; then
-                sed -i "s/OpenShift Container Platform/{ocp-short}/g" "$file"
-                local_fixed=true
-            fi
+                # Determine the fix attribute (first one if multiple suggested)
+                # "or" separates alternatives; use the first one for auto-fix
+                fix_attr="${replacement%% or *}"
 
-            # Red Hat Developer Hub → {product-short}
-            if grep -q "Red Hat Developer Hub" "$file"; then
-                sed -i "s/Red Hat Developer Hub/{product-short}/g" "$file"
-                local_fixed=true
-            fi
+                if grep -q "$pattern" "$file"; then
+                    # Skip attribute definitions and comments
+                    sed -i "/^:/!{/^\/\//!s/$pattern/$fix_attr/g}" "$file"
+                    local_fixed=true
+                fi
+            done
 
-            # Developer Hub → {product-short}
-            if grep -q "Developer Hub" "$file"; then
-                # Only replace bare "Developer Hub" not already inside an attribute
-                sed -i '/^:/!s/Developer Hub/{product-short}/g' "$file"
-                local_fixed=true
-            fi
-
-            # Backstage → {backstage}
-            if grep -q "Backstage" "$file"; then
-                # Skip attribute definitions and lines with {backstage} already
-                sed -i '/^:/!s/Backstage/{backstage}/g' "$file"
-                # Fix double-bracing: {{backstage}} back to {backstage}
-                sed -i 's/{{backstage}}/{backstage}/g' "$file"
-                local_fixed=true
-            fi
+            # Fix double-bracing artifacts from nested replacements
+            sed -i 's/{{/{/g; s/}}/}/g' "$file"
 
             if [[ "$local_fixed" == true ]]; then
                 FILES_FIXED=$((FILES_FIXED + 1))
