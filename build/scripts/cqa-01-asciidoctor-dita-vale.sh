@@ -62,8 +62,9 @@ echo "Reference: .claude/skills/cqa-01-asciidoctor-dita-vale.md"
 echo "Config: .vale-dita-only.ini"
 echo ""
 
-# Get all files
-ALL_FILES=$(get_all_files "$TARGET_FILE")
+# Get all files, excluding attributes.adoc (defines attribute values
+# using literal product names, which triggers false positives)
+ALL_FILES=$(get_all_files "$TARGET_FILE" | tr ' ' '\n' | grep -v '/attributes\.adoc$' | tr '\n' ' ')
 
 if [[ -z "$ALL_FILES" ]]; then
     echo "Error: No files found to validate" >&2

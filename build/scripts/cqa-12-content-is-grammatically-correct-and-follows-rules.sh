@@ -65,8 +65,9 @@ echo "Reference: .claude/skills/cqa-12-content-is-grammatically-correct-and-foll
 echo "Config: .vale.ini"
 echo ""
 
-# Get all included files
-ALL_FILES=$("$REPO_ROOT/build/scripts/list-all-included-files-starting-from" "$TARGET_FILE")
+# Get all included files, excluding attributes.adoc (defines attribute values
+# using literal product names, which intentionally triggers DeveloperHub.Attributes rules)
+ALL_FILES=$("$REPO_ROOT/build/scripts/list-all-included-files-starting-from" "$TARGET_FILE" | tr ' ' '\n' | grep -v '/attributes\.adoc$' | tr '\n' ' ')
 
 if [[ -z "$ALL_FILES" ]]; then
     echo "Error: No files found to validate" >&2

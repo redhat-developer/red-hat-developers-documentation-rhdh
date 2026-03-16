@@ -140,6 +140,7 @@ See `.claude/skills/update-all-resources.md` for details.
    - **Sync command:** `vale sync` (automated by update script)
    - **When to sync:** Before CQA #1 (DITA validation) or CQA #12 (grammar/style validation)
    - **Configurations:** `.vale-dita-only.ini` (CQA #1), `.vale.ini` (CQA #12)
+   - **Excluded:** `attributes.adoc` is excluded from Vale validation (defines attribute values using literal product names, which triggers false positives for `DeveloperHub.Attributes` rules)
 
 ### Best Practices Learned
 
