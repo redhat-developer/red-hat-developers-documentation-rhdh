@@ -141,6 +141,7 @@ See `.claude/skills/update-all-resources.md` for details.
    - **When to sync:** Before CQA #1 (DITA validation) or CQA #12 (grammar/style validation)
    - **Configurations:** `.vale-dita-only.ini` (CQA #1), `.vale.ini` (CQA #12)
    - **Excluded:** `attributes.adoc` is excluded from Vale validation (defines attribute values using literal product names, which triggers false positives for `DeveloperHub.Attributes` rules)
+   - **All DITA warnings must be fixed** — no acceptable warnings. See `.claude/skills/cqa-01-asciidoctor-dita-vale.md` for fix guidance
 
 ### Best Practices Learned
 

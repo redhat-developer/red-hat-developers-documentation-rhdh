@@ -22,7 +22,7 @@
 
 **Target Results:**
 - ✅ 0 errors
-- ✅ Only acceptable warnings (see below)
+- ✅ 0 warnings (all warnings must be fixed)
 - ✅ 0 suggestions
 
 **Example output:**
@@ -51,12 +51,18 @@ The AsciiDocDITA tool identifies markup that does not have a direct equivalent i
 
 **Reference:** https://github.com/jhradilek/asciidoctor-dita-vale
 
-**Acceptable Warnings:**
-- `AsciiDocDITA.CalloutList`: Callouts in code blocks (known DITA limitation)
-- `AsciiDocDITA.ConceptLink`: False positives on abbreviations like "CR"
+**NOT acceptable warnings (must be fixed):**
+- `AsciiDocDITA.BlockTitle`: Block titles (e.g. `.Prerequisites`) — restructure content to avoid block titles in non-assembly contexts
+- `AsciiDocDITA.CalloutList`: Callouts in code blocks — replace with inline comments or numbered annotations
+- `AsciiDocDITA.ConceptLink`: Inline links in prerequisites/concept content — move links to `.Additional resources` section
+- `AsciiDocDITA.RelatedLinks`: `.Additional resources` items contain explanatory text — must be link-only (no surrounding prose)
+- `AsciiDocDITA.TaskStep`: Content other than a single list in `.Procedure` — split description lists into separate procedure modules
+
+**All DITA warnings must be fixed.** There are no acceptable warnings.
+
+**Fix for `AsciiDocDITA.DocumentId`:** In master.adoc files, add `[id="{context}"]` before the level 0 heading.
 
 **Common Errors to Fix:**
-- `AsciiDocDITA.TaskStep`: Content other than list in `.Procedure` - move descriptive content before `.Procedure`
 - `AsciiDocDITA.ExampleBlock`: Nested example blocks - convert to regular text with source blocks
 - `AsciiDocDITA.ShortDescription`: Missing or incorrect `[role="_abstract"]`
 

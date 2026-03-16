@@ -15,8 +15,6 @@ All modules and assemblies must have short descriptions that:
 
 **Reference:** https://docs.oasis-open.org/dita/dita/v1.3/errata02/os/complete/part3-all-inclusive/langRef/base/shortdesc.html
 
-**Note:** For format requirements (marker, character count, placement), see [CQA #9](cqa-09-short-description-format.md).
-
 ## Verification Checklist
 
 For each abstract, verify content quality:
