@@ -66,7 +66,7 @@ Use these scripts for systematic tasks:
 
 2. **Title/ID/Filename Alignment:**
    ```bash
-   ./build/scripts/fix-title-id-filename.sh titles/<title>/master.adoc
+   ./build/scripts/cqa-10-fix-title-id-filename.sh titles/<title>/master.adoc
    ```
    - Ensures content type metadata exists (calls cqa-03-fix-content-type.sh if needed)
    - Fixes title forms (gerund → imperative)

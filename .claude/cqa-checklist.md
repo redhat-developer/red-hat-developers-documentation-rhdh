@@ -56,7 +56,7 @@
 
 - [ ] **CQA #10: Titles are brief, complete, and descriptive** - [Skill](skills/cqa-10-titles-are-brief-complete-and-descriptive.md)
   ```bash
-  ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
+  ./build/scripts/cqa-10-fix-title-id-filename.sh titles/<your-title>/master.adoc
   ```
   - [ ] Procedures: imperative form ("Install" not "Installing")
   - [ ] Concepts: noun phrases ("Configuration options")

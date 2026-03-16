@@ -1,10 +1,10 @@
 #!/bin/bash
-# fix-title-id-filename.sh
+# cqa-10-fix-title-id-filename.sh
 # Aligns title, ID, context, and filename per CQA.md rules
 #
-# Usage: ./fix-title-id-filename.sh <file-path>
+# Usage: ./cqa-10-fix-title-id-filename.sh <file-path>
 #   Processes the specified file and all its includes recursively
-#   Example: ./fix-title-id-filename.sh titles/install-rhdh-ocp/master.adoc
+#   Example: ./cqa-10-fix-title-id-filename.sh titles/install-rhdh-ocp/master.adoc
 #     Processes: master.adoc → assemblies → all included modules (recursive)
 #
 # This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
@@ -23,6 +23,173 @@
 # STEP 5: Update all include statements
 
 set -e
+
+# Convert a gerund to imperative form (e.g., "Installing" → "Install")
+# Handles three patterns:
+#   1. Doubled consonant: "Running" → "Run" (remove doubled consonant)
+#   2. Silent 'e' dropped: "Configuring" → "Configure" (add 'e' back)
+#   3. Simple '-ing': "Deploying" → "Deploy" (just strip)
+# Args: $1 = gerund word (e.g., "Installing" or "installing")
+# Returns: imperative form preserving original capitalization
+gerund_to_imperative() {
+    local word="$1"
+    local lower
+    lower=$(echo "$word" | tr '[:upper:]' '[:lower:]')
+
+    # Remove 'ing' suffix to get stem
+    local stem="${lower%ing}"
+    local result=""
+
+    case "$lower" in
+        # Explicit mappings for common documentation verbs
+        # -- Doubled consonant verbs --
+        running) result="run" ;;
+        setting) result="set" ;;
+        getting) result="get" ;;
+        putting) result="put" ;;
+        cutting) result="cut" ;;
+        stopping) result="stop" ;;
+        dropping) result="drop" ;;
+        mapping) result="map" ;;
+        planning) result="plan" ;;
+        scanning) result="scan" ;;
+        shipping) result="ship" ;;
+        shopping) result="shop" ;;
+        skipping) result="skip" ;;
+        snapping) result="snap" ;;
+        spinning) result="spin" ;;
+        splitting) result="split" ;;
+        stepping) result="step" ;;
+        stripping) result="strip" ;;
+        swapping) result="swap" ;;
+        tapping) result="tap" ;;
+        trimming) result="trim" ;;
+        wrapping) result="wrap" ;;
+        beginning) result="begin" ;;
+        # -- Silent 'e' verbs --
+        configuring) result="configure" ;;
+        creating) result="create" ;;
+        enabling) result="enable" ;;
+        disabling) result="disable" ;;
+        managing) result="manage" ;;
+        upgrading) result="upgrade" ;;
+        updating) result="update" ;;
+        removing) result="remove" ;;
+        deleting) result="delete" ;;
+        resolving) result="resolve" ;;
+        authorizing) result="authorize" ;;
+        validating) result="validate" ;;
+        customizing) result="customize" ;;
+        integrating) result="integrate" ;;
+        migrating) result="migrate" ;;
+        generating) result="generate" ;;
+        defining) result="define" ;;
+        overriding) result="override" ;;
+        retrieving) result="retrieve" ;;
+        preparing) result="prepare" ;;
+        scaling) result="scale" ;;
+        securing) result="secure" ;;
+        authenticating) result="authenticate" ;;
+        restoring) result="restore" ;;
+        replacing) result="replace" ;;
+        browsing) result="browse" ;;
+        closing) result="close" ;;
+        composing) result="compose" ;;
+        describing) result="describe" ;;
+        ensuring) result="ensure" ;;
+        using) result="use" ;;
+        including) result="include" ;;
+        invoking) result="invoke" ;;
+        providing) result="provide" ;;
+        producing) result="produce" ;;
+        reducing) result="reduce" ;;
+        releasing) result="release" ;;
+        requiring) result="require" ;;
+        subscribing) result="subscribe" ;;
+        changing) result="change" ;;
+        locating) result="locate" ;;
+        navigating) result="navigate" ;;
+        operating) result="operate" ;;
+        isolating) result="isolate" ;;
+        # -- Simple '-ing' removal verbs --
+        installing) result="install" ;;
+        deploying) result="deploy" ;;
+        building) result="build" ;;
+        adding) result="add" ;;
+        testing) result="test" ;;
+        monitoring) result="monitor" ;;
+        checking) result="check" ;;
+        importing) result="import" ;;
+        exporting) result="export" ;;
+        connecting) result="connect" ;;
+        disconnecting) result="disconnect" ;;
+        adjusting) result="adjust" ;;
+        restarting) result="restart" ;;
+        starting) result="start" ;;
+        registering) result="register" ;;
+        unregistering) result="unregister" ;;
+        assigning) result="assign" ;;
+        reviewing) result="review" ;;
+        accessing) result="access" ;;
+        fetching) result="fetch" ;;
+        searching) result="search" ;;
+        finding) result="find" ;;
+        provisioning) result="provision" ;;
+        encrypting) result="encrypt" ;;
+        mounting) result="mount" ;;
+        unmounting) result="unmount" ;;
+        attaching) result="attach" ;;
+        detaching) result="detach" ;;
+        extending) result="extend" ;;
+        limiting) result="limit" ;;
+        inspecting) result="inspect" ;;
+        troubleshooting) result="troubleshoot" ;;
+        understanding) result="understand" ;;
+        publishing) result="publish" ;;
+        selecting) result="select" ;;
+        tracking) result="track" ;;
+        transforming) result="transform" ;;
+        viewing) result="view" ;;
+        verifying) result="verify" ;;
+        modifying) result="modify" ;;
+        specifying) result="specify" ;;
+        applying) result="apply" ;;
+        *)
+            # Generic fallback with heuristic rules
+            local last_two="${stem: -2}"
+
+            # Rule 1: Doubled consonant (not ll/ss/ff/zz) → remove one
+            # e.g., "runn" → "run", "sett" → "set"
+            if [[ ${#stem} -ge 3 ]] && [[ "${last_two:0:1}" == "${last_two:1:1}" ]] && \
+               [[ "${last_two:0:1}" =~ [bcdfghjkmnpqrtvwxyz] ]]; then
+                result="${stem%?}"
+            # Rule 2: Stem ends in 'v' → add 'e' (English words rarely end in bare 'v')
+            # e.g., "resolv" → "resolve", "remov" → "remove"
+            elif [[ "$stem" =~ [v]$ ]]; then
+                result="${stem}e"
+            # Rule 3: Stem ends in vowel+'z' → add 'e'
+            # e.g., "authoriz" → "authorize", "customiz" → "customize"
+            elif [[ "$stem" =~ [aeiou]z$ ]]; then
+                result="${stem}e"
+            # Rule 4: Stem ends in vowel+'c' → add 'e'
+            # e.g., "replac" → "replace", "produc" → "produce"
+            elif [[ "$stem" =~ [aeiou]c$ ]]; then
+                result="${stem}e"
+            # Rule 5: Otherwise just strip 'ing'
+            else
+                result="$stem"
+            fi
+            echo "  ⚠ Unknown gerund '${word}' → '${result}' (consider adding to gerund_to_imperative)" >&2
+            ;;
+    esac
+
+    # Preserve original capitalization
+    if [[ "$word" =~ ^[A-Z] ]]; then
+        result="$(echo "${result:0:1}" | tr '[:lower:]' '[:upper:]')${result:1}"
+    fi
+
+    echo "$result"
+}
 
 # Function to extract included files from a given file
 get_includes() {
@@ -234,43 +401,10 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
     FIRST_WORD=$(echo "$TITLE" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]].*//')
 
     if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^\{.*\}$ ]]; then
-        # Convert gerund to imperative
+        # Convert gerund to imperative using shared function
+        IMPERATIVE_WORD=$(gerund_to_imperative "$FIRST_WORD")
         # shellcheck disable=SC2001  # sed is appropriate for title transformations
-        if [[ "$FIRST_WORD" == "Installing" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Installing /Install /')
-        elif [[ "$FIRST_WORD" == "Deploying" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Deploying /Deploy /')
-        elif [[ "$FIRST_WORD" == "Configuring" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Configuring /Configure /')
-        elif [[ "$FIRST_WORD" == "Creating" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Creating /Create /')
-        elif [[ "$FIRST_WORD" == "Setting" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Setting /Set /')
-        elif [[ "$FIRST_WORD" == "Enabling" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Enabling /Enable /')
-        elif [[ "$FIRST_WORD" == "Disabling" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Disabling /Disable /')
-        elif [[ "$FIRST_WORD" == "Building" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Building /Build /')
-        elif [[ "$FIRST_WORD" == "Running" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Running /Run /')
-        elif [[ "$FIRST_WORD" == "Managing" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Managing /Manage /')
-        elif [[ "$FIRST_WORD" == "Upgrading" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Upgrading /Upgrade /')
-        elif [[ "$FIRST_WORD" == "Updating" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Updating /Update /')
-        elif [[ "$FIRST_WORD" == "Adding" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Adding /Add /')
-        elif [[ "$FIRST_WORD" == "Removing" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Removing /Remove /')
-        elif [[ "$FIRST_WORD" == "Deleting" ]]; then
-            FIXED_TITLE=$(echo "$TITLE" | sed 's/^Deleting /Delete /')
-        else
-            # Generic gerund removal: remove "ing" suffix
-            BASE=$(echo "$FIRST_WORD" | sed 's/ing$//')
-            FIXED_TITLE=$(echo "$TITLE" | sed "s/^${FIRST_WORD} /${BASE} /")
-        fi
+        FIXED_TITLE=$(echo "$TITLE" | sed "s/^${FIRST_WORD}/${IMPERATIVE_WORD}/")
 
         TITLE_CHANGED=true
         WILL_CHANGE=true
@@ -280,38 +414,13 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
     # Check for additional gerunds in the rest of the title (e.g., "Enable and authorizing")
     # Look for " and <word>ing " patterns and convert them to imperative
     while [[ "$FIXED_TITLE" =~ (.*[[:space:]]and[[:space:]])([A-Za-z]+ing)([[:space:]].*)$ ]]; do
-        PREFIX="${BASH_REMATCH[1]}"
+        TITLE_PREFIX="${BASH_REMATCH[1]}"
         GERUND="${BASH_REMATCH[2]}"
-        SUFFIX="${BASH_REMATCH[3]}"
+        TITLE_SUFFIX="${BASH_REMATCH[3]}"
 
-        # Convert common gerunds to imperative
-        case "$GERUND" in
-            "installing") IMPERATIVE="install" ;;
-            "deploying") IMPERATIVE="deploy" ;;
-            "configuring") IMPERATIVE="configure" ;;
-            "creating") IMPERATIVE="create" ;;
-            "setting") IMPERATIVE="set" ;;
-            "enabling") IMPERATIVE="enable" ;;
-            "disabling") IMPERATIVE="disable" ;;
-            "building") IMPERATIVE="build" ;;
-            "running") IMPERATIVE="run" ;;
-            "managing") IMPERATIVE="manage" ;;
-            "upgrading") IMPERATIVE="upgrade" ;;
-            "updating") IMPERATIVE="update" ;;
-            "adding") IMPERATIVE="add" ;;
-            "removing") IMPERATIVE="remove" ;;
-            "deleting") IMPERATIVE="delete" ;;
-            "authorizing") IMPERATIVE="authorize" ;;
-            "validating") IMPERATIVE="validate" ;;
-            "testing") IMPERATIVE="test" ;;
-            "monitoring") IMPERATIVE="monitor" ;;
-            *)
-                # Generic: remove "ing" suffix
-                IMPERATIVE=$(echo "$GERUND" | sed 's/ing$//')
-                ;;
-        esac
+        IMPERATIVE=$(gerund_to_imperative "$GERUND")
 
-        FIXED_TITLE="${PREFIX}${IMPERATIVE}${SUFFIX}"
+        FIXED_TITLE="${TITLE_PREFIX}${IMPERATIVE}${TITLE_SUFFIX}"
         TITLE_CHANGED=true
         WILL_CHANGE=true
     done

@@ -159,7 +159,7 @@ Available scripts for CQA 2.1 compliance:
 ./build/scripts/cqa-03-fix-content-type.sh titles/<your-title>/master.adoc
 
 # Title/ID/filename alignment
-./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-10-fix-title-id-filename.sh titles/<your-title>/master.adoc
 
 # Orphaned module detection
 ./build/scripts/fix-orphaned-modules.sh          # List only
