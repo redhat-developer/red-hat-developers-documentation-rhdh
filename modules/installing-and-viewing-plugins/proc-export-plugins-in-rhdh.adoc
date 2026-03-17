@@ -7,7 +7,7 @@
 To use plugins in {product}, you can export plugins as derived dynamic plugin packages. These packages contain the plugin code and dependencies, ready for dynamic plugin integration into {product-short}.
 
 .Prerequisites
-* The `@red-hat-developer-hub/cli` package is installed. Use the latest version (`@latest` tag) for compatibility with the most recent features and fixes.
+* You have installed the `@red-hat-developer-hub/cli` package. Use the latest version (`@latest` tag) for compatibility with the most recent features and fixes.
 +
 [NOTE]
 ====
@@ -20,7 +20,7 @@ The command processes the plugin's source code and dependencies and generates th
 For an example of using this command, see xref:example-of-installing-a-custom-plugin-in-rhdh_install-plugins-in-rhdh[Example of installing a custom plugin in {product}].
 ====
 
-* Node.js and NPM is installed and configured.
+* You have installed and configured Node.js and NPM.
 * The {plugin-type-name} plugin is compatible with your {product} version. For more information, see link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/versions.md[Version compatibility matrix].
 * The {plugin-type-name} plugin must have a valid `package.json` file in its root directory, containing all required metadata and dependencies.
 +
@@ -29,19 +29,19 @@ Backend plugins::
 +
 To ensure compatibility with the dynamic plugin support and enable their use as dynamic plugins, existing backend plugins must be compatible with the new {backstage} backend system. Additionally, these plugins must be rebuilt using a dedicated CLI command.
 +
-The new {backstage} backend system entry point (created using `createBackendPlugin()` or `createBackendModule()`)  must be exported as the default export from either the main package or an `alpha` package (if the plugin instance support is still provided using `alpha` APIs). This doesn't add any additional requirement on top of the standard plugin development guidelines of the plugin instance.
+You must export the new {backstage} backend system entry point (created using `createBackendPlugin()` or `createBackendModule()`) as the default export from either the main package or an `alpha` package. Export as an `alpha` package if the plugin instance support still uses `alpha` APIs. This does not add any additional requirement on top of the standard plugin development guidelines of the plugin instance.
 +
-The dynamic export mechanism identifies private dependencies and sets the `bundleDependencies` field in the `package.json` file. This export mechanism ensures that the dynamic plugin package is published as a self-contained package, with its private dependencies bundled in a private `node_modules` folder.
+The dynamic export mechanism identifies private dependencies and sets the `bundleDependencies` field in the `package.json` file. This export mechanism ensures that you publish the dynamic plugin package as a self-contained package, with its private dependencies bundled in a private `node_modules` folder.
 +
 Certain plugin dependencies require specific handling in the derived packages, such as:
 +
-* *Shared dependencies* are provided by the {product-very-short} application and listed as `peerDependencies` in `package.json` file, not bundled in the dynamic plugin package. For example, by default, all `@backstage` scoped packages are shared.
+* *Shared dependencies*: The {product-very-short} application provides these dependencies and lists them as `peerDependencies` in the `package.json` file. The dynamic plugin package does not bundle shared dependencies. For example, by default, all `@backstage` scoped packages use sharing.
 +
-You can use the `--shared-package` flag to specify shared dependencies, that are expected to be provided by {product} application and not bundled in the dynamic plugin package.
+You can use the `--shared-package` flag to specify shared dependencies that {product} application provides and that the dynamic plugin package does not bundle.
 +
 To treat a `@backstage` package as private, use the negation prefix (`!`). For example, when a plugin depends on the package in `@backstage` that is not provided by the {product} application.
 
-* *Embedded dependencies* are bundled into the dynamic plugin package with their dependencies hoisted to the top level. By default, packages with `-node` or `-common` suffixes are embedded.
+* *Embedded dependencies*: The dynamic plugin package bundles these dependencies with their dependencies hoisted to the top level. By default, the package embeds packages with `-node` or `-common` suffixes.
 +
 You can use the `--embed-package` flag to specify additional embedded packages. For example, packages from the same workspace that do not follow the default naming convention.
 +
@@ -53,15 +53,15 @@ The following is an example of exporting a dynamic plugin with shared and embedd
 $ npx @red-hat-developer-hub/cli@latest plugin export --shared-package '!/@backstage/plugin-notifications/' --embed-package @backstage/plugin-notifications-backend
 ----
 +
-In the previous example:
+In the earlier example:
 +
-* `@backstage/plugin-notifications` package is treated as a private dependency and is bundled in the dynamic plugin package, despite being in the `@backstage` scope.
+* The export treats the `@backstage/plugin-notifications` package as a private dependency and bundles it in the dynamic plugin package, despite being in the `@backstage` scope.
 +
-* `@backstage/plugin-notifications-backend` package is marked as an embedded dependency and is bundled in the dynamic plugin package.
+* The export marks the `@backstage/plugin-notifications-backend` package as an embedded dependency and bundles it in the dynamic plugin package.
 
 Front-end plugins::
 +
-Front-end plugins can use `scalprum` for configuration, which the CLI can generate automatically during the export process. The generated default configuration is logged when running the following command:
+Front-end plugins can use `scalprum` for configuration. The CLI can generate this configuration automatically during the export process. When running the following command, the CLI logs the generated default configuration:
 +
 .Example command to log the default configuration
 [source,terminal]
@@ -128,13 +128,13 @@ $ export const DynamicEntityTechdocsContent = {
 $ npx @red-hat-developer-hub/cli@latest plugin export
 ----
 
-Ensure that you execute the previous command in the root directory of the plugin's JavaScript package (containing `package.json` file).
+Ensure that you run the earlier command in the root directory of the plugin's JavaScript package (containing `package.json` file).
 
-The resulting derived package will be located in the `dist-dynamic` subfolder. The exported package name consists of the original plugin name with `-dynamic` appended.
+The `dist-dynamic` subdirectory has the resulting derived package. The exported package name consists of the original plugin name with `-dynamic` appended.
 
 [WARNING]
 ====
-The derived dynamic plugin JavaScript packages must not be published to the public NPM registry. For more appropriate packaging options, see xref:package-and-publish-plugins-as-dynamic-plugins_plugins-in-rhdh[]. If you must publish to the NPM registry, use a private registry.
+Do not publish the derived dynamic plugin JavaScript packages to the public NPM registry. For more appropriate packaging options, see xref:package-and-publish-plugins-as-dynamic-plugins_plugins-in-rhdh[]. If you must publish to the NPM registry, use a private registry.
 ====
 --
 
