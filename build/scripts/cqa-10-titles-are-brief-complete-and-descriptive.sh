@@ -77,6 +77,7 @@ gerund_to_imperative() {
         updating) result="update" ;;
         removing) result="remove" ;;
         deleting) result="delete" ;;
+        editing) result="edit" ;;
         resolving) result="resolve" ;;
         authorizing) result="authorize" ;;
         validating) result="validate" ;;
@@ -316,6 +317,24 @@ expand_attributes() {
     echo "$output"
 }
 
+# Function to convert title with attributes to ID-friendly form
+# Replaces product attributes with short forms instead of fully expanding them
+# This prevents excessively long IDs/filenames like "red-hat-developer-hub"
+title_to_id_form() {
+    local title="$1"
+    echo "$title" | \
+        sed 's/{product-very-short}/rhdh/g' | \
+        sed 's/{product-short}/rhdh/g' | \
+        sed 's/{product}/rhdh/g' | \
+        sed 's/{product-custom-resource-type}//g' | \
+        sed 's/{rhbk-brand-name}/rhbk/g' | \
+        sed 's/{rhbk}/rhbk/g' | \
+        sed 's/{azure-brand-name}/microsoft-azure/g' | \
+        sed 's/{ocp-brand-name}/ocp/g' | \
+        sed 's/{ocp-short}/ocp/g' | \
+        sed 's/{[^}]*}//g'
+}
+
 # Function to process a single file
 process_file() {
     local FILE="$1"
@@ -401,6 +420,7 @@ TITLE=$(expand_attributes "$TITLE_RAW" "$FILE")
 
 # STEP 1: Check if title needs fixing
 FIXED_TITLE="$TITLE"
+FIXED_TITLE_RAW="$TITLE_RAW"
 TITLE_CHANGED=false
 if [ "$EXPECTED_FORM" = "imperative" ]; then
     # Extract first word (handling attributes)
@@ -409,8 +429,8 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
     if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^\{.*\}$ ]]; then
         # Convert gerund to imperative using shared function
         IMPERATIVE_WORD=$(gerund_to_imperative "$FIRST_WORD")
-        # shellcheck disable=SC2001  # sed is appropriate for title transformations
-        FIXED_TITLE=$(echo "$TITLE" | sed "s/^${FIRST_WORD}/${IMPERATIVE_WORD}/")
+        FIXED_TITLE="${IMPERATIVE_WORD}${TITLE#"$FIRST_WORD"}"
+        FIXED_TITLE_RAW="${IMPERATIVE_WORD}${TITLE_RAW#"$FIRST_WORD"}"
 
         TITLE_CHANGED=true
         WILL_CHANGE=true
@@ -427,6 +447,7 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
         IMPERATIVE=$(gerund_to_imperative "$GERUND")
 
         FIXED_TITLE="${TITLE_PREFIX}${IMPERATIVE}${TITLE_SUFFIX}"
+        FIXED_TITLE_RAW="${FIXED_TITLE_RAW//"$GERUND"/"$IMPERATIVE"}"
         TITLE_CHANGED=true
         WILL_CHANGE=true
     done
@@ -435,19 +456,22 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
 fi
 
 # Extract current ID (before _{context})
-CURRENT_ID=$(grep "\[id=" "$FILE" | head -1 | sed 's/.*\[id="//;s/.*\[id='"'"'//;s/_.*//')
+CURRENT_ID=$(grep "\[id=" "$FILE" | head -1 | sed 's/.*\[id="//;s/.*\[id='"'"'//' | sed 's/["'"'"'\]]*$//' | sed 's/_{context}.*//' | sed 's/_.*//')
 
 # Convert title to expected ID:
-# 1. Extract attribute names (preserve them): {product-short} → product-short
+# 1. Use raw title with short forms for attributes (e.g., {product} → rhdh)
 # 2. Lowercase everything
 # 3. Replace non-alphanumeric with hyphens
-# 4. Clean up multiple/leading/trailing hyphens
-EXPECTED_ID=$(echo "$TITLE" | \
-    sed 's/{/ /g; s/}/ /g' | \
+# 4. Clean up multiple/leading/trailing hyphens and duplicate abbreviations
+TITLE_FOR_ID=$(title_to_id_form "$FIXED_TITLE_RAW")
+EXPECTED_ID=$(echo "$TITLE_FOR_ID" | \
     tr '[:upper:]' '[:lower:]' | \
     sed 's/[^a-z0-9-]/-/g' | \
     sed 's/--*/-/g' | \
-    sed 's/^-//;s/-$//')
+    sed 's/^-//;s/-$//' | \
+    sed 's/\brhdh-rhdh\b/rhdh/g' | \
+    sed 's/\brhbk-rhbk\b/rhbk/g' | \
+    sed 's/\bocp-ocp\b/ocp/g')
 
 # Expected filename
 EXPECTED_FILENAME="${PREFIX}${EXPECTED_ID}.adoc"
@@ -484,21 +508,30 @@ fi
 if [ "$TITLE_CHANGED" = true ]; then
     OLD_TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
     if [ "$FIX_MODE" = true ]; then
-        sed -i.bak "s/^= ${OLD_TITLE}/= ${TITLE}/" "$FILE"
+        # Use raw fixed title (preserving attributes like {product}) for write-back
+        sed -i.bak "s/^= ${OLD_TITLE}/= ${FIXED_TITLE_RAW}/" "$FILE"
         rm -f "${FILE}.bak"
     fi
-    echo "  * Title: ${OLD_TITLE} → ${TITLE}"
+    echo "  * Title: ${OLD_TITLE} → ${FIXED_TITLE_RAW}"
 fi
 
 if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
     if [ "$FIX_MODE" = true ]; then
         if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
+            # Handle IDs with _{context} suffix
             sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-            sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            # Handle IDs without _{context} suffix (add it)
+            sed -i.bak "s/\[id=\"${CURRENT_ID}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='${CURRENT_ID}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
             sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
         else
+            # Handle IDs with _{context} suffix
             sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
-            sed -i.bak "s/\[id='[^']*_{context}'\]/[id='${EXPECTED_ID}_{context}']/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            # Handle IDs without _{context} suffix (add it)
+            sed -i.bak "s/\[id=\"${CURRENT_ID}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='${CURRENT_ID}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
         fi
         rm -f "${FILE}.bak"
     fi
