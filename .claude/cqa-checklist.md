@@ -1,196 +1,204 @@
 # CQA 2.1 Compliance Checklist
 
-**Title:** [FILL IN: e.g., "Installing RHDH on OpenShift"]
-**JIRA:** RHIDP-[FILL IN: e.g., 12345]
-**Target File:** titles/[FILL IN]/master.adoc
+**IMPORTANT:** This checklist implements the workflow defined in [cqa-master-workflow.md](skills/cqa-master-workflow.md).
 
-## Critical Rules
-- [ ] Complete ALL steps in exact order - DO NOT SKIP
-- [ ] DO NOT batch steps - complete each fully before proceeding
-- [ ] Mark each item ✓ IMMEDIATELY when done
-- [ ] If step says "do not fix yet", only identify issues
+**Before starting:**
+1. Read [cqa-master-workflow.md](skills/cqa-master-workflow.md) for execution rules and skill order
+2. Follow the CRITICAL EXECUTION RULES defined in the workflow
+3. Execute all requirements in the exact order listed below
+4. Re-run each requirement until idempotent (no changes)
+5. Re-run entire workflow until stable
 
----
+## Prerequisites
 
-## Steps 1-4: Initial Assessment and Validation
-
-- [ ] **Step 1:** Read main assembly file and all included modules
-- [ ] **Step 2:** Run content type script and verify results
-  ```bash
-  ./build/scripts/fix-content-type.sh titles/<your-title>/master.adoc
-  ```
-  - [ ] Review script output (compliant/violations/auto-fixed counts)
-  - [ ] Manually fix filename violations with `git mv` if needed
-  - [ ] Add missing `.Procedure` sections if flagged
-  - [ ] Verify content semantically matches declared types
-
-- [ ] **Step 3:** Verify content type metadata is present (should be done by step 2)
-
-- [ ] **Step 4:** Run Vale DITA validation to identify issues (DO NOT FIX YET)
-  ```bash
-  vale --config .vale-dita-only.ini titles/<your-title>/
-  ```
-  - [ ] Note error count: _____
-  - [ ] Note warning count: _____
+- [ ] JIRA: RHIDP-_____
+- [ ] Title: _____
+- [ ] Path: `titles/_____/master.adoc`
 
 ---
 
-## Step 5: Title/ID/Filename Compliance (Multi-Step Process)
+## Execution Workflow
 
-- [ ] **STEP 0:** Run alignment script on target file
+**IMPORTANT:** Execute in this exact order (follows [cqa-master-workflow.md](skills/cqa-master-workflow.md) Process section).
+
+- [ ] **Resources current** - [Update all resources](skills/update-all-resources.md)
   ```bash
-  ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
+  ./build/scripts/update-cqa-resources.sh
   ```
-  - [ ] Review script output (✓ aligned / 📝 changed files)
-  - [ ] Verify assembly titles use correct form (imperative if includes procedures)
-  - [ ] Verify attribute names preserved in IDs
-  - [ ] Review git changes before committing
+  - [ ] Vale styles synced
+  - [ ] Red Hat style guides current
 
-**For EACH file needing manual fixes (if any), complete STEP 1-5:**
+- [ ] **CQA #3: Content is modularized** - [Skill](skills/cqa-03-content-is-modularized.md)
+  - [ ] Modular structure (assemblies include modules)
+  - [ ] Correct metadata (`:_mod-docs-content-type:`)
+  - [ ] Correct filename prefixes (proc-, con-, ref-, assembly-)
 
-- [ ] **STEP 1:** Fix titles FIRST (title is source of truth)
+- [ ] **CQA #13: Correct content type** - [Skill](skills/cqa-13-information-is-conveyed-using-the-correct-content.md)
+  ```bash
+  ./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
+  ```
+  - [ ] Content matches declared type (PROCEDURE/CONCEPT/REFERENCE/ASSEMBLY)
+  - [ ] Procedures have `.Procedure` sections
+  - [ ] No violations found
+
+- [ ] **CQA #8: Short description content** - [Skill](skills/cqa-08-short-description-content.md)
+  - [ ] WHY user should read (benefit-focused)
+  - [ ] Not self-referential ("This section describes...")
+  - [ ] Explains value/purpose
+
+- [ ] **CQA #9: Short description format** - [Skill](skills/cqa-09-short-description-format.md)
+  ```bash
+  ./build/scripts/cqa-09-short-description-format.sh [--fix] titles/<your-title>/master.adoc
+  ```
+  - [ ] `[role="_abstract"]` marker present
+  - [ ] 50-300 characters
+  - [ ] No empty line after marker
+
+- [ ] **CQA #10: Titles are brief, complete, and descriptive** - [Skill](skills/cqa-10-titles-are-brief-complete-and-descriptive.md)
+  ```bash
+  ./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] titles/<your-title>/master.adoc
+  ```
   - [ ] Procedures: imperative form ("Install" not "Installing")
   - [ ] Concepts: noun phrases ("Configuration options")
   - [ ] References: noun phrases ("API reference")
-  - [ ] Task assemblies: imperative form ("Deploy the application")
+  - [ ] IDs match titles (lowercase-with-hyphens_{context})
+  - [ ] Filenames match titles (with prefix)
+  - [ ] All xrefs updated for changed IDs
+  - [ ] All includes updated for renamed files
 
-- [ ] **STEP 2:** Update IDs and context to match title
-  - [ ] Update `[id="..."]`: lowercase-with-hyphens_{context}
-  - [ ] Do NOT include module prefix (proc-, con-, ref-) in ID
-  - [ ] Update `:context:` in assemblies to match title
+- [ ] **CQA #11: Procedures have prerequisites** - [Skill](skills/cqa-11-procedures-prerequisites.md)
+  - [ ] `.Prerequisites` label used (plural)
+  - [ ] Max 10 items
+  - [ ] Use completed states ("You have installed...")
+  - [ ] Link to procedures when possible
 
-- [ ] **STEP 3:** Update all xrefs pointing to changed IDs
+- [ ] **CQA #2: Assembly structure** - [Skill](skills/cqa-02-assembly-structure.md)
+  - [ ] Introduction paragraph (context)
+  - [ ] Include statements only (no inline content)
+  - [ ] Context restoration at end (`:context: {parent-context}`)
+  - [ ] Proper leveloffset on includes
+
+- [ ] **CQA #5: Required elements** - [Skill](skills/cqa-05-modular-elements-checklist.md)
+  - [ ] All mandatory elements present per type
+  - [ ] Procedures: title, abstract, prerequisites, procedure, verification
+  - [ ] Concepts: title, abstract, content
+  - [ ] References: title, abstract, data
+
+- [ ] **CQA #4: Official templates** - [Skill](skills/cqa-04-modules-use-official-templates.md)
+  - [ ] CONCEPT template structure followed
+  - [ ] PROCEDURE template structure followed
+  - [ ] REFERENCE template structure followed
+
+- [ ] **CQA #6: Assembly tells one story** - [Skill](skills/cqa-06-assemblies-use-the-official-template-assemblies-ar.md)
+  - [ ] Single user story per assembly
+  - [ ] No overlapping content with other assemblies
+  - [ ] Clear purpose statement
+
+- [ ] **CQA #7: TOC depth max 3 levels** - [Skill](skills/cqa-07-toc-max-3-levels.md)
+  - [ ] Maximum 3 heading levels
+  - [ ] No excessive nesting
+  - [ ] Proper leveloffset usage
+
+- [ ] **CQA #16: Official product names** - [Skill](skills/cqa-16-official-product-names-are-used.md)
+  - [ ] Use attributes ({product}, {ocp-short}, etc.)
+  - [ ] Follow Red Hat OPL (Official Product List)
+  - [ ] No hardcoded product names
+
+- [ ] **CQA #1: Vale DITA** - [Skill](skills/cqa-01-asciidoctor-dita-vale.md)
   ```bash
-  grep -r "xref:old-id" assemblies/ modules/
-  ```
-  - [ ] Update xref statements with new ID
-  - [ ] Update anchor links in same file
-
-- [ ] **STEP 4:** Update filename to match title
-  - [ ] Keep module type prefix (proc-, con-, ref-, assembly-)
-  - [ ] Convert title to lowercase-with-hyphens
-  - [ ] Move to correct modules/[title-name]/ subdirectory
-  - [ ] Use `git mv` to preserve history
-
-- [ ] **STEP 5:** Update all include statements
-  ```bash
-  grep -r "include::.*old-filename" assemblies/ modules/
-  ```
-  - [ ] Update include statements in assemblies
-  - [ ] Verify no includes point to old filename
-
-- [ ] **VERIFICATION:** Re-run alignment script - all files should show ✓
-  ```bash
-  ./build/scripts/fix-title-id-filename.sh titles/<your-title>/master.adoc
-  ```
-
-- [ ] **STEP 6:** Remove orphaned modules
-  ```bash
-  ./build/scripts/fix-orphaned-modules.sh
-  ```
-  - [ ] Review list of orphaned files: _____ files found
-  - [ ] Verify files are truly orphaned
-  - [ ] Delete if appropriate: `./build/scripts/fix-orphaned-modules.sh --execute`
-  - [ ] Remove empty directories if needed
-
-- [ ] **STEP 7:** Fix other issues (only after title/ID/filename aligned)
-  - [ ] Add `[role="_abstract"]` short descriptions (50-300 chars)
-  - [ ] Convert `.Title` to `== Title` in concept/reference modules
-  - [ ] Fix grammar issues (parallel structure, verb agreement)
-  - [ ] Add context restoration to assemblies
-  - [ ] Remove commented-out content
-
----
-
-## Steps 7-10: Content Structure Verification
-
-- [ ] **Step 7:** Verify short descriptions for all modules
-  ```bash
-  ./build/scripts/verify-short-descriptions.sh titles/<your-title>/master.adoc
-  ```
-  - [ ] All modules have `[role="_abstract"]` after title
-  - [ ] No empty line after `[role="_abstract"]`
-  - [ ] Abstract is 50-300 characters
-  - [ ] Abstract describes what user accomplishes (not self-referential)
-  - [ ] Concepts: Answer "What is this?" and "Why care?"
-  - [ ] Procedures: Explain what user accomplishes
-  - [ ] References: Describe data being presented
-  - [ ] Assemblies: Explain user story/goal addressed
-
-- [ ] **Step 8:** Verify assembly internal structure and content
-  - [ ] Each assembly has proper structure
-  - [ ] Content follows modular docs guidelines
-
-- [ ] **Step 9:** Verify assembly includes one unique story
-  - [ ] Each assembly addresses single user story
-  - [ ] No overlapping or duplicate content
-
-- [ ] **Step 10:** Verify include depth is appropriate
-  - [ ] Assembly include statements don't go too deep
-  - [ ] Maximum nesting levels respected
-
----
-
-## Steps 11-13: Validation and Build
-
-- [ ] **Step 11:** Re-run Vale DITA validation
-  ```bash
-  vale --config .vale-dita-only.ini titles/<your-title>/
+  vale --config .vale-dita-only.ini \
+    $(./build/scripts/list-all-included-files-starting-from.sh titles/<your-title>/master.adoc)
   ```
   - [ ] 0 errors
-  - [ ] Only acceptable warnings
+  - [ ] Only acceptable warnings (callouts, false positives)
   - [ ] 0 suggestions
   - [ ] Final error count: 0
   - [ ] Final warning count: _____
 
-- [ ] **Step 12:** Run Vale default for language compliance
+- [ ] **CQA #12: Grammar** - [Skill](skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md)
   ```bash
-  vale --config .vale.ini titles/<your-title>/
+  vale --config .vale.ini \
+    $(./build/scripts/list-all-included-files-starting-from.sh titles/<your-title>/master.adoc)
   ```
-  - [ ] Fix all errors
-  - [ ] Fix all warnings
+  - [ ] 0 errors
+  - [ ] American English
+  - [ ] No passive voice in procedures
+  - [ ] Parallel structure in lists
   - [ ] Final error count: 0
   - [ ] Final warning count: 0
 
-- [ ] **Step 13:** Run build validation on all titles
+- [ ] **CQA #17: Disclaimers** - [Skill](skills/cqa-17-includes-appropriate-legal-approved-disclaimers-f.md)
+  - [ ] Tech Preview disclaimer if applicable
+  - [ ] Developer Preview disclaimer if applicable
+  - [ ] Legal-approved text used
+
+- [ ] **CQA #14: No broken links** - [Skill](skills/cqa-14-no-broken-links.md)
   ```bash
-  build/scripts/build.sh
+  ./build/scripts/build-ccutil.sh
   ```
-  - [ ] All xrefs still resolve
+  - [ ] All xrefs resolve
+  - [ ] All external links valid
   - [ ] Build completes successfully
-  - [ ] No broken links
+  - [ ] No xref errors in output
+
+- [ ] **CQA #15: Redirects** - [Skill](skills/cqa-15-redirects-if-needed-are-in-place-and-work-correc.md)
+  - [ ] Redirects in place if files moved
+  - [ ] Old URLs redirect to new locations
+  - [ ] Redirect file syntax correct
 
 ---
 
-## Steps 14-17: Final Verification and Submission
+### Cleanup & Verification
 
-- [ ] **Step 14:** Verify .claude/settings.json (if updated)
+- [ ] **Remove orphaned modules**
+  ```bash
+  ./build/scripts/fix-orphaned-modules.sh
+  ```
+  - [ ] Review list: _____ files found
+  - [ ] Verify truly orphaned
+  - [ ] Delete: `./build/scripts/fix-orphaned-modules.sh --execute`
+
+- [ ] **Verify .claude/settings.json** (if updated)
   - [ ] Permissions alphabetically sorted
   - [ ] Uses wildcard patterns (not individual files)
-  - [ ] No sensitive information (API keys, tokens)
-  - [ ] No personal references (home directories, usernames)
-  - [ ] Repository-relative paths use `//` prefix
-  - [ ] File read permissions restricted to docs directories
+  - [ ] No sensitive information (API keys, tokens, usernames)
+  - [ ] Repository-relative paths only
   - [ ] Valid JSON: `jq . .claude/settings.json`
-  - [ ] Include in commit with explanation in commit message
 
-- [ ] **Step 15:** Verify all 14 acceptance criteria are met
-  - [ ] 1. Uses correct context variable across all modules
-  - [ ] 2. Content type metadata present on first line
-  - [ ] 3. Assembly structure follows modular docs (prereq, procedure, verification, etc.)
-  - [ ] 4. Each assembly includes one unique story
-  - [ ] 5. Include statements don't go too deep
-  - [ ] 6. Concept modules have short descriptions with [role="_abstract"]
-  - [ ] 7. Reference modules have short descriptions with [role="_abstract"]
-  - [ ] 8. Modules use correct title form (imperative for procedures, noun for concepts)
-  - [ ] 9. Context variable correctly scoped (:context: in assemblies, {context} in modules)
-  - [ ] 10. Language follows style guide (no self-referential, concise, parallel structure)
-  - [ ] 11. Content conveyed using correct type (PROCEDURE/CONCEPT/REFERENCE/ASSEMBLY)
-  - [ ] 12. Each module has unique ID (:_mod-docs-content-type: metadata)
-  - [ ] 13. Product names use attributes (follow Red Hat OPL, no hardcoding)
-  - [ ] 14. Appropriate disclaimers for Tech/Developer Preview features
+---
 
-- [ ] **Step 16:** Commit changes with correct message format
+## Completion Checklist
+
+**All 17 Requirements:**
+- [ ] CQA #1: Vale DITA ✓
+- [ ] CQA #2: Assembly structure ✓
+- [ ] CQA #3: Modularized ✓
+- [ ] CQA #4: Templates ✓
+- [ ] CQA #5: Required elements ✓
+- [ ] CQA #6: One story ✓
+- [ ] CQA #7: TOC depth ✓
+- [ ] CQA #8: Short desc content ✓
+- [ ] CQA #9: Short desc format ✓
+- [ ] CQA #10: Titles ✓
+- [ ] CQA #11: Prerequisites ✓
+- [ ] CQA #12: Grammar ✓
+- [ ] CQA #13: Content type ✓
+- [ ] CQA #14: No broken links ✓
+- [ ] CQA #15: Redirects ✓
+- [ ] CQA #16: Product names ✓
+- [ ] CQA #17: Disclaimers ✓
+
+**Final Steps:**
+- [ ] All automation scripts run
+- [ ] All manual assessments complete
+- [ ] Orphaned modules removed
+- [ ] .claude/settings.json verified (if updated)
+
+---
+
+## Commit & PR
+
+- [ ] **Commit changes**
   ```bash
   git add <files>
   git commit -m "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]
@@ -206,34 +214,30 @@
   Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
   ```
 
-- [ ] **Step 17:** Create pull request
+- [ ] **Create pull request**
   ```bash
   gh pr create --title "RHIDP-XXXXX: CQA 2.1 compliance for [TITLE NAME]" --body "$(cat <<'EOF'
   **IMPORTANT: Do Not Merge - To be merged by Docs Team Only**
 
   **Version(s):** main
-
   **Issue:** https://issues.redhat.com/browse/RHIDP-XXXXX
-
-  **Preview:** TBD
+  **Preview:** [Preview URL]
 
   ## Summary
-  [Add summary of changes]
+  [Brief summary of changes]
+
+  ## CQA 2.1 Results
+  - ✅ Vale DITA: 0 errors, X acceptable warnings
+  - ✅ Vale style: 0 errors, 0 warnings
+  - ✅ Build: successful
+  - ✅ All 17 CQA requirements met
+  - ✅ Idempotency verified
 
   ## Changes Made
-  - Content type compliance: X files updated
-  - Title/ID/filename alignment: X files updated
-  - Short descriptions: X files updated
-  - Vale DITA: Fixed X errors
-  - Vale language: Fixed X issues
-  - Removed X orphaned modules
-
-  ## Verification
-  - ✅ All 14 acceptance criteria met
-  - ✅ Vale DITA: 0 errors
-  - ✅ Vale language: 0 errors, 0 warnings
-  - ✅ Build successful
-  - ✅ All xrefs resolve
+  - Content type compliance: X files
+  - Title/ID/filename alignment: X files
+  - Short descriptions: X files
+  - Orphaned modules removed: X files
 
   🤖 Generated with Claude Code
   EOF
@@ -241,14 +245,22 @@
   ```
   - [ ] PR created successfully
   - [ ] PR number: #_____
+  - [ ] Preview URL added to PR
 
 ---
 
-## Completion Verification
+## Assessment
 
-- [ ] ALL steps 1-17 marked complete above
-- [ ] All git changes committed
-- [ ] PR created and submitted
-- [ ] CQA process complete for this title
+**Title:** _____ | **JIRA:** RHIDP-_____ | **Status:** ⬜ In Progress | ⬜ Complete | ⬜ Blocked
 
-**NEVER claim completion unless ALL checkboxes above are checked ✓**
+**Results:**
+- Vale DITA: _____ errors, _____ warnings
+- Vale style: _____ errors, _____ warnings
+- Build: _____ (success/fail)
+- Files updated: _____
+
+**Notes:** _____
+
+---
+
+**CRITICAL:** Do not claim completion unless ALL checkboxes marked ✓

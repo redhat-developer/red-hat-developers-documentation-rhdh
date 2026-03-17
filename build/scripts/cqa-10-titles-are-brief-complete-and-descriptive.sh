@@ -1,0 +1,665 @@
+#!/bin/bash
+# cqa-10-titles-are-brief-complete-and-descriptive.sh
+# Aligns title, ID, context, and filename per CQA.md rules
+#
+# Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] <file-path>
+#   --fix:  Apply automatic fixes (title form, IDs, filenames, xrefs)
+#   file:   Processes the specified file and all its includes recursively
+#   Example: ./cqa-10-titles-are-brief-complete-and-descriptive.sh titles/install-rhdh-ocp/master.adoc
+#     Processes: master.adoc → assemblies → all included modules (recursive)
+#
+# This script follows CQA.md Step 5 (Title/ID/Filename Compliance):
+# STEP 0: Ensure content type metadata exists (CQA requirement #2)
+# - Reads module type from :_mod-docs-content-type: metadata (first line)
+# - If metadata is missing, skips the file (run cqa-03-content-is-modularized.sh first)
+# STEP 1: Fix titles FIRST - Title is source of truth (CQA requirement #8)
+#   - Procedures: Use imperative form ("Install" not "Installing")
+#   - Concepts: Use noun phrases ("High availability" not "Achieve high availability")
+#   - References: Use noun phrases ("Configuration options" not "Configure options")
+#   - Assemblies with procedures: Use imperative form ("Install" not "Installing")
+#   - Assemblies without procedures: Use noun phrases ("API reference" not "Configure API")
+# STEP 2: Update IDs and context to match title
+# STEP 3: Update all xrefs pointing to changed ID
+# STEP 4: Rename file to match title (using prefix from content type)
+# STEP 5: Update all include statements
+
+set -e
+
+# Convert a gerund to imperative form (e.g., "Installing" → "Install")
+# Handles three patterns:
+#   1. Doubled consonant: "Running" → "Run" (remove doubled consonant)
+#   2. Silent 'e' dropped: "Configuring" → "Configure" (add 'e' back)
+#   3. Simple '-ing': "Deploying" → "Deploy" (just strip)
+# Args: $1 = gerund word (e.g., "Installing" or "installing")
+# Returns: imperative form preserving original capitalization
+gerund_to_imperative() {
+    local word="$1"
+    local lower
+    lower=$(echo "$word" | tr '[:upper:]' '[:lower:]')
+
+    # Remove 'ing' suffix to get stem
+    local stem="${lower%ing}"
+    local result=""
+
+    case "$lower" in
+        # Explicit mappings for common documentation verbs
+        # -- Doubled consonant verbs --
+        running) result="run" ;;
+        setting) result="set" ;;
+        getting) result="get" ;;
+        putting) result="put" ;;
+        cutting) result="cut" ;;
+        stopping) result="stop" ;;
+        dropping) result="drop" ;;
+        mapping) result="map" ;;
+        planning) result="plan" ;;
+        scanning) result="scan" ;;
+        shipping) result="ship" ;;
+        shopping) result="shop" ;;
+        skipping) result="skip" ;;
+        snapping) result="snap" ;;
+        spinning) result="spin" ;;
+        splitting) result="split" ;;
+        stepping) result="step" ;;
+        stripping) result="strip" ;;
+        swapping) result="swap" ;;
+        tapping) result="tap" ;;
+        trimming) result="trim" ;;
+        wrapping) result="wrap" ;;
+        beginning) result="begin" ;;
+        # -- Silent 'e' verbs --
+        configuring) result="configure" ;;
+        creating) result="create" ;;
+        enabling) result="enable" ;;
+        disabling) result="disable" ;;
+        managing) result="manage" ;;
+        upgrading) result="upgrade" ;;
+        updating) result="update" ;;
+        removing) result="remove" ;;
+        deleting) result="delete" ;;
+        editing) result="edit" ;;
+        resolving) result="resolve" ;;
+        authorizing) result="authorize" ;;
+        validating) result="validate" ;;
+        customizing) result="customize" ;;
+        integrating) result="integrate" ;;
+        migrating) result="migrate" ;;
+        generating) result="generate" ;;
+        defining) result="define" ;;
+        overriding) result="override" ;;
+        retrieving) result="retrieve" ;;
+        preparing) result="prepare" ;;
+        scaling) result="scale" ;;
+        securing) result="secure" ;;
+        authenticating) result="authenticate" ;;
+        automating) result="automate" ;;
+        bootstrapping) result="bootstrap" ;;
+        restoring) result="restore" ;;
+        replacing) result="replace" ;;
+        browsing) result="browse" ;;
+        closing) result="close" ;;
+        composing) result="compose" ;;
+        describing) result="describe" ;;
+        ensuring) result="ensure" ;;
+        using) result="use" ;;
+        including) result="include" ;;
+        invoking) result="invoke" ;;
+        providing) result="provide" ;;
+        producing) result="produce" ;;
+        reducing) result="reduce" ;;
+        releasing) result="release" ;;
+        requiring) result="require" ;;
+        subscribing) result="subscribe" ;;
+        changing) result="change" ;;
+        locating) result="locate" ;;
+        navigating) result="navigate" ;;
+        operating) result="operate" ;;
+        isolating) result="isolate" ;;
+        # -- Simple '-ing' removal verbs --
+        installing) result="install" ;;
+        deploying) result="deploy" ;;
+        building) result="build" ;;
+        adding) result="add" ;;
+        testing) result="test" ;;
+        monitoring) result="monitor" ;;
+        checking) result="check" ;;
+        importing) result="import" ;;
+        exporting) result="export" ;;
+        connecting) result="connect" ;;
+        disconnecting) result="disconnect" ;;
+        adjusting) result="adjust" ;;
+        restarting) result="restart" ;;
+        starting) result="start" ;;
+        registering) result="register" ;;
+        unregistering) result="unregister" ;;
+        assigning) result="assign" ;;
+        reviewing) result="review" ;;
+        accessing) result="access" ;;
+        fetching) result="fetch" ;;
+        searching) result="search" ;;
+        finding) result="find" ;;
+        provisioning) result="provision" ;;
+        encrypting) result="encrypt" ;;
+        mounting) result="mount" ;;
+        unmounting) result="unmount" ;;
+        attaching) result="attach" ;;
+        detaching) result="detach" ;;
+        extending) result="extend" ;;
+        limiting) result="limit" ;;
+        inspecting) result="inspect" ;;
+        triggering) result="trigger" ;;
+        troubleshooting) result="troubleshoot" ;;
+        understanding) result="understand" ;;
+        publishing) result="publish" ;;
+        selecting) result="select" ;;
+        tracking) result="track" ;;
+        transforming) result="transform" ;;
+        viewing) result="view" ;;
+        verifying) result="verify" ;;
+        modifying) result="modify" ;;
+        specifying) result="specify" ;;
+        applying) result="apply" ;;
+        *)
+            # Generic fallback with heuristic rules
+            local last_two="${stem: -2}"
+
+            # Rule 1: Doubled consonant (not ll/ss/ff/zz) → remove one
+            # e.g., "runn" → "run", "sett" → "set"
+            if [[ ${#stem} -ge 3 ]] && [[ "${last_two:0:1}" == "${last_two:1:1}" ]] && \
+               [[ "${last_two:0:1}" =~ [bcdfghjkmnpqrtvwxyz] ]]; then
+                result="${stem%?}"
+            # Rule 2: Stem ends in 'v' → add 'e' (English words rarely end in bare 'v')
+            # e.g., "resolv" → "resolve", "remov" → "remove"
+            elif [[ "$stem" =~ [v]$ ]]; then
+                result="${stem}e"
+            # Rule 3: Stem ends in vowel+'z' → add 'e'
+            # e.g., "authoriz" → "authorize", "customiz" → "customize"
+            elif [[ "$stem" =~ [aeiou]z$ ]]; then
+                result="${stem}e"
+            # Rule 4: Stem ends in vowel+'c' → add 'e'
+            # e.g., "replac" → "replace", "produc" → "produce"
+            elif [[ "$stem" =~ [aeiou]c$ ]]; then
+                result="${stem}e"
+            # Rule 5: Otherwise just strip 'ing'
+            else
+                result="$stem"
+            fi
+            echo "  ⚠ Unknown gerund '${word}' → '${result}' (consider adding to gerund_to_imperative)" >&2
+            ;;
+    esac
+
+    # Preserve original capitalization
+    if [[ "$word" =~ ^[A-Z] ]]; then
+        result="$(echo "${result:0:1}" | tr '[:lower:]' '[:upper:]')${result:1}"
+    fi
+
+    echo "$result"
+}
+
+# Function to extract included files from a given file
+get_includes() {
+    local file="$1"
+    if [[ ! -f "$file" ]]; then
+        return
+    fi
+
+    # Extract include:: statements and resolve relative paths
+    grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
+        # Get repository root (where .git is)
+        local repo_root
+        repo_root=$(cd "$(dirname "$file")" && git rev-parse --show-toplevel 2>/dev/null) || repo_root="."
+
+        # Resolve relative path from file's directory
+        local dir
+        dir=$(dirname "$file")
+        local resolved_path
+
+        if [[ "$include_path" == /* ]]; then
+            resolved_path="$include_path"
+        elif [[ "$include_path" == ../* ]]; then
+            resolved_path="$dir/$include_path"
+        else
+            resolved_path="$dir/$include_path"
+        fi
+
+        # Normalize and make relative to repo root
+        if [[ -f "$resolved_path" ]]; then
+            # Make path relative to repo root
+            # shellcheck disable=SC2269  # Intentional fallback to original path if realpath fails
+            resolved_path=$(realpath --relative-to="$repo_root" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
+            echo "$resolved_path"
+        fi
+    done
+}
+
+# Function to recursively collect all files to process
+collect_files() {
+    local file="$1"
+    local var_name="$2"
+
+    # Use eval to access the array by name
+    local current_files
+    eval "current_files=(\"\${${var_name}[@]}\")"
+
+    # Skip if already processed
+    for existing_file in "${current_files[@]}"; do
+        if [[ "$existing_file" == "$file" ]]; then
+            return
+        fi
+    done
+
+    # Add file to array
+    eval "${var_name}+=('$file')"
+
+    # Get includes and process recursively
+    while IFS= read -r included_file; do
+        collect_files "$included_file" "$var_name"
+    done < <(get_includes "$file")
+}
+
+# Function to get content type from file (always first line)
+get_content_type() {
+    local file="$1"
+    local first_line
+    first_line=$(head -1 "$file" 2>/dev/null)
+    if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return 0
+    else
+        echo ""
+        return 0
+    fi
+}
+
+# Function to resolve an attribute value
+# Args: $1 = attribute name (without braces), $2 = file to search first
+# Returns: resolved value or original attribute name if not found
+resolve_attribute() {
+    local attr_name="$1"
+    local search_file="$2"
+    local attr_value=""
+
+    # First, try to find in the current file
+    if [[ -f "$search_file" ]]; then
+        attr_value=$(grep "^:${attr_name}:" "$search_file" 2>/dev/null | head -1 | sed "s/^:${attr_name}:[[:space:]]*//" | sed 's/[[:space:]]*$//')
+    fi
+
+    # If not found, try artifacts/attributes.adoc
+    if [[ -z "$attr_value" ]] && [[ -f "artifacts/attributes.adoc" ]]; then
+        attr_value=$(grep "^:${attr_name}:" "artifacts/attributes.adoc" 2>/dev/null | head -1 | sed "s/^:${attr_name}:[[:space:]]*//" | sed 's/[[:space:]]*$//')
+    fi
+
+    # If still not found, return the attribute name
+    if [[ -z "$attr_value" ]]; then
+        echo "$attr_name"
+    else
+        echo "$attr_value"
+    fi
+}
+
+# Function to expand all attributes in a string
+# Args: $1 = string with attributes, $2 = file to search first
+expand_attributes() {
+    local input="$1"
+    local search_file="$2"
+    local output="$input"
+
+    # Find all {attribute} patterns and expand them iteratively
+    while [[ "$output" =~ \{([^}]+)\} ]]; do
+        local attr_name="${BASH_REMATCH[1]}"
+        local attr_value
+        attr_value=$(resolve_attribute "$attr_name" "$search_file")
+
+        # Replace {attribute} with its value
+        output="${output//\{$attr_name\}/$attr_value}"
+    done
+
+    echo "$output"
+}
+
+# Function to convert title with attributes to ID-friendly form
+# Replaces product attributes with short forms instead of fully expanding them
+# This prevents excessively long IDs/filenames like "red-hat-developer-hub"
+title_to_id_form() {
+    local title="$1"
+    echo "$title" | \
+        sed 's/{product-very-short}/rhdh/g' | \
+        sed 's/{product-short}/rhdh/g' | \
+        sed 's/{product}/rhdh/g' | \
+        sed 's/{product-custom-resource-type}//g' | \
+        sed 's/{rhbk-brand-name}/rhbk/g' | \
+        sed 's/{rhbk}/rhbk/g' | \
+        sed 's/{azure-brand-name}/microsoft-azure/g' | \
+        sed 's/{ocp-brand-name}/ocp/g' | \
+        sed 's/{ocp-short}/ocp/g' | \
+        sed 's/{[^}]*}//g'
+}
+
+# Function to process a single file
+process_file() {
+    local FILE="$1"
+
+# Determine module type from content type metadata (always)
+CONTENT_TYPE=$(get_content_type "$FILE")
+
+if [[ -z "$CONTENT_TYPE" ]]; then
+    echo "? $FILE (no content type metadata - run cqa-03-content-is-modularized.sh first)"
+    return 0
+fi
+
+# Determine prefix and expected form based on content type
+case "$CONTENT_TYPE" in
+    PROCEDURE)
+        PREFIX="proc-"
+        MODULE_TYPE="PROCEDURE"
+        EXPECTED_FORM="imperative"
+        ;;
+    CONCEPT)
+        PREFIX="con-"
+        MODULE_TYPE="CONCEPT"
+        EXPECTED_FORM="noun phrase"
+        ;;
+    REFERENCE)
+        PREFIX="ref-"
+        MODULE_TYPE="REFERENCE"
+        EXPECTED_FORM="noun phrase"
+        ;;
+    ASSEMBLY)
+        PREFIX="assembly-"
+        MODULE_TYPE="ASSEMBLY"
+        # Assemblies use imperative form IF they include procedures, otherwise noun phrases
+        if grep -q "include::.*proc-.*\.adoc" "$FILE"; then
+            EXPECTED_FORM="imperative"
+        else
+            EXPECTED_FORM="noun phrase"
+        fi
+        ;;
+    SNIPPET)
+        PREFIX="snip-"
+        MODULE_TYPE="SNIPPET"
+        EXPECTED_FORM="any"
+        ;;
+    *)
+        echo "? $FILE (unknown content type: $CONTENT_TYPE)"
+        return 0
+        ;;
+esac
+
+# Track if any changes will be made
+WILL_CHANGE=false
+
+# STEP 0: Add content type metadata if missing
+ADDED_METADATA=false
+if ! grep -q "^:_mod-docs-content-type:" "$FILE"; then
+    ADDED_METADATA=true
+    WILL_CHANGE=true
+fi
+
+# Extract current title (H1 heading) and expand attributes
+TITLE_RAW=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
+if [ -z "$TITLE_RAW" ]; then
+    if [ "$MODULE_TYPE" = "SNIPPET" ]; then
+        # Snippets must NOT have a title - validate absence
+        echo "✓ $FILE (snippet: no title, as expected)"
+        return 0
+    else
+        echo "Error: No title found in $FILE (looking for '= Title')"
+        exit 1
+    fi
+fi
+
+# Snippets should NOT have titles
+if [ "$MODULE_TYPE" = "SNIPPET" ] && [ -n "$TITLE_RAW" ]; then
+    echo "✗ $FILE"
+    echo "  * Snippet has a title '= ${TITLE_RAW}' - snippets must not have titles"
+    return 0
+fi
+
+# Expand any attributes in the title (e.g., {title} → actual title value)
+TITLE=$(expand_attributes "$TITLE_RAW" "$FILE")
+
+# STEP 1: Check if title needs fixing
+FIXED_TITLE="$TITLE"
+FIXED_TITLE_RAW="$TITLE_RAW"
+TITLE_CHANGED=false
+if [ "$EXPECTED_FORM" = "imperative" ]; then
+    # Extract first word (handling attributes)
+    FIRST_WORD=$(echo "$TITLE" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]].*//')
+
+    if [[ "$FIRST_WORD" =~ ing$ ]] && [[ ! "$FIRST_WORD" =~ ^\{.*\}$ ]]; then
+        # Convert gerund to imperative using shared function
+        IMPERATIVE_WORD=$(gerund_to_imperative "$FIRST_WORD")
+        FIXED_TITLE="${IMPERATIVE_WORD}${TITLE#"$FIRST_WORD"}"
+        FIXED_TITLE_RAW="${IMPERATIVE_WORD}${TITLE_RAW#"$FIRST_WORD"}"
+
+        TITLE_CHANGED=true
+        WILL_CHANGE=true
+        TITLE="$FIXED_TITLE"
+    fi
+
+    # Check for additional gerunds in the rest of the title (e.g., "Enable and authorizing")
+    # Look for " and <word>ing " patterns and convert them to imperative
+    while [[ "$FIXED_TITLE" =~ (.*[[:space:]]and[[:space:]])([A-Za-z]+ing)([[:space:]].*)$ ]]; do
+        TITLE_PREFIX="${BASH_REMATCH[1]}"
+        GERUND="${BASH_REMATCH[2]}"
+        TITLE_SUFFIX="${BASH_REMATCH[3]}"
+
+        IMPERATIVE=$(gerund_to_imperative "$GERUND")
+
+        FIXED_TITLE="${TITLE_PREFIX}${IMPERATIVE}${TITLE_SUFFIX}"
+        FIXED_TITLE_RAW="${FIXED_TITLE_RAW//"$GERUND"/"$IMPERATIVE"}"
+        TITLE_CHANGED=true
+        WILL_CHANGE=true
+    done
+
+    TITLE="$FIXED_TITLE"
+fi
+
+# Extract current ID (before _{context})
+CURRENT_ID=$(grep "\[id=" "$FILE" | head -1 | sed 's/.*\[id="//;s/.*\[id='"'"'//' | sed 's/["'"'"'\]]*$//' | sed 's/_{context}.*//' | sed 's/_.*//')
+
+# Convert title to expected ID:
+# 1. Use raw title with short forms for attributes (e.g., {product} → rhdh)
+# 2. Lowercase everything
+# 3. Replace non-alphanumeric with hyphens
+# 4. Clean up multiple/leading/trailing hyphens and duplicate abbreviations
+TITLE_FOR_ID=$(title_to_id_form "$FIXED_TITLE_RAW")
+EXPECTED_ID=$(echo "$TITLE_FOR_ID" | \
+    tr '[:upper:]' '[:lower:]' | \
+    sed 's/[^a-z0-9-]/-/g' | \
+    sed 's/--*/-/g' | \
+    sed 's/^-//;s/-$//' | \
+    sed 's/\brhdh-rhdh\b/rhdh/g' | \
+    sed 's/\brhbk-rhbk\b/rhbk/g' | \
+    sed 's/\bocp-ocp\b/ocp/g')
+
+# Expected filename
+EXPECTED_FILENAME="${PREFIX}${EXPECTED_ID}.adoc"
+NEW_FILE="$(dirname "$FILE")/$EXPECTED_FILENAME"
+
+# Check if changes are needed
+if [ "$CURRENT_ID" != "$EXPECTED_ID" ] || [ "$FILE" != "$NEW_FILE" ]; then
+    WILL_CHANGE=true
+fi
+
+# If no changes needed, just show checkmark and return
+if [ "$WILL_CHANGE" = false ]; then
+    echo "✓ $FILE"
+    return 0
+fi
+
+# Changes needed - show header
+echo ""
+if [ "$FIX_MODE" = true ]; then
+    echo "📝 $FILE"
+else
+    echo "✗ $FILE"
+fi
+
+# Report and optionally apply changes
+if [ "$ADDED_METADATA" = true ]; then
+    if [ "$FIX_MODE" = true ]; then
+        sed -i.bak "1s/^/:_mod-docs-content-type: ${MODULE_TYPE}\n\n/" "$FILE"
+        rm -f "${FILE}.bak"
+    fi
+    echo "  + Added :_mod-docs-content-type: ${MODULE_TYPE}"
+fi
+
+if [ "$TITLE_CHANGED" = true ]; then
+    OLD_TITLE=$(grep "^= " "$FILE" | head -1 | sed 's/^= //')
+    if [ "$FIX_MODE" = true ]; then
+        # Use raw fixed title (preserving attributes like {product}) for write-back
+        sed -i.bak "s/^= ${OLD_TITLE}/= ${FIXED_TITLE_RAW}/" "$FILE"
+        rm -f "${FILE}.bak"
+    fi
+    echo "  * Title: ${OLD_TITLE} → ${FIXED_TITLE_RAW}"
+fi
+
+if [ "$CURRENT_ID" != "$EXPECTED_ID" ]; then
+    if [ "$FIX_MODE" = true ]; then
+        if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
+            # Handle IDs with _{context} suffix
+            sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            # Handle IDs without _{context} suffix (add it)
+            sed -i.bak "s/\[id=\"${CURRENT_ID}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='${CURRENT_ID}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/^:context: .*$/:context: ${EXPECTED_ID}/" "$FILE"
+        else
+            # Handle IDs with _{context} suffix
+            sed -i.bak "s/\[id=\"[^\"]*_{context}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='[^']*_{context}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            # Handle IDs without _{context} suffix (add it)
+            sed -i.bak "s/\[id=\"${CURRENT_ID}\"\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+            sed -i.bak "s/\[id='${CURRENT_ID}'\]/[id=\"${EXPECTED_ID}_{context}\"]/" "$FILE"
+        fi
+        rm -f "${FILE}.bak"
+    fi
+    if [ "$MODULE_TYPE" = "ASSEMBLY" ]; then
+        echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
+        echo "  * Context: ${CURRENT_ID} → ${EXPECTED_ID}"
+    else
+        echo "  * ID: ${CURRENT_ID} → ${EXPECTED_ID}"
+    fi
+fi
+
+if [ "$CURRENT_ID" != "$EXPECTED_ID" ] && [ "$FIX_MODE" = true ]; then
+    XREF_COUNT=0
+    while read -r xref_file; do
+        sed -i.bak "s/xref:${CURRENT_ID}_/xref:${EXPECTED_ID}_/g" "$xref_file"
+        rm -f "${xref_file}.bak"
+        XREF_COUNT=$((XREF_COUNT + 1))
+    done < <(grep -rl "xref:${CURRENT_ID}_" assemblies/ modules/ titles/ 2>/dev/null)
+
+    if [ $XREF_COUNT -gt 0 ]; then
+        echo "  * Updated $XREF_COUNT xref(s)"
+    fi
+fi
+
+if [ "$FILE" != "$NEW_FILE" ]; then
+    OLD_BASENAME=$(basename "$FILE")
+    NEW_BASENAME=$(basename "$NEW_FILE")
+    echo "  * File: $(basename "$FILE") → $NEW_BASENAME"
+
+    if [ "$FIX_MODE" = true ]; then
+        git mv "$FILE" "$NEW_FILE" 2>/dev/null || mv "$FILE" "$NEW_FILE"
+
+        INCLUDE_COUNT=0
+        while read -r include_file; do
+            if grep -q "include::.*${OLD_BASENAME}\[" "$include_file"; then
+                sed -i.bak "s|include::\(.*\)${OLD_BASENAME}\[|include::\1${NEW_BASENAME}[|g" "$include_file"
+                rm -f "${include_file}.bak"
+                INCLUDE_COUNT=$((INCLUDE_COUNT + 1))
+            fi
+        done < <(find assemblies/ modules/ titles/ -name "*.adoc" -type f 2>/dev/null)
+
+        if [ $INCLUDE_COUNT -gt 0 ]; then
+            echo "  * Updated $INCLUDE_COUNT include(s)"
+        fi
+
+        FILE="$NEW_FILE"
+    fi
+fi
+}
+
+# Main script
+FIX_MODE=false
+TARGET_FILE=""
+
+for arg in "$@"; do
+    case "$arg" in
+        --fix) FIX_MODE=true ;;
+        *)
+            if [[ -z "$TARGET_FILE" ]]; then
+                TARGET_FILE="$arg"
+            else
+                echo "Error: unexpected argument: $arg" >&2
+                echo "Usage: $0 [--fix] <file-path>" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$TARGET_FILE" ]]; then
+    echo "Usage: $0 [--fix] <file-path>" >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
+    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
+    exit 1
+fi
+
+if [ ! -f "$TARGET_FILE" ]; then
+    echo "Error: File not found: $TARGET_FILE"
+    exit 1
+fi
+
+# Collect all files to process (target + includes)
+ALL_FILES=()
+collect_files "$TARGET_FILE" ALL_FILES
+
+# Separate module files from non-module files
+MODULE_FILES=()
+SKIPPED_FILES=()
+
+for file in "${ALL_FILES[@]}"; do
+    # Skip non-.adoc files
+    if [[ "$file" != *.adoc ]]; then
+        continue
+    fi
+
+    # Skip attributes.adoc and master.adoc files (special files)
+    basename_file=$(basename "$file")
+    if [[ "$basename_file" == "attributes.adoc" ]] || [[ "$basename_file" == "master.adoc" ]]; then
+        SKIPPED_FILES+=("$file")
+        continue
+    fi
+
+    # Check if file has content type metadata or module prefix
+    content_type=$(get_content_type "$file")
+    basename_no_ext=$(basename "$file" .adoc)
+
+    if [[ -n "$content_type" ]] || [[ "$basename_no_ext" =~ ^(proc|con|ref|assembly|snip)- ]]; then
+        MODULE_FILES+=("$file")
+    else
+        SKIPPED_FILES+=("$file")
+    fi
+done
+
+# Show what will be processed
+echo "=== Found ${#ALL_FILES[@]} file(s) in include tree ==="
+if [[ ${#SKIPPED_FILES[@]} -gt 0 ]]; then
+    echo "Skipping ${#SKIPPED_FILES[@]} non-module file(s): ${SKIPPED_FILES[*]}"
+fi
+echo "Processing ${#MODULE_FILES[@]} module file(s)"
+echo ""
+
+# Process each module file
+for file in "${MODULE_FILES[@]}"; do
+    process_file "$file"
+done
+
+echo ""
+echo "=== Summary ==="
+echo "✓ Processed ${#MODULE_FILES[@]} module file(s)"

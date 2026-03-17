@@ -1,0 +1,63 @@
+#!/bin/bash
+# List all files recursively included from a starting file
+# Usage: list-all-included-files-starting-from.sh <file>
+# Output: space-separated list of files on a single line
+
+set -e
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 <file>" >&2
+  exit 1
+fi
+
+START_FILE="$1"
+
+if [[ ! -f "$START_FILE" ]]; then
+  echo "Error: File not found: $START_FILE" >&2
+  exit 1
+fi
+
+# Temporary file to collect results
+TEMP_FILE=$(mktemp)
+trap 'rm -f "$TEMP_FILE"' EXIT
+
+# Function to recursively find includes
+find_includes() {
+  local file=$1
+  local dir
+  dir=$(dirname "$file")
+
+  # Print the file
+  echo "$file" >> "$TEMP_FILE"
+
+  # Find and process includes
+  while IFS= read -r line; do
+    # Extract include path from include::path[options]
+    local include_path
+    # shellcheck disable=SC2001  # sed is appropriate for regex capture
+    include_path=$(echo "$line" | sed 's/^include::\([^[]*\).*/\1/')
+
+    # Resolve relative paths
+    if [[ "$include_path" == ../* ]]; then
+      include_path="$dir/$include_path"
+    elif [[ "$include_path" != /* ]]; then
+      include_path="$dir/$include_path"
+    fi
+
+    # Normalize path
+    include_path=$(realpath -m "$include_path" 2>/dev/null || echo "$include_path")
+
+    if [[ -f "$include_path" ]] && ! grep -qFx "$include_path" "$TEMP_FILE" 2>/dev/null; then
+      find_includes "$include_path"
+    fi
+  done < <(grep "^include::" "$file" 2>/dev/null || true)
+
+  return 0
+}
+
+# Get all files
+find_includes "$START_FILE"
+
+# Output as single line, space-separated, sorted and unique
+sort -u "$TEMP_FILE" | tr '\n' ' '
+echo  # Add newline at end
