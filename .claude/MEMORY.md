@@ -24,15 +24,10 @@ When starting CQA 2.1 compliance for any title:
    - Path to master.adoc file (e.g., `titles/installing-rhdh-ocp/master.adoc`)
 
 3. **THEN:** Use the master workflow as the guide
-   - Create a TodoWrite with items from cqa-master-workflow.md
-   - Follow the 5 phases in sequence:
-     - Phase 0: Resources
-     - Phase 1: Structure & Content Type (CQA #3, #13)
-     - Phase 2: Short Descriptions & Titles (CQA #8, #9, #10, #11)
-     - Phase 3: Assembly Structure (CQA #2, #5, #4, #6, #7)
-     - Phase 4: Names & Validation (CQA #16, #1, #12, #17)
-     - Phase 5: Links & Build (CQA #14, #15)
-   - Use individual CQA skills (.claude/skills/cqa-##-*.md) for detailed assessment
+   - Create a TodoWrite with items from cqa-master-workflow.md following the sequence defined in cqa-master-workflow.md
+   - Read individual CQA skills (.claude/skills/cqa-##-*.md) for detailed assessment
+   - Run each step sequentially: always await for the previous task completion before running the next task
+   - Respect the sequence order.
 
 4. **IMPORTANT:** Fill in the checklist header:
    - Title name

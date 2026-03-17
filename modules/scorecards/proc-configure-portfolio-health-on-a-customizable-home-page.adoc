@@ -1,0 +1,80 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-portfolio-health-on-a-customizable-home-page_{context}"]
+= Configure portfolio health on a customizable home page
+
+[role="_abstract"]
+You can add the aggregated Scorecard widget to a customizable {product-very-short} home page to monitor the collective technical health of your portfolio.
+
+.Prerequisites
+
+* You established owner group relationships in the Software Catalog.
+* {scorecard-plugin-book-link}#assembly-configuring-scorecards-in-rhdh[You have installed the Scorecard plugin].
+* You have the `scorecard.metric.read` permission.
+* You have administrative access to the {product-very-short} configuration.
+
+.Procedure
+
+. Update your {product-very-short} `{my-app-config-file}` with the following code:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard:bs_1.45.3__2.3.5!red-hat-developer-hub-backstage-plugin-scorecard
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-scorecard:
+            entityTabs:
+              - path: "/scorecard"
+                title: Scorecard
+                mountPoint: entity.page.scorecard
+            mountPoints:
+              - mountPoint: entity.page.scorecard/cards
+                importName: EntityScorecardContent
+                config:
+                  layout:
+                    gridColumn: 1 / -1
+              - mountPoint: home.page/cards
+                importName: ScorecardHomepageCard
+                config:
+                  id: "scorecard-jira.open_issues"
+                  title: "Jira open blocking tickets"
+                  props:
+                    metricId: "jira.open_issues"
+              - mountPoint: home.page/cards
+                importName: ScorecardHomepageCard
+                config:
+                  id: "scorecard-github.open_prs"
+                  title: "GitHub open PRs"
+                  props:
+                    metricId: "github.open_prs"
+  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-dynamic-home-page:
+            dynamicRoutes:
+              - path: /
+                importName: DynamicCustomizableHomePage
+----
++
+For more information, see {customizing-book-link}[{customizing-book-title}].
+. Log in to the {product-very-short} application.
+. Enter the *Edit* mode on the home page.
+. Click *Add widget* and select the metric to include.
++
+[NOTE]
+====
+You can add only one metric at a time.
+====
+. Drag the widget to your preferred layout position.
+. Click *Save*.
+
+.Verification
+
+. Log in to {product-very-short}.
+. On the *Home* page, verify that the aggregated Scorecard widget appears with the name you provided.
+. Confirm that the displayed KPIs reflect the status of your owned components, systems, and resources.
