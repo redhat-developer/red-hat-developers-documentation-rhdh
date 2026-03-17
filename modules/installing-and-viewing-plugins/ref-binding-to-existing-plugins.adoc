@@ -1,0 +1,54 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="binding-to-existing-plugins_{context}"]
+= Binding to existing plugins
+
+[role="_abstract"]
+You can bind to existing plugins and their routes, and declare new targets sourced from dynamic plugins as shown in the following `routeBindings` configuration:
+
+[source,yaml,subs="+quotes"]
+----
+# dynamic-plugins-config.yaml
+plugins:
+  - plugin: __<plugin_path_or_url>__
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          my-plugin:
+            routeBindings:
+              targets:
+                - name: __<plugin_name>__Plugin
+                  importName: __<plugin_key>__Plugin
+                  module: CustomModule
+              bindings:
+                - bindTarget: "__<plugin_name>__Plugin.externalRoutes"
+                  bindMap:
+                    headerLink: "__<plugin_name>__Plugin.routes.root"
+----
+
+where:
+
+`my-plugin`:: The plugin package name.
+`targets`:: A new bind target.
+`name`:: Optional: Defaults to `importName`. Explicit name of the plugin that exposes the bind target.
+`importName`:: Required: Explicit import name that references a `{backstage}Plugin<{}>` implementation.
+`module`:: Optional: Same as the key in `scalprum.exposedModules` in the `package.json` file of the plugin.
+`bindTarget`:: Required: One of the supported or imported bind targets.
+`bindMap`:: Required: A map of route bindings similar to `bind` function options.
+
+To configure `routeBindings`, complete the following steps:
+
+. Define new targets using `routeBindings.targets`. Set the required `importName` to a `{backstage}Plugin<{}>` implementation.
+
+. Declare route bindings using the *`routeBindings.bindings`* field by setting `bindTarget` to the name of the target to bind to. This is a dynamic or static target, such as:
++
+** `catalogPlugin.externalRoutes`
+
+** `catalogImportPlugin.externalRoutes`
+
+** `techdocsPlugin.externalRoutes`
+
+** `scaffolderPlugin.externalRoutes`
++
+You can extend existing pages with additional content by using mount points. The application defines these identifiers throughout the system.

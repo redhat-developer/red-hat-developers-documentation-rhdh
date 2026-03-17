@@ -7,7 +7,7 @@
 # Assemblies should contain only:
 # 1. Introduction with [role="_abstract"]
 # 2. Include statements for modules
-# 3. Optional .Prerequisites before includes
+# 3. Optional == Prerequisites before includes (heading syntax for TOC visibility)
 # 4. Optional .Additional resources at end
 #
 # Usage: ./cqa-02-assembly-structure.sh [--fix] <file-path>
@@ -75,7 +75,7 @@ echo ""
 echo "Assemblies should contain only:"
 echo "  - Introduction with [role=\"_abstract\"]"
 echo "  - Include statements for modules"
-echo "  - Optional .Prerequisites before includes"
+echo "  - Optional == Prerequisites before includes (heading, not block title)"
 echo "  - Optional .Additional resources at end"
 echo ""
 
@@ -151,12 +151,24 @@ while IFS= read -r file; do
         fi
     fi
 
-    # Check 3: Prerequisites location (should be before first include if present)
-    PREREQ_LINE=$(grep -n "^\.Prerequisites" "$file" | cut -d: -f1 || true)
+    # Check 3: Prerequisites location and format
+    # Should use == Prerequisites heading (not .Prerequisites block title), before first include
+    PREREQ_BLOCK_LINE=$(grep -n "^\.Prerequisites" "$file" | cut -d: -f1 || true)
+    PREREQ_BLOCK_LINE=${PREREQ_BLOCK_LINE:-0}
+    PREREQ_HEADING_LINE=$(grep -n "^== Prerequisites" "$file" | cut -d: -f1 || true)
+    PREREQ_HEADING_LINE=${PREREQ_HEADING_LINE:-0}
+
+    if [[ "$PREREQ_BLOCK_LINE" != "0" ]]; then
+        echo "  ✗ Uses .Prerequisites block title instead of == Prerequisites heading"
+        echo "    Use '== Prerequisites' for TOC visibility, consistent with Additional resources"
+        FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
+    fi
+
+    PREREQ_LINE=${PREREQ_HEADING_LINE:-$PREREQ_BLOCK_LINE}
     PREREQ_LINE=${PREREQ_LINE:-0}
     if [[ "$PREREQ_LINE" != "0" && "$FIRST_INCLUDE_LINE" != "0" ]]; then
         if [[ "$PREREQ_LINE" -gt "$FIRST_INCLUDE_LINE" ]]; then
-            echo "  ✗ .Prerequisites appears after include statements"
+            echo "  ✗ Prerequisites appears after include statements"
             FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
         fi
     fi
@@ -193,10 +205,11 @@ while IFS= read -r file; do
         # Extract content between abstract and first include
         BETWEEN_ABSTRACT_AND_INCLUDE=$(sed -n "$((ABSTRACT_LINE + 2)),$((FIRST_INCLUDE_LINE - 1))p" "$file")
 
-        # Check for problematic content (paragraphs, lists, but allow .Prerequisites)
-        # Remove .Prerequisites section and check what remains
+        # Check for problematic content (paragraphs, lists, but allow Prerequisites)
+        # Remove .Prerequisites / == Prerequisites section and check what remains
         FILTERED=$(echo "$BETWEEN_ABSTRACT_AND_INCLUDE" | \
                   grep -v "^\.Prerequisites" | \
+                  grep -v "^== Prerequisites" | \
                   grep -v "^$" | \
                   grep -v "^\*" | \
                   grep -v "^-" | \
@@ -237,7 +250,8 @@ else
     echo "Common fixes:"
     echo "  - Move detailed content to concept modules"
     echo "  - Remove text between include statements"
-    echo "  - Move .Prerequisites before first include"
+    echo "  - Use '== Prerequisites' heading (not .Prerequisites block title)"
+    echo "  - Move Prerequisites before first include"
     echo "  - Remove subheadings from assemblies"
     echo ""
     echo "See .claude/skills/cqa-02-assembly-structure.md for details"
