@@ -8,8 +8,9 @@
 
 Assemblies must have this structure:
 1. **Introduction** - One or more paragraphs marked with `[role="_abstract"]`
-2. **Include statements** - For modules only
-3. **Optional: Additional resources** - Links only, at the end after all includes
+2. **Optional: Prerequisites** - Use second-level heading (`== Prerequisites`) so it appears in the TOC, consistent with Additional resources and Next steps
+3. **Include statements** - For modules only
+4. **Optional: Additional resources** - Links only, at the end after all includes
 
 **DITA Constraint:** DITA maps do not accept text between include statements for modules.
 
@@ -24,7 +25,7 @@ Assemblies must have this structure:
 **What the script validates:**
 - Has `[role="_abstract"]` introduction
 - No content between include statements
-- `.Prerequisites` appears before first include (if present)
+- `== Prerequisites` heading before first include (if present); `.Prerequisites` block title is an error
 - `.Additional resources` at end after all includes (if present)
 - Content type is ASSEMBLY
 - No level 2+ subheadings (=== or deeper)
@@ -55,8 +56,8 @@ Note: Warnings indicate potential issues that require manual review
    - [ ] Only includes statements after introduction
    - [ ] NO detailed content in assembly (move to modules)
    - [ ] NO text between include statements
+   - [ ] Optional `== Prerequisites` heading before includes (if needed), using second-level heading for TOC visibility
    - [ ] Optional `.Additional resources` is at end (after all includes)
-   - [ ] Optional `.Prerequisites` section before includes (if needed)
 
 **What to look for:**
 
@@ -67,7 +68,7 @@ Note: Warnings indicate potential issues that require manual review
 [role="_abstract"]
 Brief introduction explaining what user accomplishes.
 
-.Prerequisites
+== Prerequisites
 * Prerequisite 1
 * Prerequisite 2
 
@@ -112,14 +113,15 @@ Here are additional details.  ← WRONG: No text between includes
 2. If text introduces a section, move it to the module being introduced
 3. If text is standalone, create a new concept module
 
-### Violation 3: Prerequisites in wrong location
-**Problem:** Prerequisites listed after includes or scattered throughout
+### Violation 3: Prerequisites in wrong location or format
+**Problem:** Prerequisites listed after includes, scattered throughout, or using block title syntax (`.Prerequisites`) instead of heading syntax
 
 **Fix:**
-1. Move all prerequisites to a single `.Prerequisites` section
+1. Move all prerequisites to a single `== Prerequisites` section (second-level heading, not `.Prerequisites` block title)
 2. Place immediately after introduction, before first include
 3. Use bulleted list format
 4. Max 10 prerequisites
+5. The second-level heading ensures Prerequisites appears in the TOC, consistent with `== Additional resources` and `== Next steps`
 
 ### Violation 4: Additional resources with descriptive text
 **Problem:** Additional resources section has explanatory content
