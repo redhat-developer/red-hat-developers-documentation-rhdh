@@ -701,6 +701,8 @@ if [[ "${1:-}" == "--all" ]]; then
         title_dir=$(dirname "$master")
         while IFS= read -r inc; do
             [[ -z "$inc" ]] && continue
+            # Skip paths with unresolved AsciiDoc attributes (resolved at build time)
+            [[ "$inc" == *"{"*"}"* ]] && continue
             # Resolve through symlinks in title dir
             target="$title_dir/$inc"
             if [[ ! -e "$target" ]]; then
@@ -715,6 +717,8 @@ if [[ "${1:-}" == "--all" ]]; then
         asm_dir=$(dirname "$asm_file")
         while IFS= read -r inc; do
             [[ -z "$inc" ]] && continue
+            # Skip paths with unresolved AsciiDoc attributes (resolved at build time)
+            [[ "$inc" == *"{"*"}"* ]] && continue
             target="$asm_dir/$inc"
             if [[ ! -e "$target" ]]; then
                 error "$asm_file: missing include target: $inc"
