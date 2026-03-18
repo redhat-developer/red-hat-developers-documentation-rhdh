@@ -1,10 +1,10 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="migrate-databases-to-an-external-server_{context}"]
+[id="migrate-local-databases-to-an-external-database-server-using-the-operator_{context}"]
 = Migrate local databases to an external database server using the Operator
 
 [role="_abstract"]
-Migrate data from a local PostgreSQL server to an external PostgreSQL service using PostgreSQL utilities such as `pg_dump` and `psql`.
+Migrate data from a local PostgreSQL server to an external PostgreSQL service by using PostgreSQL utilities such as `pg_dump` and `psql`.
 
 [NOTE]
 ====
@@ -42,15 +42,16 @@ $ oc port-forward -n developer-hub backstage-psql-developer-hub-0 15432:5432
 ----
 #!/bin/bash
 
-to_host=<db-service-host> <1>
-to_port=5432 <2>
-to_user=postgres <3>
+to_host=<db-service-host> # Destination host name, for example, <db-instance-name>.rds.amazonaws.com
+to_port=5432 # Destination port, such as 5432
+to_user=postgres # Destination server username, for example, postgres
 
-from_host=127.0.0.1 <4>
-from_port=15432 <5>
-from_user=postgres <6>
+from_host=127.0.0.1 # Source host name, such as 127.0.0.1
+from_port=15432 # Source port number, such as the <forward-to-port> variable
+from_user=postgres # Source server username, for example, postgres
 
-allDB=("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search") <7>
+# Database names to import in double quotes separated by spaces
+allDB=("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")
 
 for db in ${!allDB[@]};
 do
@@ -60,21 +61,15 @@ do
   pg_dump -h $from_host -p $from_port -U $from_user -d $db | PGPASSWORD=$TO_PSW psql -h $to_host -p $to_port -U $to_user -d $db
 done
 ----
-<1> The destination host name, for example, `<db-instance-name>.rds.amazonaws.com`.
-<2> The destination port, such as `5432`.
-<3> The destination server username, for example, `postgres`.
-<4> The source host name, such as `127.0.0.1`.
-<5> The source port number, such as the `<forward-to-port>` variable.
-<6> The source server username, for example, `postgres`.
-<7> The name of databases to import in double quotes separated by spaces, for example, `("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")`.
 
 . Create a destination database for copying the data:
 +
 [source,terminal]
 ----
-/bin/bash TO_PSW=<destination-db-password> /path/to/db_copy.sh <1>
+/bin/bash TO_PSW=<destination-db-password> /path/to/db_copy.sh
 ----
-<1> The `<destination-db-password>` variable denotes the password to connect to the destination database.
++
+Replace `<destination-db-password>` with the password to connect to the destination database.
 +
 [NOTE]
 ====
@@ -129,4 +124,4 @@ oc get pods -n <your-namespace>
 . The `backstage-developer-hub-xxx` pod is in running state.
 . The `backstage-psql-developer-hub-0` pod is not available.
 +
-You can also verify these details using the *Topology* view in the {ocp-short} web console.
+You can also verify these details by using the *Topology* view in the {ocp-short} web console.

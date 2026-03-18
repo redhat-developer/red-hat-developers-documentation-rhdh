@@ -1,10 +1,10 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="configure-postgresql-instance-using-helm_{context}"]
+[id="configure-an-external-postgresql-instance-using-the-helm-chart_{context}"]
 = Configure an external PostgreSQL instance using the Helm Chart
 
 [role="_abstract"]
-Configure an external PostgreSQL instance using the Helm Chart instead of the default local PostgreSQL instance.
+Configure an external PostgreSQL instance by using the Helm Chart instead of the default local PostgreSQL instance.
 
 .Prerequisites
 
@@ -34,27 +34,23 @@ $ cat <<EOF | oc -n <your-namespace> create -f -
 apiVersion: v1
 kind: Secret
 metadata:
- name: {my-product-database-certificates-secrets} <1>
+ name: {my-product-database-certificates-secrets} # <certificate_secret_name>
 type: Opaque
 stringData:
  postgres-ca.pem: |-
   -----BEGIN CERTIFICATE-----
-  <ca-certificate-key> <2>
+  <ca-certificate-key> # CA certificate key
  postgres-key.key: |-
   -----BEGIN CERTIFICATE-----
-  <tls-private-key> <3>
+  <tls-private-key> # Optional: TLS private key
  postgres-crt.pem: |-
   -----BEGIN CERTIFICATE-----
-  <tls-certificate-key> <4>
+  <tls-certificate-key> # Optional: TLS certificate key
   # ...
 EOF
 ----
-<1> Provide the name of the certificate secret.
-<2> Provide the CA certificate key.
-<3> Optional: Provide the TLS private key.
-<4> Optional: Provide the TLS certificate key.
 
-. Create a credential secret to connect with the PostgreSQL instance:
+. Create a credential secret to connect to the PostgreSQL instance:
 +
 [source,terminal, subs="+attributes"]
 ----
@@ -62,21 +58,17 @@ $ cat <<EOF | oc -n <your-namespace> create -f -
 apiVersion: v1
 kind: Secret
 metadata:
- name: {my-product-database-secrets} <1>
+ name: {my-product-database-secrets} # <credential_secret_name>
 type: Opaque
-stringData: <2>
+stringData: # Credential data to connect with your PostgreSQL instance
  POSTGRES_PASSWORD: <password>
  POSTGRES_PORT: "<db-port>"
  POSTGRES_USER: <username>
  POSTGRES_HOST: <db-host>
- PGSSLMODE: <ssl-mode> # for TLS connection <3>
- NODE_EXTRA_CA_CERTS: <abs-path-to-pem-file> # for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem <4>
+ PGSSLMODE: <ssl-mode> # Optional: for TLS connection, based on the required SSL mode
+ NODE_EXTRA_CA_CERTS: <abs-path-to-pem-file> # Optional: for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem
 EOF
 ----
-<1> Provide the name of the credential secret.
-<2> Provide credential data to connect with your PostgreSQL instance.
-<3> Optional: Provide the value based on the required link:https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNECT-SSLMODE[Secure Sockets Layer (SSL) mode].
-<4> Optional: Provide the value only if you need a TLS connection for your PostgreSQL instance.
 
 . Configure your PostgreSQL instance in the Helm configuration file named `values.yaml`:
 +
@@ -85,9 +77,9 @@ EOF
 # ...
 upstream:
   postgresql:
-    enabled: false  # disable PostgreSQL instance creation <1>
+    enabled: false  # disable PostgreSQL instance creation
     auth:
-      existingSecret: {my-product-database-secrets} # inject credentials secret to Backstage <2>
+      existingSecret: {my-product-database-secrets} # inject credentials secret to Backstage
   backstage:
     appConfig:
       backend:
@@ -106,7 +98,7 @@ upstream:
               cert:
                 $file: /opt/app-root/src/postgres-crt.pem
   extraEnvVarsSecrets:
-    - {my-product-database-secrets} # inject credentials secret to Backstage <3>
+    - {my-product-database-secrets} # inject credentials secret to Backstage
   extraEnvVars:
     - name: BACKEND_SECRET
       valueFrom:
@@ -117,13 +109,13 @@ upstream:
     - mountPath: /opt/app-root/src/dynamic-plugins-root
       name: dynamic-plugins-root
     - mountPath: /opt/app-root/src/postgres-crt.pem
-      name: postgres-crt # inject TLS certificate to Backstage cont. <4>
+      name: postgres-crt # Optional: inject TLS certificate to Backstage container
       subPath: postgres-crt.pem
     - mountPath: /opt/app-root/src/postgres-ca.pem
-      name: postgres-ca # inject CA certificate to Backstage cont. <5>
+      name: postgres-ca # Optional: inject CA certificate to Backstage container
       subPath: postgres-ca.pem
     - mountPath: /opt/app-root/src/postgres-key.key
-      name: postgres-key # inject TLS private key to Backstage cont. <6>
+      name: postgres-key # Optional: inject TLS private key to Backstage container
       subPath: postgres-key.key
   extraVolumes:
     - ephemeral:
@@ -147,16 +139,9 @@ upstream:
         secretName: '{{ printf "%s-dynamic-plugins-npmrc" .Release.Name }}'
     - name: postgres-crt
       secret:
-        secretName: {my-product-database-certificates-secrets} <7>
+        secretName: {my-product-database-certificates-secrets} # Certificate secret name (if TLS configured)
         # ...
 ----
-<1> Set the value of the `upstream.postgresql.enabled` parameter to `false` to disable creating local PostgreSQL instances.
-<2> Provide the name of the credential secret.
-<3> Provide the name of the credential secret.
-<4> Optional: Provide the name of the TLS certificate only for a TLS connection.
-<5> Optional: Provide the name of the CA certificate only for a TLS connection.
-<6> Optional: Provide the name of the TLS private key only if your TLS connection requires a private key.
-<7> Provide the name of the certificate secret if you have configured a TLS connection.
 
 . Apply the configuration changes in your Helm configuration file named `values.yaml`:
 +
