@@ -149,6 +149,21 @@ include::modules/admin/proc-configure-oauth-github.adoc[]
 include::modules/admin/ref-auth-config.adoc[]
 ```
 
+## Avoid nested assemblies
+
+Do not include an assembly from within another assembly. Nested assemblies add unnecessary TOC depth and cause context attribute conflicts (the inner assembly's `:!previouscontext:` unsets the outer assembly's saved context).
+
+❌ **Before:** Nested assembly
+```asciidoc
+include::assembly-mounts-for-default-secrets.adoc[leveloffset=+1]
+```
+
+✅ **After:** Include modules directly
+```asciidoc
+include::../modules/configuring-rhdh/proc-configure-mount-paths.adoc[leveloffset=+1]
+include::../modules/configuring-rhdh/proc-mount-secrets.adoc[leveloffset=+1]
+```
+
 ## Restructuring Strategies
 
 **1. Promote siblings:** Convert nested items to same-level siblings
