@@ -34,21 +34,28 @@ $ cat <<EOF | oc -n {my-product-namespace} create -f -
 apiVersion: v1
 kind: Secret
 metadata:
- name: {my-product-database-certificates-secrets} # <certificate_secret_name>
+ name: {my-product-database-certificates-secrets}
 type: Opaque
 stringData:
  postgres-ca.pem: |-
   -----BEGIN CERTIFICATE-----
-  <ca-certificate-key> # CA certificate key
+  <ca-certificate-key>
  postgres-key.key: |-
   -----BEGIN CERTIFICATE-----
-  <tls-private-key> # Optional: TLS private key
+  <tls-private-key>
  postgres-crt.pem: |-
   -----BEGIN CERTIFICATE-----
-  <tls-certificate-key> # Optional: TLS certificate key
+  <tls-certificate-key>
   # ...
 EOF
 ----
++
+Where:
+
+`{my-product-database-certificates-secrets}`:: The certificate secret name.
+`<ca-certificate-key>`:: The CA certificate key.
+`<tls-private-key>`:: Optional: The TLS private key.
+`<tls-certificate-key>`:: Optional: The TLS certificate key.
 
 . Create a credential secret to connect to the PostgreSQL instance:
 +
@@ -58,17 +65,27 @@ $ cat <<EOF | oc -n {my-product-namespace} create -f -
 apiVersion: v1
 kind: Secret
 metadata:
- name: {my-product-database-secrets} # <credential_secret_name>
+ name: {my-product-database-secrets}
 type: Opaque
-stringData: # Credential data to connect with your PostgreSQL instance
+stringData:
  POSTGRES_PASSWORD: <password>
  POSTGRES_PORT: "<db-port>"
  POSTGRES_USER: <username>
  POSTGRES_HOST: <db-host>
- PGSSLMODE: <ssl-mode> # Optional: for TLS connection, based on the required SSL mode
- NODE_EXTRA_CA_CERTS: <abs-path-to-pem-file> # Optional: for TLS connection, e.g. /opt/app-root/src/postgres-crt.pem
+ PGSSLMODE: <ssl-mode>
+ NODE_EXTRA_CA_CERTS: <abs-path-to-pem-file>
 EOF
 ----
++
+Where:
+
+`{my-product-database-secrets}`:: The credential secret name.
+`<password>`:: The password to connect to your PostgreSQL instance.
+`<db-port>`:: Your PostgreSQL instance port number, such as `5432`.
+`<username>`:: The user name to connect to your PostgreSQL instance.
+`<db-host>`:: Your PostgreSQL instance DNS or IP address.
+`<ssl-mode>`:: Optional: For TLS connections, the required SSL mode.
+`<abs-path-to-pem-file>`:: Optional: For TLS connections, the absolute path to the PEM file, for example `/opt/app-root/src/postgres-crt.pem`.
 
 . Create your `{product-custom-resource-type}` custom resource (CR):
 +
@@ -76,23 +93,31 @@ EOF
 ----
 cat <<EOF | oc -n {my-product-namespace} create -f -
 apiVersion: rhdh.redhat.com/v1alpha5
-kind: Backstage
+kind: {product-custom-resource-type}
 metadata:
   name: <backstage-instance-name>
 spec:
   database:
-    enableLocalDb: false # Set to false to disable creating local PostgreSQL instances
+    enableLocalDb: false
   application:
     extraFiles:
-      mountPath: <path> # e g /opt/app-root/src
+      mountPath: <path>
       secrets:
-        - name: {my-product-database-certificates-secrets} # Certificate secret name (if TLS connection configured)
-          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key # key name as in {my-product-database-certificates-secrets} Secret
+        - name: {my-product-database-certificates-secrets}
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
     extraEnvs:
       secrets:
-        - name: {my-product-database-secrets} # Credential secret name
+        - name: {my-product-database-secrets}
         # ...
 ----
++
+Where:
+
+`spec.database.enableLocalDb`:: Set to `false` to disable creating local PostgreSQL instances.
+`<path>`:: The mount path for certificate files, for example `/opt/app-root/src`.
+`{my-product-database-certificates-secrets}`:: The certificate secret name, required if TLS connection is configured.
+`key`:: The key names as defined in the `{my-product-database-certificates-secrets}` Secret.
+`{my-product-database-secrets}`:: The credential secret name.
 +
 [NOTE]
 ====
