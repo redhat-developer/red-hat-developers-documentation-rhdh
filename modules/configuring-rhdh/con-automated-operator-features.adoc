@@ -5,3 +5,67 @@
 
 [role="_abstract"]
 Use the Operator to automate key configuration processes for your {product-custom-resource-type} application.
+
+=== Metadata generation
+
+The Operator automatically generates metadata values for default resources at runtime to ensure proper application function.
+
+For all the default resources, `metadata.name` is generated according to the rules defined in the _Default Configuration files_, particularly the _Resource name_ column. For example, {product-custom-resource-type} Custom Resource (CR) named `mybackstage` creates Kubernetes Deployment resource called `backstage-mybackstage`.
+
+The following metadata is generated for each resource:
+
+* `deployment.yaml`
+** `spec.selector.matchLabels[rhdh.redhat.com/app] = backstage-{cr-name}`
+** `spec.template.metadata.labels[rhdh.redhat.com/app] = backstage-{cr-name}`
+* `service.yaml`
+** `spec.selector[rhdh.redhat.com/app] = backstage-{cr-name}`
+* `db-statefulset.yaml`
+** `spec.selector.matchLabels[rhdh.redhat.com/app] = backstage-psql-{cr-name}`
+** `spec.template.metadata.labels[rhdh.redhat.com/app] = backstage-psql-{cr-name}`
+* `db-service.yaml`
+** `spec.selector[rhdh.redhat.com/app] = backstage-psql-{cr-name}`
+
+=== Multiple resources
+
+Define and create multiple resources of the same type in a single YAML file by using the `---` delimiter to separate resource definitions.
+
+For example, adding the following code snip to `pvcs.yaml` creates two PersistentVolumeClaims (PVCs) called `backstage-{cr-name}-myclaim1` and `backstage-{cr-name}-myclaim2` and mounts them to the {product-custom-resource-type} container accordingly.
+
+.Example creating multiple PVCs
+[source,yaml]
+----
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim1
+...
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim2
+...
+----
+
+=== Default base URLs
+
+The Operator automatically sets base URLs for your application based on Route parameters and OpenShift cluster ingress domain.
+
+The Operator follows these rules to set the base URLs for your application:
+
+* If the cluster is not OpenShift, the Operator makes no changes.
+* If you explicitly set the `spec.application.route.enabled` field in your Custom Resource (CR) to `false`, no changes are made.
+* If you define `spec.application.route.host` in the {product-custom-resource-type} CR, the base URLs are set to `pass:c,a,q[https&#58;//<spec.application.route.host>]`.
+* If you specify the `spec.application.route.subdomain` in the {product-custom-resource-type} CR, the base URLs are set to `pass:c,a,q[https&#58;//<spec.application.route.subdomain>.<cluster_ingress_domain>]`.
+* If no custom host or subdomain is provided, the Operator sets the base URLs to `pass:c,a,q[https&#58;//backstage-<cr_name>-<namespace>.<cluster_ingress_domain>]`, which is the default domain for the created _Route_ resource.
+
+The Operator updates the following base URLs in the default `app-config` ConfigMap:
+
+* `app.baseUrl`
+* `backend.baseUrl`
+* `backend.cors.origin`
+
+[NOTE]
+====
+You can perform these actions on a best-effort basis and only on OpenShift. During an error or on non-OpenShift clusters, you can still override these defaults by providing a custom `app-config` ConfigMap.
+====
