@@ -363,6 +363,122 @@ if [[ "${1:-}" == "--all" ]]; then
         fi
     done
 
+    # ── Build image file ownership map ──
+    # IMG_FILE_OWNERS: "subdir/file.png" → "ctx1 ctx2 ..."
+    declare -A IMG_FILE_OWNERS
+
+    # Helper: extract image references (subdir/file.png) from an adoc file
+    _extract_img_refs() {
+        grep -v '^//' "$1" 2>/dev/null | grep -oP 'image::?\K[^/]+/[^[\]]+' || true
+    }
+
+    # From master.adoc
+    for master in titles/*/master.adoc; do
+        d=$(basename "$(dirname "$master")")
+        ctx="${DIR_CTX[$d]}"
+        while IFS= read -r ref; do
+            [[ -z "$ref" ]] && continue
+            IMG_FILE_OWNERS["$ref"]="${IMG_FILE_OWNERS[$ref]:-} $ctx"
+        done < <(_extract_img_refs "$master")
+    done
+
+    # From modules in subdirs (inherit owners through MOD_DIR_OWNERS)
+    for mod_dir in modules/*/; do
+        [[ -d "$mod_dir" ]] || continue
+        md=$(basename "$mod_dir")
+        [[ "$md" == "shared" ]] && continue
+        owners="${MOD_DIR_OWNERS[$md]:-}"
+        [[ -z "$(echo "$owners" | tr -d ' ')" ]] && continue
+        for f in "$mod_dir"*.adoc; do
+            [[ -f "$f" ]] || continue
+            while IFS= read -r ref; do
+                [[ -z "$ref" ]] && continue
+                IMG_FILE_OWNERS["$ref"]="${IMG_FILE_OWNERS[$ref]:-} $owners"
+            done < <(_extract_img_refs "$f")
+        done
+    done
+
+    # From shared modules — inherit owners from all titles/assemblies that include each module
+    for f in modules/shared/*.adoc; do
+        [[ -f "$f" ]] || continue
+        bn=$(basename "$f")
+        # Collect owners: titles and assemblies that include this shared module
+        # Use basename for grep to handle double-slash paths (modules/shared//file.adoc)
+        shared_mod_owners=""
+        for master in titles/*/master.adoc; do
+            if grep -q "$bn" "$master" 2>/dev/null; then
+                d=$(basename "$(dirname "$master")")
+                shared_mod_owners="$shared_mod_owners ${DIR_CTX[$d]}"
+            fi
+        done
+        for af in "${!ASM_FILE_OWNERS[@]}"; do
+            [[ -f "assemblies/$af" ]] || continue
+            if grep -q "$bn" "assemblies/$af" 2>/dev/null; then
+                shared_mod_owners="$shared_mod_owners ${ASM_FILE_OWNERS[$af]}"
+            fi
+        done
+        [[ -z "$(echo "$shared_mod_owners" | tr -d ' ')" ]] && continue
+        while IFS= read -r ref; do
+            [[ -z "$ref" ]] && continue
+            IMG_FILE_OWNERS["$ref"]="${IMG_FILE_OWNERS[$ref]:-} $shared_mod_owners"
+        done < <(_extract_img_refs "$f")
+    done
+
+    # From assemblies in subdirs (inherit owners, skip shared)
+    for af in "${!ASM_FILE_OWNERS[@]}"; do
+        [[ -f "assemblies/$af" ]] || continue
+        asm_dir=$(dirname "$af")
+        [[ "$asm_dir" == "shared" ]] && continue
+        owners="${ASM_FILE_OWNERS[$af]}"
+        while IFS= read -r ref; do
+            [[ -z "$ref" ]] && continue
+            IMG_FILE_OWNERS["$ref"]="${IMG_FILE_OWNERS[$ref]:-} $owners"
+        done < <(_extract_img_refs "assemblies/$af")
+    done
+
+    # From shared assemblies — inherit owners from all titles/assemblies that include them
+    for af in "${!ASM_FILE_OWNERS[@]}"; do
+        [[ -f "assemblies/$af" ]] || continue
+        asm_dir=$(dirname "$af")
+        [[ "$asm_dir" != "shared" ]] && continue
+        owners="${ASM_FILE_OWNERS[$af]}"
+        while IFS= read -r ref; do
+            [[ -z "$ref" ]] && continue
+            IMG_FILE_OWNERS["$ref"]="${IMG_FILE_OWNERS[$ref]:-} $owners"
+        done < <(_extract_img_refs "assemblies/$af")
+    done
+
+    # Deduplicate owners
+    for ref in "${!IMG_FILE_OWNERS[@]}"; do
+        IMG_FILE_OWNERS["$ref"]=$(echo "${IMG_FILE_OWNERS[$ref]}" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ' || true)
+    done
+
+    # Compute per-file destination directory
+    # IMG_FILE_DEST: "old_dir/file.png" → "new_dir"
+    declare -A IMG_FILE_DEST=()
+    IMG_FILE_DEST[__sentinel__]=1  # bash 5.3 workaround
+
+    for ref in "${!IMG_FILE_OWNERS[@]}"; do
+        [[ -f "images/$ref" ]] || continue
+        owners="${IMG_FILE_OWNERS[$ref]}"
+        dest=$(_compute_dest $owners)
+        old_dir=$(dirname "$ref")
+        if [[ "$old_dir" != "$dest" ]]; then
+            IMG_FILE_DEST["$ref"]="$dest"
+            info "  Image: $ref → $dest/ (owners: $owners)"
+        fi
+    done
+    unset 'IMG_FILE_DEST[__sentinel__]'
+
+    # Check for unreferenced image files
+    for img_file in images/*/*; do
+        [[ -f "$img_file" ]] || continue
+        ref="${img_file#images/}"
+        if [[ -z "${IMG_FILE_OWNERS[$ref]:-}" ]]; then
+            warn "Image $ref not referenced by any .adoc file — keeping as-is"
+        fi
+    done
+
     if ! $EXEC; then
         phase "DRY RUN COMPLETE"
         echo ""
@@ -371,6 +487,7 @@ if [[ "${1:-}" == "--all" ]]; then
         echo "  Assembly dirs to rename: $(for d in "${!ASM_DIR_DEST[@]}"; do [[ "$d" != "${ASM_DIR_DEST[$d]}" ]] && echo x; done | wc -l)"
         echo "  Flat assemblies to move: ${#FLAT_ASM_DEST[@]}"
         echo "  Module dirs to rename: $(for d in "${!MOD_DIR_DEST[@]}"; do [[ "$d" != "${MOD_DIR_DEST[$d]}" ]] && echo x; done | wc -l)"
+        echo "  Image files to move: ${#IMG_FILE_DEST[@]}"
         echo ""
         echo "Re-run with --exec to apply: $0 --all --exec"
         exit 0
@@ -433,8 +550,23 @@ if [[ "${1:-}" == "--all" ]]; then
         fi
     done
 
-    # ── Phase 4: Update include paths ─────────────────────────────
-    phase "Phase 4: Update include paths"
+    # ── Phase 4: Move image files ───────────────────────────────────
+    phase "Phase 4: Move images"
+
+    for ref in $(echo "${!IMG_FILE_DEST[@]}" | tr ' ' '\n' | sort); do
+        dest="${IMG_FILE_DEST[$ref]}"
+        [[ ! -f "images/$ref" ]] && continue
+        bn=$(basename "$ref")
+        mkdir -p "images/$dest"
+        info "git mv images/$ref images/$dest/$bn"
+        git mv "images/$ref" "images/$dest/$bn"
+    done
+
+    # Clean up empty image directories
+    find images/ -mindepth 1 -type d -empty -delete 2>/dev/null || true
+
+    # ── Phase 5: Update include paths ─────────────────────────────
+    phase "Phase 5: Update include and image paths"
 
     # Build sed script for master.adoc files
     master_sed=""
@@ -457,6 +589,15 @@ if [[ "${1:-}" == "--all" ]]; then
         new_dir="${MOD_DIR_DEST[$old_dir]}"
         [[ "$old_dir" == "$new_dir" ]] && continue
         master_sed="${master_sed}s|include::modules/${old_dir}/|include::modules/${new_dir}/|g;"
+    done
+
+    # Image file moves: image::old_dir/file.png → image::new_dir/file.png (no ../ ever)
+    for ref in "${!IMG_FILE_DEST[@]}"; do
+        dest="${IMG_FILE_DEST[$ref]}"
+        bn=$(basename "$ref")
+        old_dir=$(dirname "$ref")
+        master_sed="${master_sed}s|image::${old_dir}/${bn}|image::${dest}/${bn}|g;"
+        master_sed="${master_sed}s|image:${old_dir}/${bn}|image:${dest}/${bn}|g;"
     done
 
     # Apply to all master.adoc files
@@ -486,6 +627,15 @@ if [[ "${1:-}" == "--all" ]]; then
         asm_sed="${asm_sed}s|include::\.\.\/assemblies/${old_dir}/|include::../assemblies/${new_dir}/|g;"
     done
 
+    # Image file moves in assembly files (same pattern, no ../)
+    for ref in "${!IMG_FILE_DEST[@]}"; do
+        dest="${IMG_FILE_DEST[$ref]}"
+        bn=$(basename "$ref")
+        old_dir=$(dirname "$ref")
+        asm_sed="${asm_sed}s|image::${old_dir}/${bn}|image::${dest}/${bn}|g;"
+        asm_sed="${asm_sed}s|image:${old_dir}/${bn}|image:${dest}/${bn}|g;"
+    done
+
     # Apply to all assembly .adoc files in subdirs
     if [[ -n "$asm_sed" ]]; then
         for asm_file in assemblies/*/*.adoc; do
@@ -493,6 +643,20 @@ if [[ "${1:-}" == "--all" ]]; then
             sed -i "$asm_sed" "$asm_file"
         done
         info "Updated include paths in assembly files"
+    fi
+
+    # Update image references in module files
+    mod_img_sed=""
+    for ref in "${!IMG_FILE_DEST[@]}"; do
+        dest="${IMG_FILE_DEST[$ref]}"
+        bn=$(basename "$ref")
+        old_dir=$(dirname "$ref")
+        mod_img_sed="${mod_img_sed}s|image::${old_dir}/${bn}|image::${dest}/${bn}|g;"
+        mod_img_sed="${mod_img_sed}s|image:${old_dir}/${bn}|image:${dest}/${bn}|g;"
+    done
+    if [[ -n "$mod_img_sed" ]]; then
+        find modules/ -name '*.adoc' -exec sed -i "$mod_img_sed" {} +
+        info "Updated image paths in module files"
     fi
 
     # Fix flat assemblies that moved into subdirs:
@@ -522,8 +686,8 @@ if [[ "${1:-}" == "--all" ]]; then
         sed -i 's|include::\.\.\/\.\.\/assemblies/|include::../assemblies/|g' "$file"
     done
 
-    # ── Phase 5: Verify ───────────────────────────────────────────
-    phase "Phase 5: Verification"
+    # ── Phase 6: Verify ───────────────────────────────────────────
+    phase "Phase 6: Verification"
 
     ERRORS=0
     # Check that all include targets exist
@@ -553,10 +717,33 @@ if [[ "${1:-}" == "--all" ]]; then
         done < <(grep -v '^//' "$asm_file" 2>/dev/null | grep -oP 'include::\K[^[]+' || true)
     done
 
+    # Verify image references (block image:: and inline image: macros)
+    # Only match actual AsciiDoc image macros, not YAML `image:` keys in code blocks
+    for adoc_file in $(find titles modules assemblies -name '*.adoc' 2>/dev/null | sort); do
+        [[ -f "$adoc_file" ]] || continue
+        while IFS= read -r img_ref; do
+            [[ -z "$img_ref" ]] && continue
+            # Skip non-image refs: YAML container images, OCI URIs, refs without subdir/
+            [[ "$img_ref" == *"://"* || "$img_ref" == *" "* || "$img_ref" == *"'"* ]] && continue
+            [[ "$img_ref" != *"/"* ]] && continue
+            # Image references should never contain ../
+            if [[ "$img_ref" == *"../"* ]]; then
+                error "$adoc_file: image reference contains '../': image::$img_ref"
+                ERRORS=$((ERRORS + 1))
+                continue
+            fi
+            # Check image file exists via images/ directory
+            if [[ ! -f "images/$img_ref" ]]; then
+                error "$adoc_file: missing image: images/$img_ref"
+                ERRORS=$((ERRORS + 1))
+            fi
+        done < <(grep -v '^//' "$adoc_file" 2>/dev/null | grep -oP 'image::?\K[^[\]]+' || true)
+    done
+
     if [[ $ERRORS -gt 0 ]]; then
-        warn "$ERRORS broken include(s) found — review and fix manually"
+        warn "$ERRORS broken reference(s) found — review and fix manually"
     else
-        info "All include targets verified"
+        info "All include and image targets verified"
     fi
 
     phase "Done"
