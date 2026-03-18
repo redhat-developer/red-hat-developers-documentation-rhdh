@@ -1,4 +1,8 @@
 #!/bin/bash
+# shellcheck disable=SC2128,SC2178,SC2086
+# SC2128/SC2178: owners variables are space-delimited strings, not arrays — intentional.
+# SC2086: unquoted $owners passed to _compute_dest for word splitting — intentional.
+#
 # align-title-directories.sh
 #
 # Aligns title, assembly, and module directory names using <category>_<context> naming.
@@ -54,7 +58,9 @@ resolve_local_attrs() {
 
     while IFS= read -r line; do
         local attr_name attr_value
+        # shellcheck disable=SC2001  # sed needed for regex capture groups
         attr_name=$(echo "$line" | sed 's/^:\([^:]*\):.*/\1/')
+        # shellcheck disable=SC2001
         attr_value=$(echo "$line" | sed 's/^:[^:]*: *//')
         if [[ "$title" == *"{${attr_name}}"* ]]; then
             title="${title//\{${attr_name}\}/${attr_value}}"
@@ -107,8 +113,11 @@ derive_context() {
     title="${title,,}"
     title="${title// /-}"
     title="${title//_/-}"
+    # shellcheck disable=SC2001  # sed needed for regex character classes
     title=$(echo "$title" | sed 's/([^)]*)//g')
+    # shellcheck disable=SC2001
     title=$(echo "$title" | sed 's/[^a-z0-9-]//g')
+    # shellcheck disable=SC2001
     title=$(echo "$title" | sed 's/-\{2,\}/-/g')
     title=$(echo "$title" | sed 's/^-//;s/-$//')
 

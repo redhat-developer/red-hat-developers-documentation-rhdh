@@ -141,8 +141,6 @@ while IFS= read -r img_file; do
     [[ -f "$img_file" ]] || continue
     IMG_CHECKED=$((IMG_CHECKED + 1))
 
-    # Get the relative path from images/ (e.g., "shared/foo.png")
-    img_ref="${img_file#images/}"
     img_basename=$(basename "$img_file")
 
     # Check if any .adoc file references this image (by basename, handles subdir moves)
