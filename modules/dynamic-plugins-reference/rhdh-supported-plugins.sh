@@ -456,7 +456,7 @@ generate_dynamic_plugins_table() {
   # Process temporary files
   # 1) Production
   temp_file="$TEMP_DIR/adoc.production.tmp"
-  out_file="${0/.sh/.ref-rh-supported-plugins}"
+  out_file="${0/.sh/.ref-supported-plugins}"
   rm -f "$out_file"
   count=0
   if [[ -f "$temp_file" ]]; then
@@ -472,7 +472,7 @@ generate_dynamic_plugins_table() {
 
   # 2) Tech Preview
   temp_file="$TEMP_DIR/adoc.tech-preview.tmp"
-  out_file="${0/.sh/.ref-rh-tech-preview-plugins}"
+  out_file="${0/.sh/.ref-technology-preview-plugins}"
   rm -f "$out_file"
   count=0
   if [[ -f "$temp_file" ]]; then
@@ -522,7 +522,7 @@ generate_dynamic_plugins_table() {
   count=1
   index=0
   empties=0
-  for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-deprecated-plugins; do
+  for d in ref-supported-plugins ref-technology-preview-plugins ref-deprecated-plugins; do
       (( index = count - 1 ))
       this_num_plugins=${num_plugins[$index]}
       echo -n -e "${green}[$count] Processing $d ${norm}..."
@@ -689,8 +689,8 @@ generate_migration_table() {
     fi
 
     # Generate the migration adoc file from template
-    migration_template="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration.template.adoc}"
-    migration_output="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration.adoc}"
+    migration_template="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration-to-the-github-container-registry.template.adoc}"
+    migration_output="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration-to-the-github-container-registry.adoc}"
 
     if [[ -f "$migration_template" ]]; then
         # Replace placeholders in template
