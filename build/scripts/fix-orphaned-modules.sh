@@ -131,18 +131,56 @@ done
 echo "  Checked $CHECKED/$TOTAL files"
 echo ""
 
+# ── Check for orphaned images ──
+echo "Checking for orphaned images..."
+
+ORPHANED_IMAGES=()
+IMG_CHECKED=0
+
+while IFS= read -r img_file; do
+    [[ -f "$img_file" ]] || continue
+    IMG_CHECKED=$((IMG_CHECKED + 1))
+
+    img_basename=$(basename "$img_file")
+
+    # Check if any .adoc file references this image (by basename, handles subdir moves)
+    if grep -rq "$img_basename" --include="*.adoc" titles/ modules/ assemblies/ 2>/dev/null; then
+        continue
+    fi
+
+    ORPHANED_IMAGES+=("$img_file")
+done < <(find images/ -type f 2>/dev/null | sort)
+
+echo "  Checked $IMG_CHECKED image files"
+echo ""
+
 # Report findings
-if [[ ${#ORPHANED_FILES[@]} -eq 0 ]]; then
+if [[ ${#ORPHANED_FILES[@]} -eq 0 && ${#ORPHANED_IMAGES[@]} -eq 0 ]]; then
     echo -e "${GREEN}✓ No orphaned files found${NC}"
     exit 0
 fi
 
-echo -e "${YELLOW}Found ${#ORPHANED_FILES[@]} orphaned file(s):${NC}"
+if [[ ${#ORPHANED_FILES[@]} -gt 0 ]]; then
+    echo -e "${YELLOW}Found ${#ORPHANED_FILES[@]} orphaned .adoc file(s):${NC}"
+    echo ""
+    for file in "${ORPHANED_FILES[@]}"; do
+        echo "  $file"
+    done
+    echo ""
+fi
+
+if [[ ${#ORPHANED_IMAGES[@]} -gt 0 ]]; then
+    echo -e "${YELLOW}Found ${#ORPHANED_IMAGES[@]} orphaned image(s):${NC}"
+    echo ""
+    for file in "${ORPHANED_IMAGES[@]}"; do
+        echo "  $file"
+    done
+fi
+
 echo ""
 
-for file in "${ORPHANED_FILES[@]}"; do
-    echo "  $file"
-done
+# Combine all orphaned files
+ALL_ORPHANED=("${ORPHANED_FILES[@]}" "${ORPHANED_IMAGES[@]}")
 
 echo ""
 
@@ -152,7 +190,7 @@ if [[ "$EXECUTE" == "true" ]]; then
     echo ""
 
     DELETED=0
-    for file in "${ORPHANED_FILES[@]}"; do
+    for file in "${ALL_ORPHANED[@]}"; do
         # Check if file is tracked by git
         if git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
             echo "  git rm $file"
@@ -164,12 +202,15 @@ if [[ "$EXECUTE" == "true" ]]; then
         DELETED=$((DELETED + 1))
     done
 
+    # Clean up empty image directories
+    find images/ -mindepth 1 -type d -empty -delete 2>/dev/null || true
+
     echo ""
     echo -e "${GREEN}✓ Deleted $DELETED orphaned file(s)${NC}"
     echo ""
     echo "Next steps:"
     echo "  1. Review the changes: git status"
-    echo "  2. If correct, commit: git add -A && git commit -m 'Remove orphaned modules'"
+    echo "  2. If correct, commit: git add -A && git commit -m 'Remove orphaned modules and images'"
     echo "  3. If incorrect, revert: git checkout ."
 else
     echo -e "${YELLOW}DRY-RUN MODE${NC} - No files were deleted"
@@ -180,8 +221,10 @@ fi
 
 echo ""
 echo "=== Summary ==="
-echo "Total files checked: $CHECKED"
-echo "Orphaned files found: ${#ORPHANED_FILES[@]}"
+echo "Total .adoc files checked: $CHECKED"
+echo "Total image files checked: $IMG_CHECKED"
+echo "Orphaned .adoc files: ${#ORPHANED_FILES[@]}"
+echo "Orphaned images: ${#ORPHANED_IMAGES[@]}"
 if [[ "$EXECUTE" == "true" ]]; then
     echo -e "${GREEN}Status: Files deleted${NC}"
 else
