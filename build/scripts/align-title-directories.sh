@@ -399,24 +399,30 @@ if [[ "${1:-}" == "--all" ]]; then
     done
 
     # From shared modules — inherit owners from all titles/assemblies that include each module
+    # Build reverse index: shared_module_basename → owners (single grep pass per file)
+    declare -A SHARED_MOD_OWNERS
+    for master in titles/*/master.adoc; do
+        d=$(basename "$(dirname "$master")")
+        ctx="${DIR_CTX[$d]}"
+        while IFS= read -r sm; do
+            [[ -z "$sm" ]] && continue
+            SHARED_MOD_OWNERS["$sm"]="${SHARED_MOD_OWNERS[$sm]:-} $ctx"
+        done < <(grep -v '^//' "$master" 2>/dev/null | grep -oP 'modules/shared/+\K[^[]+' || true)
+    done
+    for af in "${!ASM_FILE_OWNERS[@]}"; do
+        [[ -f "assemblies/$af" ]] || continue
+        owners="${ASM_FILE_OWNERS[$af]}"
+        while IFS= read -r sm; do
+            [[ -z "$sm" ]] && continue
+            SHARED_MOD_OWNERS["$sm"]="${SHARED_MOD_OWNERS[$sm]:-} $owners"
+        done < <(grep -v '^//' "assemblies/$af" 2>/dev/null | grep -oP 'modules/shared/+\K[^[]+' || true)
+    done
+
+    # Now trace image refs from shared modules using pre-built ownership
     for f in modules/shared/*.adoc; do
         [[ -f "$f" ]] || continue
         bn=$(basename "$f")
-        # Collect owners: titles and assemblies that include this shared module
-        # Use basename for grep to handle double-slash paths (modules/shared//file.adoc)
-        shared_mod_owners=""
-        for master in titles/*/master.adoc; do
-            if grep -q "$bn" "$master" 2>/dev/null; then
-                d=$(basename "$(dirname "$master")")
-                shared_mod_owners="$shared_mod_owners ${DIR_CTX[$d]}"
-            fi
-        done
-        for af in "${!ASM_FILE_OWNERS[@]}"; do
-            [[ -f "assemblies/$af" ]] || continue
-            if grep -q "$bn" "assemblies/$af" 2>/dev/null; then
-                shared_mod_owners="$shared_mod_owners ${ASM_FILE_OWNERS[$af]}"
-            fi
-        done
+        shared_mod_owners="${SHARED_MOD_OWNERS[$bn]:-}"
         [[ -z "$(echo "$shared_mod_owners" | tr -d ' ')" ]] && continue
         while IFS= read -r ref; do
             [[ -z "$ref" ]] && continue
