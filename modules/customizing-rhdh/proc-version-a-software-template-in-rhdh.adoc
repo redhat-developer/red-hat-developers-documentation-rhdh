@@ -1,0 +1,59 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="version-a-software-template-in-rhdh_{context}"]
+= Version a Software Template in {product}
+
+[role="_abstract"]
+Version Software Templates by using the `catalog:scaffolded-from` and `catalog:template:version` custom actions to track template versions and the entities created from them.
+
+.Prerequisites
+
+* You have administrator rights to {product}.
+* The following dynamic plugins are enabled in your `{product-custom-resource-type}` or `{my-app-config-config-map}` file:
+** `backstage-community-plugin-catalog-backend-module-scaffolder-relation-processor-dynamic`
+** `backstage-plugin-notifications`
+** `backstage-plugin-notifications-backend-dynamic`
+
+.Procedure
+
+. Make sure the required plugins are enabled in your {product-very-short} `{my-app-config-config-map}` file or the {backstage} custom resource (CR):
++
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+      - package: ./dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-scaffolder-relation-processor-dynamic
+        disabled: false
+      - package: ./dynamic-plugins/dist/backstage-plugin-notifications
+        disabled: false
+      - package: ./dynamic-plugins/dist/backstage-plugin-notifications-backend-dynamic
+        disabled: false
+----
+
+. Modify the Software Template that you want to update.
+. Complete one or both of the following tasks:
+. *Include the annotation in your template*: Add the `backstage.io/template-version` annotation in your template metadata. When this annotation is present, it is automatically used to annotate your catalog entity and display a default version value.
+. *Pass the annotation as input to the action*: This method takes precedence over the annotation in the template itself and allows the user running the template to specify the version.
+
++
+[source,yaml]
+----
+# ...
+- id: version-templateRef
+  name: Append the version of this template to the entityRef
+  action: catalog:template:version
+  input:
+    annotations:
+      backstage.io/template-version: ${{ parameters.version }}
+# ...
+----
+
+.Verification
+. {configuring-book-link}#ref-software-template-YAML-file-structure_configuring-templates[Create a catalog component using the updated Software Template]. This step creates a new component in {product-custom-resource-type} and optionally, pushes files to an external repository (for example, GitHub, GitLab).
+. Check the component in the Catalog UI.
+.. On the *Catalog* page, locate the newly created catalog component.
+.. Verify that the `backstage.io/template-version` annotation is present in the entity. You can use *INSPECT ENTITY* and select *YAML Raw* or *JSON Raw* view to find the annotation in the component definition.
+. Only if you have published the catalog component: Check the component file in the repository.
+.. If *VIEW SOURCE* is present in your UI: Click *VIEW SOURCE* to open the stored component file in the repository.
+.. Locate the file manually and verify that the `backstage.io/template-version` annotation is present.

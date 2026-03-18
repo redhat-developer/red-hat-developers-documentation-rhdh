@@ -76,13 +76,13 @@ FILE_COUNT=$(echo "$ALL_FILES" | wc -w)
 echo "Validating $FILE_COUNT file(s)..."
 echo ""
 
-# Run Vale with DITA-only config
+# Run Vale with DITA-only config (JSON output for easy parsing)
 # Note: Vale exit codes:
 #   0 = no errors
 #   1 = errors found
 #   2 = usage error
 # shellcheck disable=SC2086
-vale --config .vale-dita-only.ini $ALL_FILES
+vale --config .vale-dita-only.ini --output JSON $ALL_FILES
 VALE_EXIT=$?
 
 echo ""

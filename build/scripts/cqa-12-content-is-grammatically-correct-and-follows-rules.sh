@@ -79,9 +79,9 @@ FILE_COUNT=$(echo "$ALL_FILES" | wc -w)
 echo "Validating $FILE_COUNT file(s)..."
 echo ""
 
-# Run Vale with grammar/style config
+# Run Vale with grammar/style config (JSON output for easy parsing)
 # shellcheck disable=SC2086
-vale --config .vale.ini $ALL_FILES
+vale --config .vale.ini --output JSON $ALL_FILES
 VALE_EXIT=$?
 
 echo ""
