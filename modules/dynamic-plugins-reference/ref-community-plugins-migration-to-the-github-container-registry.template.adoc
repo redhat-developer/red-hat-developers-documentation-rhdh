@@ -1,0 +1,143 @@
+:_mod-docs-content-type: REFERENCE
+
+// This page is generated! Do not edit the .adoc file, but instead run rhdh-supported-plugins.sh to regen this page from the latest plugin metadata.
+
+[id="community-plugins-migration-to-the-github-container-registry_{context}"]
+= Community plugins migration to the GitHub Container Registry
+
+[role="_abstract"]
+Starting with {product} 1.9, community-supported plugins are no longer distributed as bundled wrappers in the {product-short} container image. Update your dynamic plugins configuration to use the new GitHub Container Registry paths.
+
+[IMPORTANT]
+====
+*Breaking Change in {product-very-short} 1.9*
+
+These plugins are now built using GitHub Actions and published exclusively to the GitHub Container Registry (ghcr.io).
+
+If you use the plugins listed in this section, you must update your dynamic plugins configuration (in `dynamic-plugins-default.yaml`, your ConfigMap or CustomResource) to use the new `oci://ghcr.io/...` paths.
+====
+
+== What changed
+
+In {product-short} 1.8 and earlier, community plugins were:
+
+* Wrapped and bundled in the {product-short} container image.
+* Referenced by using local paths, such as `./dynamic-plugins/dist/<plugin-name>`.
+
+Starting with {product-short} 1.9, community plugins are:
+
+* Built using GitHub Actions from the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays] repository.
+* Published to `ghcr.io/redhat-developer/rhdh-plugin-export-overlays`.
+* Referenced by using OCI registry paths, such as `oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<oci-artifact-name>:<tag>`.
++
+include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
+
+== Migration steps
+
+To migrate your configuration:
+
+. Identify plugins in your ConfigMap or CustomResource that use local paths starting with `./dynamic-plugins/dist/`.
+. Find the corresponding `ghcr.io` path in the following migration table:
++
+[source,yaml]
+----
+# Before ({product-very-short} 1.8 and earlier)
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-jenkins
+    disabled: false
+
+# After ({product-very-short} 1.9+)
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
+    disabled: false
+----
+
+. Update your configuration to use the new OCI registry path.
+
+
+== Understanding the tag format
+
+The `ghcr.io` image tags use the following format: `bs_<backstage-version>__<plugin-version>`
+
+Example: `bs_1.45.3__0.26.0`:
+where
+* `bs_1.45.3`: Built against {backstage} version 1.45.3
+* `0.26.0`: Node.js-packaged {backstage} plugin, version 0.26.0
+
+See {dynamic-plugins-reference-book-link}#determining-tag-values[Determining Tag Values]
+
+== Community plugins migration table
+
+The following table lists all %%MIGRATION_COUNT%% community-supported plugins that have been migrated from bundled wrappers to `ghcr.io`.
+
+[NOTE]
+====
+Replace `<tag>` with the version tag corresponding to your {product-short} version. See {dynamic-plugins-reference-book-link}#determining-tag-values[Determining Tag Values]
+====
+
+include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
+
+[cols="1,2,3,4", options="header"]
+|===
+|Plugin Name
+|Plugin Version
+|Old Path ({product-very-short} 1.8)
+|New Path ({product-very-short} 1.9+)
+
+%%MIGRATION_TABLE%%
+|===
+
+== Plugins remaining bundled in {product-very-short} 1.9
+
+The following plugins remain bundled in 1.9 while transitioning to `ghcr.io` distribution in a future release:
+
+[cols="1,2,3,4", options="header"]
+|===
+|Plugin Name
+|Plugin Version
+|Current Path ({product-very-short} 1.9)
+|Future Path ({product-very-short} 1.10+)
+
+%%BUNDLED_PLUGINS%%
+|===
+
+== Troubleshooting
+
+*Plugin not loading after migration*
+
+If a plugin fails to load, perform the following checks:
+
+. Verify the `ghcr.io` path is correct and the image tag or digest exists.
+. Confirm your cluster has network access to `ghcr.io`.
+. Review {product-short} logs for OCI pull errors.
+
+include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
+
+*Determining tag values*
+
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+
+*Determining SHA256 digests*
+
+You can look up the SHA256 digest using the Skopeo CLI or by searching in the {product-very-short} Plugin Export Overlays repository.
+
+*Skopeo CLI*
+
+Ensure you have `skopeo` and `jq` installed.
+
+. Locate the plugin path in the {dynamic-plugins-reference-book-link}[{dynamic-plugins-reference-book-title}].
+. Run the following command, replacing the plugin path prefix `oci://` with `docker://`:
++
+[source,bash]
+----
+skopeo inspect docker://<plugin-path>:<tag> | jq '.Digest'
+----
+
+*{product-very-short} Plugin Export Overlays Repo*
+
+Go to the link:https://github.com/orgs/redhat-developer/packages?tab=packages&q=[plugin packages list in the rhdh-plugin-export-overlays repository]. Search for your plugin and select the tag that is associated with this release.
+
+
+== Additional resources
+
+* link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[{product-very-short} Plugin Export Overlays GitHub repository]
