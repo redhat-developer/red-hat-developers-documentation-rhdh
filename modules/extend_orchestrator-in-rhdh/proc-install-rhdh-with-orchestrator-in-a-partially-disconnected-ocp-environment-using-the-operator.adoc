@@ -1,0 +1,100 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="install-rhdh-with-orchestrator-in-a-partially-disconnected-ocp-environment-using-the-operator_{context}"]
+= Install {product} with Orchestrator in a partially disconnected {ocp-short} environment using the Operator
+
+[role="_abstract"]
+You can install {product} with Orchestrator plugin in a partial air-gapped environment using the Operator.
+
+A disconnected installation prevents unauthorized access, data transfer, or communication with external sources.
+
+You can use the `oc-mirror` command to mirror resources directly to your accessible local mirror registry and apply the generated cluster resources.
+
+.Prerequisites
+
+* You have mirrored the {product} Operator images to the local registry using the {product-very-short} mirroring script. For more information, see {installing-in-air-gap-book-link}#proc-install-rhdh-operator-airgapped-partial.adoc_title-install-rhdh-air-grapped[_Installing {product} in a partially disconnected environment with the Operator_].
+
+include::snip-installing-the-orchestrator-common-prerequisites.adoc[]
+
+.Procedure
+
+. Create an `ImageSetConfiguration` file for `oc-mirror`. You must include the images and operators required by the Serverless Logic Operator in the `ImageSetConfiguration` file, as shown in the following example:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: mirror.openshift.io/v2alpha1
+kind: ImageSetConfiguration
+mirror:
+  additionalimages:
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator@_<digest>_
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend@_<digest>_
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator@_<digest>_
+  - name: registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets@_<digest>_
+  
+  operators:
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v<ocp-version>
+     # For example: registry.redhat.io/redhat/redhat-operator-index:v{ocp-version}
+      packages:
+      - name: logic-operator
+        channels:
+        - name: stable
+          minVersion: {rhoserverless-version}
+          maxVersion: {rhoserverless-version}
+      - name: serverless-operator
+        channels:
+        - name: stable
+          minVersion: {rhoserverless-version}
+          maxVersion: {rhoserverless-version}
+----
++
+Where:
+
+`<digest>`::
+Locate the image digests for your version of {product-very-short} in the `dynamic-plugins.default.yaml` file. You can extract this file from the plugin catalog index image to verify the default settings for your specific release:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+#!/bin/bash
+
+unpack () {
+  local IMAGE="$1"
+  DIR="${IMAGE//:/_}"
+  DIR="/tmp/${DIR//\//-}"
+  rm -fr "$DIR"; mkdir -p "$DIR"; container_id=$(podman create "${IMAGE}")
+  podman export $container_id -o /tmp/image.tar && tar xf /tmp/image.tar -C "${DIR}/"; podman rm $container_id; rm -f /tmp/image.tar
+  echo "Unpacked $IMAGE into $DIR"
+  cd $DIR; tree -d -L 3 -I "usr|root|buildinfo"
+}
+
+unpack "registry.access.redhat.com/rhdh/plugin-catalog-index:1.9"
+
+# you can then find the `dynamic-plugins.default.yaml` under /tmp/registry.access.redhat.com/rhdh/plugin-catalog-index_1.9/dynamic-plugins.default.yaml
+----
+
+. Mirror the images in the `ImageSetConfiguration.yaml` file by running the `oc-mirror` command. For example:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc-mirror --config=imagesetconfiguration.yaml docker://<registry URL:port> --workspace file://<workspace folder> --authfile /path/to/authfile  --v2
+$ cd <workspace folder>/working-dir/cluster-resources/
+$ oc apply -f .
+----
++
+. Install the OpenShift Serverless Operator and OpenShift Serverless Logic Operators using `OperatorHub`.
+
+. Create a {product-custom-resource-type} custom resource (CR).
+
+. Configure the {product-custom-resource-type} CR for the Orchestrator as described in the {orchestrator-book-link}#con-orchestrator-plugin-dependencies-operator_orchestrator-rhdh[Orchestrator plugin dependencies for Operator installation].
++
+Create all the resources and configure the {product-custom-resource-type} instance accordingly.
+
+.Verification
+
+. Restart the {product-very-short} pod and wait for the components to deploy properly.
+
+. Once stable, go to the {product-very-short} UI, and confirm that the Orchestrator UI is accessible and functioning correctly.
+
+[NOTE]
+====
+The successful accessibility of the Orchestrator UI confirms that the underlying components are running and the cluster recognizes the plugin.
+====
