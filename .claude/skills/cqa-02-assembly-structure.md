@@ -35,6 +35,12 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 
 # 3. Re-run to verify remaining issues
 ./build/scripts/cqa-02-assembly-structure.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script validates (12 checks):**
@@ -70,7 +76,7 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 
 **Not auto-fixed (manual):**
 - Content between include statements — requires moving text into modules
-- Missing `[role="_abstract"]` — requires writing introduction text
+- Missing `[role="_abstract"]` — delegated to [CQA #9 - Short description format](cqa-09-short-description-format.md)
 - Level 3+ subheadings — requires restructuring
 - Prerequisites count, order, completeness
 - Include order and additional resources link validity
