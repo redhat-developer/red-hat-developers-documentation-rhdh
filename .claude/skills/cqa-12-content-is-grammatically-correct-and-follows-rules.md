@@ -10,6 +10,8 @@
 
 Content must follow American English grammar, Red Hat style standards: correct grammar/spelling/punctuation, official terminology, consistent voice, proper capitalization, parallel structure.
 
+**IMPORTANT:** Try hard to fix ALL Vale issues — errors, warnings, AND suggestions. Do not skip warnings or suggestions unless they are clearly false positives (e.g., code blocks, attributes.adoc). Every unfixed issue degrades content quality.
+
 ## Command
 
 **Run grammar and style verification:**
@@ -24,49 +26,30 @@ Content must follow American English grammar, Red Hat style standards: correct g
 
 **Target Results:**
 - ✅ Zero Vale errors
-- ✅ Minimal Vale warnings
+- ✅ Zero Vale warnings
+- ✅ Zero Vale suggestions (fix all unless clearly false positive)
 
-## Reference Commands
+## How to Run
 
-### Step 1: Ensure Vale Styles Current (< 7 Days)
-
-```bash
-LAST_SYNC=$(cat .claude/.vale-sync-timestamp 2>/dev/null || echo 0)
-DAYS_OLD=$(( ($(date +%s) - $LAST_SYNC) / 86400 ))
-[ $DAYS_OLD -ge 7 ] && vale sync && echo $(date +%s) > .claude/.vale-sync-timestamp
-```
-
-### Step 2: Run Vale Grammar and Style Validation
-
-**Validate title master.adoc and ALL included files:**
+**IMPORTANT:** Always use the associated script to run Vale. Do NOT run `vale` directly.
 
 ```bash
-# For a specific title (recommended approach)
-vale --config .vale.ini \
-  $(./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc)
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<title-name>/master.adoc
 ```
 
-**Example for install-rhdh-osd-gcp:**
-```bash
-vale --config .vale.ini \
-  $(./build/scripts/list-all-included-files-starting-from.sh titles/install-rhdh-osd-gcp/master.adoc)
-```
+The script handles file discovery, filtering (e.g., excluding `attributes.adoc`), and outputs JSON.
 
-**See also:** [get-title-files.md](get-title-files.md) for detailed explanation of the file list extraction script.
-
-**What .vale.ini validates:**
+**What it validates:**
 ✅ Grammar (RedHat), Spelling, Terminology, Style (Google/Microsoft), Conscious language, Capitalization
-❌ DITA compatibility (use .vale-dita-only.ini for CQA #1)
-
-**IMPORTANT:** Do NOT run `vale titles/<title>/` on the entire directory - this validates files NOT part of the title and produces misleading results. Always specify master.adoc and its includes.
+❌ DITA compatibility (use `.vale-dita-only.ini` / CQA #1 script instead)
 
 ### Step 3: Review Vale Alerts
 
 | Severity | Action | Examples |
 |----------|--------|----------|
 | **error** ❌ | MUST fix | Spelling errors, prohibited terms, grammar violations |
-| **warning** ⚠️ | SHOULD fix | Style suggestions, preferred terminology |
-| **suggestion** 💡 | OPTIONAL | Alternative phrasing, minor improvements |
+| **warning** ⚠️ | MUST fix | Style suggestions, preferred terminology |
+| **suggestion** 💡 | SHOULD fix | Alternative phrasing, minor improvements |
 
 ## Common Issues and Fixes
 
@@ -86,12 +69,12 @@ vale --config .vale.ini \
 
 ## Validation Workflow
 
-1. Sync Vale styles (if > 7 days): `vale sync && echo $(date +%s) > .claude/.vale-sync-timestamp`
-2. Run validation: `vale --config .vale.ini titles/<your-title>/`
-3. Fix all errors (❌ severity)
-4. Fix warnings (⚠️ severity)
-5. Re-run Vale to verify: `vale --config .vale.ini titles/<your-title>/`
-6. Verify zero errors and minimal warnings
+1. Run the script: `./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc`
+2. Fix all errors (❌ severity)
+3. Fix all warnings (⚠️ severity)
+4. Fix all suggestions (💡 severity) unless clearly false positive
+5. Re-run the script to verify
+6. Verify zero errors, zero warnings, and zero suggestions
 
 ## Acceptable Exceptions
 
