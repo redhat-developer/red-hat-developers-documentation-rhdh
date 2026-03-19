@@ -6,28 +6,13 @@
 
 **Quality Level:** Required/non-negotiable
 
-## Automated Validation and Fixing
+## Automated Validation
 
 **IMPORTANT:** ALWAYS use the script below.
 
 ```bash
-# 1. Report issues
-./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
-
-# 2. Auto-fix what can be fixed
-./build/scripts/cqa-03-content-is-modularized.sh --fix titles/<your-title>/master.adoc
-
-# 3. Re-run to verify remaining issues
-./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
-
-# 4. Attempt manual fixes for remaining issues
-
-# 5. Re-run to verify remaining issues
-
-# 6. If issues remain, report as failed and list the remaining issues
+./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
 ```
-
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
 
 **What the script does:**
 - Detects and validates `:_mod-docs-content-type:` metadata (must be first line)
