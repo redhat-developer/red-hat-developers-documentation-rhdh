@@ -2,7 +2,7 @@
 
 ## Information is conveyed using the correct content type
 
-**Reference:** [Red Hat Web Content Types](../resources/content-types.md)
+**Reference:** [Product Documentation Content Types (CQA extract)](../resources/content-types-for-cqa.md)
 
 **Quality Level:** Required/non-negotiable
 
@@ -60,7 +60,7 @@ While RHDH documentation primarily uses Product documentation with modular struc
 - **FAQ**: Frequently asked questions (evolve-loop content)
 - **In-app content**: UI microcopy, tooltips, help text
 
-**See [content-types.md](../resources/content-types.md) for complete definitions and guidance on choosing content types.**
+**See [content-types-for-cqa.md](../resources/content-types-for-cqa.md) for complete definitions and guidance on choosing content types.**
 
 ## Command
 

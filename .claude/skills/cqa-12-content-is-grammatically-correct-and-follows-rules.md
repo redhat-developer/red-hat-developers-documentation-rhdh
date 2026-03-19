@@ -3,8 +3,8 @@
 ## Content is grammatically correct and follows rules of American English grammar
 
 **References:**
-- [Red Hat Supplementary Style Guide](../resources/red-hat-ssg.md) - Grammar, style, terminology
-- [Red Hat Peer Review Guide](../resources/red-hat-peer-review.md) - Editorial quality standards
+- [Red Hat Supplementary Style Guide (CQA extract)](../resources/red-hat-ssg-for-cqa.md) - Grammar, style, terminology
+- [Red Hat Peer Review Guide (CQA extract)](../resources/red-hat-peer-review-for-cqa.md) - Editorial quality standards
 
 **Quality Level:** Required/non-negotiable
 

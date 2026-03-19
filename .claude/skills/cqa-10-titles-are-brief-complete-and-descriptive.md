@@ -12,8 +12,8 @@ All module and assembly titles must be:
 - **Content-appropriate:** Match module type conventions
 
 **References:**
-- [Red Hat Supplementary Style Guide](../resources/red-hat-ssg.md) - Title capitalization and length
-- [Red Hat Peer Review Guide](../resources/red-hat-peer-review.md) - Style checklist and title standards
+- [Red Hat Supplementary Style Guide (CQA extract)](../resources/red-hat-ssg-for-cqa.md) - Title capitalization and length
+- [Red Hat Peer Review Guide (CQA extract)](../resources/red-hat-peer-review-for-cqa.md) - Style checklist and title standards
 - [Modular Documentation Reference Guide](../resources/red-hat-modular-docs.md) - Title forms by type
 
 ## Verification

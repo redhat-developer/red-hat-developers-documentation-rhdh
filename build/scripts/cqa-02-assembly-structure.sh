@@ -1,259 +1,87 @@
 #!/bin/bash
-# cqa-02-assembly-structure.sh
-# Validates assembly structure compliance (CQA #2)
-#
-# Reference: .claude/skills/cqa-02-assembly-structure.md
-#
-# Assemblies should contain only:
-# 1. Introduction with [role="_abstract"]
-# 2. Include statements for modules
-# 3. Optional == Prerequisites before includes (heading syntax for TOC visibility)
-# 4. Optional .Additional resources at end
-#
-# Usage: ./cqa-02-assembly-structure.sh [--fix] <file-path>
+# cqa-02-assembly-structure.sh - Validates assembly structure compliance (CQA #2)
+# Usage: ./cqa-02-assembly-structure.sh <file-path>
 
 set -e
 
-# Parse arguments
-FIX_MODE=false
-TARGET_FILE=""
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TARGET_FILE="${1:?Usage: $0 <file-path>}"
 
-# shellcheck disable=SC2034
-for arg in "$@"; do
-    case "$arg" in
-        --fix) FIX_MODE=true ;;
-        *)
-            if [[ -z "$TARGET_FILE" ]]; then
-                TARGET_FILE="$arg"
-            else
-                echo "Error: unexpected argument: $arg" >&2
-                echo "Usage: $0 [--fix] <file-path>" >&2
-                exit 1
-            fi
-            ;;
-    esac
-done
+[[ $# -gt 1 ]] && { echo "Error: unexpected argument: $2" >&2; exit 1; }
+[[ -f "$TARGET_FILE" ]] || { echo "Error: File not found: $TARGET_FILE" >&2; exit 1; }
 
-if [[ -z "$TARGET_FILE" ]]; then
-    echo "Usage: $0 [--fix] <file-path>" >&2
-    echo "" >&2
-    echo "Examples:" >&2
-    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
-    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
-    exit 1
-fi
+# Get assembly files from the title's include tree
+mapfile -t ASSEMBLY_FILES < <("$SCRIPT_DIR/list-all-included-files-starting-from.sh" "$TARGET_FILE" | tr ' ' '\n' | grep -v '^$' | grep -E "assemblies/.*\.adoc$|titles/.*/master\.adoc$" || true)
 
-if [[ ! -f "$TARGET_FILE" ]]; then
-    echo "Error: File not found: $TARGET_FILE" >&2
-    exit 1
-fi
-
-# Get repository root
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || REPO_ROOT="."
-
-# Function to get all included files
-get_all_files() {
-    local file="$1"
-    "$REPO_ROOT/build/scripts/list-all-included-files-starting-from.sh" "$file"
-}
-
-# Get all files
-ALL_FILES=$(get_all_files "$TARGET_FILE")
-
-# Filter to only assembly files
-ASSEMBLY_FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | grep -E "assemblies/.*\.adoc$|titles/.*/master\.adoc$" || true)
-
-if [[ -z "$ASSEMBLY_FILES" ]]; then
-    echo "No assembly files found."
-    exit 0
-fi
+[[ ${#ASSEMBLY_FILES[@]} -gt 0 ]] || { echo "No assembly files found."; exit 0; }
 
 echo "=== CQA #2: Verify Assembly Structure ==="
 echo ""
-echo "Reference: .claude/skills/cqa-02-assembly-structure.md"
-echo ""
-echo "Assemblies should contain only:"
-echo "  - Introduction with [role=\"_abstract\"]"
-echo "  - Include statements for modules"
-echo "  - Optional == Prerequisites before includes (heading, not block title)"
-echo "  - Optional .Additional resources at end"
-echo ""
 
-# Track violations
-TOTAL_ASSEMBLIES=0
+TOTAL=0
 VIOLATIONS=0
 
-# Check each assembly
-while IFS= read -r file; do
-    if [[ ! -f "$file" ]]; then
-        continue
-    fi
+# Helper: get line number of first match after a given line
+lineno() { grep -n "$1" "$2" | cut -d: -f1; }
 
-    TOTAL_ASSEMBLIES=$((TOTAL_ASSEMBLIES + 1))
-    FILE_VIOLATIONS=0
+for file in "${ASSEMBLY_FILES[@]}"; do
+    [[ -f "$file" ]] || continue
+    TOTAL=$((TOTAL + 1))
+    V=0
 
     echo "Checking: $(basename "$file")"
 
-    # Check 1: Has abstract
-    if ! grep -q '\[role="_abstract"\]' "$file"; then
-        echo "  ✗ Missing [role=\"_abstract\"] introduction"
-        FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
+    # Check 1: Content type must be ASSEMBLY (in first 5 lines)
+    CT=$(head -5 "$file" | sed -n 's/:_mod-docs-content-type:[[:space:]]*//p' | tr -d '[:space:]')
+    if [[ -z "$CT" ]]; then
+        echo "  ✗ Missing :_mod-docs-content-type: ASSEMBLY"; V=$((V + 1))
+    elif [[ "$CT" != "ASSEMBLY" ]]; then
+        echo "  ✗ Content type is '$CT' (expected ASSEMBLY)"; V=$((V + 1))
     fi
 
-    # Check 2: Detect content between includes (DITA violation)
-    # This is complex - we need to find text that appears after an include but before the next include
-    # Strategy: Look for lines that are not:
-    # - Empty lines
-    # - Include statements
-    # - Comment lines (//)
-    # - Metadata lines (:...)
-    # - Block titles (.Prerequisites, .Additional resources)
-    # - Context management (ifdef, ifndef)
+    # Check 2: Has abstract
+    grep -q '\[role="_abstract"\]' "$file" || { echo "  ✗ Missing [role=\"_abstract\"] introduction"; V=$((V + 1)); }
 
-    # Extract the section after abstract and before any context restoration
-    # Look for non-empty, non-include, non-metadata content between includes
+    # Check 3: Prerequisites must use == heading, not .block title
+    grep -q "^\.Prerequisites" "$file" && { echo "  ✗ Uses .Prerequisites block title instead of == Prerequisites heading"; V=$((V + 1)); }
 
-    # Simple heuristic: Count paragraphs (non-empty lines that aren't special syntax)
-    # Only check includes after the = title line (preamble includes like
-    # include::artifacts/attributes.adoc[] are not subject to this rule)
-    TITLE_LINE=$(grep -n "^= " "$file" | head -1 | cut -d: -f1 || echo "0")
-    FIRST_INCLUDE_LINE=$(tail -n +"${TITLE_LINE:-1}" "$file" | grep -n "^include::" | head -1 | cut -d: -f1 || echo "0")
-    if [[ "$FIRST_INCLUDE_LINE" != "0" && "$TITLE_LINE" != "0" ]]; then
-        FIRST_INCLUDE_LINE=$((TITLE_LINE + FIRST_INCLUDE_LINE - 1))
-    fi
+    # Check 4: No level 3+ subheadings
+    grep -q "^===[[:space:]]" "$file" && { echo "  ✗ Contains level 3+ subheadings (=== or deeper)"; V=$((V + 1)); }
 
-    if [[ "$FIRST_INCLUDE_LINE" != "0" ]]; then
-        # Get content after first include (post-title)
-        CONTENT_AFTER_INCLUDES=$(tail -n +$((FIRST_INCLUDE_LINE + 1)) "$file")
-
-        # Check for problematic content between includes
-        # Problematic = paragraph text (not empty, not include, not block title, not metadata, not comment)
-        SUSPECT_LINES=$(echo "$CONTENT_AFTER_INCLUDES" | grep -v "^$" | \
-                                                         grep -v "^include::" | \
-                                                         grep -v "^//" | \
-                                                         grep -v "^:" | \
-                                                         grep -v "^ifdef::" | \
-                                                         grep -v "^ifndef::" | \
-                                                         grep -v "^endif::" | \
-                                                         grep -v "^\." | \
-                                                         grep -v "^=" | \
-                                                         grep -v "^\*" | \
-                                                         grep -v "^-" | \
-                                                         grep -v "^|" | \
-                                                         grep -v "^\[" | \
-                                                         grep -v "^----$" | \
-                                                         grep -v "^====$" || true)
-
-        if [[ -n "$SUSPECT_LINES" ]]; then
-            SUSPECT_COUNT=$(echo "$SUSPECT_LINES" | wc -l)
-            echo "  ⚠ Warning: May contain content between includes ($SUSPECT_COUNT lines)"
-            echo "    Review for paragraphs/text between include statements"
-        fi
-    fi
-
-    # Check 3: Prerequisites location and format
-    # Should use == Prerequisites heading (not .Prerequisites block title), before first include
-    PREREQ_BLOCK_LINE=$(grep -n "^\.Prerequisites" "$file" | cut -d: -f1 || true)
-    PREREQ_BLOCK_LINE=${PREREQ_BLOCK_LINE:-0}
-    PREREQ_HEADING_LINE=$(grep -n "^== Prerequisites" "$file" | cut -d: -f1 || true)
-    PREREQ_HEADING_LINE=${PREREQ_HEADING_LINE:-0}
-
-    if [[ "$PREREQ_BLOCK_LINE" != "0" ]]; then
-        echo "  ✗ Uses .Prerequisites block title instead of == Prerequisites heading"
-        echo "    Use '== Prerequisites' for TOC visibility, consistent with Additional resources"
-        FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
-    fi
-
-    PREREQ_LINE=${PREREQ_HEADING_LINE:-$PREREQ_BLOCK_LINE}
-    PREREQ_LINE=${PREREQ_LINE:-0}
-    if [[ "$PREREQ_LINE" != "0" && "$FIRST_INCLUDE_LINE" != "0" ]]; then
-        if [[ "$PREREQ_LINE" -gt "$FIRST_INCLUDE_LINE" ]]; then
-            echo "  ✗ Prerequisites appears after include statements"
-            FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
-        fi
-    fi
-
-    # Check 4: Additional resources location (should be at end, after all includes if present)
-    RESOURCES_LINE=$(grep -n "^\.Additional resources" "$file" | head -1 | cut -d: -f1 || true)
-    RESOURCES_LINE=${RESOURCES_LINE:-0}
-    LAST_INCLUDE_LINE=$(grep -n "^include::" "$file" | tail -1 | cut -d: -f1 || true)
-    LAST_INCLUDE_LINE=${LAST_INCLUDE_LINE:-0}
-
-    if [[ "$RESOURCES_LINE" != "0" && "$LAST_INCLUDE_LINE" != "0" ]]; then
-        if [[ "$RESOURCES_LINE" -lt "$LAST_INCLUDE_LINE" ]]; then
-            echo "  ✗ .Additional resources appears before include statements"
-            FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
-        fi
-    fi
-
-    # Check 5: Content type should be ASSEMBLY
-    CONTENT_TYPE=$(head -20 "$file" | grep ":_mod-docs-content-type:" | sed 's/:_mod-docs-content-type:[[:space:]]*//' | sed 's/[[:space:]]*$//' || echo "")
-    if [[ -n "$CONTENT_TYPE" && "$CONTENT_TYPE" != "ASSEMBLY" ]]; then
-        echo "  ⚠ Warning: Content type is '$CONTENT_TYPE' (expected ASSEMBLY)"
-    fi
-
-    # Check 6: No level 2+ subheadings (assemblies shouldn't have === or deeper)
-    if grep -q "^===[[:space:]]" "$file"; then
-        echo "  ✗ Contains level 2+ subheadings (=== or deeper)"
-        FILE_VIOLATIONS=$((FILE_VIOLATIONS + 1))
-    fi
-
-    # Check 7: No detailed lists/content after abstract (before first include)
-    ABSTRACT_LINE=$(grep -n '\[role="_abstract"\]' "$file" | head -1 | cut -d: -f1 || echo "0")
-
-    if [[ "$ABSTRACT_LINE" != "0" && "$FIRST_INCLUDE_LINE" != "0" ]]; then
-        # Extract content between abstract and first include
-        BETWEEN_ABSTRACT_AND_INCLUDE=$(sed -n "$((ABSTRACT_LINE + 2)),$((FIRST_INCLUDE_LINE - 1))p" "$file")
-
-        # Check for problematic content (paragraphs, lists, but allow Prerequisites)
-        # Remove .Prerequisites / == Prerequisites section and check what remains
-        FILTERED=$(echo "$BETWEEN_ABSTRACT_AND_INCLUDE" | \
-                  grep -v "^\.Prerequisites" | \
-                  grep -v "^== Prerequisites" | \
-                  grep -v "^$" | \
-                  grep -v "^\*" | \
-                  grep -v "^-" | \
-                  grep -v "^:" | \
-                  grep -v "^//" || true)
-
-        if [[ -n "$FILTERED" ]]; then
-            NON_EMPTY=$(echo "$FILTERED" | grep -v "^$" || true)
-            if [[ -n "$NON_EMPTY" ]]; then
-                echo "  ⚠ Warning: May contain detailed content between abstract and includes"
-                echo "    Review for explanatory text that should be in a concept module"
-            fi
-        fi
-    fi
-
-    # Summary for this file
-    if [[ $FILE_VIOLATIONS -eq 0 ]]; then
-        echo "  ✓ Structure compliant"
+    # Find module include line numbers (after title, excluding artifacts/)
+    TITLE_LN=$(lineno "^= " "$file" | head -1)
+    if [[ -n "$TITLE_LN" ]]; then
+        mapfile -t INCLUDE_LNS < <(tail -n +"$TITLE_LN" "$file" | grep -n "^include::" | grep -v "artifacts/" | cut -d: -f1 | while read -r n; do echo $((TITLE_LN + n - 1)); done)
     else
-        VIOLATIONS=$((VIOLATIONS + FILE_VIOLATIONS))
+        INCLUDE_LNS=()
     fi
-    echo ""
-done <<< "$ASSEMBLY_FILES"
 
-# Final summary
+    if [[ ${#INCLUDE_LNS[@]} -gt 0 ]]; then
+        FIRST_INC=${INCLUDE_LNS[0]}
+        LAST_INC=${INCLUDE_LNS[-1]}
+
+        # Check 5: Prerequisites must be before first include
+        PREREQ_LN=$(lineno "^== Prerequisites" "$file" | head -1)
+        [[ -n "$PREREQ_LN" && "$PREREQ_LN" -gt "$FIRST_INC" ]] && { echo "  ✗ Prerequisites appears after include statements"; V=$((V + 1)); }
+
+        # Check 6: Additional resources must be after last include
+        RES_LN=$(lineno "^\.Additional resources" "$file" | head -1)
+        [[ -n "$RES_LN" && "$RES_LN" -lt "$LAST_INC" ]] && { echo "  ✗ .Additional resources appears before include statements"; V=$((V + 1)); }
+
+        # Check 7: No content between includes
+        if [[ "$FIRST_INC" != "$LAST_INC" ]]; then
+            BETWEEN=$(sed -n "$((FIRST_INC + 1)),$((LAST_INC - 1))p" "$file" | \
+                grep -v -E "^$|^include::|^//|^ifdef::|^ifndef::|^endif::|^\.Additional resources|^== " || true)
+            [[ -n "$BETWEEN" ]] && { echo "  ✗ Content between include statements ($(echo "$BETWEEN" | wc -l) lines)"; V=$((V + 1)); }
+        fi
+    fi
+
+    [[ $V -eq 0 ]] && echo "  ✓ Structure compliant" || VIOLATIONS=$((VIOLATIONS + V))
+    echo ""
+done
+
 echo "=== Summary ==="
-echo "Assemblies checked: $TOTAL_ASSEMBLIES"
-
-if [[ $VIOLATIONS -eq 0 ]]; then
-    echo "✓ All assemblies have compliant structure"
-    echo ""
-    echo "Note: Warnings indicate potential issues that require manual review"
-    echo "See .claude/skills/cqa-02-assembly-structure.md for guidance"
-    exit 0
-else
-    echo "✗ Found $VIOLATIONS violation(s)"
-    echo ""
-    echo "Common fixes:"
-    echo "  - Move detailed content to concept modules"
-    echo "  - Remove text between include statements"
-    echo "  - Use '== Prerequisites' heading (not .Prerequisites block title)"
-    echo "  - Move Prerequisites before first include"
-    echo "  - Remove subheadings from assemblies"
-    echo ""
-    echo "See .claude/skills/cqa-02-assembly-structure.md for details"
-    exit 1
-fi
+echo "Assemblies checked: $TOTAL"
+[[ $VIOLATIONS -eq 0 ]] && { echo "✓ All assemblies have compliant structure"; exit 0; }
+echo "✗ Found $VIOLATIONS violation(s)"
+exit 1

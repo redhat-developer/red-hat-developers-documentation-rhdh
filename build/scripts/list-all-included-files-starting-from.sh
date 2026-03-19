@@ -59,5 +59,4 @@ find_includes() {
 find_includes "$START_FILE"
 
 # Output as single line, space-separated, sorted and unique
-sort -u "$TEMP_FILE" | tr '\n' ' '
-echo  # Add newline at end
+sort -u "$TEMP_FILE" | paste -sd ' '

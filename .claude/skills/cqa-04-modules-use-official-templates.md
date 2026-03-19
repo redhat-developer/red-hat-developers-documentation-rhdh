@@ -23,15 +23,16 @@ All modules must follow official Red Hat modular documentation templates for the
 | Module Type | Required Elements | Allowed Sections | Prohibited |
 |-------------|-------------------|------------------|------------|
 | **CONCEPT**<br>`con-*.adoc` | • Intro paragraph (What/Why)<br>• Body content | • Subheadings (`===`)<br>• `.Additional resources` | ❌ Numbered steps<br>❌ Action items |
-| **PROCEDURE**<br>`proc-*.adoc` | • Title (gerund form)<br>• Intro<br>• Steps (imperative) | • `.Prerequisites`<br>• `.Procedure`<br>• `.Verification`<br>• `.Troubleshooting`<br>• `.Next steps`<br>• `.Additional resources` | ❌ Custom subheadings (`===`)<br>❌ Non-standard sections |
+| **PROCEDURE**<br>`proc-*.adoc` | • Title (imperative form)<br>• Intro<br>• Steps (imperative) | • `.Prerequisites`<br>• `.Procedure`<br>• `.Verification`<br>• `.Troubleshooting`<br>• `.Next steps`<br>• `.Additional resources` | ❌ Custom subheadings (`===`)<br>❌ Non-standard sections |
 | **REFERENCE**<br>`ref-*.adoc` | • Concise intro<br>• Organized data (tables/lists) | • Subheadings (`===`)<br>• `.Additional resources` | ❌ Lengthy explanations |
 
 ### Example: CONCEPT Module
 
 ```asciidoc
+:_mod-docs-content-type: CONCEPT
+
 [id="concept-name_{context}"]
 = Concept title (noun phrase)
-:_mod-docs-content-type: CONCEPT
 
 Single intro: What is this? Why care?
 
@@ -42,9 +43,10 @@ Body content with paragraphs, lists, tables.
 ### Example: PROCEDURE Module
 
 ```asciidoc
-[id="procedure-name_{context}"]
-= Creating the resource (gerund)
 :_mod-docs-content-type: PROCEDURE
+
+[id="procedure-name_{context}"]
+= Create the resource (imperative)
 
 Intro: What this accomplishes and why.
 
@@ -64,9 +66,10 @@ Intro: What this accomplishes and why.
 ### Example: REFERENCE Module
 
 ```asciidoc
+:_mod-docs-content-type: REFERENCE
+
 [id="reference-name_{context}"]
 = Reference title (noun phrase)
-:_mod-docs-content-type: REFERENCE
 
 Brief intro to reference data.
 
@@ -86,7 +89,7 @@ Brief intro to reference data.
 | **Explanations in REFERENCE** | Lengthy paragraphs | Move to CONCEPT, keep only data tables |
 | **No introduction** | Module starts with heading | Add intro paragraph after metadata |
 | **Imperative in prerequisites** | "Install the Operator" | "You have installed the Operator" |
-| **Wrong title form (PROCEDURE)** | "Install X" (imperative) | "Installing X" (gerund) |
+| **Wrong title form (PROCEDURE)** | "Installing X" (gerund) | "Install X" (imperative) |
 
 ## Validation Workflow
 
