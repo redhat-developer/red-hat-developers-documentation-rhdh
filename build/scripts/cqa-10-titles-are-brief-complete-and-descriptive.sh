@@ -453,6 +453,19 @@ if [ "$EXPECTED_FORM" = "imperative" ]; then
     done
 
     TITLE="$FIXED_TITLE"
+
+    # Validate that the first word is a known imperative verb
+    # This catches truncated words like "Delegat" (should be "Delegate")
+    FIRST_WORD_CHECK=$(echo "$TITLE" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]].*//')
+    if [[ ! "$FIRST_WORD_CHECK" =~ ^\{.*\}$ ]]; then
+        FIRST_LOWER=$(echo "$FIRST_WORD_CHECK" | tr '[:upper:]' '[:lower:]')
+        # Known valid imperative verbs (from gerund_to_imperative + common doc verbs)
+        KNOWN_IMPERATIVES=" run set get put cut stop drop map plan scan ship shop skip snap spin split step strip swap tap trim wrap begin configure create enable disable manage upgrade update remove delete edit resolve authorize validate customize integrate migrate generate define override retrieve prepare scale secure authenticate automate bootstrap restore replace browse close compose describe ensure use include invoke provide produce reduce release require subscribe change locate navigate operate isolate install deploy build add test monitor check import export connect disconnect adjust restart start register unregister assign review access fetch search find provision encrypt mount unmount attach detach extend limit inspect trigger troubleshoot understand publish select track transform view verify modify specify apply send download design delegate determine "
+        if ! echo "$KNOWN_IMPERATIVES" | grep -q " ${FIRST_LOWER} "; then
+            echo "  ⚠ Title starts with '${FIRST_WORD_CHECK}' which is not a recognized imperative verb (possible truncation?)"
+            WILL_CHANGE=true
+        fi
+    fi
 fi
 
 # Extract current ID (before _{context})
