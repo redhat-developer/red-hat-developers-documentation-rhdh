@@ -6,12 +6,25 @@
 
 **Quality Level:** Required/non-negotiable
 
-## Automated Validation
+## Automated Validation and Fixing
 
 **IMPORTANT:** ALWAYS use the script below.
 
 ```bash
-./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-03-content-is-modularized.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script does:**

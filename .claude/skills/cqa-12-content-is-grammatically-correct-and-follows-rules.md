@@ -12,11 +12,25 @@ Content must follow American English grammar, Red Hat style standards: correct g
 
 **IMPORTANT:** Try hard to fix ALL Vale issues — errors, warnings, AND suggestions. Do not skip warnings or suggestions unless they are clearly false positives (e.g., code blocks, attributes.adoc). Every unfixed issue degrades content quality.
 
-## Command
+## Automated Validation and Fixing
 
-**Run grammar and style verification:**
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
+
 ```bash
-./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script does:**

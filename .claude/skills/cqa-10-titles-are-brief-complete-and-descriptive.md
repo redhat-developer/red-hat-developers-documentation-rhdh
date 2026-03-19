@@ -93,12 +93,25 @@ done | sort -n
 - Include key technologies (OpenShift, Kubernetes, Helm)
 - Avoid marketing language ("amazing", "powerful")
 
-## Script Integration
+## Automated Validation and Fixing
 
-The title/ID/filename alignment script helps enforce title correctness:
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
 
 ```bash
-./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 This script:

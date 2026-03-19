@@ -8,14 +8,25 @@
 
 All modules must follow official Red Hat modular documentation templates for their content type.
 
-## Commands
+## Automated Validation and Fixing
+
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect module files without running the script.
 
 ```bash
-# Verify module template compliance
+# 1. Report issues
 ./build/scripts/cqa-04-modules-use-official-templates.sh titles/<your-title>/master.adoc
 
-# Fix mode (auto-fixes .Prerequisite → .Prerequisites)
+# 2. Auto-fix what can be fixed
 ./build/scripts/cqa-04-modules-use-official-templates.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-04-modules-use-official-templates.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 ## Template Requirements by Module Type

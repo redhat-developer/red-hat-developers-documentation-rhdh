@@ -9,11 +9,25 @@ All links in the documentation must be valid and accessible. This includes:
 - External URLs to Red Hat domains and third-party sites
 - Cross-title links to other RHDH documentation titles
 
-## Command
+## Automated Validation and Fixing
 
-**Run broken links verification:**
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
+
 ```bash
-./build/scripts/cqa-14-no-broken-links.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-14-no-broken-links.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-14-no-broken-links.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-14-no-broken-links.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script does:**

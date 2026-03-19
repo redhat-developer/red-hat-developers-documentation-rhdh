@@ -96,10 +96,21 @@
 
 The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded product names inline during editing. It flags the same patterns as the script below.
 
-### Run Complete Validation Script
-
 ```bash
+# 1. Report issues
 ./build/scripts/cqa-16-official-product-names-are-used.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-16-official-product-names-are-used.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-16-official-product-names-are-used.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script validates:**
@@ -108,11 +119,6 @@ The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded pr
 - Backstage (should use `{backstage}` or `{product-custom-resource-type}`)
 
 **Skips:** source blocks, attribute definitions, comments, attributes.adoc, snippets
-
-**Fix mode:**
-```bash
-./build/scripts/cqa-16-official-product-names-are-used.sh --fix titles/<your-title>/master.adoc
-```
 
 After fixing, manually verify first occurrence in abstract uses `{product}` (not `{product-short}`).
 

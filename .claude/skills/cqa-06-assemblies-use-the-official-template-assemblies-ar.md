@@ -7,11 +7,25 @@
 **Quality Level:** Required/non-negotiable
 
 
-## Command
+## Automated Validation and Fixing
 
-**Run assembly template and structure verification:**
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect assembly files without running the script.
+
 ```bash
-./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script does:**

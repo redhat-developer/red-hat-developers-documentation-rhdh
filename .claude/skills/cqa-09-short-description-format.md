@@ -16,11 +16,25 @@ Short descriptions must follow AsciiDoc/DITA format requirements:
 
 **Note:** For content quality requirements (WHY, keywords, self-referential language), see [CQA #8](cqa-08-short-description-content.md).
 
-## Command
+## Automated Validation and Fixing
 
-**Run short description format verification:**
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
+
 ```bash
-./build/scripts/cqa-09-short-description-format.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-09-short-description-format.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-09-short-description-format.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-09-short-description-format.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script does:**

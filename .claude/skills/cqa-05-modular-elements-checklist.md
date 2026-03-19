@@ -10,12 +10,25 @@ All modules and assemblies must include required structural elements per the Red
 
 **IMPORTANT:** This requirement validates against the official checklist at [.claude/resources/modular-documentation-templates-checklist.md](../resources/modular-documentation-templates-checklist.md). Review that checklist before running validation.
 
-## Automated Validation
+## Automated Validation and Fixing
 
-### Run Complete Validation Script
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
 
 ```bash
-./build/scripts/cqa-05-modular-elements-checklist.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-05-modular-elements-checklist.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-05-modular-elements-checklist.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-05-modular-elements-checklist.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
 **What the script validates:**
