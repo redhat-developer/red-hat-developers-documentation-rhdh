@@ -59,12 +59,6 @@ if [[ ! -f ".vale.ini" ]]; then
     exit 1
 fi
 
-echo "=== CQA #12: Validate Grammar and Style with Vale ==="
-echo ""
-echo "Reference: .claude/skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md"
-echo "Config: .vale.ini"
-echo ""
-
 # Get all included files, excluding attributes.adoc (defines attribute values
 # using literal product names, which intentionally triggers DeveloperHub.Attributes rules)
 ALL_FILES=$("$REPO_ROOT/build/scripts/list-all-included-files-starting-from.sh" "$TARGET_FILE" | tr ' ' '\n' | grep -v '/attributes\.adoc$' | tr '\n' ' ')
@@ -74,34 +68,6 @@ if [[ -z "$ALL_FILES" ]]; then
     exit 1
 fi
 
-# Count files
-FILE_COUNT=$(echo "$ALL_FILES" | wc -w)
-echo "Validating $FILE_COUNT file(s)..."
-echo ""
-
-# Run Vale with grammar/style config (JSON output for easy parsing)
+# Run Vale with grammar/style config (JSON output only)
 # shellcheck disable=SC2086
 vale --config .vale.ini --output JSON $ALL_FILES
-VALE_EXIT=$?
-
-echo ""
-echo "=== Summary ==="
-
-if [[ $VALE_EXIT -eq 0 ]]; then
-    echo "v All files pass grammar and style validation"
-    echo ""
-    echo "Target: 0 errors, acceptable warnings only"
-    exit 0
-elif [[ $VALE_EXIT -eq 1 ]]; then
-    echo "x Vale found issues (see output above)"
-    echo ""
-    echo "Required: Fix all errors"
-    echo "Recommended: Fix warnings"
-    echo "Optional: Review suggestions"
-    echo ""
-    echo "See .claude/skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md"
-    exit 1
-else
-    echo "x Vale encountered an error (exit code: $VALE_EXIT)"
-    exit "$VALE_EXIT"
-fi
