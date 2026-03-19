@@ -46,7 +46,7 @@
 | `AsciiDocDITA.BlockTitle` | **Auto-fixed.** Convert to a lead-in sentence ending with `:`. Block titles (`.Something`) are only valid for examples, figures, and tables. Skips block titles before tables, examples, source blocks, and images. |
 | `AsciiDocDITA.TaskContents` | **Auto-fixed.** Add `.Procedure` before the first numbered steps list. |
 | `AsciiDocDITA.TaskTitle` | Unsupported sub-heading inside a procedure module. Remove the heading, or convert to a `.Procedure` block title or bold lead-in text. |
-| `AsciiDocDITA.TaskStep` | **Auto-fixed.** Attach to the preceding step with `+` continuation (replaces blank line before the offending content with `+`). |
+| `AsciiDocDITA.TaskStep` | **Auto-fixed.** After `.Procedure` and before the first step: remove. After a list: attach to the preceding step with `+` continuation. |
 | `AsciiDocDITA.ConceptLink` | Links inside body text of concepts or procedures. Move links to `.Additional resources` section. |
 | `AsciiDocDITA.AssemblyContents` | Content after include directives in an assembly. Move text into a module, or before the includes. |
 | `AsciiDocDITA.RelatedLinks` | `.Additional resources` items contain explanatory text. Items must be link-only — remove surrounding prose. |
@@ -57,7 +57,7 @@
 - AuthorLine — insert blank line after title
 - BlockTitle — convert to lead-in sentence ending with `:` (skips titles before tables/examples/source/images)
 - TaskContents — add `.Procedure` before first ordered list
-- TaskStep — replace blank line before offending content with `+` continuation
+- TaskStep — after `.Procedure` before first step: remove; after a list: replace blank line with `+` continuation
 - CalloutList — convert `<1> text` to `<1>:: text` description list format
 
 **Delegated:**

@@ -111,7 +111,9 @@ except: pass
         fi
     done <<< "$ISSUES_TSV"
 
-    # Fix TaskStep: attach non-list content after .Procedure to preceding step with + continuation
+    # Fix TaskStep: two cases depending on context
+    # 1. After .Procedure before first step: remove the blank line + offending content marker
+    # 2. After a list: attach to preceding step with + continuation
     # Process files in reverse line order to avoid line number shifts
     declare -A TASKSTEP_FILES
     while IFS=$'\t' read -r file line check; do
@@ -122,14 +124,24 @@ except: pass
         # Sort lines in reverse order
         for line in $(echo "${TASKSTEP_FILES[$file]}" | tr ' ' '\n' | sort -rn); do
             [[ -z "$line" ]] && continue
-            LINE_CONTENT=$(sed -n "${line}p" "$file")
-            # Check if previous line is empty — if so, replace it with +
+            # Check if previous line is empty
             PREV_LN=$((line - 1))
             PREV_CONTENT=$(sed -n "${PREV_LN}p" "$file")
             if [[ -z "$PREV_CONTENT" ]]; then
-                sed -i "${PREV_LN}s/^$/+/" "$file"
-                echo "  >> Fixed TaskStep: $file:$line — attached to preceding step with +"
-                FIXED=$((FIXED + 1))
+                # Look further back to find context: is this after .Procedure?
+                PREV_PREV_LN=$((line - 2))
+                PREV_PREV_CONTENT=$(sed -n "${PREV_PREV_LN}p" "$file")
+                if [[ "$PREV_PREV_CONTENT" == ".Procedure" ]]; then
+                    # After .Procedure before first step: just remove the blank line
+                    sed -i "${PREV_LN}d" "$file"
+                    echo "  >> Fixed TaskStep: $file:$line — removed blank line after .Procedure"
+                    FIXED=$((FIXED + 1))
+                else
+                    # After a list: attach to preceding step with +
+                    sed -i "${PREV_LN}s/^$/+/" "$file"
+                    echo "  >> Fixed TaskStep: $file:$line — attached to preceding step with +"
+                    FIXED=$((FIXED + 1))
+                fi
             fi
         done
     done
