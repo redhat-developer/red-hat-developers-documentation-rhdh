@@ -17,11 +17,13 @@
 #   - Removes admonition titles
 #   - Adds missing image alt text quotes
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
 readonly PATTERN_BLOCK_TITLE='^\.[A-Z]'
 
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa05_check() {
     local target="$1"
 

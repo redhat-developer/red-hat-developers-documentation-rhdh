@@ -16,6 +16,7 @@
 #   ./build/scripts/cqa.sh --all
 #   ./build/scripts/cqa.sh --all --format json
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
@@ -108,8 +109,10 @@ if [[ "$CQA_ALL_MODE" == true ]]; then
 
         total=$((total + 1))
 
-        # Extract CQA number from filename
-        cqa_num=$(echo "$script" | sed 's/^cqa-0*\([0-9]*\).*/\1/')
+        # Extract CQA number from filename (strip prefix and leading zeros)
+        cqa_num="${script#cqa-}"
+        cqa_num="${cqa_num%%-*}"
+        cqa_num=$((10#$cqa_num))
 
         # Run script, capture output
         output=$("$script_path" "${pass_args[@]}" 2>&1 || true)

@@ -38,6 +38,7 @@ CQA_ALL_MODE=false
 CQA_TITLE_PATTERN=""
 CQA_FORMAT="checklist"
 CQA_TARGET_FILE=""
+# shellcheck disable=SC2034  # Used by cqa-01
 CQA_OUTPUT_FORMAT=""  # legacy --output line|JSON for cqa-01
 declare -a CQA_TARGET_FILES=()
 
@@ -55,6 +56,7 @@ cqa_parse_args() {
             continue
         fi
         if [[ "$expect_output" == true ]]; then
+            # shellcheck disable=SC2034
             CQA_OUTPUT_FORMAT="$arg"
             expect_output=false
             continue
@@ -564,6 +566,7 @@ SARIF_EOF
 # ── Delegation metadata ──
 # Scripts declare what they delegate to other scripts
 # Format: "check_name:target_cqa_number"
+# shellcheck disable=SC2034  # Used by individual CQA scripts
 declare -a CQA_DELEGATES_TO=()
 
 # ── Common file skip helpers ──
@@ -614,12 +617,12 @@ cqa_run_for_each_title() {
                 "$callback" "$target"
                 cqa_summary
 
-                grand_files=$(($grand_files + $_CQA_TOTAL_FILES))
-                grand_issues=$(($grand_issues + $_CQA_FILES_WITH_ISSUES))
-                grand_autofix=$(($grand_autofix + $_CQA_TOTAL_AUTOFIX))
-                grand_fixed=$(($grand_fixed + $_CQA_TOTAL_FIXED))
-                grand_manual=$(($grand_manual + $_CQA_TOTAL_MANUAL))
-                grand_delegated=$(($grand_delegated + $_CQA_TOTAL_DELEGATED))
+                grand_files=$((grand_files + _CQA_TOTAL_FILES))
+                grand_issues=$((grand_issues + _CQA_FILES_WITH_ISSUES))
+                grand_autofix=$((grand_autofix + _CQA_TOTAL_AUTOFIX))
+                grand_fixed=$((grand_fixed + _CQA_TOTAL_FIXED))
+                grand_manual=$((grand_manual + _CQA_TOTAL_MANUAL))
+                grand_delegated=$((grand_delegated + _CQA_TOTAL_DELEGATED))
             done
 
             echo ""
@@ -628,9 +631,9 @@ cqa_run_for_each_title() {
             echo "Files: ${grand_files} checked, ${grand_issues} with issues"
             if [[ "$CQA_FIX_MODE" == true ]]; then
                 echo "Fixed: ${grand_fixed} automatically"
-                echo "Remaining: $(($grand_manual + $grand_delegated)) (${grand_manual} manual, ${grand_delegated} delegated)"
+                echo "Remaining: $((grand_manual + grand_delegated)) (${grand_manual} manual, ${grand_delegated} delegated)"
             else
-                local total=$(($grand_autofix + $grand_manual + $grand_delegated))
+                local total=$((grand_autofix + grand_manual + grand_delegated))
                 echo "Violations: ${total} total (${grand_autofix} autofixable, ${grand_manual} manual, ${grand_delegated} delegated)"
             fi
         fi

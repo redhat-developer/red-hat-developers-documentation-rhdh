@@ -17,6 +17,7 @@
 #   - artifacts/attributes.adoc (defines the attributes)
 #   - Snippet files
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
@@ -77,6 +78,7 @@ PATTERNS=(
     'Google Cloud|{gcp-brand-name}|gcp-brand-name|Google Cloud Platform'
 )
 
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa16_check() {
     local target="$1"
 
@@ -96,7 +98,6 @@ _cqa16_check() {
         cqa_compute_block_ranges "$file"
 
         local file_violations=0
-        local file_fixed=false
 
         # Check each pattern
         for pattern_entry in "${PATTERNS[@]}"; do

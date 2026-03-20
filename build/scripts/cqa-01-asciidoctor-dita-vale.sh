@@ -16,13 +16,16 @@
 #   - ShortDescription -> CQA #8
 #   - DocumentId -> CQA #10
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
+# shellcheck disable=SC2034  # Used by delegation framework
 CQA_DELEGATES_TO=("ShortDescription:8" "DocumentId:10")
 
 [[ -f ".vale-dita-only.ini" ]] || { echo "Error: .vale-dita-only.ini not found" >&2; exit 1; }
 
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa01_check() {
     local target="$1"
 
@@ -185,11 +188,11 @@ try:
                 kind = 'manual'
             print(f\"{f}\t{i['Line']}\t{kind}\t{target}\t{fix_type}\t{check}: {i['Message']}\")
 except: pass
-" 2>/dev/null | while IFS=$'\t' read -r file line kind target fix_type message; do
+" 2>/dev/null | while IFS=$'\t' read -r file line kind delegate_to fix_type message; do
             case "$kind" in
                 autofix) cqa_fail_autofix "$file" "$line" "$message" ;;
                 manual)  cqa_fail_manual "$file" "$line" "$message" ;;
-                delegated) cqa_delegated "$file" "$line" "$target" "$message" "$fix_type" ;;
+                delegated) cqa_delegated "$file" "$line" "$delegate_to" "$message" "$fix_type" ;;
             esac
         done
     else

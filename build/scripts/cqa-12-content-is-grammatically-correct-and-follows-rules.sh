@@ -15,11 +15,13 @@
 #   - vale CLI installed
 #   - .vale.ini configuration file
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
 [[ -f ".vale.ini" ]] || { echo "Error: .vale.ini configuration file not found" >&2; exit 1; }
 
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa12_check() {
     local target="$1"
 
@@ -61,10 +63,7 @@ try:
 except Exception as e:
     print(f'Error parsing Vale JSON: {e}', file=sys.stderr)
     sys.exit(2)
-" 2>/dev/null | while IFS=$'\t' read -r file line severity message; do
-            local level="warning"
-            [[ "$severity" == "error" ]] && level="error"
-            [[ "$severity" == "suggestion" ]] && level="note"
+" 2>/dev/null | while IFS=$'\t' read -r file line _severity message; do
             cqa_fail_manual "$file" "$line" "$message"
         done
     else
