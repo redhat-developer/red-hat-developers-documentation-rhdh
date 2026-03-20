@@ -46,6 +46,22 @@ _cqa05_check() {
             is_nested_assembly=true
         fi
 
+        # Snippets: only check for titles (which they must not have)
+        if [[ "$content_type" == "SNIPPET" ]]; then
+            if grep -q "^= " "$file"; then
+                local snippet_title
+                snippet_title=$(grep "^= " "$file" | head -1 | sed 's/^= //')
+                cqa_fail_manual "$file" "" "Snippet has title '= ${snippet_title}' -- remove from snippet and add to including files"
+            fi
+            if grep -E "$PATTERN_BLOCK_TITLE" "$file" > /dev/null 2>&1; then
+                local bt
+                bt=$(grep -E "$PATTERN_BLOCK_TITLE" "$file" | head -1)
+                cqa_fail_manual "$file" "" "Snippet has block title '${bt}' -- move to including files"
+            fi
+            cqa_file_pass "$file"
+            continue
+        fi
+
         # Check 1: Has content type metadata
         if [[ -z "$content_type" ]]; then
             cqa_delegated "$file" "" "3" "Missing :_mod-docs-content-type: metadata"
@@ -133,7 +149,7 @@ _cqa05_check() {
                 cqa_fail_manual "$file" "" "Assembly contains level 2+ subheadings (=== or deeper)"
             fi
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" > /dev/null 2>&1; then
-                cqa_delegated "$file" "" "2" "Assembly contains block titles (only .Additional resources allowed)"
+                cqa_delegated "$file" "" "2" "Assembly contains block titles (only .Additional resources allowed)" "manual"
             fi
         fi
 
@@ -142,7 +158,7 @@ _cqa05_check() {
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" > /dev/null 2>&1; then
                 local bt_ln
                 bt_ln=$(grep -En "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" | head -1 | cut -d: -f1)
-                cqa_delegated "$file" "$bt_ln" "1" "Contains block titles other than .Additional resources or .Next steps"
+                cqa_fail_manual "$file" "$bt_ln" "Contains block titles other than .Additional resources or .Next steps"
             fi
         fi
 
@@ -165,7 +181,7 @@ _cqa05_check() {
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" > /dev/null 2>&1; then
                 local violating
                 violating=$(grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" | head -1)
-                cqa_delegated "$file" "" "1" "Non-standard block title: $violating"
+                cqa_fail_manual "$file" "" "Non-standard block title: $violating"
             fi
         fi
 
