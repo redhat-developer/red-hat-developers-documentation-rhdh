@@ -52,11 +52,11 @@ data:
     name: Lightspeed Core Service (LCS)
     service:
       host: 0.0.0.0
-    # Use ${LIGHTSPEED_SERVICE_PORT} if you are not running the Service on port `8080`
-    # port: ${LIGHTSPEED_SERVICE_PORT}
+    # Use ${env.LIGHTSPEED_SERVICE_PORT} if you are not running the Service on port `8080`
+    # port: ${env.LIGHTSPEED_SERVICE_PORT}
       auth_enabled: false
       workers: 1
-      color_log: true
+      color_log: true// Beginning of change. Fixes syntax bug by adding 'env.' prefix to environment variable.
       access_log: true
     llama_stack:
       use_as_library_client: false
@@ -76,12 +76,7 @@ data:
 +
 [IMPORTANT]
 ====
-{lcs-short} uses Llama Stack expansion syntax for environment variables. To make sure the service correctly parses variables in the `lightspeed-stack.yaml` file, you must use the `${env.VAR}` format. Variable names are case-sensitive and must be uppercase. The syntax `${env.var}` is not supported. For example:
-[source,yaml]
-----
-model_config:
-  api_key: ${env.VAR}
-----
+LCS requires Llama Stack expansion syntax for environment variables in the `lightspeed-stack.yaml` file. You must use the `${env.VAR}` format with uppercase variable names. The service does not support lowercase names or omitting the `env.` prefix, such as `${env.var}`.
 ====
 .. Click *Create*.
 
@@ -120,7 +115,7 @@ data:
       # If not provided, the plugin uses built-in default prompts
       prompts:
         - title: Getting Started with Red Hat Developer Hub
-          message: Can you guide me through the first steps to start using {product-short} as a developer, like exploring the Software Catalog and adding my service?
+          message: Can you guide me through the first steps to start using RHDH as a developer, like exploring the Software Catalog and adding my service?
 
       # OPTIONAL: Port for lightspeed service (default: 8080)
       # servicePort: ${LIGHTSPEED_SERVICE_PORT}
@@ -139,8 +134,7 @@ To display user icons from external providers such as Gravatar or GitLab, includ
 +
 [IMPORTANT]
 ====
-{product} {product-version} configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (`api.openai.com`).
-Do not use the official OpenAI API URL or token with vLLM in this release. Attempting this might result in errors or improper responses. Native OpenAI provider support is planned for future releases.
+{product} {product-version} uses the vLLM provider exclusively. While the vLLM provider supports the OpenAI API schema, it does not support the official OpenAI service (`api.openai.com`). You must not use official OpenAI API URLs or token with vLLM in this release. Using these credentials results in errors or improper responses. Native OpenAI provider support is planned for future releases.
 ====
 
 .. In the {ocp-short} web console, navigate to *Secrets*.
@@ -171,6 +165,8 @@ stringData:
   SAFETY_MODEL: "llama-guard3:8b"
   SAFETY_URL: "http://localhost:#####/v1"
   SAFETY_API_KEY: ""
+  VALIDATION_PROVIDER: "vllm"
+  VALIDATION_MODEL_NAME: "_<model_name>_"
 ----
 +
 where:
@@ -179,6 +175,7 @@ where:
 `ENABLE_OPENAI`:: Enables the OpenAI provider. Set to true to activate.
 `ENABLE_VERTEX_AI`:: Enables the Vertex AI provider. Set to true to activate.
 `ENABLE_OLLAMA`:: Enables the Ollama provider. Set to true to activate.
++
 [NOTE]
 ====
 To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
@@ -195,6 +192,8 @@ To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
 `SAFETY_MODEL`:: The identifier for the safety model. The recommended value is llama-guard3:8b.
 `SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`).
 `SAFETY_API_KEY`:: The API key required to authenticate with the safety model, if applicable.
+`VALIDATION_PROVIDER`:: The model provider used for model validation.
+`VALIDATION_MODEL_NAME`:: The name of the model used for model validation.
 .. Click *Create*.
 
 . Update the dynamic plugins ConfigMap: Add the {ls-short} plugin image to your existing dynamic plugins ConfigMap (`dynamic-plugins-rhdh`).
@@ -297,22 +296,19 @@ volumes:
   - emptyDir: {}
     name: rag-data-volume
 ----
-... Add the `initContainers` section to initialize RAG data:
+... Update the `spec.deployment.patch.spec.template.spec.initContainers` specification section to initialize RAG data:
 [source,yaml]
 +
 ----
 initContainers:
   - name: init-rag-data
     image: 'quay.io/redhat-ai-dev/rag-content:release-1.9-lcs'
-    command:
-      - "sh"
-      - "-c"
-      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /rag-content/ && cp -r /rag/embeddings_model /rag-content/ && echo 'Copy complete.'"
+    command: ["sh", "-c", "cp -r /rag/vector_db/rhdh_product_docs /rag-content/ && cp -r /rag/embeddings_model /rag-content/"]
     volumeMounts:
       - mountPath: /rag-content
         name: rag-data-volume
 ----
-... Add the Llama Stack and the {lcs-short} containers to the `spec.deployment.patch.spec.template.spec.containers` section:
+... Add the Llama Stack (`llama-stack`) and the {lcs-short} (`lightspeed-core`) containers to the `spec.deployment.patch.spec.template.spec.containers` section:
 +
 [source,yaml]
 ----
@@ -408,7 +404,7 @@ global:
       - emptyDir: {}
         name: rag-data-volume
 ----
-... Update the `initContainers` section (if supported by your Helm chart structure) to initialize RAG data.
+... Update the `upstream.backstage.initContainers` section (if supported by your Helm chart structure) to initialize RAG data.
 +
 [source,yaml]
 ----
