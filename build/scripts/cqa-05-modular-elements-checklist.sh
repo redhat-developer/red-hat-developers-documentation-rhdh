@@ -155,12 +155,14 @@ _cqa05_check() {
             fi
         fi
 
-        # Concept checks (Reference modules commonly use descriptive block titles for tables/sections)
-        if [[ "$content_type" == "CONCEPT" ]]; then
-            if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" | grep -v "^\.Example" | grep -v "^\.Sample" > /dev/null 2>&1; then
+        # Concept/Reference checks: only .Additional resources and .Next steps allowed
+        if [[ "$content_type" == "CONCEPT" || "$content_type" == "REFERENCE" ]]; then
+            if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" > /dev/null 2>&1; then
                 local bt_ln
-                bt_ln=$(grep -En "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" | grep -v "^\.Example" | grep -v "^\.Sample" | head -1 | cut -d: -f1)
-                cqa_fail_manual "$file" "$bt_ln" "Contains block titles other than .Additional resources, .Next steps, or .Example/.Sample"
+                bt_ln=$(grep -En "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" | head -1 | cut -d: -f1)
+                local bt_text
+                bt_text=$(sed -n "${bt_ln}p" "$file")
+                cqa_fail_manual "$file" "$bt_ln" "Non-standard block title: ${bt_text}"
             fi
         fi
 
@@ -179,7 +181,7 @@ _cqa05_check() {
                 fi
             fi
 
-            local allowed_blocks="^\\.Prerequisites$|^\\.Prerequisite$|^\\.Procedure|^\\.Verification$|^\\.Results$|^\\.Result$|^\\.Troubleshooting$|^\\.Troubleshooting steps$|^\\.Troubleshooting step$|^\\.Next steps$|^\\.Next step$|^\\.Additional resources$|^\\.Example|^\\.Sample|^\\.Available|^\\.Before|^\\.After|^\\.Optional"
+            local allowed_blocks="^\\.Prerequisites$|^\\.Prerequisite$|^\\.Procedure$|^\\.Verification$|^\\.Results$|^\\.Result$|^\\.Troubleshooting$|^\\.Troubleshooting steps$|^\\.Troubleshooting step$|^\\.Next steps$|^\\.Next step$|^\\.Additional resources$"
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" > /dev/null 2>&1; then
                 local violating
                 violating=$(grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" | head -1)
