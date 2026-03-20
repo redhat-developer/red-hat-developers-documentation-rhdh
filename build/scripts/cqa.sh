@@ -3,7 +3,7 @@
 #
 # Usage: ./build/scripts/cqa.sh [--fix] [--all] [--title PATTERN] [--format checklist|json] <file-path>
 #
-# Runs all 17 CQA scripts in the order defined by cqa-main-workflow.md.
+# Runs all 18 CQA scripts in the order defined by cqa-main-workflow.md.
 # Passes all arguments through to each script.
 #
 # With --all (checklist mode): displays a compact summary checklist.
@@ -21,6 +21,7 @@ cqa_parse_args "$0" "$@"
 
 # CQA scripts in optimal workflow order (matches cqa-main-workflow.md)
 CQA_SCRIPTS=(
+    "cqa-00-orphaned-modules.sh"
     "cqa-03-content-is-modularized.sh"
     "cqa-13-information-is-conveyed-using-the-correct-content.sh"
     "cqa-10-titles-are-brief-complete-and-descriptive.sh"
