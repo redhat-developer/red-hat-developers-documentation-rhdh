@@ -15,11 +15,9 @@
 #   - Content inside source/listing blocks (----, ....)
 #   - attributes.adoc files
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa07_check() {
     local target="$1"
 
@@ -37,10 +35,10 @@ _cqa07_check() {
         local violation_line_nums=()
         local line_num=0
 
-        # shellcheck disable=SC2094  # cqa_is_in_block reads cached data, not $file
         while IFS= read -r line; do
             line_num=$((line_num + 1))
 
+            # Skip content inside blocks
             if cqa_is_in_block "$file" "$line_num"; then
                 continue
             fi
@@ -84,7 +82,6 @@ _cqa07_check() {
             cqa_file_pass "$file"
         fi
     done
-    return 0
 }
 
 cqa_run_for_each_title _cqa07_check

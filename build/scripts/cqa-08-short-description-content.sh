@@ -16,7 +16,6 @@
 #   - SNIPPET files
 #   - attributes.adoc and master.adoc files
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
@@ -50,7 +49,6 @@ SELF_REF_REMOVABLE=(
     "In this section, we "
 )
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa08_check() {
     local target="$1"
 
@@ -124,7 +122,6 @@ _cqa08_check() {
             cqa_file_pass "$file"
         fi
     done
-    return 0
 }
 
 cqa_run_for_each_title _cqa08_check

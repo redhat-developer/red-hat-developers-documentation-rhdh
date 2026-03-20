@@ -1,36 +1,21 @@
 #!/bin/bash
 # cqa-03-content-is-modularized.sh - Validates content type metadata (CQA #3)
-# Usage: ./cqa-03-content-is-modularized.sh [--fix] <file-path>
+# Usage: ./cqa-03-content-is-modularized.sh [--fix] [--all] <file-path>
+#
+# Checks:
+#   - Content type metadata present and correct (:_mod-docs-content-type:)
+#   - Content type on first line, not duplicated
+#   - .Procedure and .Verification section list formatting
+#
+# Autofix:
+#   - Adds/fixes content type metadata
+#   - Normalizes section list formatting
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-cd "$REPO_ROOT"
-
-# Parse arguments
-FIX_MODE=false
-TARGET_FILE=""
-for arg in "$@"; do
-    case "$arg" in
-        --fix) FIX_MODE=true ;;
-        *)
-            if [[ -z "$TARGET_FILE" ]]; then
-                TARGET_FILE="$arg"
-            else
-                echo "Error: unexpected argument: $arg" >&2
-                echo "Usage: $0 [--fix] <file-path>" >&2
-                exit 1
-            fi
-            ;;
-    esac
-done
-
-[[ -n "$TARGET_FILE" ]] || { echo "Usage: $0 [--fix] <file-path>" >&2; exit 1; }
-[[ -f "$TARGET_FILE" ]] || { echo "Error: File not found: $TARGET_FILE" >&2; exit 1; }
+source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
+cqa_parse_args "$0" "$@"
 
 # Detect content type from file content and filename
-detect_content_type() {
+_detect_content_type() {
     local file="$1"
     local bn
     bn=$(basename "$file" .adoc)
@@ -55,32 +40,20 @@ detect_content_type() {
     esac
 }
 
-# Get current content type from first line
-get_current_type() {
-    local first_line
-    first_line=$(head -1 "$1" 2>/dev/null)
-    if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
-        echo "${BASH_REMATCH[1]}"
-    fi
-}
-
 # Count occurrences of content type metadata
-count_type_occurrences() {
+_count_type_occurrences() {
     grep -c "^:_mod-docs-content-type:" "$1" 2>/dev/null || echo "0"
 }
 
-# Fix content type metadata: ensure correct type on first line, remove duplicates
-fix_content_type() {
+# Fix content type metadata
+_fix_content_type() {
     local file="$1" type="$2"
-    if [[ "$FIX_MODE" == true ]]; then
-        sed -i '/^:_mod-docs-content-type:/d' "$file"
-        sed -i "1s/^/:_mod-docs-content-type: ${type}\n\n/" "$file"
-    fi
+    sed -i '/^:_mod-docs-content-type:/d' "$file"
+    sed -i "1s/^/:_mod-docs-content-type: ${type}\n\n/" "$file"
 }
 
 # Fix list formatting in a section (.Procedure or .Verification)
-# $1=file $2=section name (e.g., "Procedure" or "Verification")
-fix_section_lists() {
+_fix_section_lists() {
     local file="$1" section="$2"
 
     grep -q "^\.${section}" "$file" 2>/dev/null || return 1
@@ -94,7 +67,6 @@ fix_section_lists() {
     nested=$(echo "$after" | grep -c "^\*\* " || true)
     numbered=$(echo "$after" | grep -cE "^\\.+ " || true)
 
-    # Skip files with includes
     [[ $includes -gt 0 ]] && return 1
 
     local fix_type=""
@@ -108,7 +80,7 @@ fix_section_lists() {
 
     [[ -z "$fix_type" ]] && return 1
 
-    if [[ "$FIX_MODE" == true ]]; then
+    if [[ "$CQA_FIX_MODE" == true ]]; then
         case "$fix_type" in
             single-to-unnumbered)
                 sed -i "/^\.${section}/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}" "$file" ;;
@@ -117,110 +89,84 @@ fix_section_lists() {
         esac
     fi
 
+    local section_ln
+    section_ln=$(grep -n "^\.${section}$" "$file" | head -1 | cut -d: -f1)
+
     case "$fix_type" in
-        single-to-unnumbered)   echo "  * Convert single numbered step in .${section} to unnumbered item" ;;
-        mixed-to-numbered)      echo "  * Convert mixed list formatting in .${section} to numbered steps" ;;
-        unnumbered-to-numbered) echo "  * Convert multiple unnumbered items in .${section} to numbered steps" ;;
+        single-to-unnumbered)   cqa_fail_autofix "$file" "$section_ln" "Single numbered step in .${section} -- convert to unnumbered" "Converted to unnumbered" ;;
+        mixed-to-numbered)      cqa_fail_autofix "$file" "$section_ln" "Mixed list in .${section} -- convert to numbered" "Converted to numbered" ;;
+        unnumbered-to-numbered) cqa_fail_autofix "$file" "$section_ln" "Multiple unnumbered items in .${section} -- convert to numbered" "Converted to numbered" ;;
     esac
     return 0
 }
 
-# Validate PROCEDURE structure
-validate_procedure() {
-    local file="$1"
-    if ! grep -q "^\.Procedure" "$file" 2>/dev/null; then
-        echo "  ⚠ Missing .Procedure section"
-        return
-    fi
+_cqa03_check() {
+    local target="$1"
 
-    local after
-    after=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+    cqa_header "3" "Verify Content Type Metadata" "$target"
 
-    local includes numbered unnumbered
-    includes=$(echo "$after" | grep -c "^include::" || true)
-    unnumbered=$(echo "$after" | grep -c "^\* " || true)
-    numbered=$(echo "$after" | grep -cE "^\\.+ " || true)
+    for file in "${_CQA_COLLECTED_FILES[@]}"; do
+        [[ -f "$file" ]] || continue
 
-    if [[ $includes -eq 0 && $numbered -eq 1 && $unnumbered -eq 0 ]]; then
-        echo "  ⚠ .Procedure has only 1 numbered step (should be multiple or 1 unnumbered)"
-    fi
+        cqa_file_start "$file"
+
+        local detected
+        detected=$(_detect_content_type "$file")
+        if [[ -z "$detected" ]]; then
+            continue
+        fi
+
+        local current
+        current=$(cqa_get_content_type "$file")
+        local occurrences
+        occurrences=$(_count_type_occurrences "$file")
+        local needs_fix=false
+
+        if [[ "$current" != "$detected" ]] || [[ "$occurrences" -ne 1 ]]; then
+            needs_fix=true
+        fi
+
+        if [[ "$needs_fix" == true ]]; then
+            if [[ -z "$current" && "$occurrences" -eq 0 ]]; then
+                cqa_fail_autofix "$file" "1" "Missing :_mod-docs-content-type: -- add ${detected}" "Added :_mod-docs-content-type: ${detected}"
+            elif [[ -z "$current" && "$occurrences" -gt 0 ]]; then
+                cqa_fail_autofix "$file" "1" "Content type not on first line -- move to line 1" "Moved to first line"
+            elif [[ "$current" != "$detected" ]]; then
+                cqa_fail_autofix "$file" "1" "Content type: ${current} -> ${detected}" "Changed to ${detected}"
+            fi
+            if [[ "$occurrences" -gt 1 ]]; then
+                cqa_fail_autofix "$file" "" "Content type appears $occurrences times -- remove duplicates" "Removed $((occurrences - 1)) duplicate(s)"
+            fi
+
+            [[ "$CQA_FIX_MODE" == true ]] && _fix_content_type "$file" "$detected"
+        fi
+
+        # Fix and validate section lists for PROCEDURE files
+        if [[ "$detected" == "PROCEDURE" ]]; then
+            _fix_section_lists "$file" "Procedure" || true
+            _fix_section_lists "$file" "Verification" || true
+
+            # Validate PROCEDURE structure
+            if grep -q "^\.Procedure" "$file" 2>/dev/null; then
+                local after
+                after=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+                local numbered
+                numbered=$(echo "$after" | grep -cE "^\\.+ " || true)
+                local unnumbered
+                unnumbered=$(echo "$after" | grep -c "^\* " || true)
+                if [[ $numbered -eq 1 && $unnumbered -eq 0 ]]; then
+                    local proc_ln
+                    proc_ln=$(grep -n "^\.Procedure$" "$file" | head -1 | cut -d: -f1)
+                    cqa_fail_manual "$file" "$proc_ln" ".Procedure has only 1 numbered step (should be multiple or 1 unnumbered)"
+                fi
+            fi
+        fi
+
+        if [[ "$needs_fix" == false ]] && [[ "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then
+            cqa_file_pass "$file"
+        fi
+    done
 }
 
-# ── Main ──
-
-echo "=== CQA #3: Verify Content Type Metadata ==="
-echo ""
-[[ "$FIX_MODE" == true ]] && echo "FIX MODE - Will apply automatic fixes" && echo ""
-
-# Collect files using shared script
-mapfile -t FILES < <("$SCRIPT_DIR/list-all-included-files-starting-from.sh" "$TARGET_FILE" | tr ' ' '\n' | grep -v '^$')
-
-echo "Processing ${#FILES[@]} file(s) from: $TARGET_FILE"
-echo ""
-
-PROCESSED=0 COMPLIANT=0 CHANGED=0
-
-for file in "${FILES[@]}"; do
-    [[ -f "$file" ]] || continue
-    PROCESSED=$((PROCESSED + 1))
-
-    detected=$(detect_content_type "$file")
-    if [[ -z "$detected" ]]; then
-        echo "? $(basename "$file") (cannot determine content type)"
-        continue
-    fi
-
-    current=$(get_current_type "$file")
-    occurrences=$(count_type_occurrences "$file")
-    needs_fix=false
-
-    # Check if metadata is correct
-    if [[ "$current" != "$detected" ]] || [[ "$occurrences" -ne 1 ]]; then
-        needs_fix=true
-    fi
-
-    if [[ "$needs_fix" == true ]]; then
-        CHANGED=$((CHANGED + 1))
-        if [[ "$FIX_MODE" == true ]]; then
-            echo "📝 $(basename "$file")"
-        else
-            echo "✗ $(basename "$file")"
-        fi
-
-        if [[ -z "$current" && "$occurrences" -eq 0 ]]; then
-            echo "  + Add :_mod-docs-content-type: ${detected}"
-        elif [[ -z "$current" && "$occurrences" -gt 0 ]]; then
-            echo "  * Move content type to first line"
-        elif [[ "$current" != "$detected" ]]; then
-            echo "  * Content type: ${current} → ${detected}"
-        fi
-        [[ "$occurrences" -gt 1 ]] && echo "  * Remove $((occurrences - 1)) duplicate(s)"
-
-        fix_content_type "$file" "$detected"
-    else
-        COMPLIANT=$((COMPLIANT + 1))
-    fi
-
-    # Fix and validate section lists for PROCEDURE files
-    if [[ "$detected" == "PROCEDURE" ]]; then
-        fix_section_lists "$file" "Procedure" || true
-        fix_section_lists "$file" "Verification" || true
-        validate_procedure "$file"
-    fi
-done
-
-echo ""
-echo "=== Summary ==="
-echo "Files processed: $PROCESSED"
-echo "Compliant: $COMPLIANT"
-
-if [[ $CHANGED -gt 0 ]]; then
-    if [[ "$FIX_MODE" == true ]]; then
-        echo "✓ Updated $CHANGED file(s)"
-    else
-        echo "✗ Found $CHANGED file(s) with issues"
-        echo ""
-        echo "Run with --fix to apply automatic fixes:"
-        echo "  $0 --fix $TARGET_FILE"
-    fi
-fi
+cqa_run_for_each_title _cqa03_check
+exit "$(cqa_exit_code)"

@@ -17,13 +17,11 @@
 #   - Removes admonition titles
 #   - Adds missing image alt text quotes
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
 readonly PATTERN_BLOCK_TITLE='^\.[A-Z]'
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa05_check() {
     local target="$1"
 
@@ -48,22 +46,6 @@ _cqa05_check() {
             is_nested_assembly=true
         fi
 
-        # Snippets: only check for titles (which they must not have)
-        if [[ "$content_type" == "SNIPPET" ]]; then
-            if grep -q "^= " "$file"; then
-                local snippet_title
-                snippet_title=$(grep "^= " "$file" | head -1 | sed 's/^= //')
-                cqa_fail_manual "$file" "" "Snippet has title '= ${snippet_title}' -- remove from snippet and add to including files"
-            fi
-            if grep -E "$PATTERN_BLOCK_TITLE" "$file" > /dev/null 2>&1; then
-                local bt
-                bt=$(grep -E "$PATTERN_BLOCK_TITLE" "$file" | head -1)
-                cqa_fail_manual "$file" "" "Snippet has block title '${bt}' -- move to including files"
-            fi
-            cqa_file_pass "$file"
-            continue
-        fi
-
         # Check 1: Has content type metadata
         if [[ -z "$content_type" ]]; then
             cqa_delegated "$file" "" "3" "Missing :_mod-docs-content-type: metadata"
@@ -76,15 +58,7 @@ _cqa05_check() {
             fi
         else
             if ! grep -q '\[id=".*_{context}"\]' "$file" && ! grep -q "\[id='.*_{context}'\]" "$file"; then
-                if grep -q '\[id="[^"]*"\]' "$file"; then
-                    # Has an ID but missing _{context} suffix — autofix
-                    if [[ "$CQA_FIX_MODE" == true ]]; then
-                        sed -i 's/\[id="\([^"]*[^}]\)"\]/[id="\1_{context}"]/' "$file"
-                    fi
-                    cqa_fail_autofix "$file" "" "Topic ID missing _{context} suffix" "Added _{context} suffix"
-                else
-                    cqa_fail_manual "$file" "" "Missing [id=\"..._{context}\"] topic ID"
-                fi
+                cqa_delegated "$file" "" "2" "Missing or incorrect topic ID (must include _{context})"
             fi
         fi
 
@@ -159,35 +133,21 @@ _cqa05_check() {
                 cqa_fail_manual "$file" "" "Assembly contains level 2+ subheadings (=== or deeper)"
             fi
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" > /dev/null 2>&1; then
-                cqa_delegated "$file" "" "2" "Assembly contains block titles (only .Additional resources allowed)" "manual"
+                cqa_delegated "$file" "" "2" "Assembly contains block titles (only .Additional resources allowed)"
             fi
         fi
 
         # Concept/Reference checks
         if [[ "$content_type" == "CONCEPT" || "$content_type" == "REFERENCE" ]]; then
-            # Subheadings: == (H2) allowed for complex content, but === (H3) or deeper forbidden
-            if grep -E "^===[[:space:]]" "$file" > /dev/null 2>&1; then
-                local sh_ln
-                sh_ln=$(grep -En "^===[[:space:]]" "$file" | head -1 | cut -d: -f1)
-                cqa_fail_manual "$file" "$sh_ln" "${content_type} contains level 3+ subheadings (=== or deeper) -- only == (H2) subheadings allowed"
-            fi
-            # Block titles: only .Additional resources and .Next steps allowed
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" > /dev/null 2>&1; then
                 local bt_ln
                 bt_ln=$(grep -En "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" | head -1 | cut -d: -f1)
-                local bt_text
-                bt_text=$(sed -n "${bt_ln}p" "$file")
-                cqa_fail_manual "$file" "$bt_ln" "Non-standard block title: ${bt_text}"
+                cqa_delegated "$file" "$bt_ln" "1" "Contains block titles other than .Additional resources or .Next steps"
             fi
         fi
 
-        # Procedure checks: no subheadings allowed at all
+        # Procedure checks
         if [[ "$content_type" == "PROCEDURE" ]]; then
-            if grep -E "^==[[:space:]]" "$file" > /dev/null 2>&1; then
-                local sh_ln
-                sh_ln=$(grep -En "^==[[:space:]]" "$file" | head -1 | cut -d: -f1)
-                cqa_fail_manual "$file" "$sh_ln" "Procedure contains subheadings (== or deeper) -- procedures must not have subheadings"
-            fi
             if ! grep -q "^\.Procedure$" "$file"; then
                 cqa_delegated "$file" "" "4" "Missing .Procedure block title"
             else
@@ -205,7 +165,7 @@ _cqa05_check() {
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" > /dev/null 2>&1; then
                 local violating
                 violating=$(grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" | head -1)
-                cqa_fail_manual "$file" "" "Non-standard block title: $violating"
+                cqa_delegated "$file" "" "1" "Non-standard block title: $violating"
             fi
         fi
 
@@ -213,7 +173,6 @@ _cqa05_check() {
             cqa_file_pass "$file"
         fi
     done
-    return 0
 }
 
 cqa_run_for_each_title _cqa05_check

@@ -8,6 +8,7 @@
 #   - PROCEDURE files have .Procedure section with numbered steps
 #   - CONCEPT files do not have .Procedure sections
 #   - REFERENCE files do not have .Procedure sections
+#   - ASSEMBLY files contain only intro + includes (no detailed content)
 #   - Filename prefix matches content type
 #
 # Autofix:
@@ -17,11 +18,9 @@
 # Skips:
 #   - SNIPPET files, attributes.adoc, master.adoc
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa13_check() {
     local target="$1"
 
@@ -60,6 +59,30 @@ _cqa13_check() {
                     file_has_issue=true
                 fi
                 ;;
+            ASSEMBLY)
+                local detail_lines
+                detail_lines=$(awk '
+                    /^= /{found=1; next}
+                    found && /^include::/{next}
+                    found && /^\[role="_abstract"\]/{next}
+                    found && /^\[id=/{next}
+                    found && /^:_mod-docs-content-type:/{next}
+                    found && /^:context:/{next}
+                    found && /^ifdef::|^ifndef::|^endif::/{next}
+                    found && /^\/\//{next}
+                    found && /^\.Prerequisites/{next}
+                    found && /^\.Additional resources/{next}
+                    found && /^\* /{next}
+                    found && /^$/{next}
+                    found && /^ifeval::|^endif::/{next}
+                    found{count++}
+                    END{print count+0}
+                ' "$file" 2>/dev/null)
+                if [[ $detail_lines -gt 5 ]]; then
+                    cqa_fail_manual "$file" "" "ASSEMBLY has $detail_lines lines of detailed content (should only have intro + includes)"
+                    file_has_issue=true
+                fi
+                ;;
         esac
 
         # Check filename prefix matches content type
@@ -77,8 +100,7 @@ _cqa13_check() {
             if [[ "$CQA_FIX_MODE" == true ]]; then
                 # Auto-rename: strip existing prefix, add correct one
                 local new_basename="${expected_prefix}${basename_file#*-}"
-                local new_file
-                new_file="$(dirname "$file")/${new_basename}.adoc"
+                local new_file="$(dirname "$file")/${new_basename}.adoc"
                 if [[ "$file" != "$new_file" ]]; then
                     git mv "$file" "$new_file" 2>/dev/null || mv "$file" "$new_file"
                     # Update include statements across the repo
@@ -99,7 +121,6 @@ _cqa13_check() {
             cqa_file_pass "$file"
         fi
     done
-    return 0
 }
 
 cqa_run_for_each_title _cqa13_check

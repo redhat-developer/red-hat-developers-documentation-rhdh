@@ -17,11 +17,9 @@
 #   - Non-assembly files (PROCEDURE, CONCEPT, REFERENCE, SNIPPET)
 #   - attributes.adoc files
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa06_check() {
     local target="$1"
 

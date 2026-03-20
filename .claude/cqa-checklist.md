@@ -33,22 +33,7 @@
 ./build/scripts/cqa-XX-*.sh --all
 ```
 
-Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` (applied), `[-> CQA #NN AUTOFIX]` / `[-> CQA #NN MANUAL]` (delegated).
-
-- [ ] **CQA #0: Orphaned modules**
-  ```bash
-  ./build/scripts/cqa-00-orphaned-modules.sh [--fix]
-  ```
-  - [ ] No orphaned .adoc files
-  - [ ] No orphaned images
-  - [ ] Delete orphans: `./build/scripts/cqa-00-orphaned-modules.sh --fix`
-
-- [ ] **CQA #0: Directory structure**
-  ```bash
-  ./build/scripts/cqa-00-directory-structure.sh [--fix]
-  ```
-  - [ ] All directories follow `<category>_<context>` naming
-  - [ ] Fix misnamed dirs: `./build/scripts/cqa-00-directory-structure.sh --fix`
+Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` (applied), `[-> CQA #NN]` (delegated to another CQA).
 
 - [ ] **Resources current** - [Update all resources](skills/update-all-resources.md)
   ```bash
@@ -198,9 +183,9 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Build completes successfully
   - [ ] No xref errors in output
 
-- [ ] **CQA #15: Redirects** - [Skill](skills/cqa-15-redirects.sh)
+- [ ] **CQA #15: Redirects** - [Skill](skills/cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh)
   ```bash
-  ./build/scripts/cqa-15-redirects.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Redirects in place if files moved
   - [ ] Old URLs redirect to new locations
@@ -209,6 +194,14 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 ---
 
 ### Cleanup & Verification
+
+- [ ] **Remove orphaned modules**
+  ```bash
+  ./build/scripts/fix-orphaned-modules.sh
+  ```
+  - [ ] Review list: _____ files found
+  - [ ] Verify truly orphaned
+  - [ ] Delete: `./build/scripts/fix-orphaned-modules.sh --execute`
 
 - [ ] **Verify .claude/settings.json** (if updated)
   - [ ] Permissions alphabetically sorted
@@ -221,8 +214,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 
 ## Completion Checklist
 
-**All 18 Requirements:**
-- [ ] CQA #0: Orphaned modules ✓
+**All 17 Requirements:**
 - [ ] CQA #1: Vale DITA ✓
 - [ ] CQA #2: Assembly structure ✓
 - [ ] CQA #3: Modularized ✓
@@ -244,6 +236,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 **Final Steps:**
 - [ ] All automation scripts run
 - [ ] All manual assessments complete
+- [ ] Orphaned modules removed
 - [ ] .claude/settings.json verified (if updated)
 
 ---
@@ -282,7 +275,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - Vale DITA: 0 errors, X acceptable warnings
   - Vale style: 0 errors, 0 warnings
   - Build: successful
-  - All 19 CQA requirements met
+  - All 17 CQA requirements met
   - Idempotency verified
 
   ## Changes Made

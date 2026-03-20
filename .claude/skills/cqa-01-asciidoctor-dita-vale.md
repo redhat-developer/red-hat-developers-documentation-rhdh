@@ -30,6 +30,8 @@
 ./build/scripts/cqa-01-asciidoctor-dita-vale.sh --output JSON titles/<your-title>/master.adoc
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **Target Results:**
 - ✅ 0 errors, 0 warnings, 0 suggestions
 

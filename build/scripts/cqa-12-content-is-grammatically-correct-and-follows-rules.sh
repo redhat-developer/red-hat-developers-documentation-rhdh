@@ -15,13 +15,11 @@
 #   - vale CLI installed
 #   - .vale.ini configuration file
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
 [[ -f ".vale.ini" ]] || { echo "Error: .vale.ini configuration file not found" >&2; exit 1; }
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa12_check() {
     local target="$1"
 
@@ -63,7 +61,10 @@ try:
 except Exception as e:
     print(f'Error parsing Vale JSON: {e}', file=sys.stderr)
     sys.exit(2)
-" 2>/dev/null | while IFS=$'\t' read -r file line _severity message; do
+" 2>/dev/null | while IFS=$'\t' read -r file line severity message; do
+            local level="warning"
+            [[ "$severity" == "error" ]] && level="error"
+            [[ "$severity" == "suggestion" ]] && level="note"
             cqa_fail_manual "$file" "$line" "$message"
         done
     else
@@ -74,27 +75,14 @@ except Exception as e:
             echo ""
         fi
 
-        local vale_output
-        vale_output=$(vale --config .vale.ini --output line "${vale_files[@]}" 2>/dev/null || true)
+        local vale_exit=0
+        vale --config .vale.ini --output line "${vale_files[@]}" 2>/dev/null || vale_exit=$?
 
-        if [[ -z "$vale_output" ]]; then
+        if [[ $vale_exit -eq 0 ]]; then
             cqa_file_pass "$target"
         else
-            # Only report as failure if there are errors (not just warnings/suggestions)
-            local error_count
-            error_count=$(echo "$vale_output" | grep -c ':error:' || echo "0")
-            local warning_count
-            warning_count=$(echo "$vale_output" | grep -c ':warning:' || echo "0")
-            local total_count
-            total_count=$(echo "$vale_output" | wc -l)
-
-            if [[ "$error_count" -gt 0 ]]; then
-                echo "$vale_output" | grep ':error:' | head -20
-                echo ""
-                cqa_fail_manual "$target" "" "Vale found ${error_count} errors (${warning_count} warnings, ${total_count} total issues)"
-            else
-                cqa_file_pass "$target"
-            fi
+            echo ""
+            cqa_fail_manual "$target" "" "Vale found grammar/style issues (see output above)"
         fi
     fi
 }

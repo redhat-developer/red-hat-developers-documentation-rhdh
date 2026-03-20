@@ -10,14 +10,12 @@
 #   - Renames files via git mv
 #   - Updates all xrefs and include statements
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2034
 CQA_DELEGATES_TO=("DocumentId:10")
 
-# shellcheck disable=SC2329
+# Convert a gerund to imperative form
 gerund_to_imperative() {
     local word="$1"
     local lower
@@ -102,11 +100,9 @@ gerund_to_imperative() {
     echo "$result"
 }
 
-# shellcheck disable=SC2329  # Helper functions invoked from _cqa10_check/_process_file
+# Resolve attribute value
 _resolve_attribute() {
-    local attr_name="$1"
-    local search_file="$2"
-    local attr_value=""
+    local attr_name="$1" search_file="$2" attr_value=""
     if [[ -f "$search_file" ]]; then
         attr_value=$(grep "^:${attr_name}:" "$search_file" 2>/dev/null | head -1 | sed "s/^:${attr_name}:[[:space:]]*//" | sed 's/[[:space:]]*$//')
     fi
@@ -116,11 +112,8 @@ _resolve_attribute() {
     echo "${attr_value:-$attr_name}"
 }
 
-# shellcheck disable=SC2329
 _expand_attributes() {
-    local input="$1"
-    local search_file="$2"
-    local output="$input"
+    local input="$1" search_file="$2" output="$input"
     while [[ "$output" =~ \{([^}]+)\} ]]; do
         local attr_name="${BASH_REMATCH[1]}"
         local attr_value
@@ -130,7 +123,6 @@ _expand_attributes() {
     echo "$output"
 }
 
-# shellcheck disable=SC2329
 _title_to_id_form() {
     local title="$1"
     echo "$title" | \
@@ -142,7 +134,6 @@ _title_to_id_form() {
         sed 's/{[^}]*}//g'
 }
 
-# shellcheck disable=SC2329
 _process_file() {
     local FILE="$1"
 
@@ -232,8 +223,7 @@ _process_file() {
         sed 's/\brhdh-rhdh\b/rhdh/g' | sed 's/\brhbk-rhbk\b/rhbk/g' | sed 's/\bocp-ocp\b/ocp/g')
 
     local EXPECTED_FILENAME="${PREFIX}${EXPECTED_ID}.adoc"
-    local NEW_FILE
-    NEW_FILE="$(dirname "$FILE")/$EXPECTED_FILENAME"
+    local NEW_FILE="$(dirname "$FILE")/$EXPECTED_FILENAME"
 
     if [[ "$CURRENT_ID" != "$EXPECTED_ID" ]] || [[ "$FILE" != "$NEW_FILE" ]]; then
         WILL_CHANGE=true
@@ -300,7 +290,6 @@ _process_file() {
     fi
 }
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa10_check() {
     local target="$1"
 

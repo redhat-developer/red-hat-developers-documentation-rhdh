@@ -1,6 +1,6 @@
 # CQA 2.1 Main Workflow
 
-Execute all 19 CQA requirements in optimal order. Each links to detailed skill with commands, criteria, and fixes.
+Execute all 17 CQA requirements in optimal order. Each links to detailed skill with commands, criteria, and fixes.
 
 **CRITICAL EXECUTION RULES:**
 1. **Run skills in the exact order listed** - The sequence is optimized to minimize conflicts
@@ -23,7 +23,7 @@ Execute all 19 CQA requirements in optimal order. Each links to detailed skill w
 
 ## Unified Script Interface
 
-Run all 19 CQA checks in workflow order with `cqa.sh`:
+Run all 17 CQA checks in workflow order with `cqa.sh`:
 
 ```bash
 # Run all checks for a title
@@ -46,7 +46,7 @@ Or run individual scripts (all share a common interface via `cqa-lib.sh`):
 - `[AUTOFIX]` - Can be auto-fixed with `--fix`
 - `[FIXED]` - Was auto-fixed (in `--fix` mode)
 - `[MANUAL]` - Requires human judgment
-- `[-> CQA #NN AUTOFIX]` / `[-> CQA #NN MANUAL]` - Delegated to another CQA script
+- `[-> CQA #NN]` - Delegated to another CQA script
 
 ---
 
@@ -54,8 +54,6 @@ Or run individual scripts (all share a common interface via `cqa-lib.sh`):
 
 **For each requirement below:** Run validation/fixes until no new changes occur. **For the entire sequence:** Re-run all requirements until the full workflow is stable.
 
-- [ ] **CQA #0:** Orphaned modules — `cqa-00-orphaned-modules.sh` — Find/delete unreferenced files
-- [ ] **CQA #0:** Directory structure — `cqa-00-directory-structure.sh` — Verify `<category>_<context>` naming
 - [ ] Resources current. [Update all resources](update-all-resources.md)
 - [ ] **CQA #3:** [Content is modularized](cqa-03-content-is-modularized.md) - Modular structure, correct metadata/prefixes
 - [ ] **CQA #13:** [Correct content type](cqa-13-information-is-conveyed-using-the-correct-content.md) - Content matches declared type
@@ -73,14 +71,13 @@ Or run individual scripts (all share a common interface via `cqa-lib.sh`):
 - [ ] **CQA #12:** [Grammar](cqa-12-content-is-grammatically-correct-and-follows-rules.md) - 0 errors, American English
 - [ ] **CQA #17:** [Disclaimers](cqa-17-includes-appropriate-legal-approved-disclaimers-f.md) - Legal-approved for Tech/Dev Preview
 - [ ] **CQA #14:** [No broken links](cqa-14-no-broken-links.md) - All xrefs/external links valid, build succeeds
-- [ ] **CQA #15:** [Redirects](cqa-15-redirects.sh) - Redirects in place if needed
+- [ ] **CQA #15:** [Redirects](cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh) - Redirects in place if needed
 
 ---
 
 ## Completion
 
-**All 18 Requirements:**
-- [ ] CQA #0: Orphaned modules
+**All 17 Requirements:**
 - [ ] CQA #1: Vale DITA
 - [ ] CQA #2: Assembly structure
 - [ ] CQA #3: Modularized

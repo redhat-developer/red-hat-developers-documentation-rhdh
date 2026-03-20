@@ -13,22 +13,13 @@
 #
 # Note: For full link validation including external URLs, run build-ccutil.sh
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa14_check() {
     local target="$1"
 
     cqa_header "14" "Verify No Broken Links" "$target"
-
-    # Resolve :imagesdir: from the target, then fall back to artifacts/attributes.adoc
-    local imagesdir=""
-    imagesdir=$(grep -m1 '^:imagesdir:' "$target" 2>/dev/null | sed 's/^:imagesdir: *//' || true)
-    if [[ -z "$imagesdir" ]] && [[ -f "artifacts/attributes.adoc" ]]; then
-        imagesdir=$(grep -m1 '^:imagesdir:' "artifacts/attributes.adoc" 2>/dev/null | sed 's/^:imagesdir: *//' || true)
-    fi
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue
@@ -60,18 +51,7 @@ _cqa14_check() {
             local image_path
             image_path=$(echo "$line_content" | sed -E 's/.*image::?([^[]*)\[.*/\1/')
             [[ "$image_path" == *"{"* ]] && continue
-            # Skip empty, URLs, or paths with spaces/quotes (likely YAML in code blocks)
-            [[ -z "$image_path" || "$image_path" == *"://"* || "$image_path" == *" "* || "$image_path" == *"'"* ]] && continue
-            # Resolve image path using :imagesdir: if set
-            local resolved=false
-            if [[ -n "$imagesdir" ]] && [[ -f "$imagesdir/$image_path" ]]; then
-                resolved=true
-            elif [[ -f "$file_dir/$image_path" ]]; then
-                resolved=true
-            elif [[ -f "$image_path" ]]; then
-                resolved=true
-            fi
-            if [[ "$resolved" == false ]]; then
+            if [[ -n "$image_path" ]] && [[ ! -f "$file_dir/$image_path" ]] && [[ ! -f "$image_path" ]]; then
                 cqa_fail_manual "$file" "$line_num" "Broken image: $image_path"
                 file_has_issue=true
             fi
@@ -81,7 +61,6 @@ _cqa14_check() {
             cqa_file_pass "$file"
         fi
     done
-    return 0
 }
 
 cqa_run_for_each_title _cqa14_check

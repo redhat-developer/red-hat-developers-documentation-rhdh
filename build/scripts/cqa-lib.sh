@@ -25,8 +25,6 @@
 [[ -n "${_CQA_LIB_LOADED+x}" ]] && return 0
 _CQA_LIB_LOADED=1
 
-readonly _CQA_FMT_CHECKLIST="checklist"
-
 set -e
 
 # ── Repository root and script directory ──
@@ -38,9 +36,8 @@ cd "$CQA_REPO_ROOT"
 CQA_FIX_MODE=false
 CQA_ALL_MODE=false
 CQA_TITLE_PATTERN=""
-CQA_FORMAT="$_CQA_FMT_CHECKLIST"
+CQA_FORMAT="checklist"
 CQA_TARGET_FILE=""
-# shellcheck disable=SC2034  # Used by cqa-01
 CQA_OUTPUT_FORMAT=""  # legacy --output line|JSON for cqa-01
 declare -a CQA_TARGET_FILES=()
 
@@ -58,7 +55,6 @@ cqa_parse_args() {
             continue
         fi
         if [[ "$expect_output" == true ]]; then
-            # shellcheck disable=SC2034
             CQA_OUTPUT_FORMAT="$arg"
             expect_output=false
             continue
@@ -96,8 +92,8 @@ cqa_parse_args() {
 
     # Validate format
     case "$CQA_FORMAT" in
-        "$_CQA_FMT_CHECKLIST"|json) ;;
-        *) echo "Error: --format must be '$_CQA_FMT_CHECKLIST' or 'json'" >&2; exit 1 ;;
+        checklist|json) ;;
+        *) echo "Error: --format must be 'checklist' or 'json'" >&2; exit 1 ;;
     esac
 
     # Resolve targets
@@ -129,7 +125,6 @@ _cqa_usage() {
     echo "  $script_name titles/install-rhdh-ocp/master.adoc" >&2
     echo "  $script_name --fix --all" >&2
     echo "  $script_name --title 'install*' --format json" >&2
-    return 0
 }
 
 _cqa_discover_all_titles() {
@@ -153,11 +148,10 @@ _cqa_discover_all_titles() {
         seen_realpaths+=("$real_path")
         CQA_TARGET_FILES+=("$master")
     done < <(find titles/ -maxdepth 2 -name "master.adoc" -path "titles/${pattern}/master.adoc" 2>/dev/null | sort)
-    return 0
 }
 
 # ── File discovery ──
-# Replaces list-all-included-files-starting-from.sh and custom collect_files()
+# Replaces both list-all-included-files-starting-from.sh and custom collect_files()
 # Uses realpath dedup to handle symlinks correctly
 
 declare -A _CQA_SEEN_FILES=()
@@ -167,7 +161,6 @@ cqa_collect_files() {
     _CQA_SEEN_FILES=()
     _CQA_COLLECTED_FILES=()
     _cqa_collect_recursive "$start_file"
-    return 0
 }
 
 _cqa_collect_recursive() {
@@ -221,7 +214,6 @@ cqa_get_content_type() {
     if [[ "$first_line" =~ ^:_mod-docs-content-type:[[:space:]]*(.*[^[:space:]])[[:space:]]*$ ]]; then
         echo "${BASH_REMATCH[1]}"
     fi
-    return 0
 }
 
 # ── Block range helpers ──
@@ -313,7 +305,6 @@ cqa_reset_counters() {
     _CQA_TOTAL_MANUAL=0
     _CQA_TOTAL_DELEGATED=0
     _CQA_TOTAL_PASS=0
-    return 0
 }
 
 # Start processing a new file
@@ -322,7 +313,6 @@ cqa_file_start() {
     _CQA_TOTAL_FILES=$((_CQA_TOTAL_FILES + 1))
     _CQA_CURRENT_FILE="$file"
     _CQA_CURRENT_FILE_HAS_ISSUES=false
-    return 0
 }
 
 # File header (printed on first issue for that file)
@@ -330,12 +320,11 @@ _cqa_ensure_file_header() {
     if [[ "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then
         _CQA_CURRENT_FILE_HAS_ISSUES=true
         _CQA_FILES_WITH_ISSUES=$((_CQA_FILES_WITH_ISSUES + 1))
-        if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
+        if [[ "$CQA_FORMAT" == "checklist" ]]; then
             echo ""
             echo "### $_CQA_CURRENT_FILE"
         fi
     fi
-    return 0
 }
 
 # Report a passing check
@@ -343,7 +332,7 @@ cqa_pass() {
     local line="${1:-}"
     local desc="$2"
     _CQA_TOTAL_PASS=$((_CQA_TOTAL_PASS + 1))
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
+    if [[ "$CQA_FORMAT" == "checklist" ]]; then
         if [[ -n "$line" ]]; then
             echo -e "- [x] Line ${line}: ${desc}"
         else
@@ -351,7 +340,6 @@ cqa_pass() {
         fi
     fi
     # SARIF: passes are not reported
-    return 0
 }
 
 # Report an autofixable issue (report mode) or a fixed issue (fix mode)
@@ -365,20 +353,20 @@ cqa_fail_autofix() {
 
     if [[ "$CQA_FIX_MODE" == true ]]; then
         _CQA_TOTAL_FIXED=$((_CQA_TOTAL_FIXED + 1))
-        if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
+        if [[ "$CQA_FORMAT" == "checklist" ]]; then
             if [[ -n "$line" ]]; then
-                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} ${file}: Line ${line}: ${fix_desc}"
+                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} Line ${line}: ${fix_desc}"
             else
-                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} ${file}: ${fix_desc}"
+                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} ${fix_desc}"
             fi
         fi
     else
         _CQA_TOTAL_AUTOFIX=$((_CQA_TOTAL_AUTOFIX + 1))
-        if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
+        if [[ "$CQA_FORMAT" == "checklist" ]]; then
             if [[ -n "$line" ]]; then
-                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} ${file}: Line ${line}: ${desc}"
+                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} Line ${line}: ${desc}"
             else
-                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} ${file}: ${desc}"
+                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} ${desc}"
             fi
         fi
     fi
@@ -386,7 +374,6 @@ cqa_fail_autofix() {
     if [[ "$CQA_FORMAT" == "json" ]]; then
         _cqa_sarif_add "$file" "$line" "warning" "$desc" "autofix"
     fi
-    return 0
 }
 
 # Report a manual-only issue
@@ -398,61 +385,48 @@ cqa_fail_manual() {
     _cqa_ensure_file_header
     _CQA_TOTAL_MANUAL=$((_CQA_TOTAL_MANUAL + 1))
 
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
+    if [[ "$CQA_FORMAT" == "checklist" ]]; then
         if [[ -n "$line" ]]; then
-            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} ${file}: Line ${line}: ${desc}"
+            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} Line ${line}: ${desc}"
         else
-            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} ${file}: ${desc}"
+            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} ${desc}"
         fi
     fi
 
     if [[ "$CQA_FORMAT" == "json" ]]; then
         _cqa_sarif_add "$file" "$line" "error" "$desc" "manual"
     fi
-    return 0
 }
 
 # Report a delegated issue (handled by another CQA script)
-# Args: file line target_cqa desc [fix_type]
-# fix_type: "autofix" (default) or "manual"
 cqa_delegated() {
     local file="${1:-$_CQA_CURRENT_FILE}"
     local line="${2:-}"
     local target_cqa="$3"
     local desc="$4"
-    local fix_type="${5:-autofix}"
 
     _cqa_ensure_file_header
     _CQA_TOTAL_DELEGATED=$((_CQA_TOTAL_DELEGATED + 1))
 
-    local fix_label
-    if [[ "$fix_type" == "manual" ]]; then
-        fix_label=" MANUAL"
-    else
-        fix_label=" AUTOFIX"
-    fi
-
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
+    if [[ "$CQA_FORMAT" == "checklist" ]]; then
         if [[ -n "$line" ]]; then
-            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}${fix_label}]${_C_NC} ${file}: Line ${line}: ${desc}"
+            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}]${_C_NC} Line ${line}: ${desc}"
         else
-            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}${fix_label}]${_C_NC} ${file}: ${desc}"
+            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}]${_C_NC} ${desc}"
         fi
     fi
 
     if [[ "$CQA_FORMAT" == "json" ]]; then
         _cqa_sarif_add "$file" "$line" "note" "Delegated to CQA #${target_cqa}: $desc" "delegated"
     fi
-    return 0
 }
 
 # Mark file as all-passed (call if no issues were found for the file)
 cqa_file_pass() {
     local file="${1:-$_CQA_CURRENT_FILE}"
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" && "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then
+    if [[ "$CQA_FORMAT" == "checklist" && "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then
         echo -e "${_C_GREEN}-  [x]${_C_NC} ${file}"
     fi
-    return 0
 }
 
 # Print section header
@@ -461,7 +435,7 @@ cqa_header() {
     local title="$2"
     local target="${3:-}"
 
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
+    if [[ "$CQA_FORMAT" == "checklist" ]]; then
         echo "## CQA #${cqa_num}: ${title}"
         if [[ -n "$target" ]]; then
             echo "Processing: ${target}"
@@ -473,7 +447,6 @@ cqa_header() {
     fi
 
     cqa_set_tool_info "cqa-${cqa_num}"
-    return 0
 }
 
 # Print summary
@@ -515,7 +488,6 @@ cqa_exit_code() {
         local total=$((_CQA_TOTAL_AUTOFIX + _CQA_TOTAL_MANUAL + _CQA_TOTAL_DELEGATED))
         [[ $total -gt 0 ]] && echo 1 || echo 0
     fi
-    return 0
 }
 
 # ── SARIF output ──
@@ -547,7 +519,6 @@ _cqa_sarif_add() {
       }],
       \"properties\": { \"fixability\": \"${kind}\" }
     }")
-    return 0
 }
 
 _cqa_sarif_emit() {
@@ -578,13 +549,11 @@ _cqa_sarif_emit() {
   }]
 }
 SARIF_EOF
-    return 0
 }
 
 # ── Delegation metadata ──
 # Scripts declare what they delegate to other scripts
 # Format: "check_name:target_cqa_number"
-# shellcheck disable=SC2034  # Used by individual CQA scripts
 declare -a CQA_DELEGATES_TO=()
 
 # ── Common file skip helpers ──
@@ -635,12 +604,12 @@ cqa_run_for_each_title() {
                 "$callback" "$target"
                 cqa_summary
 
-                grand_files=$((grand_files + _CQA_TOTAL_FILES))
-                grand_issues=$((grand_issues + _CQA_FILES_WITH_ISSUES))
-                grand_autofix=$((grand_autofix + _CQA_TOTAL_AUTOFIX))
-                grand_fixed=$((grand_fixed + _CQA_TOTAL_FIXED))
-                grand_manual=$((grand_manual + _CQA_TOTAL_MANUAL))
-                grand_delegated=$((grand_delegated + _CQA_TOTAL_DELEGATED))
+                grand_files=$(($grand_files + $_CQA_TOTAL_FILES))
+                grand_issues=$(($grand_issues + $_CQA_FILES_WITH_ISSUES))
+                grand_autofix=$(($grand_autofix + $_CQA_TOTAL_AUTOFIX))
+                grand_fixed=$(($grand_fixed + $_CQA_TOTAL_FIXED))
+                grand_manual=$(($grand_manual + $_CQA_TOTAL_MANUAL))
+                grand_delegated=$(($grand_delegated + $_CQA_TOTAL_DELEGATED))
             done
 
             echo ""
@@ -649,12 +618,11 @@ cqa_run_for_each_title() {
             echo "Files: ${grand_files} checked, ${grand_issues} with issues"
             if [[ "$CQA_FIX_MODE" == true ]]; then
                 echo "Fixed: ${grand_fixed} automatically"
-                echo "Remaining: $((grand_manual + grand_delegated)) (${grand_manual} manual, ${grand_delegated} delegated)"
+                echo "Remaining: $(($grand_manual + $grand_delegated)) (${grand_manual} manual, ${grand_delegated} delegated)"
             else
-                local total=$((grand_autofix + grand_manual + grand_delegated))
+                local total=$(($grand_autofix + $grand_manual + $grand_delegated))
                 echo "Violations: ${total} total (${grand_autofix} autofixable, ${grand_manual} manual, ${grand_delegated} delegated)"
             fi
         fi
     fi
-    return 0
 }

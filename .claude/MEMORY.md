@@ -8,9 +8,9 @@ This file contains persistent knowledge about working with the RHDH documentatio
 
 1. **FIRST:** Load the workflow files
    ```
-   Read .claude/skills/cqa-master-workflow.md, .claude/cqa-checklist.md, .claude/MEMORY.md
+   Read .claude/skills/cqa-main-workflow.md, .claude/cqa-checklist.md, .claude/MEMORY.md
    ```
-   - The master workflow orchestrates all 17 CQA requirements in optimal order
+   - The main workflow orchestrates all 17 CQA requirements in optimal order
    - The checklist follows the same 5-phase structure
    - **Idempotency requirement:** Re-execute each requirement until no changes, then re-run entire workflow until stable
 
@@ -19,7 +19,7 @@ This file contains persistent knowledge about working with the RHDH documentatio
    - Title name or path to master.adoc file
 
 3. **THEN:** Use the master workflow as the guide
-   - Create a TodoWrite following the sequence in cqa-master-workflow.md
+   - Create a TodoWrite following the sequence in cqa-main-workflow.md
    - Read individual CQA skills (.claude/skills/cqa-##-*.md) for detailed assessment
    - Run each step sequentially; respect the sequence order
 

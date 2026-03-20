@@ -16,11 +16,9 @@
 # Skips:
 #   - SNIPPET files
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa09_check() {
     local target="$1"
 
@@ -97,17 +95,6 @@ _cqa09_check() {
 
         # Clean and count
         abstract_text=$(echo "$abstract_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
-
-        # If abstract is a single attribute reference like {abstract}, resolve it
-        if [[ "$abstract_text" =~ ^\{([a-z][-a-z0-9]*)\}$ ]]; then
-            local attr_name="${BASH_REMATCH[1]}"
-            local attr_value
-            attr_value=$(grep -m1 "^:${attr_name}:" "$file" 2>/dev/null | sed "s/^:${attr_name}: *//" || true)
-            if [[ -n "$attr_value" ]]; then
-                abstract_text="$attr_value"
-            fi
-        fi
-
         local char_count=${#abstract_text}
 
         if [[ $char_count -lt 50 ]]; then
