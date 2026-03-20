@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh
+# cqa-15-redirects.sh
 # Checks if redirects are needed and in place (CQA #15)
 #
-# Usage: ./cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-15-redirects.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Detects renamed or moved files that may need redirects

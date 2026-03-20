@@ -55,7 +55,7 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 14. [No broken links](cqa-14-no-broken-links.md)
 
-15. [Redirects (if needed) are in place and work correctly](cqa-15-redirects-if-needed-are-in-place-and-work-correc.md)
+15. [Redirects (if needed) are in place and work correctly](cqa-15-redirects.md)
 
 
 ## Legal and Branding

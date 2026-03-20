@@ -6,16 +6,16 @@ When editing `.adoc` files, ALWAYS run the relevant CQA scripts to validate and 
 
 ```bash
 # Report issues for a title
-./build/scripts/cqa-XX-*.sh titles/<title>/master.adoc
+./build/scripts/cqa.sh titles/<title>/master.adoc
 
 # Auto-fix issues
-./build/scripts/cqa-XX-*.sh --fix titles/<title>/master.adoc
+./build/scripts/cqa.sh --fix titles/<title>/master.adoc
 
 # Run across all titles
-./build/scripts/cqa-XX-*.sh --all
+./build/scripts/cqa.sh --all
 
 # Auto-fix across all titles
-./build/scripts/cqa-XX-*.sh --fix --all
+./build/scripts/cqa.sh --fix --all
 ```
 
 Output markers: `[AUTOFIX]` (auto-fixable), `[FIXED]` (applied), `[MANUAL]` (needs human), `[-> CQA #NN]` (delegated).

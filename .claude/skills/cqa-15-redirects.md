@@ -11,13 +11,13 @@
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-15-redirects.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-15-redirects.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-15-redirects.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 
