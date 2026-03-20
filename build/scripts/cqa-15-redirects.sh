@@ -63,6 +63,7 @@ _cqa15_check() {
     if [[ "$needs_review" == false ]]; then
         cqa_file_pass "$target"
     fi
+    return 0
 }
 
 cqa_run_for_each_title _cqa15_check
