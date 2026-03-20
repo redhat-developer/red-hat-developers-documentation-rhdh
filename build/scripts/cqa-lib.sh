@@ -355,18 +355,18 @@ cqa_fail_autofix() {
         _CQA_TOTAL_FIXED=$((_CQA_TOTAL_FIXED + 1))
         if [[ "$CQA_FORMAT" == "checklist" ]]; then
             if [[ -n "$line" ]]; then
-                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} Line ${line}: ${fix_desc}"
+                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} ${file}: Line ${line}: ${fix_desc}"
             else
-                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} ${fix_desc}"
+                echo -e "- [x] ${_C_GREEN}[FIXED]${_C_NC} ${file}: ${fix_desc}"
             fi
         fi
     else
         _CQA_TOTAL_AUTOFIX=$((_CQA_TOTAL_AUTOFIX + 1))
         if [[ "$CQA_FORMAT" == "checklist" ]]; then
             if [[ -n "$line" ]]; then
-                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} Line ${line}: ${desc}"
+                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} ${file}: Line ${line}: ${desc}"
             else
-                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} ${desc}"
+                echo -e "- [ ] ${_C_YELLOW}[AUTOFIX]${_C_NC} ${file}: ${desc}"
             fi
         fi
     fi
@@ -387,9 +387,9 @@ cqa_fail_manual() {
 
     if [[ "$CQA_FORMAT" == "checklist" ]]; then
         if [[ -n "$line" ]]; then
-            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} Line ${line}: ${desc}"
+            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} ${file}: Line ${line}: ${desc}"
         else
-            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} ${desc}"
+            echo -e "- [ ] ${_C_RED}[MANUAL]${_C_NC} ${file}: ${desc}"
         fi
     fi
 
@@ -399,20 +399,30 @@ cqa_fail_manual() {
 }
 
 # Report a delegated issue (handled by another CQA script)
+# Args: file line target_cqa desc [fix_type]
+# fix_type: "autofix" (default) or "manual"
 cqa_delegated() {
     local file="${1:-$_CQA_CURRENT_FILE}"
     local line="${2:-}"
     local target_cqa="$3"
     local desc="$4"
+    local fix_type="${5:-autofix}"
 
     _cqa_ensure_file_header
     _CQA_TOTAL_DELEGATED=$((_CQA_TOTAL_DELEGATED + 1))
 
+    local fix_label
+    if [[ "$fix_type" == "manual" ]]; then
+        fix_label=" MANUAL"
+    else
+        fix_label=" AUTOFIX"
+    fi
+
     if [[ "$CQA_FORMAT" == "checklist" ]]; then
         if [[ -n "$line" ]]; then
-            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}]${_C_NC} Line ${line}: ${desc}"
+            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}${fix_label}]${_C_NC} ${file}: Line ${line}: ${desc}"
         else
-            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}]${_C_NC} ${desc}"
+            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}${fix_label}]${_C_NC} ${file}: ${desc}"
         fi
     fi
 

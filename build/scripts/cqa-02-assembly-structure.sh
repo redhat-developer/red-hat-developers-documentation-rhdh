@@ -108,9 +108,9 @@ _cqa02_check() {
                 intro=$(sed -n "$((abstract_ln + 1))p" "$file")
                 local intro_len=${#intro}
                 if [[ $intro_len -lt 50 ]]; then
-                    cqa_delegated "$file" "$((abstract_ln + 1))" "8" "Introduction too short (${intro_len} chars, recommend 50-300)"
+                    cqa_delegated "$file" "$((abstract_ln + 1))" "9" "Introduction too short (${intro_len} chars, recommend 50-300)" "manual"
                 elif [[ $intro_len -gt 300 ]]; then
-                    cqa_delegated "$file" "$((abstract_ln + 1))" "8" "Introduction too long (${intro_len} chars, recommend 50-300)"
+                    cqa_delegated "$file" "$((abstract_ln + 1))" "9" "Introduction too long (${intro_len} chars, recommend 50-300)" "manual"
                 fi
             fi
         fi

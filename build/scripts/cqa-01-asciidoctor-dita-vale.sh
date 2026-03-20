@@ -147,9 +147,9 @@ except: pass
         while IFS=$'\t' read -r file line check; do
             case "$check" in
                 AsciiDocDITA.ShortDescription*)
-                    cqa_delegated "$file" "$line" "8" "ShortDescription issue (run CQA #8)" ;;
+                    cqa_delegated "$file" "$line" "8" "ShortDescription issue (run CQA #8)" "manual" ;;
                 AsciiDocDITA.DocumentId*)
-                    cqa_delegated "$file" "$line" "10" "DocumentId issue (run CQA #10)" ;;
+                    cqa_delegated "$file" "$line" "10" "DocumentId issue (run CQA #10)" "manual" ;;
             esac
         done <<< "$issues_tsv"
 
@@ -170,23 +170,26 @@ try:
             check = i['Check']
             kind = 'autofix'
             target = ''
+            fix_type = 'autofix'
             if 'ShortDescription' in check:
                 kind = 'delegated'
                 target = '8'
+                fix_type = 'manual'
             elif 'DocumentId' in check:
                 kind = 'delegated'
                 target = '10'
+                fix_type = 'manual'
             elif check in ('AsciiDocDITA.DocumentTitle', 'AsciiDocDITA.TaskTitle',
                            'AsciiDocDITA.ConceptLink', 'AsciiDocDITA.AssemblyContents',
                            'AsciiDocDITA.RelatedLinks', 'AsciiDocDITA.ExampleBlock'):
                 kind = 'manual'
-            print(f\"{f}\t{i['Line']}\t{kind}\t{target}\t{check}: {i['Message']}\")
+            print(f\"{f}\t{i['Line']}\t{kind}\t{target}\t{fix_type}\t{check}: {i['Message']}\")
 except: pass
-" 2>/dev/null | while IFS=$'\t' read -r file line kind target message; do
+" 2>/dev/null | while IFS=$'\t' read -r file line kind target fix_type message; do
             case "$kind" in
                 autofix) cqa_fail_autofix "$file" "$line" "$message" ;;
                 manual)  cqa_fail_manual "$file" "$line" "$message" ;;
-                delegated) cqa_delegated "$file" "$line" "$target" "$message" ;;
+                delegated) cqa_delegated "$file" "$line" "$target" "$message" "$fix_type" ;;
             esac
         done
     else

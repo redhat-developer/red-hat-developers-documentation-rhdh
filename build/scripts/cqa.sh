@@ -116,7 +116,7 @@ if [[ "$CQA_ALL_MODE" == true ]]; then
         # Extract the CQA header line for the check name
         cqa_name=$(echo "$output" | grep "^## CQA #" | head -1 | sed 's/^## CQA #[0-9]*: //')
 
-        # Collect issue lines (AUTOFIX, MANUAL, FIXED, delegated)
+        # Collect issue lines (AUTOFIX, MANUAL, FIXED, delegated) — file path is included by cqa-lib.sh
         script_issues=$(echo "$output" | grep -E '^- \[ \] \[' | grep -E '\[AUTOFIX\]|\[MANUAL\]|\[-> CQA' || true)
 
         if [[ -z "$script_issues" ]]; then
@@ -126,13 +126,8 @@ if [[ "$CQA_ALL_MODE" == true ]]; then
             echo "- [ ] **CQA #${cqa_num}:** ${cqa_name}"
             failed=$((failed + 1))
 
-            # Group by issue description, count occurrences
-            echo "$script_issues" | sed 's/^- \[ \] //' | sort | uniq -c | sort -rn | while read -r count line; do
-                if [[ $count -gt 1 ]]; then
-                    echo "    - ${line} (${count} files)"
-                else
-                    echo "    - ${line}"
-                fi
+            echo "$script_issues" | sed 's/^- \[ \] //' | while IFS= read -r line; do
+                echo "    - ${line}"
             done
         fi
     done
