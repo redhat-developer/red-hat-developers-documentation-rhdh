@@ -3,8 +3,8 @@
 ## Content is grammatically correct and follows rules of American English grammar
 
 **References:**
-- [Red Hat Supplementary Style Guide](../resources/red-hat-ssg.md) - Grammar, style, terminology
-- [Red Hat Peer Review Guide](../resources/red-hat-peer-review.md) - Editorial quality standards
+- [Red Hat Supplementary Style Guide (CQA extract)](../resources/red-hat-ssg-for-cqa.md) - Grammar, style, terminology
+- [Red Hat Peer Review Guide (CQA extract)](../resources/red-hat-peer-review-for-cqa.md) - Editorial quality standards
 
 **Quality Level:** Required/non-negotiable
 
@@ -12,12 +12,28 @@ Content must follow American English grammar, Red Hat style standards: correct g
 
 **IMPORTANT:** Try hard to fix ALL Vale issues — errors, warnings, AND suggestions. Do not skip warnings or suggestions unless they are clearly false positives (e.g., code blocks, attributes.adoc). Every unfixed issue degrades content quality.
 
-## Command
+## Automated Validation and Fixing
 
-**Run grammar and style verification:**
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
+
 ```bash
-./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
+
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
 
 **What the script does:**
 - Runs Vale with `.vale.ini` config on all included files

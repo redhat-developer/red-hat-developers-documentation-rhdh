@@ -123,25 +123,28 @@ jobs:
             -level=warning
 
       - name: Post shellcheck summary as PR comment
-        if: always() && steps.changed-files.outputs.count > 0
+        if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.RHDH_BOT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const changedFilesCount = '${{ steps.changed-files.outputs.count }}';
+            const changedFilesCount = parseInt('${{ steps.changed-files.outputs.count }}', 10);
             const changedFiles = `${{ steps.changed-files.outputs.changed_files }}`.split('\n').filter(f => f);
 
-            let comment = '## 🐚 Shellcheck Analysis Results\n\n';
-            comment += `**Changed shell scripts in this PR:** ${changedFilesCount}\n\n`;
+            let comment = '## Shellcheck Analysis Results\n\n';
 
-            comment += '### Scripts analyzed:\n';
-            changedFiles.forEach(file => {
-              comment += `- \`${file}\`\n`;
-            });
-            comment += '\n';
-
-            comment += '💡 Check the **Files changed** tab for detailed shellcheck suggestions.\n\n';
-            comment += 'All findings are reported as warnings and won\'t block the PR.\n\n';
+            if (changedFilesCount > 0) {
+              comment += `**Changed shell scripts in this PR:** ${changedFilesCount}\n\n`;
+              comment += '### Scripts analyzed:\n';
+              changedFiles.forEach(file => {
+                comment += `- \`${file}\`\n`;
+              });
+              comment += '\n';
+              comment += 'Check the **Files changed** tab for detailed shellcheck suggestions.\n\n';
+              comment += 'All findings are reported as warnings and won\'t block the PR.\n\n';
+            } else {
+              comment += 'No shell scripts were changed in this PR.\n\n';
+            }
 
             comment += '---\n';
             comment += '*Automated shellcheck analysis • See [shellcheck.net](https://www.shellcheck.net/) for details*\n';
@@ -153,9 +156,9 @@ jobs:
               issue_number: context.issue.number,
             });
 
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Shellcheck Analysis Results')
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('Shellcheck Analysis Results')
             );
 
             if (botComment) {
@@ -165,7 +168,7 @@ jobs:
                 comment_id: botComment.id,
                 body: comment
               });
-            } else {
+            } else if (changedFilesCount > 0) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,

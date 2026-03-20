@@ -1,216 +1,124 @@
 #!/bin/bash
-# Verify short descriptions (abstracts) per CQA requirements #6 and #7
+# cqa-09-short-description-format.sh
+# Validates short description formatting (CQA #9)
 #
-# Usage: ./cqa-09-short-description-format.sh [--fix] <file-path>
-#   --fix:  Currently no automatic fixes available (validation only)
-#   file:   Processes the specified file and all its includes recursively
-#   Example: ./cqa-09-short-description-format.sh titles/install-rhdh-ocp/master.adoc
+# Usage: ./cqa-09-short-description-format.sh [--fix] [--all] <file-path>
 #
-# Requirements:
-# - Every module and assembly must have a single, concise introductory paragraph
-# - Mark with [role="_abstract"] immediately after the title
-# - Introduction should be 50-300 characters for AEM migration
-# - The [role="_abstract"] line cannot be followed by an empty line
+# Checks:
+#   - [role="_abstract"] marker present
+#   - No empty line after [role="_abstract"]
+#   - Abstract length: 50-300 characters
+#
+# Autofix:
+#   - Removes blank line after [role="_abstract"]
+#   - Inserts [role="_abstract"] marker when missing (before first paragraph after title)
+#
+# Skips:
+#   - SNIPPET files
 
-set -e
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
+cqa_parse_args "$0" "$@"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-cd "$REPO_ROOT"
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
+_cqa09_check() {
+    local target="$1"
 
-# Function to extract included files from a given file
-get_includes() {
-    local file="$1"
-    if [[ ! -f "$file" ]]; then
-        return
-    fi
+    cqa_header "9" "Verify Short Description Format" "$target"
 
-    # Extract include:: statements and resolve relative paths
-    grep "^include::" "$file" 2>/dev/null | sed 's/^include:://' | sed 's/\[.*//' | while read -r include_path; do
-        # Resolve relative path from file's directory
-        local dir
-        dir=$(dirname "$file")
-        local resolved_path
+    for file in "${_CQA_COLLECTED_FILES[@]}"; do
+        [[ "$file" != *.adoc ]] && continue
 
-        if [[ "$include_path" == /* ]]; then
-            resolved_path="$include_path"
-        elif [[ "$include_path" == ../* ]]; then
-            resolved_path="$dir/$include_path"
-        else
-            resolved_path="$dir/$include_path"
-        fi
+        local content_type
+        content_type=$(cqa_get_content_type "$file")
+        [[ -z "$content_type" ]] && continue
+        [[ "$content_type" == "SNIPPET" ]] && continue
 
-        # Normalize and make relative to repo root
-        if [[ -f "$resolved_path" ]]; then
-            # Make path relative to REPO_ROOT
-            # shellcheck disable=SC2269  # Intentional fallback to original path if realpath fails
-            resolved_path=$(realpath --relative-to="$REPO_ROOT" "$resolved_path" 2>/dev/null) || resolved_path="$resolved_path"
-            echo "$resolved_path"
-        fi
-    done
-}
+        cqa_file_start "$file"
 
-# Function to recursively collect all files to process
-collect_files() {
-    local file="$1"
-    local var_name="$2"
-
-    # Use eval to access the array by name
-    local current_files
-    eval "current_files=(\"\${${var_name}[@]}\")"
-
-    # Skip if already processed
-    for existing_file in "${current_files[@]}"; do
-        if [[ "$existing_file" == "$file" ]]; then
-            return
-        fi
-    done
-
-    # Add file to array
-    eval "${var_name}+=('$file')"
-
-    # Get includes and process recursively
-    while IFS= read -r included_file; do
-        collect_files "$included_file" "$var_name"
-    done < <(get_includes "$file")
-}
-
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Parse arguments
-FIX_MODE=false
-TARGET_FILE=""
-
-# shellcheck disable=SC2034
-for arg in "$@"; do
-    case "$arg" in
-        --fix) FIX_MODE=true ;;
-        *)
-            if [[ -z "$TARGET_FILE" ]]; then
-                TARGET_FILE="$arg"
+        # Check for [role="_abstract"]
+        if ! grep -q '^\[role="_abstract"\]' "$file"; then
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                # Find the first non-empty, non-metadata line after the title
+                local title_ln
+                title_ln=$(grep -n "^= " "$file" | head -1 | cut -d: -f1)
+                if [[ -n "$title_ln" ]]; then
+                    local insert_ln=$((title_ln + 1))
+                    local next_content
+                    next_content=$(sed -n "${insert_ln}p" "$file")
+                    # Skip past :context:, :attr:, blank lines, [id=...] etc.
+                    while [[ "$next_content" =~ ^: ]] || [[ -z "$next_content" ]] || [[ "$next_content" =~ ^\[id= ]] || [[ "$next_content" =~ ^ifdef:: ]]; do
+                        insert_ln=$((insert_ln + 1))
+                        next_content=$(sed -n "${insert_ln}p" "$file")
+                        # Safety: don't go past end of file
+                        [[ $insert_ln -gt $(wc -l < "$file") ]] && break
+                    done
+                    # Insert [role="_abstract"] before the first content line
+                    sed -i "${insert_ln}i\\[role=\"_abstract\"]" "$file"
+                    cqa_fail_autofix "$file" "$insert_ln" "Missing [role=\"_abstract\"] marker" "Inserted [role=\"_abstract\"] before first paragraph"
+                fi
             else
-                echo "Error: unexpected argument: $arg" >&2
-                echo "Usage: $0 [--fix] <file-path>" >&2
-                exit 1
+                cqa_fail_autofix "$file" "" "Missing [role=\"_abstract\"] marker" "Insert marker before first paragraph"
             fi
-            ;;
-    esac
-done
-
-if [[ -z "$TARGET_FILE" ]]; then
-    echo "Usage: $0 [--fix] <file-path>" >&2
-    echo "" >&2
-    echo "Examples:" >&2
-    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
-    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
-    exit 1
-fi
-
-if [[ ! -f "$TARGET_FILE" ]]; then
-    echo "Error: File not found: $TARGET_FILE" >&2
-    exit 1
-fi
-
-echo "=== CQA Requirements #6 & #7: Verify Short Descriptions ==="
-echo ""
-
-# Collect files to process
-FILES_TO_PROCESS=()
-echo "Processing file and includes: $TARGET_FILE"
-echo ""
-collect_files "$TARGET_FILE" FILES_TO_PROCESS
-
-VIOLATIONS=0
-CHECKED=0
-
-for file in "${FILES_TO_PROCESS[@]}"; do
-    # Extract content type
-    CONTENT_TYPE=$(grep "^:_mod-docs-content-type:" "$file" | sed 's/^:_mod-docs-content-type: *//' | sed 's/ *$//')
-
-    if [[ -z "$CONTENT_TYPE" ]]; then
-        continue
-    fi
-
-    # Skip snippets - they don't need abstracts
-    if [[ "$CONTENT_TYPE" == "SNIPPET" ]]; then
-        continue
-    fi
-
-    CHECKED=$((CHECKED + 1))
-
-    # Check for [role="_abstract"]
-    if ! grep -q '^\[role="_abstract"\]' "$file"; then
-        echo -e "${RED}✗${NC} $file"
-        echo "  Issue: Missing [role=\"_abstract\"] marker"
-        echo ""
-        VIOLATIONS=$((VIOLATIONS + 1))
-        continue
-    fi
-
-    # Get line number of [role="_abstract"]
-    ABSTRACT_LINE=$(grep -n '^\[role="_abstract"\]' "$file" | head -1 | cut -d: -f1)
-
-    # Check if next line is empty (violation)
-    NEXT_LINE=$((ABSTRACT_LINE + 1))
-    NEXT_LINE_CONTENT=$(sed -n "${NEXT_LINE}p" "$file")
-
-    if [[ -z "$NEXT_LINE_CONTENT" ]]; then
-        echo -e "${RED}✗${NC} $file"
-        echo "  Issue: Empty line after [role=\"_abstract\"] (abstract must start on next line)"
-        echo ""
-        VIOLATIONS=$((VIOLATIONS + 1))
-        continue
-    fi
-
-    # Extract abstract text (can be multi-line, ends at first empty line or next section)
-    ABSTRACT_TEXT=""
-    LINE_NUM=$NEXT_LINE
-    while true; do
-        LINE_CONTENT=$(sed -n "${LINE_NUM}p" "$file")
-        # Stop at empty line, section marker, or include statement
-        if [[ -z "$LINE_CONTENT" ]] || [[ "$LINE_CONTENT" =~ ^\. ]] || [[ "$LINE_CONTENT" =~ ^include:: ]]; then
-            break
+            continue
         fi
-        ABSTRACT_TEXT="${ABSTRACT_TEXT}${LINE_CONTENT} "
-        LINE_NUM=$((LINE_NUM + 1))
+
+        # Get line number of [role="_abstract"]
+        local abstract_line
+        abstract_line=$(grep -n '^\[role="_abstract"\]' "$file" | head -1 | cut -d: -f1)
+        local next_line=$((abstract_line + 1))
+        local next_content
+        next_content=$(sed -n "${next_line}p" "$file")
+
+        # Check if next line is empty (violation)
+        if [[ -z "$next_content" ]]; then
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                sed -i "${next_line}d" "$file"
+                cqa_fail_autofix "$file" "$next_line" "Empty line after [role=\"_abstract\"]" "Removed blank line"
+            else
+                cqa_fail_autofix "$file" "$next_line" "Empty line after [role=\"_abstract\"] (abstract must start on next line)"
+            fi
+            continue
+        fi
+
+        # Extract abstract text (can be multi-line, ends at first empty line or next section)
+        local abstract_text=""
+        local ln=$next_line
+        while true; do
+            local line_content
+            line_content=$(sed -n "${ln}p" "$file")
+            # Stop at empty line, section marker, or include statement
+            if [[ -z "$line_content" ]] || [[ "$line_content" =~ ^\. ]] || [[ "$line_content" =~ ^include:: ]]; then
+                break
+            fi
+            abstract_text="${abstract_text}${line_content} "
+            ln=$((ln + 1))
+        done
+
+        # Clean and count
+        abstract_text=$(echo "$abstract_text" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
+
+        # If abstract is a single attribute reference like {abstract}, resolve it
+        if [[ "$abstract_text" =~ ^\{([a-z][-a-z0-9]*)\}$ ]]; then
+            local attr_name="${BASH_REMATCH[1]}"
+            local attr_value
+            attr_value=$(grep -m1 "^:${attr_name}:" "$file" 2>/dev/null | sed "s/^:${attr_name}: *//" || true)
+            if [[ -n "$attr_value" ]]; then
+                abstract_text="$attr_value"
+            fi
+        fi
+
+        local char_count=${#abstract_text}
+
+        if [[ $char_count -lt 50 ]]; then
+            cqa_fail_manual "$file" "$next_line" "Abstract too short (${char_count} chars, minimum 50)"
+        elif [[ $char_count -gt 300 ]]; then
+            cqa_fail_manual "$file" "$next_line" "Abstract too long (${char_count} chars, maximum 300)"
+        else
+            cqa_file_pass "$file"
+        fi
     done
+}
 
-    # Remove leading/trailing whitespace and collapse multiple spaces
-    ABSTRACT_TEXT=$(echo "$ABSTRACT_TEXT" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
-
-    # Calculate character count (excluding AsciiDoc attributes)
-    # For character count, we need to consider rendered text
-    CHAR_COUNT=${#ABSTRACT_TEXT}
-
-    # Check character count (50-300 characters)
-    if [[ $CHAR_COUNT -lt 50 ]]; then
-        echo -e "${YELLOW}⚠${NC} $file"
-        echo "  Issue: Abstract too short ($CHAR_COUNT chars, minimum 50)"
-        echo "  Text: $ABSTRACT_TEXT"
-        echo ""
-        VIOLATIONS=$((VIOLATIONS + 1))
-    elif [[ $CHAR_COUNT -gt 300 ]]; then
-        echo -e "${YELLOW}⚠${NC} $file"
-        echo "  Issue: Abstract too long ($CHAR_COUNT chars, maximum 300)"
-        echo "  Text: ${ABSTRACT_TEXT:0:100}..."
-        echo ""
-        VIOLATIONS=$((VIOLATIONS + 1))
-    else
-        echo -e "${GREEN}✓${NC} $file ($CHAR_COUNT chars)"
-    fi
-
-done
-
-echo ""
-echo "=== Summary ==="
-echo "Files checked: $CHECKED"
-if [[ $VIOLATIONS -eq 0 ]]; then
-    echo -e "${GREEN}✓ All files have compliant short descriptions${NC}"
-    exit 0
-else
-    echo -e "${RED}✗ Found $VIOLATIONS violation(s)${NC}"
-    exit 1
-fi
+cqa_run_for_each_title _cqa09_check
+exit "$(cqa_exit_code)"

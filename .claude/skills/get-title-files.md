@@ -10,64 +10,28 @@ Many CQA requirements need to validate or process ALL files that make up a docum
 - All modules included by those assemblies
 - Recursively, all nested includes
 
-This helper provides a dedicated script to extract that complete file list for use in CQA validation commands.
+This functionality is integrated into `cqa-lib.sh` via `cqa_collect_files()`.
 
-## Script
+## Usage
 
-**Location:** [build/scripts/list-all-included-files-starting-from.sh](../../build/scripts/list-all-included-files-starting-from.sh)
-
-**Usage:**
-```bash
-./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc
-```
-
-**Output:** Space-separated list of all files (master.adoc + all recursively included files) on a single line
-
-**How it works:**
+All CQA scripts automatically use `cqa_collect_files()` when processing a title. The function:
 1. Starts from the specified file (e.g., master.adoc)
 2. Recursively extracts all `include::` statements
-3. Resolves relative paths (../) correctly
-4. Avoids infinite loops by tracking processed files
-5. Returns sorted, deduplicated list on a single line
-
-## Example Usage
-
-**For titles/install-rhdh-osd-gcp/master.adoc:**
+3. Resolves relative paths correctly
+4. Deduplicates by realpath (handles symlinks)
+5. Stores results in `_CQA_COLLECTED_FILES` array
 
 ```bash
-./build/scripts/list-all-included-files-starting-from.sh titles/install-rhdh-osd-gcp/master.adoc
+# In a CQA script (after sourcing cqa-lib.sh):
+cqa_collect_files "$target"
+for file in "${_CQA_COLLECTED_FILES[@]}"; do
+    # process each file
+done
 ```
 
-**Example output:**
-```
-/path/to/artifacts/attributes.adoc /path/to/modules/install-rhdh-osd-gcp/proc-install-product-on-osd-short-on-gcp-short-using-the-helm-chart.adoc /path/to/modules/install-rhdh-osd-gcp/proc-install-product-on-osd-short-on-gcp-short-using-the-operator.adoc titles/install-rhdh-osd-gcp/master.adoc
-```
+## When Used
 
-## Using with Vale
-
-**Vale DITA validation on title files:**
-```bash
-vale --config .vale-dita-only.ini \
-  $(./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc)
-```
-
-**Vale style validation on title files:**
-```bash
-vale --config .vale.ini \
-  $(./build/scripts/list-all-included-files-starting-from.sh titles/<title-name>/master.adoc)
-```
-
-## Notes
-
-- Recursively follows all `include::` statements
-- Handles relative paths (../) and absolute paths correctly
-- Avoids infinite loops by tracking already-processed files
-- Returns sorted, deduplicated list
-- Works with attribute substitution in include paths (dynamically resolves {platform-id}, {context}, etc.)
-
-## When to Use
-
-Use this helper for CQA requirements that need to validate all title content:
+Used by CQA requirements that validate all title content:
 - CQA #1: Vale DITA validation
 - CQA #8: Short description content
 - CQA #9: Short description format

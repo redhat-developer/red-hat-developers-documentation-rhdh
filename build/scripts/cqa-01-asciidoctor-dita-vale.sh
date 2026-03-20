@@ -1,115 +1,214 @@
 #!/bin/bash
-# cqa-01-asciidoctor-dita-vale.sh
-# Validates AsciiDoc DITA compliance using Vale (CQA #1)
+# cqa-01-asciidoctor-dita-vale.sh - Validates AsciiDoc DITA compliance using Vale (CQA #1)
+# Usage: ./cqa-01-asciidoctor-dita-vale.sh [--fix] [--all] [--output line|JSON] <file-path>
 #
-# Reference: .claude/skills/cqa-01-asciidoctor-dita-vale.md
+# Checks:
+#   - AsciiDoc DITA compliance via Vale with .vale-dita-only.ini
 #
-# Usage: ./cqa-01-asciidoctor-dita-vale.sh [--fix] <file-path>
+# Autofix:
+#   - AuthorLine: insert blank line after title
+#   - CalloutList: convert callout items to description list
+#   - BlockTitle: convert invalid block titles to lead-in sentences
+#   - TaskContents: add .Procedure before first numbered list
+#   - TaskStep: fix blank lines around steps
+#
+# Delegates:
+#   - ShortDescription -> CQA #8
+#   - DocumentId -> CQA #10
 
-set -e
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
+cqa_parse_args "$0" "$@"
 
-# Parse arguments
-FIX_MODE=false
-TARGET_FILE=""
+# shellcheck disable=SC2034  # Used by delegation framework
+CQA_DELEGATES_TO=("ShortDescription:8" "DocumentId:10")
 
-# shellcheck disable=SC2034
-for arg in "$@"; do
-    case "$arg" in
-        --fix) FIX_MODE=true ;;
-        *)
-            if [[ -z "$TARGET_FILE" ]]; then
-                TARGET_FILE="$arg"
-            else
-                echo "Error: unexpected argument: $arg" >&2
-                echo "Usage: $0 [--fix] <file-path>" >&2
-                exit 1
+[[ -f ".vale-dita-only.ini" ]] || { echo "Error: .vale-dita-only.ini not found" >&2; exit 1; }
+
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
+_cqa01_check() {
+    local target="$1"
+
+    cqa_header "1" "Vale AsciiDoc DITA Compliance" "$target"
+
+    # Collect files excluding attributes.adoc
+    local vale_files=()
+    for f in "${_CQA_COLLECTED_FILES[@]}"; do
+        [[ "$f" != *.adoc ]] && continue
+        [[ "$(basename "$f")" == "attributes.adoc" ]] && continue
+        vale_files+=("$f")
+    done
+
+    [[ ${#vale_files[@]} -gt 0 ]] || { echo "No files to validate."; return; }
+
+    cqa_file_start "$target"
+
+    # Legacy --output support for backward compat
+    if [[ "$CQA_OUTPUT_FORMAT" == "JSON" ]]; then
+        vale --config .vale-dita-only.ini --output JSON "${vale_files[@]}"
+        return $?
+    fi
+
+    # --- Fix mode ---
+    if [[ "$CQA_FIX_MODE" == true ]]; then
+        local vale_json
+        vale_json=$(vale --config .vale-dita-only.ini --output JSON "${vale_files[@]}" 2>/dev/null || true)
+
+        local issues_tsv
+        issues_tsv=$(echo "$vale_json" | python3 -c "
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    for f, issues in d.items():
+        for i in issues:
+            print(f\"{f}\t{i['Line']}\t{i['Check']}\")
+except: pass
+" 2>/dev/null)
+
+        # Fix AuthorLine
+        while IFS=$'\t' read -r file line check; do
+            [[ "$check" == "AsciiDocDITA.AuthorLine" ]] || continue
+            local title_ln=$((line - 1))
+            local title_content
+            title_content=$(sed -n "${title_ln}p" "$file")
+            if [[ "$title_content" == "= "* ]]; then
+                sed -i "${title_ln}a\\\\" "$file"
+                cqa_fail_autofix "$file" "$line" "AuthorLine: missing blank line after title" "Added blank line after title"
             fi
-            ;;
-    esac
-done
+        done <<< "$issues_tsv"
 
-if [[ -z "$TARGET_FILE" ]]; then
-    echo "Usage: $0 [--fix] <file-path>" >&2
-    echo "" >&2
-    echo "Examples:" >&2
-    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
-    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
-    exit 1
-fi
+        # Fix CalloutList
+        while IFS=$'\t' read -r file line check; do
+            [[ "$check" == "AsciiDocDITA.CalloutList" ]] || continue
+            local line_content
+            line_content=$(sed -n "${line}p" "$file")
+            if [[ "$line_content" =~ ^\<[0-9]+\>[[:space:]] ]]; then
+                sed -i "${line}s/^<\([0-9]*\)> /<\1>:: /" "$file"
+                cqa_fail_autofix "$file" "$line" "CalloutList: invalid format" "Converted to description list"
+            fi
+        done <<< "$issues_tsv"
 
-if [[ ! -f "$TARGET_FILE" ]]; then
-    echo "Error: File not found: $TARGET_FILE" >&2
-    exit 1
-fi
+        # Fix BlockTitle
+        while IFS=$'\t' read -r file line check; do
+            [[ "$check" == "AsciiDocDITA.BlockTitle" ]] || continue
+            local line_content
+            line_content=$(sed -n "${line}p" "$file")
+            local next_line
+            next_line=$(sed -n "$((line + 1))p" "$file")
+            # Skip if next line is a block delimiter (table, example, source, image)
+            if [[ "$next_line" == "|==="* || "$next_line" == "===="* || "$next_line" == "----"* || "$next_line" == "[source"* || "$next_line" == "image::"* ]]; then
+                cqa_fail_manual "$file" "$line" "BlockTitle before block element -- review manually"
+                continue
+            fi
+            if [[ "$line_content" == "."* ]]; then
+                local title_text="${line_content#.}"
+                sed -i "${line}s/^\..*/${title_text}:/" "$file"
+                cqa_fail_autofix "$file" "$line" "BlockTitle: invalid .Title format" "Converted to lead-in sentence"
+            fi
+        done <<< "$issues_tsv"
 
-if [[ ! -f ".vale-dita-only.ini" ]]; then
-    echo "Error: .vale-dita-only.ini configuration file not found" >&2
-    exit 1
-fi
+        # Fix TaskContents
+        while IFS=$'\t' read -r file line check; do
+            [[ "$check" == "AsciiDocDITA.TaskContents" ]] || continue
+            local first_ol
+            first_ol=$(grep -n '^\. ' "$file" | head -1 | cut -d: -f1)
+            if [[ -n "$first_ol" ]]; then
+                sed -i "$((first_ol))i\\\\.Procedure" "$file"
+                cqa_fail_autofix "$file" "$first_ol" "TaskContents: missing .Procedure" "Added .Procedure before line $first_ol"
+            fi
+        done <<< "$issues_tsv"
 
-# Get repository root
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || REPO_ROOT="."
+        # Fix TaskStep (process in reverse line order)
+        declare -A taskstep_files=()
+        while IFS=$'\t' read -r file line check; do
+            [[ "$check" == "AsciiDocDITA.TaskStep" ]] || continue
+            taskstep_files["$file"]+="$line "
+        done <<< "$issues_tsv"
+        for file in "${!taskstep_files[@]}"; do
+            for line in $(echo "${taskstep_files[$file]}" | tr ' ' '\n' | sort -rn); do
+                [[ -z "$line" ]] && continue
+                local prev_ln=$((line - 1))
+                local prev_content
+                prev_content=$(sed -n "${prev_ln}p" "$file")
+                if [[ -z "$prev_content" ]]; then
+                    local prev_prev_content
+                    prev_prev_content=$(sed -n "$((line - 2))p" "$file")
+                    if [[ "$prev_prev_content" == ".Procedure" ]]; then
+                        sed -i "${prev_ln}d" "$file"
+                        cqa_fail_autofix "$file" "$line" "TaskStep: blank line after .Procedure" "Removed blank line"
+                    else
+                        sed -i "${prev_ln}s/^$/+/" "$file"
+                        cqa_fail_autofix "$file" "$line" "TaskStep: detached from preceding step" "Attached with + continuation"
+                    fi
+                fi
+            done
+        done
 
-# Function to get all included files
-get_all_files() {
-    local file="$1"
-    "$REPO_ROOT/build/scripts/list-all-included-files-starting-from.sh" "$file"
+        # Handle delegated checks
+        while IFS=$'\t' read -r file line check; do
+            case "$check" in
+                AsciiDocDITA.ShortDescription*)
+                    cqa_delegated "$file" "$line" "8" "ShortDescription issue (run CQA #8)" "manual" ;;
+                AsciiDocDITA.DocumentId*)
+                    cqa_delegated "$file" "$line" "10" "DocumentId issue (run CQA #10)" "manual" ;;
+                *) ;;
+            esac
+        done <<< "$issues_tsv"
+
+        return 0
+    fi
+
+    # --- Report mode ---
+    if [[ "$CQA_FORMAT" == "json" ]]; then
+        local vale_json
+        vale_json=$(vale --config .vale-dita-only.ini --output JSON "${vale_files[@]}" 2>/dev/null || true)
+        # Parse and add to SARIF
+        echo "$vale_json" | python3 -c "
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    for f, issues in d.items():
+        for i in issues:
+            check = i['Check']
+            kind = 'autofix'
+            target = ''
+            fix_type = 'autofix'
+            if 'ShortDescription' in check:
+                kind = 'delegated'
+                target = '8'
+                fix_type = 'manual'
+            elif 'DocumentId' in check:
+                kind = 'delegated'
+                target = '10'
+                fix_type = 'manual'
+            elif check in ('AsciiDocDITA.DocumentTitle', 'AsciiDocDITA.TaskTitle',
+                           'AsciiDocDITA.ConceptLink', 'AsciiDocDITA.AssemblyContents',
+                           'AsciiDocDITA.RelatedLinks', 'AsciiDocDITA.ExampleBlock'):
+                kind = 'manual'
+            print(f\"{f}\t{i['Line']}\t{kind}\t{target}\t{fix_type}\t{check}: {i['Message']}\")
+except: pass
+" 2>/dev/null | while IFS=$'\t' read -r file line kind delegate_to fix_type message; do
+            case "$kind" in
+                autofix) cqa_fail_autofix "$file" "$line" "$message" ;;
+                manual)  cqa_fail_manual "$file" "$line" "$message" ;;
+                delegated) cqa_delegated "$file" "$line" "$delegate_to" "$message" "$fix_type" ;;
+            esac
+        done
+    else
+        local vale_output
+        vale_output=$(vale --config .vale-dita-only.ini --output line "${vale_files[@]}" 2>/dev/null || true)
+        if [[ -z "$vale_output" ]]; then
+            cqa_file_pass "$target"
+        else
+            local total_count
+            total_count=$(echo "$vale_output" | wc -l)
+            echo "$vale_output" | head -20
+            echo ""
+            cqa_fail_autofix "$target" "" "Vale found ${total_count} DITA compliance issues" "Run with --fix to auto-resolve"
+        fi
+    fi
+    return 0
 }
 
-echo "=== CQA #1: Validate AsciiDoc DITA Compliance with Vale ==="
-echo ""
-echo "Reference: .claude/skills/cqa-01-asciidoctor-dita-vale.md"
-echo "Config: .vale-dita-only.ini"
-echo ""
-
-# Get all files, excluding attributes.adoc (defines attribute values
-# using literal product names, which triggers false positives)
-ALL_FILES=$(get_all_files "$TARGET_FILE" | tr ' ' '\n' | grep -v '/attributes\.adoc$' | tr '\n' ' ')
-
-if [[ -z "$ALL_FILES" ]]; then
-    echo "Error: No files found to validate" >&2
-    exit 1
-fi
-
-# Count files
-FILE_COUNT=$(echo "$ALL_FILES" | wc -w)
-echo "Validating $FILE_COUNT file(s)..."
-echo ""
-
-# Run Vale with DITA-only config (JSON output for easy parsing)
-# Note: Vale exit codes:
-#   0 = no errors
-#   1 = errors found
-#   2 = usage error
-# shellcheck disable=SC2086
-vale --config .vale-dita-only.ini --output JSON $ALL_FILES
-VALE_EXIT=$?
-
-echo ""
-echo "=== Summary ==="
-
-if [[ $VALE_EXIT -eq 0 ]]; then
-    echo "✓ All files pass AsciiDoc DITA validation"
-    echo ""
-    echo "Target: 0 errors, acceptable warnings only"
-    echo "See .claude/skills/cqa-01-asciidoctor-dita-vale.md for acceptable warning types"
-    exit 0
-elif [[ $VALE_EXIT -eq 1 ]]; then
-    echo "✗ Vale found issues (see output above)"
-    echo ""
-    echo "Required: 0 errors"
-    echo ""
-    echo "All warnings must be fixed. Common fixes:"
-    echo "  - AsciiDocDITA.BlockTitle: In ref modules use == headings; in procs restructure"
-    echo "  - AsciiDocDITA.CalloutList: Replace callouts with inline comments"
-    echo "  - AsciiDocDITA.ConceptLink: Move inline links to .Additional resources"
-    echo "  - AsciiDocDITA.DocumentId: Add [id=\"{context}\"] before heading in master.adoc"
-    echo "  - AsciiDocDITA.RelatedLinks: .Additional resources must be link-only (no prose)"
-    echo "  - AsciiDocDITA.TaskStep: Split description lists into separate procedures"
-    echo ""
-    echo "See .claude/skills/cqa-01-asciidoctor-dita-vale.md for details"
-    exit 1
-else
-    echo "✗ Vale encountered an error (exit code: $VALE_EXIT)"
-    exit $VALE_EXIT
-fi
+cqa_run_for_each_title _cqa01_check
+exit "$(cqa_exit_code)"

@@ -13,6 +13,8 @@ on:
       - 'assemblies/**'
       - 'modules/**'
       - 'artifacts/**'
+      - 'images/**'
+      - 'build/scripts/**'
     branches:
       - main
       - rhdh-1.**
@@ -60,11 +62,11 @@ jobs:
         id: check
         run: |
           if [[ "${{ needs.check-commit-author.outputs.is_authorized }}" == "true" ]]; then
-            echo "✓ Commit author is in rhdh team - using internal environment"
+            echo "Commit author is in rhdh team - using internal environment"
           elif [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
-            echo "✓ Internal PR (not from fork) - using internal environment"
+            echo "Internal PR (not from fork) - using internal environment"
           else
-            echo "✓ External PR from fork from non-rhdh team member - using external environment for security"
+            echo "External PR from fork from non-rhdh team member - using external environment for security"
           fi
 
   cqa-check:
@@ -75,214 +77,79 @@ jobs:
       contents: read
       pull-requests: write
       checks: write
+      security-events: write
     steps:
-      - name: Checkout base branch to get trusted scripts
+      - name: Checkout main branch for trusted scripts
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          ref: ${{ github.event.pull_request.base.ref }}
+          ref: main
           path: trusted-scripts
+          sparse-checkout: build/scripts
 
-      - name: Checkout PR branch for content to check
+      - name: Checkout PR branch for content
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           path: pr-content
 
-      - name: Setup reviewdog
-        uses: reviewdog/action-setup@19ad6fc8b7358ccdc9fd4a25c75dd93eeb097e1e # v1
-        with:
-          reviewdog_version: latest
+      - name: Copy trusted scripts into PR content
+        run: |
+          cp trusted-scripts/build/scripts/cqa-lib.sh pr-content/build/scripts/cqa-lib.sh
+          cp trusted-scripts/build/scripts/cqa.sh pr-content/build/scripts/cqa.sh
+          for script in trusted-scripts/build/scripts/cqa-[0-9]*.sh; do
+            cp "$script" "pr-content/build/scripts/$(basename "$script")"
+          done
+          chmod +x pr-content/build/scripts/cqa*.sh
 
-      - name: Get changed .adoc files
-        id: changed-files
+      - name: Run CQA checks (checklist)
+        id: cqa-checklist
         run: |
           cd pr-content
-          # Get list of changed .adoc files
-          git fetch origin ${{ github.base_ref }}
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.adoc$' || echo "")
-          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          # Count changed files
-          if [ -n "$CHANGED_FILES" ]; then
-            COUNT=$(echo "$CHANGED_FILES" | wc -l)
-          else
-            COUNT=0
-          fi
-          echo "count=$COUNT" >> $GITHUB_OUTPUT
-
-      - name: Run orphaned modules check
-        id: orphaned-check
-        run: |
-          # Copy trusted script from base branch
-          cp trusted-scripts/build/scripts/fix-orphaned-modules.sh pr-content/build/scripts/fix-orphaned-modules.sh
-          cd pr-content
-          chmod +x build/scripts/fix-orphaned-modules.sh
-
-          # Capture output
-          OUTPUT=$(./build/scripts/fix-orphaned-modules.sh 2>&1)
-
-          # Extract orphaned files count
-          ORPHANED_COUNT=$(echo "$OUTPUT" | grep "Orphaned files found:" | awk '{print $4}')
-          echo "orphaned_count=$ORPHANED_COUNT" >> $GITHUB_OUTPUT
-
-          # Save full output for comment
+          OUTPUT=$(./build/scripts/cqa.sh --all 2>&1 || true)
           echo "output<<EOF" >> $GITHUB_OUTPUT
           echo "$OUTPUT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Apply content type fixes and generate suggestions
-        id: content-type-fixes
-        if: steps.changed-files.outputs.count > 0
-        run: |
-          # Copy trusted script from base branch
-          cp trusted-scripts/build/scripts/cqa-03-content-is-modularized.sh pr-content/build/scripts/cqa-03-content-is-modularized.sh
-          cd pr-content
-          chmod +x build/scripts/cqa-03-content-is-modularized.sh
-
-          # Apply fixes to changed files
-          while IFS= read -r file; do
-            if [ -n "$file" ] && [ -f "$file" ]; then
-              ./build/scripts/cqa-03-content-is-modularized.sh "$file" >/dev/null 2>&1 || true
-            fi
-          done <<< "${{ steps.changed-files.outputs.changed_files }}"
-
-          # Generate diff for reviewdog
-          git diff > /tmp/content-type.diff
-
-          # Check if there are changes
-          if [ -s /tmp/content-type.diff ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Reset changes (don't commit)
-          git checkout .
-
-      - name: Post content type suggestions via reviewdog
-        if: steps.content-type-fixes.outputs.has_changes == 'true'
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
+      - name: Run CQA checks (SARIF)
+        id: cqa-sarif
         run: |
           cd pr-content
-          cat /tmp/content-type.diff | reviewdog -f=diff -f.diff.strip=0 \
-            -name="CQA: Content Type" \
-            -reporter=github-pr-review \
-            -filter-mode=nofilter \
-            -fail-on-error=false \
-            -level=warning
+          ./build/scripts/cqa.sh --all --format json > ${{ github.workspace }}/cqa-results.sarif 2>/dev/null || true
 
-      - name: Apply title/ID/filename fixes and generate suggestions
-        id: title-fixes
-        if: steps.changed-files.outputs.count > 0
-        run: |
-          # Copy trusted script from base branch
-          cp trusted-scripts/build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh pr-content/build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh
-          cd pr-content
-          chmod +x build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: cqa-results.sarif
+          category: content-quality-assessment
+        continue-on-error: true
 
-          # Apply fixes to changed assemblies/modules/titles
-          while IFS= read -r file; do
-            if [ -n "$file" ] && [ -f "$file" ]; then
-              if [[ "$file" =~ (assemblies|modules|titles) ]]; then
-                ./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh "$file" >/dev/null 2>&1 || true
-              fi
-            fi
-          done <<< "${{ steps.changed-files.outputs.changed_files }}"
-
-          # Generate diff for reviewdog (only content changes, not file renames)
-          git diff > /tmp/title-fixes.diff
-
-          # Check if there are changes
-          if [ -s /tmp/title-fixes.diff ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-
-          # Reset changes (don't commit)
-          git checkout .
-
-      - name: Post title/ID/filename suggestions via reviewdog
-        if: steps.title-fixes.outputs.has_changes == 'true'
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
-        run: |
-          cd pr-content
-          cat /tmp/title-fixes.diff | reviewdog -f=diff -f.diff.strip=0 \
-            -name="CQA: Title/ID/Filename" \
-            -reporter=github-pr-review \
-            -filter-mode=nofilter \
-            -fail-on-error=false \
-            -level=warning
-
-      - name: Post CQA summary as PR comment
+      - name: Post CQA checklist as PR comment
         if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.RHDH_BOT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const orphanedCount = '${{ steps.orphaned-check.outputs.orphaned_count }}' || '0';
-            const contentTypeChanged = '${{ steps.content-type-fixes.outputs.has_changes }}' === 'true';
-            const titleChanged = '${{ steps.title-fixes.outputs.has_changes }}' === 'true';
-            const changedFilesCount = '${{ steps.changed-files.outputs.count }}';
+            const cqaOutput = `${{ steps.cqa-checklist.outputs.output }}`;
 
-            let comment = '## 📋 Content Quality Assessment Results\n\n';
-            comment += `**Changed .adoc files in this PR:** ${changedFilesCount}\n\n`;
-
-            // Orphaned modules check
-            comment += '### 🗑️ Orphaned Modules Check\n';
-            if (orphanedCount === '0') {
-              comment += '✅ No orphaned files found\n\n';
-            } else {
-              comment += `⚠️ Found **${orphanedCount}** orphaned file(s)\n\n`;
-              comment += '<details>\n<summary>Click to view orphaned files</summary>\n\n```\n';
-              comment += `${{ steps.orphaned-check.outputs.output }}`;
-              comment += '\n```\n</details>\n\n';
-              comment += '💡 To delete orphaned files, run:\n```bash\n./build/scripts/fix-orphaned-modules.sh --execute\n```\n\n';
-            }
-
-            // Content type check
-            comment += '### 📝 Content Type Validation\n';
-            if (changedFilesCount === '0') {
-              comment += 'ℹ️ No .adoc files changed in this PR\n\n';
-            } else if (!contentTypeChanged) {
-              comment += '✅ All changed files have correct content type metadata\n\n';
-            } else {
-              comment += '💡 **Code suggestions posted** for content type fixes\n';
-              comment += 'Click "View changes" in the Files tab to see and apply suggestions\n\n';
-            }
-
-            // Title/ID/filename alignment check
-            comment += '### 🏷️ Title/ID/Filename Alignment\n';
-            if (changedFilesCount === '0') {
-              comment += 'ℹ️ No .adoc files changed in this PR\n\n';
-            } else if (!titleChanged) {
-              comment += '✅ All changed files have aligned title/ID/filename\n\n';
-            } else {
-              comment += '💡 **Code suggestions posted** for title/ID/filename alignment\n';
-              comment += 'Click "View changes" in the Files tab to see and apply suggestions\n\n';
-              comment += '⚠️ Note: File renames must be done manually using `git mv`\n\n';
-            }
-
-            // Footer
+            let comment = '## Content Quality Assessment Results\n\n';
+            comment += '```\n';
+            comment += cqaOutput;
+            comment += '\n```\n\n';
             comment += '---\n';
-            comment += '*Automated CQA check • See [CQA.md](../blob/main/CQA.md) for manual verification steps*\n';
+            comment += '*Automated CQA check run on the entire repository*\n';
 
-            // Find existing CQA comment
+            // Find existing CQA comment and update or create
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
 
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Content Quality Assessment Results')
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('Content Quality Assessment Results')
             );
 
             if (botComment) {

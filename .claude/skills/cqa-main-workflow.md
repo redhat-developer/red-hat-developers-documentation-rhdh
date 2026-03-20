@@ -1,6 +1,6 @@
-# CQA 2.1 Master Workflow
+# CQA 2.1 Main Workflow
 
-Execute all 17 CQA requirements in optimal order. Each links to detailed skill with commands, criteria, and fixes.
+Execute all 19 CQA requirements in optimal order. Each links to detailed skill with commands, criteria, and fixes.
 
 **CRITICAL EXECUTION RULES:**
 1. **Run skills in the exact order listed** - The sequence is optimized to minimize conflicts
@@ -21,16 +21,47 @@ Execute all 17 CQA requirements in optimal order. Each links to detailed skill w
 
 ---
 
+## Unified Script Interface
+
+Run all 19 CQA checks in workflow order with `cqa.sh`:
+
+```bash
+# Run all checks for a title
+./build/scripts/cqa.sh titles/<your-title>/master.adoc
+
+# Auto-fix all checks for a title
+./build/scripts/cqa.sh --fix titles/<your-title>/master.adoc
+
+# Run all checks across all titles
+./build/scripts/cqa.sh --all
+```
+
+Or run individual scripts (all share a common interface via `cqa-lib.sh`):
+
+```bash
+./build/scripts/cqa-XX-*.sh [--fix] [--all] titles/<your-title>/master.adoc
+```
+
+**Output markers:**
+- `[AUTOFIX]` - Can be auto-fixed with `--fix`
+- `[FIXED]` - Was auto-fixed (in `--fix` mode)
+- `[MANUAL]` - Requires human judgment
+- `[-> CQA #NN AUTOFIX]` / `[-> CQA #NN MANUAL]` - Delegated to another CQA script
+
+---
+
 ## Process
 
 **For each requirement below:** Run validation/fixes until no new changes occur. **For the entire sequence:** Re-run all requirements until the full workflow is stable.
 
+- [ ] **CQA #0:** Orphaned modules — `cqa-00-orphaned-modules.sh` — Find/delete unreferenced files
+- [ ] **CQA #0:** Directory structure — `cqa-00-directory-structure.sh` — Verify `<category>_<context>` naming
 - [ ] Resources current. [Update all resources](update-all-resources.md)
 - [ ] **CQA #3:** [Content is modularized](cqa-03-content-is-modularized.md) - Modular structure, correct metadata/prefixes
 - [ ] **CQA #13:** [Correct content type](cqa-13-information-is-conveyed-using-the-correct-content.md) - Content matches declared type
+- [ ] **CQA #10:** [Titles](cqa-10-titles-are-brief-complete-and-descriptive.md) - Brief, complete, descriptive; renames files/IDs
 - [ ] **CQA #8:** [Short description content](cqa-08-short-description-content.md) - WHY user should read, benefit-focused
 - [ ] **CQA #9:** [Short description format](cqa-09-short-description-format.md) - `[role="_abstract"]`, 50-300 chars
-- [ ] **CQA #10:** [Titles](cqa-10-titles-are-brief-complete-and-descriptive.md) - Brief, complete, descriptive
 - [ ] **CQA #11:** [Prerequisites](cqa-11-procedures-prerequisites.md) - `.Prerequisites` label, max 10 items, completed states
 - [ ] **CQA #2:** [Assembly structure](cqa-02-assembly-structure.md) - Introduction + includes only
 - [ ] **CQA #5:** [Required elements](cqa-05-modular-elements-checklist.md) - All mandatory elements present
@@ -42,30 +73,31 @@ Execute all 17 CQA requirements in optimal order. Each links to detailed skill w
 - [ ] **CQA #12:** [Grammar](cqa-12-content-is-grammatically-correct-and-follows-rules.md) - 0 errors, American English
 - [ ] **CQA #17:** [Disclaimers](cqa-17-includes-appropriate-legal-approved-disclaimers-f.md) - Legal-approved for Tech/Dev Preview
 - [ ] **CQA #14:** [No broken links](cqa-14-no-broken-links.md) - All xrefs/external links valid, build succeeds
-- [ ] **CQA #15:** [Redirects](cqa-15-redirects-if-needed-are-in-place-and-work-correc.md) - Redirects in place if needed
+- [ ] **CQA #15:** [Redirects](cqa-15-redirects.sh) - Redirects in place if needed
 
 ---
 
 ## Completion
 
-**All 17 Requirements:**
-- [ ] CQA #1: Vale DITA ✓
-- [ ] CQA #2: Assembly structure ✓
-- [ ] CQA #3: Modularized ✓
-- [ ] CQA #4: Templates ✓
-- [ ] CQA #5: Required elements ✓
-- [ ] CQA #6: One story ✓
-- [ ] CQA #7: TOC depth ✓
-- [ ] CQA #8: Short desc content ✓
-- [ ] CQA #9: Short desc format ✓
-- [ ] CQA #10: Titles ✓
-- [ ] CQA #11: Prerequisites ✓
-- [ ] CQA #12: Grammar ✓
-- [ ] CQA #13: Content type ✓
-- [ ] CQA #14: No broken links ✓
-- [ ] CQA #15: Redirects ✓
-- [ ] CQA #16: Product names ✓
-- [ ] CQA #17: Disclaimers ✓
+**All 18 Requirements:**
+- [ ] CQA #0: Orphaned modules
+- [ ] CQA #1: Vale DITA
+- [ ] CQA #2: Assembly structure
+- [ ] CQA #3: Modularized
+- [ ] CQA #4: Templates
+- [ ] CQA #5: Required elements
+- [ ] CQA #6: One story
+- [ ] CQA #7: TOC depth
+- [ ] CQA #8: Short desc content
+- [ ] CQA #9: Short desc format
+- [ ] CQA #10: Titles
+- [ ] CQA #11: Prerequisites
+- [ ] CQA #12: Grammar
+- [ ] CQA #13: Content type
+- [ ] CQA #14: No broken links
+- [ ] CQA #15: Redirects
+- [ ] CQA #16: Product names
+- [ ] CQA #17: Disclaimers
 
 **Final Steps:**
 - [ ] All automation scripts run
@@ -73,13 +105,13 @@ Execute all 17 CQA requirements in optimal order. Each links to detailed skill w
 - [ ] Commit with JIRA reference
 - [ ] PR created
 
-**CRITICAL:** Do not claim completion unless ALL checkboxes marked ✓
+**CRITICAL:** Do not claim completion unless ALL checkboxes marked
 
 ---
 
 ## Assessment
 
-**Title:** _____ | **JIRA:** RHIDP-_____ | **Status:** ⬜ In Progress | ⬜ Complete | ⬜ Blocked
+**Title:** _____ | **JIRA:** RHIDP-_____ | **Status:** In Progress | Complete | Blocked
 
 **Results:**
 - Vale DITA: _____ errors, _____ warnings
