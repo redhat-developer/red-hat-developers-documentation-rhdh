@@ -13,11 +13,14 @@
 #
 # Autofix (--fix): Deletes orphaned files (git rm if tracked, rm otherwise)
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 
 # Custom arg parsing: accept standard flags but don't require a target file
 CQA_FIX_MODE=false
+# shellcheck disable=SC2034  # CQA_FORMAT/CQA_FIX_MODE used by cqa-lib output functions
 CQA_FORMAT="checklist"
+# shellcheck disable=SC2034
 for arg in "$@"; do
     case "$arg" in
         --fix)         CQA_FIX_MODE=true ;;
@@ -25,7 +28,6 @@ for arg in "$@"; do
         --format=*)    CQA_FORMAT="${arg#--format=}" ;;
         --format)      ;; # next arg handled below
         checklist|json)
-            # Could be the value after --format
             if [[ "${_prev_arg:-}" == "--format" ]]; then
                 CQA_FORMAT="$arg"
             fi

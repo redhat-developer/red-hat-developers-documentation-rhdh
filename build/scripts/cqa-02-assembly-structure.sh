@@ -17,23 +17,27 @@
 # Autofix: content type, context save/restore, ID suffix, :context:, prerequisites heading,
 #          additional resources format
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# Helper: get line number of first match
+# shellcheck disable=SC2329
 _lineno() { grep -n "$1" "$2" 2>/dev/null | head -1 | cut -d: -f1; }
 
+# shellcheck disable=SC2329
 _fix_content_type_first_line() {
     local file="$1"
     sed -i '/^:_mod-docs-content-type:/d' "$file"
     sed -i '1s/^/:_mod-docs-content-type: ASSEMBLY\n/' "$file"
 }
 
+# shellcheck disable=SC2329
 _fix_add_context_save() {
     local file="$1"
     sed -i '1a\ifdef::context[:parent-context: {context}]' "$file"
 }
 
+# shellcheck disable=SC2329
 _fix_add_context_restore() {
     local file="$1"
     sed -i '/^ifdef::parent-context\[:context: {parent-context}\]$/d' "$file"
@@ -42,6 +46,7 @@ _fix_add_context_restore() {
     printf '\nifdef::parent-context[:context: {parent-context}]\nifndef::parent-context[:!context:]\n' >> "$file"
 }
 
+# shellcheck disable=SC2329
 _fix_context_line() {
     local file="$1" title_ln="$2"
     sed -i '/^:context:/d' "$file"
@@ -52,6 +57,7 @@ _fix_context_line() {
     fi
 }
 
+# shellcheck disable=SC2329
 _cqa02_check() {
     local target="$1"
 
@@ -74,7 +80,8 @@ _cqa02_check() {
         [[ -f "$file" ]] || continue
 
         cqa_file_start "$file"
-        local is_master=$([[ "$(basename "$file")" == "master.adoc" ]] && echo true || echo false)
+        local is_master
+        is_master=$([[ "$(basename "$file")" == "master.adoc" ]] && echo true || echo false)
 
         # Check 1: Content type on first line
         local first_line
@@ -205,7 +212,6 @@ _cqa02_check() {
         fi
 
         # Check 9: Additional resources format
-        local need_ar_fix=false
         if grep -q "^\.Additional resources" "$file"; then
             local ar_ln
             ar_ln=$(_lineno "^\.Additional resources" "$file")

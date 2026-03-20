@@ -18,9 +18,11 @@
 # Skips:
 #   - SNIPPET files, attributes.adoc, master.adoc
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa13_check() {
     local target="$1"
 
@@ -100,7 +102,8 @@ _cqa13_check() {
             if [[ "$CQA_FIX_MODE" == true ]]; then
                 # Auto-rename: strip existing prefix, add correct one
                 local new_basename="${expected_prefix}${basename_file#*-}"
-                local new_file="$(dirname "$file")/${new_basename}.adoc"
+                local new_file
+                new_file="$(dirname "$file")/${new_basename}.adoc"
                 if [[ "$file" != "$new_file" ]]; then
                     git mv "$file" "$new_file" 2>/dev/null || mv "$file" "$new_file"
                     # Update include statements across the repo

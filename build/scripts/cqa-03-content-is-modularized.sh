@@ -11,10 +11,11 @@
 #   - Adds/fixes content type metadata
 #   - Normalizes section list formatting
 
+# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# Detect content type from file content and filename
+# shellcheck disable=SC2329  # Helper functions invoked from _cqa03_check
 _detect_content_type() {
     local file="$1"
     local bn
@@ -40,19 +41,19 @@ _detect_content_type() {
     esac
 }
 
-# Count occurrences of content type metadata
+# shellcheck disable=SC2329
 _count_type_occurrences() {
     grep -c "^:_mod-docs-content-type:" "$1" 2>/dev/null || echo "0"
 }
 
-# Fix content type metadata
+# shellcheck disable=SC2329
 _fix_content_type() {
     local file="$1" type="$2"
     sed -i '/^:_mod-docs-content-type:/d' "$file"
     sed -i "1s/^/:_mod-docs-content-type: ${type}\n\n/" "$file"
 }
 
-# Fix list formatting in a section (.Procedure or .Verification)
+# shellcheck disable=SC2329
 _fix_section_lists() {
     local file="$1" section="$2"
 
@@ -100,6 +101,7 @@ _fix_section_lists() {
     return 0
 }
 
+# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa03_check() {
     local target="$1"
 
