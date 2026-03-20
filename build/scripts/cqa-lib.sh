@@ -153,7 +153,7 @@ _cqa_discover_all_titles() {
 }
 
 # ── File discovery ──
-# Replaces both list-all-included-files-starting-from.sh and custom collect_files()
+# Replaces list-all-included-files-starting-from.sh and custom collect_files()
 # Uses realpath dedup to handle symlinks correctly
 
 declare -A _CQA_SEEN_FILES=()

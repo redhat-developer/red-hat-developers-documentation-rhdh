@@ -2,7 +2,7 @@
 
 ## CQA Compliance
 
-When editing `.adoc` files, ALWAYS run the relevant CQA scripts to validate and fix changes before considering the task done. Run all 17 checks at once with `build/scripts/cqa.sh`, or run individual scripts. All share a common interface via `build/scripts/cqa-lib.sh`:
+When editing `.adoc` files, ALWAYS run the relevant CQA scripts to validate and fix changes before considering the task done. Run all 19 checks at once with `build/scripts/cqa.sh`, or run individual scripts. All share a common interface via `build/scripts/cqa-lib.sh`:
 
 ```bash
 # Report issues for a title

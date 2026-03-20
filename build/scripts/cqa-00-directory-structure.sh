@@ -25,12 +25,10 @@
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 
-readonly _SHARED_DIR="shared"
-
 # Custom arg parsing: accept standard flags plus optional positional args for single-title mode
 CQA_FIX_MODE=false
 # shellcheck disable=SC2034  # CQA_FORMAT used by cqa-lib output functions
-CQA_FORMAT="$_CQA_FMT_CHECKLIST"
+CQA_FORMAT="checklist"
 _TITLE_ARG=""
 _CONTEXT_ARG=""
 # shellcheck disable=SC2034
@@ -61,23 +59,19 @@ done
 # ── Helpers ──
 
 slugify_category() {
-    local input="$1"
-    echo "$input" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g'
+    echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g'
 }
 
 read_category() {
-    local file="$1"
-    grep -m1 '^:_mod-docs-category:' "$file" 2>/dev/null | sed 's/^:_mod-docs-category: //'
+    grep -m1 '^:_mod-docs-category:' "$1" 2>/dev/null | sed 's/^:_mod-docs-category: //'
 }
 
 read_title() {
-    local file="$1"
-    grep -m1 '^:title:' "$file" 2>/dev/null | sed 's/^:title: //'
+    grep -m1 '^:title:' "$1" 2>/dev/null | sed 's/^:title: //'
 }
 
 read_context() {
-    local file="$1"
-    grep -m1 '^:context:' "$file" 2>/dev/null | sed 's/^:context: *//' | sed 's/ *$//'
+    grep -m1 '^:context:' "$1" 2>/dev/null | sed 's/^:context: *//' | sed 's/ *$//'
 }
 
 resolve_local_attrs() {
@@ -164,7 +158,6 @@ move_dir_contents() {
         fi
     done
     rmdir "$src" 2>/dev/null || true
-    return 0
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -242,7 +235,7 @@ if [[ -n "$_TITLE_ARG" ]]; then
 
     if [[ -n "$MODULE_DIRS" ]]; then
         while IFS= read -r mod_dir; do
-            [[ -z "$mod_dir" || "$mod_dir" == "$NEW_DIR" || "$mod_dir" == "$_SHARED_DIR" ]] && continue
+            [[ -z "$mod_dir" || "$mod_dir" == "$NEW_DIR" || "$mod_dir" == "shared" ]] && continue
             if [[ -d "modules/$mod_dir" ]]; then
                 if [[ -d "modules/$NEW_DIR" ]]; then
                     for f in "modules/$mod_dir"/*; do
@@ -355,7 +348,7 @@ for master in titles/*/master.adoc; do
     ctx="${DIR_CTX[$d]:-}"
     [[ -z "$ctx" ]] && continue
     while IFS= read -r md; do
-        [[ -z "$md" || "$md" == "$_SHARED_DIR" ]] && continue
+        [[ -z "$md" || "$md" == "shared" ]] && continue
         MOD_DIR_OWNERS["$md"]="${MOD_DIR_OWNERS[$md]:-} $ctx"
     done < <(grep -v '^//' "$master" 2>/dev/null | grep -oP 'include::modules/\K[^/]+' | sort -u || true)
 done
@@ -364,7 +357,7 @@ for af in "${!ASM_FILE_OWNERS[@]}"; do
     [[ -f "assemblies/$af" ]] || continue
     owners="${ASM_FILE_OWNERS[$af]}"
     while IFS= read -r md; do
-        [[ -z "$md" || "$md" == "$_SHARED_DIR" ]] && continue
+        [[ -z "$md" || "$md" == "shared" ]] && continue
         MOD_DIR_OWNERS["$md"]="${MOD_DIR_OWNERS[$md]:-} $owners"
     done < <(grep -v '^//' "assemblies/$af" 2>/dev/null | grep -oP 'include::(\.\.\/)?modules/\K[^/]+' | sort -u || true)
 done
@@ -400,9 +393,9 @@ _compute_dest() {
     done
 
     if $all_same; then
-        echo "${first_cat}_${_SHARED_DIR}"
+        echo "${first_cat}_shared"
     else
-        echo "$_SHARED_DIR"
+        echo "shared"
     fi
 }
 
@@ -423,7 +416,7 @@ declare -A ASM_DIR_DEST
 for asm_dir in assemblies/*/; do
     [[ -d "$asm_dir" ]] || continue
     dn=$(basename "$asm_dir")
-    [[ "$dn" == "$_SHARED_DIR" || "$dn" == "modules" ]] && continue
+    [[ "$dn" == "shared" || "$dn" == "modules" ]] && continue
 
     all_owners=""
     for f in "$asm_dir"*.adoc; do
@@ -483,8 +476,7 @@ done
 declare -A IMG_FILE_OWNERS
 
 _extract_img_refs() {
-    local file="$1"
-    grep -v '^//' "$file" 2>/dev/null | grep -oP 'image::?\K[^/]+/[^[\]]+' || true
+    grep -v '^//' "$1" 2>/dev/null | grep -oP 'image::?\K[^/]+/[^[\]]+' || true
 }
 
 for master in titles/*/master.adoc; do
@@ -500,7 +492,7 @@ done
 for mod_dir in modules/*/; do
     [[ -d "$mod_dir" ]] || continue
     md=$(basename "$mod_dir")
-    [[ "$md" == "$_SHARED_DIR" ]] && continue
+    [[ "$md" == "shared" ]] && continue
     owners="${MOD_DIR_OWNERS[$md]:-}"
     [[ -z "$(echo "$owners" | tr -d ' ')" ]] && continue
     for f in "$mod_dir"*.adoc; do
