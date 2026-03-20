@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-06-assemblies-use-the-official-template-assemblies-ar.sh
-# Validates assemblies follow the official template and tell one user story (CQA #6)
+# Validates assemblies follow the official template and tell one user story (CQA-6)
 #
 # Usage: ./cqa-06-assemblies-use-the-official-template-assemblies-ar.sh [--fix] [--all] <file-path>
 #

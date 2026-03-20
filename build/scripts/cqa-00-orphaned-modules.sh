@@ -1,5 +1,5 @@
 #!/bin/bash
-# cqa-00-orphaned-modules.sh - Find and optionally delete orphaned modules (CQA #0)
+# cqa-00-orphaned-modules.sh - Find and optionally delete orphaned modules (CQA-0)
 #
 # Usage: ./cqa-00-orphaned-modules.sh [--fix] [--format checklist|json]
 #

@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-14-no-broken-links.sh
-# Validates no broken links exist (CQA #14)
+# Validates no broken links exist (CQA-14)
 #
 # Usage: ./cqa-14-no-broken-links.sh [--fix] [--all] <file-path>
 #

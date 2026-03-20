@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-07-toc-max-3-levels.sh
-# Validates TOC depth does not exceed 3 levels (CQA #7)
+# Validates TOC depth does not exceed 3 levels (CQA-7)
 #
 # Usage: ./cqa-07-toc-max-3-levels.sh [--fix] [--all] <file-path>
 #

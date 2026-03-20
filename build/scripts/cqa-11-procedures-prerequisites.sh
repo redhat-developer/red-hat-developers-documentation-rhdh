@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-11-procedures-prerequisites.sh
-# Validates procedure prerequisites requirements (CQA #11)
+# Validates procedure prerequisites requirements (CQA-11)
 #
 # Usage: ./cqa-11-procedures-prerequisites.sh [--fix] [--all] <file-path>
 #

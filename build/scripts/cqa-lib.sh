@@ -434,14 +434,14 @@ cqa_delegated() {
 
     if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
         if [[ -n "$line" ]]; then
-            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}${fix_label}]${_C_NC} ${file}: Line ${line}: ${desc}"
+            echo -e "- [ ] ${_C_CYAN}[-> CQA-${target_cqa}${fix_label}]${_C_NC} ${file}: Line ${line}: ${desc}"
         else
-            echo -e "- [ ] ${_C_CYAN}[-> CQA #${target_cqa}${fix_label}]${_C_NC} ${file}: ${desc}"
+            echo -e "- [ ] ${_C_CYAN}[-> CQA-${target_cqa}${fix_label}]${_C_NC} ${file}: ${desc}"
         fi
     fi
 
     if [[ "$CQA_FORMAT" == "json" ]]; then
-        _cqa_sarif_add "$file" "$line" "note" "Delegated to CQA #${target_cqa}: $desc" "delegated"
+        _cqa_sarif_add "$file" "$line" "note" "Delegated to CQA-${target_cqa}: $desc" "delegated"
     fi
     return 0
 }
@@ -466,7 +466,7 @@ cqa_header() {
         if [[ "$CQA_ALL_MODE" == true ]]; then
             # In --all mode, print the header only once
             if [[ "$_CQA_HEADER_PRINTED" == false ]]; then
-                echo "## CQA #${cqa_num}: ${title}"
+                echo "## CQA-${cqa_num}: ${title}"
                 if [[ "$CQA_FIX_MODE" == true ]]; then
                     echo -e "${_C_YELLOW}Mode: --fix${_C_NC}"
                 fi
@@ -474,7 +474,7 @@ cqa_header() {
                 _CQA_HEADER_PRINTED=true
             fi
         else
-            echo "## CQA #${cqa_num}: ${title}"
+            echo "## CQA-${cqa_num}: ${title}"
             if [[ -n "$target" ]]; then
                 echo "Processing: ${target}"
             fi

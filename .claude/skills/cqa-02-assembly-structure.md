@@ -1,4 +1,4 @@
-# CQA #2 - Assembly Structure
+# CQA-2 - Assembly Structure
 
 ## Assemblies should contain only an introductory section and include statements
 
@@ -43,7 +43,7 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script validates (12 checks):**
 - Content type is ASSEMBLY on first line, not repeated
@@ -73,12 +73,12 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 - Add missing `:context:` attribute (value derived from ID without `_{context}` suffix)
 
 **Not auto-fixed (delegated):**
-- ID value mismatch with title — handled by [CQA #10 - Titles](cqa-10-titles-are-brief-complete-and-descriptive.md)
-- Introduction length (50-300 chars) — handled by [CQA #8 - Short descriptions](cqa-08-short-description-content.md)
+- ID value mismatch with title — handled by [CQA-10 - Titles](cqa-10-titles-are-brief-complete-and-descriptive.md)
+- Introduction length (50-300 chars) — handled by [CQA-8 - Short descriptions](cqa-08-short-description-content.md)
 
 **Not auto-fixed (manual):**
 - Content between include statements — requires moving text into modules
-- Missing `[role="_abstract"]` — delegated to [CQA #9 - Short description format](cqa-09-short-description-format.md)
+- Missing `[role="_abstract"]` — delegated to [CQA-9 - Short description format](cqa-09-short-description-format.md)
 - Level 3+ subheadings — requires restructuring
 - Prerequisites count, order, completeness
 - Include order and additional resources link validity

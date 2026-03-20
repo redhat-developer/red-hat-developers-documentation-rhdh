@@ -1,4 +1,4 @@
-# CQA #1 - AsciiDoc DITA Vale
+# CQA-1 - AsciiDoc DITA Vale
 
 ## Content passes Vale asciidoctor-dita-vale tool check with no errors
 
@@ -30,7 +30,7 @@
 ./build/scripts/cqa-01-asciidoctor-dita-vale.sh --output JSON titles/<your-title>/master.adoc
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **Target Results:**
 - ✅ 0 errors, 0 warnings, 0 suggestions
@@ -41,10 +41,10 @@
 
 | Warning | Fix |
 |---------|-----|
-| `AsciiDocDITA.ShortDescription` | **Delegated to [CQA #8](cqa-08-short-description-content.md).** Add `[role="_abstract"]` before the first paragraph after the title. Ensure the paragraph is 50-300 chars. |
+| `AsciiDocDITA.ShortDescription` | **Delegated to [CQA-8](cqa-08-short-description-content.md).** Add `[role="_abstract"]` before the first paragraph after the title. Ensure the paragraph is 50-300 chars. |
 | `AsciiDocDITA.AuthorLine` | **Auto-fixed.** Add a blank line after the title. The author line is not supported in DITA topics. |
 | `AsciiDocDITA.DocumentTitle` | Add a level 0 heading (`= Title`). For master.adoc, ensure `= {title}` is present. |
-| `AsciiDocDITA.DocumentId` | **Delegated to [CQA #10](cqa-10-titles-are-brief-complete-and-descriptive.md).** Add `[id="{context}"]` before the level 0 heading. |
+| `AsciiDocDITA.DocumentId` | **Delegated to [CQA-10](cqa-10-titles-are-brief-complete-and-descriptive.md).** Add `[id="{context}"]` before the level 0 heading. |
 | `AsciiDocDITA.BlockTitle` | **Auto-fixed.** Convert to a lead-in sentence ending with `:`. Block titles (`.Something`) are only valid for examples, figures, and tables. Skips block titles before tables, examples, source blocks, and images. |
 | `AsciiDocDITA.TaskContents` | **Auto-fixed.** Add `.Procedure` before the first numbered steps list. |
 | `AsciiDocDITA.TaskTitle` | Unsupported sub-heading inside a procedure module. Remove the heading, or convert to a `.Procedure` block title or bold lead-in text. |
@@ -63,8 +63,8 @@
 - CalloutList — convert `<1> text` to `<1>:: text` description list format
 
 **Delegated:**
-- ShortDescription — [CQA #8](cqa-08-short-description-content.md)
-- DocumentId — [CQA #10](cqa-10-titles-are-brief-complete-and-descriptive.md)
+- ShortDescription — [CQA-8](cqa-08-short-description-content.md)
+- DocumentId — [CQA-10](cqa-10-titles-are-brief-complete-and-descriptive.md)
 
 **Not auto-fixed (manual):**
 - DocumentTitle — requires writing a title

@@ -1,5 +1,5 @@
 #!/bin/bash
-# cqa-02-assembly-structure.sh - Validates assembly structure compliance (CQA #2)
+# cqa-02-assembly-structure.sh - Validates assembly structure compliance (CQA-2)
 # Usage: ./cqa-02-assembly-structure.sh [--fix] [--all] <file-path>
 #
 # Checks:

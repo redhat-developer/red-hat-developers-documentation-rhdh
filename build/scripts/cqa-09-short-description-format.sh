@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-09-short-description-format.sh
-# Validates short description formatting (CQA #9)
+# Validates short description formatting (CQA-9)
 #
 # Usage: ./cqa-09-short-description-format.sh [--fix] [--all] <file-path>
 #

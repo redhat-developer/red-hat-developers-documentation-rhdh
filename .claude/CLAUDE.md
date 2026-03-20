@@ -18,7 +18,7 @@ When editing `.adoc` files, ALWAYS run the relevant CQA scripts to validate and 
 ./build/scripts/cqa.sh --fix --all
 ```
 
-Output markers: `[AUTOFIX]` (auto-fixable), `[FIXED]` (applied), `[MANUAL]` (needs human), `[-> CQA #NN AUTOFIX]` / `[-> CQA #NN MANUAL]` (delegated).
+Output markers: `[AUTOFIX]` (auto-fixable), `[FIXED]` (applied), `[MANUAL]` (needs human), `[-> CQA-NN AUTOFIX]` / `[-> CQA-NN MANUAL]` (delegated).
 
 For full CQA workflow, load `.claude/skills/cqa-main-workflow.md`. Individual skill files are in `.claude/skills/cqa-*.md`.
 
