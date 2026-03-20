@@ -141,7 +141,15 @@ if [[ "$CQA_ALL_MODE" == true ]]; then
     echo "---"
     echo "**Total:** ${total} checks | ${passed} passed | ${failed} with issues"
 
-    [[ $failed -gt 0 ]] && exit 1
+    if [[ $failed -gt 0 ]]; then
+        echo ""
+        echo "To auto-fix what can be auto-fixed, run:"
+        echo '```'
+        echo "./build/scripts/cqa.sh --fix --all"
+        echo '```'
+        echo "To attempt manual fixes, ask Claude to run the CQA main workflow."
+        exit 1
+    fi
     exit 0
 fi
 
@@ -169,4 +177,10 @@ echo "========================================"
 echo "## CQA Summary"
 echo "Scripts run: $total | Passed: $passed | Failed: $failed"
 
-[[ $failed -gt 0 ]] && exit 1
+if [[ $failed -gt 0 ]]; then
+    echo ""
+    echo "To auto-fix what can be auto-fixed, run:"
+    echo "  ./build/scripts/cqa.sh --fix ${pass_args[*]}"
+    echo "To attempt manual fixes, ask Claude to run the CQA main workflow."
+    exit 1
+fi
