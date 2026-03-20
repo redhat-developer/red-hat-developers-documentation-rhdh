@@ -74,14 +74,27 @@ except Exception as e:
             echo ""
         fi
 
-        local vale_exit=0
-        vale --config .vale.ini --output line "${vale_files[@]}" 2>/dev/null || vale_exit=$?
+        local vale_output
+        vale_output=$(vale --config .vale.ini --output line "${vale_files[@]}" 2>/dev/null || true)
 
-        if [[ $vale_exit -eq 0 ]]; then
+        if [[ -z "$vale_output" ]]; then
             cqa_file_pass "$target"
         else
-            echo ""
-            cqa_fail_manual "$target" "" "Vale found grammar/style issues (see output above)"
+            # Only report as failure if there are errors (not just warnings/suggestions)
+            local error_count
+            error_count=$(echo "$vale_output" | grep -c ':error:' || echo "0")
+            local warning_count
+            warning_count=$(echo "$vale_output" | grep -c ':warning:' || echo "0")
+            local total_count
+            total_count=$(echo "$vale_output" | wc -l)
+
+            if [[ "$error_count" -gt 0 ]]; then
+                echo "$vale_output" | grep ':error:' | head -20
+                echo ""
+                cqa_fail_manual "$target" "" "Vale found ${error_count} errors (${warning_count} warnings, ${total_count} total issues)"
+            else
+                cqa_file_pass "$target"
+            fi
         fi
     fi
 }

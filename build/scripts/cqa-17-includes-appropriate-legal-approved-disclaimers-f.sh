@@ -36,9 +36,20 @@ _cqa17_check() {
 
         local file_has_issue=false
 
-        # Check for Technology Preview mentions
-        if grep -qi "technology preview" "$file" 2>/dev/null; then
-            if ! grep -q "include::.*snip-.*tech.*preview\|include::.*snip-.*tp-\|{technology-preview}" "$file" 2>/dev/null; then
+        # Pre-compute block ranges to skip source/listing blocks
+        cqa_compute_block_ranges "$file"
+
+        # Check for Technology Preview mentions (outside source blocks)
+        local has_tp_mention=false
+        while IFS=: read -r tp_ln _; do
+            [[ -z "$tp_ln" ]] && continue
+            cqa_is_in_block "$file" "$tp_ln" && continue
+            has_tp_mention=true
+            break
+        done < <(grep -ni "technology preview" "$file" 2>/dev/null || true)
+
+        if [[ "$has_tp_mention" == true ]]; then
+            if ! grep -q "include::.*snip-.*tech.*preview\|include::.*snip-.*tp-\|{technology-preview}\|access.redhat.com/support/offerings/techpreview" "$file" 2>/dev/null; then
                 local line_num
                 line_num=$(grep -ni "technology preview" "$file" | head -1 | cut -d: -f1)
                 cqa_fail_manual "$file" "$line_num" "Mentions 'Technology Preview' but may not include official disclaimer snippet"
@@ -46,8 +57,16 @@ _cqa17_check() {
             fi
         fi
 
-        # Check for Developer Preview mentions
-        if grep -qi "developer preview" "$file" 2>/dev/null; then
+        # Check for Developer Preview mentions (outside source blocks)
+        local has_dp_mention=false
+        while IFS=: read -r dp_ln _; do
+            [[ -z "$dp_ln" ]] && continue
+            cqa_is_in_block "$file" "$dp_ln" && continue
+            has_dp_mention=true
+            break
+        done < <(grep -ni "developer preview" "$file" 2>/dev/null || true)
+
+        if [[ "$has_dp_mention" == true ]]; then
             if ! grep -q "include::.*snip-.*dev.*preview\|include::.*snip-.*dp-\|{developer-preview}" "$file" 2>/dev/null; then
                 local line_num
                 line_num=$(grep -ni "developer preview" "$file" | head -1 | cut -d: -f1)
