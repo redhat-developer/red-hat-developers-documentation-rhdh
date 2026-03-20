@@ -22,6 +22,15 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[FIXED]` (applied), `[MANUAL]` (nee
 
 For full CQA workflow, load `.claude/skills/cqa-main-workflow.md`. Individual skill files are in `.claude/skills/cqa-*.md`.
 
+## Pull Requests
+
+When creating PRs, follow `.github/pull_request_template.md`:
+
+- **Title format:** `[RHIDP#<jira-id>]: <short description>` (no `GH#` or `BZ#` prefix needed unless applicable)
+- **Body:** Must include the `IMPORTANT: Do Not Merge` banner, `Version(s):`, `Issue:` (Jira link), and `Preview:` (preview URL or N/A)
+- **Target branch:** Open PRs against `main` and cherrypick to released branches as needed
+- **Never use `#N` in PR title or body** — GitHub auto-links it to issues/PRs. Use dash notation (e.g., `CQA-05`) instead.
+
 ## GitHub Workflows (`.github/workflows/`)
 
 | Workflow | Trigger | Purpose |
