@@ -76,8 +76,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      checks: write
-      security-events: write
     steps:
       - name: Checkout main branch for trusted scripts
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -110,20 +108,6 @@ jobs:
           echo "output<<EOF" >> $GITHUB_OUTPUT
           echo "$OUTPUT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Run CQA checks (SARIF)
-        id: cqa-sarif
-        run: |
-          cd pr-content
-          ./build/scripts/cqa.sh --all --format json > ${{ github.workspace }}/cqa-results.sarif 2>/dev/null || true
-
-      - name: Upload SARIF to GitHub Code Scanning
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: cqa-results.sarif
-          category: content-quality-assessment
-        continue-on-error: true
 
       - name: Post CQA checklist as PR comment
         if: always()
