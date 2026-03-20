@@ -23,6 +23,10 @@ _cqa14_check() {
 
     cqa_header "14" "Verify No Broken Links" "$target"
 
+    # Resolve :imagesdir: from the target (master.adoc or nearest parent)
+    local imagesdir=""
+    imagesdir=$(grep -m1 '^:imagesdir:' "$target" 2>/dev/null | sed 's/^:imagesdir: *//' || true)
+
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue
 
@@ -53,7 +57,18 @@ _cqa14_check() {
             local image_path
             image_path=$(echo "$line_content" | sed -E 's/.*image::?([^[]*)\[.*/\1/')
             [[ "$image_path" == *"{"* ]] && continue
-            if [[ -n "$image_path" ]] && [[ ! -f "$file_dir/$image_path" ]] && [[ ! -f "$image_path" ]]; then
+            # Skip empty, URLs, or paths with spaces/quotes (likely YAML in code blocks)
+            [[ -z "$image_path" || "$image_path" == *"://"* || "$image_path" == *" "* || "$image_path" == *"'"* ]] && continue
+            # Resolve image path using :imagesdir: if set
+            local resolved=false
+            if [[ -n "$imagesdir" ]] && [[ -f "$imagesdir/$image_path" ]]; then
+                resolved=true
+            elif [[ -f "$file_dir/$image_path" ]]; then
+                resolved=true
+            elif [[ -f "$image_path" ]]; then
+                resolved=true
+            fi
+            if [[ "$resolved" == false ]]; then
                 cqa_fail_manual "$file" "$line_num" "Broken image: $image_path"
                 file_has_issue=true
             fi

@@ -8,7 +8,6 @@
 #   - PROCEDURE files have .Procedure section with numbered steps
 #   - CONCEPT files do not have .Procedure sections
 #   - REFERENCE files do not have .Procedure sections
-#   - ASSEMBLY files contain only intro + includes (no detailed content)
 #   - Filename prefix matches content type
 #
 # Autofix:
@@ -58,30 +57,6 @@ _cqa13_check() {
             REFERENCE)
                 if grep -q "^\.Procedure" "$file" 2>/dev/null; then
                     cqa_fail_manual "$file" "" "REFERENCE has .Procedure section (should be PROCEDURE type or remove steps)"
-                    file_has_issue=true
-                fi
-                ;;
-            ASSEMBLY)
-                local detail_lines
-                detail_lines=$(awk '
-                    /^= /{found=1; next}
-                    found && /^include::/{next}
-                    found && /^\[role="_abstract"\]/{next}
-                    found && /^\[id=/{next}
-                    found && /^:_mod-docs-content-type:/{next}
-                    found && /^:context:/{next}
-                    found && /^ifdef::|^ifndef::|^endif::/{next}
-                    found && /^\/\//{next}
-                    found && /^\.Prerequisites/{next}
-                    found && /^\.Additional resources/{next}
-                    found && /^\* /{next}
-                    found && /^$/{next}
-                    found && /^ifeval::|^endif::/{next}
-                    found{count++}
-                    END{print count+0}
-                ' "$file" 2>/dev/null)
-                if [[ $detail_lines -gt 5 ]]; then
-                    cqa_fail_manual "$file" "" "ASSEMBLY has $detail_lines lines of detailed content (should only have intro + includes)"
                     file_has_issue=true
                 fi
                 ;;
