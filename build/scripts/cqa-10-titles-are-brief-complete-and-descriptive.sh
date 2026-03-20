@@ -305,7 +305,7 @@ _process_file() {
 _cqa10_check() {
     local target="$1"
 
-    cqa_header "10" "Verify Titles Are Brief, Complete, and Descriptive" "$target"
+    cqa_header "10" "Verify titles are brief, complete, and descriptive" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

@@ -116,7 +116,7 @@ _fix_section_lists() {
 _cqa03_check() {
     local target="$1"
 
-    cqa_header "3" "Verify Content Type Metadata" "$target"
+    cqa_header "3" "Verify content type metadata" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ -f "$file" ]] || continue

@@ -82,7 +82,7 @@ PATTERNS=(
 _cqa16_check() {
     local target="$1"
 
-    cqa_header "16" "Verify Official Product Names" "$target"
+    cqa_header "16" "Verify official product names" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

@@ -28,7 +28,7 @@ cqa_parse_args "$0" "$@"
 _cqa04_check() {
     local target="$1"
 
-    cqa_header "4" "Verify Module Templates" "$target"
+    cqa_header "4" "Verify module templates" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

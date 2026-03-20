@@ -25,7 +25,7 @@ cqa_parse_args "$0" "$@"
 _cqa12_check() {
     local target="$1"
 
-    cqa_header "12" "Verify Grammar and Style (Vale)" "$target"
+    cqa_header "12" "Verify grammar and style (Vale)" "$target"
 
     # Filter out attributes.adoc from collected files
     local vale_files=()
