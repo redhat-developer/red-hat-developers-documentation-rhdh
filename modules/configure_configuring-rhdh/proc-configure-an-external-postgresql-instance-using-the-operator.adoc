@@ -1,0 +1,127 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-an-external-postgresql-instance-using-the-operator_{context}"]
+= Configure an external PostgreSQL instance using the Operator
+
+[role="_abstract"]
+Configure an external PostgreSQL instance by using the {product} Operator instead of the default local PostgreSQL instance.
+
+.Prerequisites
+
+* You meet the {about-book-link}#rhdh-sizing_about-rhdh[Sizing requirements for external PostgreSQL deployments].
+* You are using a supported version of PostgreSQL. For more information, see the link:https://access.redhat.com/support/policy/updates/developerhub[Product life cycle page].
+* You have the following details:
+** `db_host`: Denotes your PostgreSQL instance Domain Name System (DNS) or IP address
+** `db_port`: Denotes your PostgreSQL instance port number, such as `5432`
+** `username`: Denotes the user name to connect to your PostgreSQL instance
+** `password`: Denotes the password to connect to your PostgreSQL instance
+* You have installed the {product} Operator.
+* Optional: You have a CA certificate, Transport Layer Security (TLS) private key, and TLS certificate so that you can secure your database connection by using the TLS protocol. For more information, refer to your PostgreSQL vendor documentation.
+
+[NOTE]
+====
+By default, {product-short} uses a database for each plugin and automatically creates it if none exists. You might need the `Create Database` privilege in addition to `PostgreSQL Database` privileges for configuring an external PostgreSQL instance.
+====
+
+
+.Procedure
+
+. Optional: Create a certificate secret to configure your PostgreSQL instance with a TLS connection:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ cat <<EOF | oc -n {my-product-namespace} create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: {my-product-database-certificates-secrets}
+type: Opaque
+stringData:
+ postgres-ca.pem: |-
+  -----BEGIN CERTIFICATE-----
+  <ca_certificate_key>
+ postgres-key.key: |-
+  -----BEGIN CERTIFICATE-----
+  <tls_private_key>
+ postgres-crt.pem: |-
+  -----BEGIN CERTIFICATE-----
+  <tls_certificate_key>
+  # ...
+EOF
+----
++
+Where:
+
+`{my-product-database-certificates-secrets}`:: The certificate secret name.
+`<ca_certificate_key>`:: The CA certificate key.
+`<tls_private_key>`:: Optional: The TLS private key.
+`<tls_certificate_key>`:: Optional: The TLS certificate key.
+
+. Create a credential secret to connect to the PostgreSQL instance:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ cat <<EOF | oc -n {my-product-namespace} create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+ name: {my-product-database-secrets}
+type: Opaque
+stringData:
+ POSTGRES_PASSWORD: <password>
+ POSTGRES_PORT: "<db_port>"
+ POSTGRES_USER: <username>
+ POSTGRES_HOST: <db_host>
+ PGSSLMODE: <ssl_mode>
+ NODE_EXTRA_CA_CERTS: <abs_path_to_pem_file>
+EOF
+----
++
+Where:
+
+`{my-product-database-secrets}`:: The credential secret name.
+`<password>`:: The password to connect to your PostgreSQL instance.
+`<db_port>`:: Your PostgreSQL instance port number, such as `5432`.
+`<username>`:: The user name to connect to your PostgreSQL instance.
+`<db_host>`:: Your PostgreSQL instance DNS or IP address.
+`<ssl_mode>`:: Optional: For TLS connections, the required SSL mode.
+`<abs_path_to_pem_file>`:: Optional: For TLS connections, the absolute path to the Privacy-Enhanced Mail (PEM) file, for example `/opt/app-root/src/postgres-crt.pem`.
+
+. Create your `{product-custom-resource-type}` custom resource (CR):
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+cat <<EOF | oc -n {my-product-namespace} create -f -
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: <backstage_instance_name>
+spec:
+  database:
+    enableLocalDb: false
+  application:
+    extraFiles:
+      mountPath: <path>
+      secrets:
+        - name: {my-product-database-certificates-secrets}
+          key: postgres-crt.pem, postgres-ca.pem, postgres-key.key
+    extraEnvs:
+      secrets:
+        - name: {my-product-database-secrets}
+        # ...
+----
++
+Where:
+
+`spec.database.enableLocalDb`:: Set to `false` to disable creating local PostgreSQL instances.
+`<path>`:: The mount path for certificate files, for example `/opt/app-root/src`.
+`{my-product-database-certificates-secrets}`:: The certificate secret name, required if you configure a TLS connection.
+`key`:: The key names as defined in the `{my-product-database-certificates-secrets}` Secret.
+`{my-product-database-secrets}`:: The credential secret name.
++
+[NOTE]
+====
+The environment variables listed in the `{product-custom-resource-type}` CR work with the Operator default configuration. If you have changed the Operator default configuration, you must reconfigure the `{product-custom-resource-type}` CR accordingly.
+====
+
+. Apply the `{product-custom-resource-type}` CR to the namespace where you have deployed the {product-short} instance.

@@ -1,0 +1,305 @@
+:_mod-docs-content-type: REFERENCE
+
+// This page is generated! Do not edit the .adoc file, but instead run rhdh-supported-plugins.sh to regen this page from the latest plugin metadata.
+
+[id="community-plugins-migration-to-the-github-container-registry_{context}"]
+= Community plugins migration to the GitHub Container Registry
+
+[role="_abstract"]
+Starting with {product} 1.9, community-supported plugins are no longer distributed as bundled wrappers in the {product-short} container image. Update your dynamic plugins configuration to use the new GitHub Container Registry paths.
+
+[IMPORTANT]
+====
+*Breaking Change in {product-very-short} 1.9*
+
+These plugins are now built using GitHub Actions and published exclusively to the GitHub Container Registry (ghcr.io).
+
+If you use the plugins listed in this section, you must update your dynamic plugins configuration (in `dynamic-plugins-default.yaml`, your ConfigMap or CustomResource) to use the new `oci://ghcr.io/...` paths.
+====
+
+== What changed
+
+In {product-short} 1.8 and earlier, community plugins were:
+
+* Wrapped and bundled in the {product-short} container image.
+* Referenced by using local paths, such as `./dynamic-plugins/dist/<plugin-name>`.
+
+Starting with {product-short} 1.9, community plugins are:
+
+* Built using GitHub Actions from the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays] repository.
+* Published to `ghcr.io/redhat-developer/rhdh-plugin-export-overlays`.
+* Referenced by using OCI registry paths, such as `oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<oci-artifact-name>:<tag>`.
++
+include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
+
+== Migration steps
+
+To migrate your configuration:
+
+. Identify plugins in your ConfigMap or CustomResource that use local paths starting with `./dynamic-plugins/dist/`.
+. Find the corresponding `ghcr.io` path in the following migration table:
++
+[source,yaml]
+----
+# Before (RHDH 1.8 and earlier)
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-jenkins
+    disabled: false
+
+# After (RHDH 1.9+)
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
+    disabled: false
+----
+
+. Update your configuration to use the new OCI registry path.
+
+
+== Understanding the tag format
+
+The `ghcr.io` image tags use the following format: `bs_<backstage-version>__<plugin-version>`
+
+Example: `bs_1.45.3__0.26.0`:
+where
+* `bs_1.45.3`: Built against {backstage} version 1.45.3
+* `0.26.0`: Node.js-packaged {backstage} plugin, version 0.26.0
+
+See {dynamic-plugins-reference-book-link}#determining-tag-values[Determining Tag Values]
+
+== Community plugins migration table
+
+The following table lists all 36 community-supported plugins that have been migrated from bundled wrappers to `ghcr.io`.
+
+[NOTE]
+====
+Replace `<tag>` with the version tag corresponding to your {product-short} version. See {dynamic-plugins-reference-book-link}#determining-tag-values[Determining Tag Values]
+====
+
+include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
+
+[cols="1,2,3,4", options="header"]
+|===
+|Plugin Name
+|Plugin Version
+|Old Path ({product-very-short} 1.8)
+|New Path ({product-very-short} 1.9+)
+
+|*3Scale*
+|3.10.0|`./dynamic-plugins/dist/backstage-community-plugin-3scale-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-3scale-backend:<tag>`
+
+|*ArgoCD Backend*
+|1.0.2|`./dynamic-plugins/dist/backstage-community-plugin-redhat-argocd-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-argocd-backend:<tag>`
+
+|*Azure DevOps Backend*
+|0.23.0|`./dynamic-plugins/dist/backstage-community-plugin-azure-devops-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-azure-devops-backend:<tag>`
+
+|*Catalog Backend Module Azure DevOps Annotator Processor*
+|0.14.0|`./dynamic-plugins/dist/bcp-ctlg-backend-mod-azure-devops-annotator-processor`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-catalog-backend-module-azure-devops-annotator-processor:<tag>`
+
+|*Catalog Backend Module Bitbucket Cloud*
+|0.5.5|`./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-bitbucket-cloud`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-catalog-backend-module-bitbucket-cloud:<tag>`
+
+|*Catalog Backend Module Bitbucket Server*
+|0.5.5|`./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-bitbucket-server`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-catalog-backend-module-bitbucket-server:<tag>`
+
+|*Datadog*
+|2.6.0|`./dynamic-plugins/dist/roadiehq-backstage-plugin-datadog`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-datadog:<tag>`
+
+|*Dynatrace*
+|10.12.1|`./dynamic-plugins/dist/backstage-community-plugin-dynatrace`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-dynatrace:<tag>`
+
+|*GitHub Actions*
+|0.18.0|`./dynamic-plugins/dist/backstage-community-plugin-github-actions`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-github-actions:<tag>`
+
+|*GitHub Insights*
+|3.4.1|`./dynamic-plugins/dist/roadiehq-backstage-plugin-github-insights`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-github-insights:<tag>`
+
+|*GitHub Issues*
+|0.16.0|`./dynamic-plugins/dist/backstage-community-plugin-github-issues`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-github-issues:<tag>`
+
+|*GitHub Pull Requests*
+|3.6.2|`./dynamic-plugins/dist/roadiehq-backstage-plugin-github-pull-requests`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-github-pull-requests:<tag>`
+
+|*GitLab Backend*
+|6.13.0|`./dynamic-plugins/dist/immobiliarelabs-backstage-plugin-gitlab-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/immobiliarelabs-backstage-plugin-gitlab-backend:<tag>`
+
+|*JFrog Artifactory*
+|1.24.1|`./dynamic-plugins/dist/backstage-community-plugin-jfrog-artifactory`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jfrog-artifactory:<tag>`
+
+|*Jenkins Backend*
+|0.22.0|`./dynamic-plugins/dist/backstage-community-plugin-jenkins-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins-backend:<tag>`
+
+|*Jenkins Scaffolder Backend Module*
+|0.16.0|`./dynamic-plugins/dist/bcp-scaffolder-backend-mod-jenkins`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-jenkins:<tag>`
+
+|*Jira*
+|2.14.0|`./dynamic-plugins/dist/roadiehq-backstage-plugin-jira`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-jira:<tag>`
+
+|*Lighthouse Backend*
+|0.17.0|`./dynamic-plugins/dist/backstage-community-plugin-lighthouse-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-lighthouse-backend:<tag>`
+
+|*Nexus Repository Manager*
+|1.19.4|`./dynamic-plugins/dist/backstage-community-plugin-nexus-repository-manager`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-nexus-repository-manager:<tag>`
+
+|*PagerDuty Backend*
+|0.10.1|`./dynamic-plugins/dist/pagerduty-backstage-plugin-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/pagerduty-backstage-plugin-backend:<tag>`
+
+|*Quay Backend*
+|1.10.1|`./dynamic-plugins/dist/backstage-community-plugin-quay-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay-backend:<tag>`
+
+|*Roadie ArgoCD Backend*
+|4.6.0|`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>`
+
+|*Scaffolder Backend ArgoCD*
+|1.8.1|`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>`
+
+|*Scaffolder Backend Module Azure DevOps*
+|0.18.0|`./dynamic-plugins/dist/bcp-scaffolder-backend-mod-azure-devops`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-azure-devops:<tag>`
+
+|*Scaffolder Backend Module Bitbucket Cloud*
+|0.2.15|`./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-bitbucket-cloud`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-scaffolder-backend-module-bitbucket-cloud:<tag>`
+
+|*Scaffolder Backend Module Bitbucket Server*
+|0.2.15|`./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-bitbucket-server`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-scaffolder-backend-module-bitbucket-server:<tag>`
+
+|*Scaffolder Backend Module DotNet*
+|0.9.0|`./dynamic-plugins/dist/bcp-scaffolder-backend-mod-dotnet`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-dotnet:<tag>`
+
+|*Scaffolder Backend Module Gerrit*
+|0.2.15|`./dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-gerrit`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-scaffolder-backend-module-gerrit:<tag>`
+
+|*Scaffolder Backend Module Quay*
+|2.14.0|`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>`
+
+|*Scaffolder Backend Module ServiceNow*
+|2.11.0|`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-servicenow`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-servicenow:<tag>`
+
+|*Scaffolder Backend Module SonarQube*
+|2.11.0|`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-sonarqube`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-sonarqube:<tag>`
+
+|*Scaffolder Backend Module Utils*
+|4.1.1|`./dynamic-plugins/dist/roadiehq-scaffolder-backend-module-utils`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-module-utils:<tag>`
+
+|*Search Backend Module Azure DevOps*
+|0.1.2|`./dynamic-plugins/dist/bcp-search-backend-mod-azure-devops`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-search-backend-module-azure-devops:<tag>`
+
+|*Security Insights*
+|3.3.1|`./dynamic-plugins/dist/roadiehq-backstage-plugin-security-insights`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-security-insights:<tag>`
+
+|*SonarQube Backend*
+|0.15.0|`./dynamic-plugins/dist/backstage-community-plugin-sonarqube-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-sonarqube-backend:<tag>`
+
+|*Tekton*
+|3.33.3|`./dynamic-plugins/dist/backstage-community-plugin-tekton`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>`
+
+|===
+
+== Plugins remaining bundled in {product-very-short} 1.9
+
+The following plugins remain bundled in 1.9 while transitioning to `ghcr.io` distribution in a future release:
+
+[cols="1,2,3,4", options="header"]
+|===
+|Plugin Name
+|Plugin Version
+|Current Path ({product-very-short} 1.9)
+|Future Path ({product-very-short} 1.10+)
+
+|*Quay*
+|1.28.1|`./dynamic-plugins/dist/backstage-community-plugin-quay`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>`
+
+|*Scaffolder Backend Module Quay*
+|2.14.0|`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>`
+
+|*Tekton*
+|3.33.3|`./dynamic-plugins/dist/backstage-community-plugin-tekton`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>`
+
+|*Roadie ArgoCD Backend*
+|4.6.0|`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>`
+
+|*Scaffolder Backend ArgoCD*
+|1.8.1|`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic`
+|`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>`
+
+|===
+
+== Troubleshooting
+
+*Plugin not loading after migration*
+
+If a plugin fails to load, perform the following checks:
+
+. Verify the `ghcr.io` path is correct and the image tag or digest exists.
+. Confirm your cluster has network access to `ghcr.io`.
+. Review {product-short} logs for OCI pull errors.
+
+include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
+
+*Determining tag values*
+
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+
+*Determining SHA256 digests*
+
+You can look up the SHA256 digest using the Skopeo CLI or by searching in the RHDH Plugin Export Overlays repository.
+
+*Skopeo CLI*
+
+Ensure you have `skopeo` and `jq` installed.
+
+. Locate the plugin path in the {dynamic-plugins-reference-book-link}[{dynamic-plugins-reference-book-title}].
+. Run the following command, replacing the plugin path prefix `oci://` with `docker://`:
++
+[source,bash]
+----
+skopeo inspect docker://<plugin-path>:<tag> | jq '.Digest'
+----
+
+*RHDH Plugin Export Overlays Repo*
+
+Go to the link:https://github.com/orgs/redhat-developer/packages?tab=packages&q=[plugin packages list in the rhdh-plugin-export-overlays repository]. Search for your plugin and select the tag that is associated with this release.
+
+
+== Additional resources
+
+* link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[RHDH Plugin Export Overlays GitHub repository]

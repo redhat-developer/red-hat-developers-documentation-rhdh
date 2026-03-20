@@ -1,0 +1,83 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-and-give-access-to-the-role-based-access-control-rbac-feature_{context}"]
+= Enable and give access to the role-based access control (RBAC) feature
+
+[role="_abstract"]
+Enable the RBAC plugin and declare policy administrators to manage permissions and access the RBAC REST API and Web UI.
+
+The role-based access control (RBAC) feature is disabled by default.
+Enable the RBAC plugin and declare policy administrators to start using RBAC features.
+
+The permission policies for users and groups in the {product-short} are managed by permission policy administrators.
+Only permission policy administrators can access the RBAC REST API.
+
+.Prerequisites
+* You have {configuring-book-link}[added a custom {product-short} application configuration], and have necessary permissions to change it.
+* You have {authentication-book-link}[enabled an authentication provider].
+
+.Procedure
+. The RBAC plugin is installed but disabled by default.
+To enable the  `./dynamic-plugins/dist/backstage-community-plugin-rbac` plugin, edit your `dynamic-plugins.yaml` with the following content.
++
+.`dynamic-plugins.yaml` fragment
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-rbac
+    disabled: false
+----
++
+See {installing-and-viewing-plugins-book-link}[{installing-and-viewing-plugins-book-title}].
+
+. Declare policy administrators to enable a select number of authenticated users to configure RBAC policies through the REST API or Web UI, instead of changing the CSV file directly.
++
+The permissions can be specified in a separate CSV file referenced in your `{my-app-config-config-map}` config map, or permissions can be created using the REST API or Web UI.
++
+To declare users such as _<your_policy_administrator_name>_ as policy administrators, edit your custom {product-short} ConfigMap, such as `app-config-rhdh`, and add following code to the `{my-app-config-file}` content:
++
+.`{my-app-config-file}` fragment
+[source,yaml,subs=+quotes]
+----
+permission:
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/__<your_policy_administrator_name>__
+----
+
+. To display the available permissions provided by installed plugins in the {product-short} UI, you must supply the corresponding list of plugin IDs.
+There are two ways to do this, by updating your application configuration or by using the RBAC REST API permissions endpoint.
++
+
+.. To supply plugins by updating your application configuration, you can specify the plugins with permissions in your `{my-app-config-file}` file as follows:
++
+.`{my-app-config-file}` fragment
+[source,yaml,subs=+quotes]
+----
+permission:
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/__<your_policy_administrator_name>__
+    pluginsWithPermission:
+      - catalog
+      - scaffolder
+      - permission
+----
+
+.. To specify the plugins with permissions by using the RBAC REST API permissions endpoint, see the xref:supported-rbac-rest-api-endpoints_manage-authorizations-by-using-the-rest-api[RBAC REST API permissions endpoint].
+
+.Verification
+. Sign out from the existing {product} session and log in again using the declared policy administrator account.
+. With RBAC enabled, most features are disabled by default.
+.. Navigate to the *Catalog* page in {product-very-short}.
+The *Create* button is not visible.
+You cannot create new components.
+.. Navigate to the API page.
+The *Register* button is not visible.
+
+.Next steps
+* Explicitly enable permissions to resources in {product-short}.

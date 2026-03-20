@@ -1,0 +1,52 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-rbac-for-scorecards-by-using-the-rbac-csv-file_{context}"]
+= Configure RBAC for Scorecards by using the RBAC CSV file
+
+[role="_abstract"]
+You can grant read access to Scorecard metrics by adding permission policies to your RBAC CSV file.
+
+.Prerequisites
+
+* You have {authorization-book-link}#enabling-and-giving-access-to-rbac_title-authorization[enabled RBAC and assigned a policy administrator role].
+* You have added `scorecard` to the list of authorized plugins under your `permission.rbac.pluginsWithPermission` configuration.
+
+.Procedure
+
+. Add the following policy to your CSV file to allow users to view metrics:
++
+[source,yaml]
+----
+g, user:default/<YOUR_USERNAME>, role:default/scorecard-viewer
+p, role:default/scorecard-viewer, scorecard.metric.read, read, allow
+p, role:default/scorecard-viewer, catalog.entity.read, read, allow
+----
++
+See {authorization-book-link}#assembly-rbac-permission-policies-reference_title-authorization[Permission policies reference].
+
+. Optional: Restrict access to specific metrics by defining a conditional policy in the `rbac-conditional-policies.yaml` file as described in {authorization-book-link}#managing-authorizations-by-using-external-files[Defining conditional policies]:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+result: CONDITIONAL
+roleEntityRef: "role:default/scorecard-viewer"
+pluginId: scorecard
+resourceType: scorecard-metric
+permissionMapping:
+  - read
+conditions:
+  rule: HAS_METRIC_ID
+  resourceType: scorecard-metric
+  params:
+    metricIds: [_<your_metric_id>_]
+----
++
+where:
+
+`metricIds`:: Enter the metric ID for user access, such as `github.open_prs`.
++
+This policy allows users to read only the specified metrics and restricts access to all other metrics.
+
+.Verification
+
+* Verify that the user can view Scorecard metrics in {product-very-short}.

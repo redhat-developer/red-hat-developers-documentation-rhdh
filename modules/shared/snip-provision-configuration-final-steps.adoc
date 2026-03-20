@@ -1,0 +1,46 @@
+:_mod-docs-content-type: SNIPPET
+
+. Author your custom `dynamic-plugins.yaml` file to enable plugins.
+By default, {product-short} enables a minimal plugin set, and disables plugins that require configuration or secrets, such as the GitHub repository discovery plugin and the Role-based access control (RBAC) plugin.
++
+Enable the GitHub repository discovery and the RBAC features:
++
+.`dynamic.plugins.yaml`
+[source,yaml]
+----
+includes:
+  - dynamic-plugins.default.yaml
+plugins:
+  - package: ./dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github
+    disabled: false
+  - package: ./dynamic-plugins/dist/backstage-community-plugin-rbac
+    disabled: false
+----
+
+. Provision your custom configuration files to your {platform} cluster.
++
+.. Create the _<{my-product-namespace}>_ {namespace} aimed at containing your {product-short} instance.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc create namespace {my-product-namespace}
+----
++
+.. Create config maps for your `{my-app-config-file}` and `dynamic-plugins.yaml` files in the _<{my-product-namespace}>_ project.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc create configmap {my-app-config-config-map} --from-file={my-app-config-file} --namespace={my-product-namespace}
+$ oc create configmap dynamic-plugins-rhdh --from-file=dynamic-plugins.yaml --namespace={my-product-namespace}
+----
++
+You can also link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nnodes-pods-configmap-create-from-console_configmaps[create the config maps by using the web console].
++
+.. Provision your `secrets.txt` file to the `{my-product-secrets}` secret in the _<{my-product-namespace}>_ project.
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc create secret generic {my-product-secrets} --from-file=secrets.txt --namespace={my-product-namespace}
+----
++
+You can also link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/nodes/index#nodes-pods-secrets-creating-web-console-secrets_nodes-pods-secrets[create the secret by using the web console].

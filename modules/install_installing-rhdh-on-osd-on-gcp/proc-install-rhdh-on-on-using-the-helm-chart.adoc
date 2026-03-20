@@ -1,0 +1,70 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="install-rhdh-on-on-using-the-helm-chart_{context}"]
+= Install {product} on {osd-short} on {gcp-short} using the Helm Chart
+
+[role="_abstract"]
+Deploy {product-short} on {osd-short} on {gcp-short} using Helm for flexible, customizable configuration management.
+
+.Prerequisites
+* You have a valid {gcp-short} account.
+* Your {osd-short} cluster is running on {gcp-short}. For more information, see{osd-docs-link}/html/installing_accessing_and_deleting_openshift_dedicated_clusters/osd-creating-a-cluster-on-gcp[Creating a cluster on {gcp-short}] in {osd-brand-name} documentation.
+* You have installed Helm 3 or the latest.
+* Make sure that your system meets the minimum sizing requirements. See {about-book-link}#rhdh-sizing_about-rhdh[Sizing requirements for {product}].
+
+.Procedure
+. From the *Developer* perspective on the {product-short} web console, click *+Add*.
+. From the *Developer Catalog* panel, click *Helm Chart*.
+. In the *Filter by keyword* box, enter {product-short} and click the *{product}* card.
+. From the {product} page, click *Create*.
+. From your cluster, copy the {ocp-short} router host (for example: `apps.<clusterName>.com`).
+. Select the radio button to configure the {product-short} instance with either the form view or YAML view.
++
+[IMPORTANT]
+====
+Before deploying {product-short} using the Helm chart, you must define custom configuration settings such as the public `baseUrl` for your instance. Without setting `baseUrl`, the application cannot function correctly. You can define this configuration either through the *Form view* or the *YAML view* in the Helm install wizard.
+
+To configure the `baseUrl`, set the following values in your Helm configuration:
+[source,yaml]
+----
+global:
+  app:
+    baseUrl: https://<your-developer-hub-link>
+  backend:
+    baseUrl: https://<your-developer-hub-link>
+    cors:
+      origin: https://<your-developer-hub-link>
+----
+You can also define additional secrets, plugins, and advanced configuration in your `values.yaml` file. For full instructions, see:
+{configuring-book-link}#provisioning-and-using-your-custom-configuration[Provisioning your custom {product} configuration].
+====
++
+The *Form view* is selected by default.
++
+--
+.. Using *Form view*
+... To configure the instance with the Form view, go to *Root Schema → global → Enable service authentication within {backstage} instance* and paste your {ocp-short} router host into the field on the form.
+
+.. Using *YAML view*
+... To configure the instance with the YAML view, paste your {ocp-short} router hostname in the `global.clusterRouterBase` parameter value as shown in the following example:
++
+[source,yaml,subs="attributes+"]
+----
+global:
+  auth:
+    backend:
+      enabled: true
+  clusterRouterBase: apps.<clusterName>.com
+  # other {product} Helm Chart configurations
+----
+--
+
+. Edit the other values if needed, then click *Create* and wait for the database and {product-short} to start.
+
+.Verification
+
+* To access {product-short}, click the *Open URL* icon.
+
+.Additional resources
+* {configuring-book-link}[{configuring-book-title}]
+* {customizing-book-link}[{customizing-book-title}]
