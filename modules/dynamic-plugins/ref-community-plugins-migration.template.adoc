@@ -27,12 +27,9 @@ Starting with {product-short} 1.9, community plugins are:
 
 * Built using GitHub Actions from the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays] repository.
 * Published to `ghcr.io/redhat-developer/rhdh-plugin-export-overlays`.
-* Referenced by using OCI registry paths, such as `oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<plugin-name>:<tag>`.
+* Referenced by using OCI registry paths, such as `oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<oci-artifact-name>:<tag>`.
 +
-[TIP]
-====
-To ensure environment stability, use a SHA256 digest instead of a version tag.
-====
+include::snip-tag-for-sha256-tip.adoc[]
 
 == Migration steps
 
@@ -66,23 +63,23 @@ where
 * `bs_1.45.3`: Built against {backstage} version 1.45.3
 * `0.26.0`: Nodejs-packaged {backstage} plugin, version 0.26.0
 
+See {dynamic-plugins-reference-book-link}#determining-tag-values[Determining Tag Values]
+
 == Community plugins migration table
 
 The following table lists all %%MIGRATION_COUNT%% community-supported plugins that have been migrated from bundled wrappers to `ghcr.io`.
 
 [NOTE]
 ====
-Replace `<tag>` with the version tag corresponding to your {product-short} version. For the latest tags, see the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays repository].
+Replace `<tag>` with the version tag corresponding to your {product-short} version. See {dynamic-plugins-reference-book-link}#determining-tag-values[Determining Tag Values]
 ====
 
-[TIP]
-====
-To ensure environment stability, use a SHA256 digest instead of a version tag.
-====
+include::snip-tag-for-sha256-tip.adoc[]
 
-[cols="1,2,3", options="header"]
+[cols="1,2,3,4", options="header"]
 |===
 |Plugin Name
+|Plugin Version
 |Old Path (RHDH 1.8)
 |New Path (RHDH 1.9+)
 
@@ -93,11 +90,12 @@ To ensure environment stability, use a SHA256 digest instead of a version tag.
 
 The following plugins remain bundled in 1.9 while transitioning to `ghcr.io` distribution in a future release:
 
-[cols="1,2,3", options="header"]
+[cols="1,2,3,4", options="header"]
 |===
 |Plugin Name
-|Old Path (RHDH 1.9)
-|New Path (RHDH 1.10+)
+|Plugin Version
+|Current Path (RHDH 1.9)
+|Future Path (RHDH 1.10+)
 
 %%BUNDLED_PLUGINS%%
 |===
@@ -112,20 +110,33 @@ If a plugin fails to load, perform the following checks:
 . Confirm your cluster has network access to `ghcr.io`.
 . Review {product-short} logs for OCI pull errors.
 
-[TIP]
-====
-To avoid unexpected updates, use a SHA256 digest instead of a tag.
-====
+include::snip-tag-for-sha256-tip.adoc[]
 
-=== Finding available tags
+=== Determining tag values
 
-To list available image tags for a plugin, run the following command:
+include::snip-tag-for-OCI-package-paths.adoc[]
+
+=== Determining SHA256 digests
+
+You can look up the SHA256 digest using the Skopeo CLI or by searching in the RHDH Plugin Export Overlays repository
+
+*Skopeo CLI* 
+
+Ensure you have `skopeo` and `jq` installed
+
+.. Locate the plugin path in the {dynamic-plugins-reference-book-link}[{dynamic-plugins-reference-book-title}]
+.. Run the following command, replacing the plugin path prefix `oci://` with `docker://`
+
 
 [source,bash]
 ----
-# Using skopeo (filter for bs_ tags only, excluding pr_ and next__ tags)
-skopeo list-tags docker://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<plugin-name> | jq -r '.Tags[]' | grep '^bs_'
+skopeo inspect docker://<plugin-path>:<tag> | jq '.Digest'
 ----
+
+*RHDH Plugin Export Overlays Repo* 
+
+Go to the link:https://github.com/orgs/redhat-developer/packages?tab=packages&q=[plugin packages list in the rhdh-plugin-export-overlays repository]. Search for your plugin and select the tag that is associated with this release. 
+
 
 == Additional resources
 
