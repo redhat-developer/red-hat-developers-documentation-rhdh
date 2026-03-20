@@ -5,13 +5,11 @@
 # Usage: ./cqa-15-redirects.sh [--fix] [--all] <file-path>
 #
 # Checks:
-#   - Detects renamed or moved files that may need redirects
-#   - Reports files with changed IDs that may affect external links
+#   - Detects :title: changes in master.adoc (published title changes)
+#   - Detects deleted master.adoc files (title removed)
 #
 # Autofix (--fix stub):
 #   - Reports [MANUAL] items (redirect implementation is platform-dependent)
-#
-# Note: Redirect implementation depends on the publishing platform.
 
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
@@ -27,37 +25,30 @@ _cqa15_check() {
 
     local needs_review=false
 
-    # Check for renamed files in git (staged or recent commits)
-    local renamed_files
-    renamed_files=$(git diff --name-status --diff-filter=R HEAD~5..HEAD -- 'assemblies/' 'modules/' 'titles/' 2>/dev/null || true)
-    local staged_renames
-    staged_renames=$(git diff --cached --name-status --diff-filter=R -- 'assemblies/' 'modules/' 'titles/' 2>/dev/null || true)
-
-    if [[ -n "$renamed_files" ]]; then
-        while IFS=$'\t' read -r _status old_file new_file; do
-            [[ -z "$old_file" ]] && continue
-            cqa_fail_manual "$target" "" "Renamed in recent commit: $old_file -> $new_file -- may need redirect"
-            needs_review=true
-        done <<< "$renamed_files"
-    fi
-
-    if [[ -n "$staged_renames" ]]; then
-        while IFS=$'\t' read -r _status old_file new_file; do
-            [[ -z "$old_file" ]] && continue
-            cqa_fail_manual "$target" "" "Renamed (staged): $old_file -> $new_file -- may need redirect"
-            needs_review=true
-        done <<< "$staged_renames"
-    fi
-
-    # Check for deleted files
-    local deleted_files
-    deleted_files=$(git diff --name-status --diff-filter=D HEAD~5..HEAD -- 'assemblies/' 'modules/' 'titles/' 2>/dev/null || true)
-    if [[ -n "$deleted_files" ]]; then
+    # Check for deleted master.adoc files
+    local deleted_titles
+    deleted_titles=$(git diff --name-status --diff-filter=D HEAD~5..HEAD -- 'titles/*/master.adoc' 2>/dev/null || true)
+    if [[ -n "$deleted_titles" ]]; then
         while IFS=$'\t' read -r _status deleted_file; do
             [[ -z "$deleted_file" ]] && continue
-            cqa_fail_manual "$target" "" "Deleted in recent commit: $deleted_file -- may need redirect"
+            cqa_fail_manual "$target" "" "Title removed: $(dirname "$deleted_file") -- needs redirect"
             needs_review=true
-        done <<< "$deleted_files"
+        done <<< "$deleted_titles"
+    fi
+
+    # Check if :title: changed in master.adoc
+    if [[ "$(basename "$target")" == "master.adoc" ]]; then
+        local title_diff
+        title_diff=$(git diff HEAD~5..HEAD -- "$target" 2>/dev/null | grep -E '^[-+]:title:' | grep -v '^[-+][-+][-+]' || true)
+        if [[ -n "$title_diff" ]]; then
+            local old_title new_title
+            old_title=$(echo "$title_diff" | grep '^-:title:' | sed 's/^-:title: *//' | head -1)
+            new_title=$(echo "$title_diff" | grep '^+:title:' | sed 's/^+:title: *//' | head -1)
+            if [[ -n "$old_title" && -n "$new_title" && "$old_title" != "$new_title" ]]; then
+                cqa_fail_manual "$target" "" "Title changed: '$old_title' -> '$new_title' -- may need redirect"
+                needs_review=true
+            fi
+        fi
     fi
 
     if [[ "$needs_review" == false ]]; then

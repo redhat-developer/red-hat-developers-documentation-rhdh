@@ -134,6 +134,27 @@ Work through each checkbox in the checklist for thorough validation.
 | **PROCEDURE with custom blocks** | `.Installation steps` | Use `.Procedure` |
 | **CONCEPT with numbered steps** | 1. Do this<br>2. Do that | Move to PROCEDURE module |
 
+### Fixing non-standard block titles
+
+Non-standard block titles (`.Example XYZ`, `.Sample config`, `.Available props`, etc.) are the most common CQA-05 violation. The fix depends on context:
+
+1. **If surrounding text already describes the block** → just delete the `.Title` line entirely. The preceding paragraph provides sufficient context.
+2. **If no surrounding context exists** → convert the block title to a lead-in sentence before the block (without the dot prefix). For example, `.Example creating many PVCs` becomes `For example, to create many PVCs:`.
+3. **Never replace one non-standard title with another** (e.g., don't change `.Helm config excerpt` to `.Example`—`.Example` is also non-standard).
+4. **The script may only report the first violation per file.** Always scan the entire file for ALL `.Title` lines and fix them all.
+
+### Creating assemblies for inline content
+
+When a title `master.adoc` contains `== Section` headings with `leveloffset=+2` includes, extract them into proper nested assemblies:
+
+1. Create the assembly in `assemblies/<category>_<title>/assembly-<section-name>.adoc`
+2. **Use relative include paths**: `include::../modules/shared/...` (relative to the assembly directory), NOT `include::modules/shared/...` (relative to repo root)
+3. Add context save/restore boilerplate (`ifdef::context[:parent-context: {context}]` at top, restore at bottom)
+4. Change includes from `leveloffset=+2` to `leveloffset=+1` in the assembly
+5. In the title, replace the `==` section with `include::assemblies/.../assembly-....adoc[leveloffset=+1]`
+
+Similarly, if a title has inline content (paragraphs, lists) beyond the `[role="_abstract"]` introduction, extract it into a concept module.
+
 ## Validation Workflow
 
 1. **Run content type validation:**
