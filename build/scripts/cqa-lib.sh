@@ -340,10 +340,7 @@ _cqa_ensure_file_header() {
 
 # Report a passing check
 cqa_pass() {
-    local line="${1:-}"
-    local desc="$2"
     _CQA_TOTAL_PASS=$((_CQA_TOTAL_PASS + 1))
-    # SARIF: passes are not reported
     return 0
 }
 
@@ -441,8 +438,6 @@ cqa_delegated() {
 
 # Mark file as all-passed (call if no issues were found for the file)
 cqa_file_pass() {
-    local file="${1:-$_CQA_CURRENT_FILE}"
-    # Suppress per-file pass output — only errors are shown
     return 0
 }
 
