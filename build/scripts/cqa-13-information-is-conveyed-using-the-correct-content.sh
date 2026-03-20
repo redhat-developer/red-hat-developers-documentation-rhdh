@@ -99,6 +99,7 @@ _cqa13_check() {
             cqa_file_pass "$file"
         fi
     done
+    return 0
 }
 
 cqa_run_for_each_title _cqa13_check

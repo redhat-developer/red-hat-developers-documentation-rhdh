@@ -15,6 +15,8 @@
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
+readonly _PATTERN_INCLUDE="^include::"
+
 # shellcheck disable=SC2329  # Helper functions invoked from _cqa03_check
 _detect_content_type() {
     local file="$1"
@@ -22,7 +24,7 @@ _detect_content_type() {
     bn=$(basename "$file" .adoc)
 
     # Content-based detection first
-    if grep -q "^include::" "$file" 2>/dev/null && grep "^include::" "$file" | grep -qE "(proc-|ref-|con-)"; then
+    if grep -q "$_PATTERN_INCLUDE" "$file" 2>/dev/null && grep "$_PATTERN_INCLUDE" "$file" | grep -qE "(proc-|ref-|con-)"; then
         echo "ASSEMBLY"; return
     fi
     if grep -q "^\.Procedure" "$file" 2>/dev/null; then
@@ -43,7 +45,8 @@ _detect_content_type() {
 
 # shellcheck disable=SC2329
 _count_type_occurrences() {
-    grep -c "^:_mod-docs-content-type:" "$1" 2>/dev/null || echo "0"
+    local file="$1"
+    grep -c "^:_mod-docs-content-type:" "$file" 2>/dev/null || echo "0"
 }
 
 # shellcheck disable=SC2329
@@ -51,6 +54,7 @@ _fix_content_type() {
     local file="$1" type="$2"
     sed -i '/^:_mod-docs-content-type:/d' "$file"
     sed -i "1s/^/:_mod-docs-content-type: ${type}\n\n/" "$file"
+    return 0
 }
 
 # shellcheck disable=SC2329
@@ -63,7 +67,7 @@ _fix_section_lists() {
     after=$(awk "/^\\.${section}\$/{flag=1; next} flag && /^\\.(Prerequisites|Procedure|Verification|Troubleshooting|Next steps|Additional)/{exit} flag" "$file" 2>/dev/null)
 
     local includes unnumbered nested numbered
-    includes=$(echo "$after" | grep -c "^include::" || true)
+    includes=$(echo "$after" | grep -c "$_PATTERN_INCLUDE" || true)
     unnumbered=$(echo "$after" | grep -c "^\* " || true)
     nested=$(echo "$after" | grep -c "^\*\* " || true)
     numbered=$(echo "$after" | grep -cE "^\\.+ " || true)
@@ -157,7 +161,7 @@ _cqa03_check() {
                 local unnumbered
                 unnumbered=$(echo "$after" | grep -c "^\* " || true)
                 local includes
-                includes=$(echo "$after" | grep -c "^include::" || true)
+                includes=$(echo "$after" | grep -c "$_PATTERN_INCLUDE" || true)
                 # Skip single-step check if there are includes (they may contain additional steps)
                 if [[ $numbered -eq 1 && $unnumbered -eq 0 && $includes -eq 0 ]]; then
                     local proc_ln
@@ -171,6 +175,7 @@ _cqa03_check() {
             cqa_file_pass "$file"
         fi
     done
+    return 0
 }
 
 cqa_run_for_each_title _cqa03_check

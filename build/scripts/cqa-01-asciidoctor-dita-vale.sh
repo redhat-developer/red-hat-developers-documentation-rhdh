@@ -44,11 +44,9 @@ _cqa01_check() {
     cqa_file_start "$target"
 
     # Legacy --output support for backward compat
-    if [[ -n "$CQA_OUTPUT_FORMAT" ]]; then
-        if [[ "$CQA_OUTPUT_FORMAT" == "JSON" ]]; then
-            vale --config .vale-dita-only.ini --output JSON "${vale_files[@]}"
-            return $?
-        fi
+    if [[ "$CQA_OUTPUT_FORMAT" == "JSON" ]]; then
+        vale --config .vale-dita-only.ini --output JSON "${vale_files[@]}"
+        return $?
     fi
 
     # --- Fix mode ---
@@ -153,6 +151,7 @@ except: pass
                     cqa_delegated "$file" "$line" "8" "ShortDescription issue (run CQA #8)" "manual" ;;
                 AsciiDocDITA.DocumentId*)
                     cqa_delegated "$file" "$line" "10" "DocumentId issue (run CQA #10)" "manual" ;;
+                *) ;;
             esac
         done <<< "$issues_tsv"
 
@@ -208,6 +207,7 @@ except: pass
             cqa_fail_autofix "$target" "" "Vale found ${total_count} DITA compliance issues" "Run with --fix to auto-resolve"
         fi
     fi
+    return 0
 }
 
 cqa_run_for_each_title _cqa01_check

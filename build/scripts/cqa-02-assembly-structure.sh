@@ -22,7 +22,11 @@ source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
 # shellcheck disable=SC2329
-_lineno() { grep -n "$1" "$2" 2>/dev/null | head -1 | cut -d: -f1; }
+_lineno() {
+    local pattern="$1"
+    local file="$2"
+    grep -n "$pattern" "$file" 2>/dev/null | head -1 | cut -d: -f1
+}
 
 # shellcheck disable=SC2329
 _fix_content_type_first_line() {
@@ -254,6 +258,7 @@ _cqa02_check() {
             cqa_file_pass "$file"
         fi
     done
+    return 0
 }
 
 cqa_run_for_each_title _cqa02_check

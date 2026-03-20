@@ -48,13 +48,11 @@ _cqa17_check() {
             break
         done < <(grep -ni "technology preview" "$file" 2>/dev/null || true)
 
-        if [[ "$has_tp_mention" == true ]]; then
-            if ! grep -q "include::.*snip-.*tech.*preview\|include::.*snip-.*tp-\|{technology-preview}\|access.redhat.com/support/offerings/techpreview" "$file" 2>/dev/null; then
-                local line_num
-                line_num=$(grep -ni "technology preview" "$file" | head -1 | cut -d: -f1)
-                cqa_fail_manual "$file" "$line_num" "Mentions 'Technology Preview' but may not include official disclaimer snippet"
-                file_has_issue=true
-            fi
+        if [[ "$has_tp_mention" == true ]] && ! grep -q "include::.*snip-.*tech.*preview\|include::.*snip-.*tp-\|{technology-preview}\|access.redhat.com/support/offerings/techpreview" "$file" 2>/dev/null; then
+            local line_num
+            line_num=$(grep -ni "technology preview" "$file" | head -1 | cut -d: -f1)
+            cqa_fail_manual "$file" "$line_num" "Mentions 'Technology Preview' but may not include official disclaimer snippet"
+            file_has_issue=true
         fi
 
         # Check for Developer Preview mentions (outside source blocks)
@@ -66,19 +64,18 @@ _cqa17_check() {
             break
         done < <(grep -ni "developer preview" "$file" 2>/dev/null || true)
 
-        if [[ "$has_dp_mention" == true ]]; then
-            if ! grep -q "include::.*snip-.*dev.*preview\|include::.*snip-.*dp-\|{developer-preview}" "$file" 2>/dev/null; then
-                local line_num
-                line_num=$(grep -ni "developer preview" "$file" | head -1 | cut -d: -f1)
-                cqa_fail_manual "$file" "$line_num" "Mentions 'Developer Preview' but may not include official disclaimer snippet"
-                file_has_issue=true
-            fi
+        if [[ "$has_dp_mention" == true ]] && ! grep -q "include::.*snip-.*dev.*preview\|include::.*snip-.*dp-\|{developer-preview}" "$file" 2>/dev/null; then
+            local line_num
+            line_num=$(grep -ni "developer preview" "$file" | head -1 | cut -d: -f1)
+            cqa_fail_manual "$file" "$line_num" "Mentions 'Developer Preview' but may not include official disclaimer snippet"
+            file_has_issue=true
         fi
 
         if [[ "$file_has_issue" == false ]]; then
             cqa_file_pass "$file"
         fi
     done
+    return 0
 }
 
 cqa_run_for_each_title _cqa17_check
