@@ -1,4 +1,4 @@
-# CQA #11 - Procedures
+# CQA-11 - Procedures
 
 ## Procedure prerequisites requirements
 
@@ -33,7 +33,7 @@ If a procedure includes prerequisites:
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script does:**
 - Checks `.Prerequisites` label uses correct plural form

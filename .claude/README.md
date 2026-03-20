@@ -56,21 +56,21 @@ CQA 2.1 reference materials and style guides:
 - `red-hat-ssg.md` - Red Hat Supplementary Style Guide (SSG) for product documentation
   - Updated weekly minimum, daily maximum
   - Source: https://redhat-documentation.github.io/supplementary-style-guide/ssg.md
-  - Used for CQA #8, #9, #10, #12, #16 (grammar, style, formatting)
+  - Used for CQA-8, #9, #10, #12, #16 (grammar, style, formatting)
 - `red-hat-peer-review.md` - Red Hat Peer Review Guide for technical documentation
   - Updated weekly minimum, daily maximum
   - Source: https://redhat-documentation.github.io/peer-review/
-  - Used for CQA #10 (titles), CQA #12 (grammar), editorial quality
+  - Used for CQA-10 (titles), CQA-12 (grammar), editorial quality
 - `red-hat-modular-docs.md` - Red Hat Modular Documentation Reference Guide
   - Updated weekly minimum, daily maximum
   - Source: https://redhat-documentation.github.io/modular-docs/
-  - Used for CQA #2, #3, #4, #5, #6, #10, #13 (modularization, content types, templates)
+  - Used for CQA-2, #3, #4, #5, #6, #10, #13 (modularization, content types, templates)
 
 **Vale Configuration:**
 - `.vale-sync-timestamp` - Tracks last Vale sync time (Unix timestamp)
 - Vale styles synced weekly minimum, daily maximum
 - Command: `vale sync` updates RedHat, AsciiDocDITA style rules
-- Used for CQA #1 (DITA validation) and CQA #12 (grammar/style)
+- Used for CQA-1 (DITA validation) and CQA-12 (grammar/style)
 
 **Regenerating skills:** If the official CQA spreadsheet is updated, re-export to ZIP, replace the file, and run:
 ```bash

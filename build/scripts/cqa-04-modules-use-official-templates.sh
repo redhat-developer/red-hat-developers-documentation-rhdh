@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-04-modules-use-official-templates.sh
-# Verify modules use official Red Hat modular documentation templates (CQA #4)
+# Verify modules use official Red Hat modular documentation templates (CQA-4)
 #
 # Usage: ./cqa-04-modules-use-official-templates.sh [--fix] [--all] <file-path>
 #

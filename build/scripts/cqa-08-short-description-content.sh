@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-08-short-description-content.sh
-# Validates short description content quality (CQA #8)
+# Validates short description content quality (CQA-8)
 #
 # Usage: ./cqa-08-short-description-content.sh [--fix] [--all] <file-path>
 #

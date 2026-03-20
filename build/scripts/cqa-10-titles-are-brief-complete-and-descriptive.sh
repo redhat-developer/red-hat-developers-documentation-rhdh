@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-10-titles-are-brief-complete-and-descriptive.sh
-# Aligns title, ID, context, and filename per CQA rules (CQA #10)
+# Aligns title, ID, context, and filename per CQA rules (CQA-10)
 #
 # Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] [--all] <file-path>
 #
@@ -149,7 +149,7 @@ _process_file() {
     local CONTENT_TYPE
     CONTENT_TYPE=$(cqa_get_content_type "$FILE")
     if [[ -z "$CONTENT_TYPE" ]]; then
-        cqa_delegated "$FILE" "" "3" "No content type metadata -- run CQA #3 first"
+        cqa_delegated "$FILE" "" "3" "No content type metadata -- run CQA-3 first"
         return 0
     fi
 

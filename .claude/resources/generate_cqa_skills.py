@@ -132,7 +132,7 @@ def main():
         skill_file = skills_dir / filename
         
         skill = []
-        skill.append(f"# CQA #{idx} - {req['section']}\n")
+        skill.append(f"# CQA-{idx} - {req['section']}\n")
         skill.append(f"## {req['requirement']['text']}\n")
         
         if req["requirement"]["link"]:

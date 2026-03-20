@@ -1,4 +1,4 @@
-# CQA #13 - Editorial
+# CQA-13 - Editorial
 
 ## Information is conveyed using the correct content type
 
@@ -83,7 +83,7 @@ While RHDH documentation primarily uses Product documentation with modular struc
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script does:**
 - Validates PROCEDURE files have `.Procedure` section with steps
@@ -98,7 +98,7 @@ While RHDH documentation primarily uses Product documentation with modular struc
 
 ## Validation
 
-**Note:** Content type metadata is automatically validated by CQA #3. This requirement focuses on manual verification that content matches declared types.
+**Note:** Content type metadata is automatically validated by CQA-3. This requirement focuses on manual verification that content matches declared types.
 
 **Manual checks:**
 - Review each module to ensure content aligns with its declared type

@@ -1,5 +1,5 @@
 #!/bin/bash
-# cqa-01-asciidoctor-dita-vale.sh - Validates AsciiDoc DITA compliance using Vale (CQA #1)
+# cqa-01-asciidoctor-dita-vale.sh - Validates AsciiDoc DITA compliance using Vale (CQA-1)
 # Usage: ./cqa-01-asciidoctor-dita-vale.sh [--fix] [--all] [--output line|JSON] <file-path>
 #
 # Checks:
@@ -13,8 +13,8 @@
 #   - TaskStep: fix blank lines around steps
 #
 # Delegates:
-#   - ShortDescription -> CQA #8
-#   - DocumentId -> CQA #10
+#   - ShortDescription -> CQA-8
+#   - DocumentId -> CQA-10
 
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
@@ -179,9 +179,9 @@ except: pass
         while IFS=$'\t' read -r file line check; do
             case "$check" in
                 AsciiDocDITA.ShortDescription*)
-                    cqa_delegated "$file" "$line" "8" "ShortDescription issue (run CQA #8)" "manual" ;;
+                    cqa_delegated "$file" "$line" "8" "ShortDescription issue (run CQA-8)" "manual" ;;
                 AsciiDocDITA.DocumentId*)
-                    cqa_delegated "$file" "$line" "10" "DocumentId issue (run CQA #10)" "manual" ;;
+                    cqa_delegated "$file" "$line" "10" "DocumentId issue (run CQA-10)" "manual" ;;
                 *) ;;
             esac
         done <<< "$issues_tsv"
