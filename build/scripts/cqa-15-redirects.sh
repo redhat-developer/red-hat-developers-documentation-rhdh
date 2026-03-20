@@ -13,11 +13,9 @@
 #
 # Note: Redirect implementation depends on the publishing platform.
 
-# shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa15_check() {
     local target="$1"
 
@@ -34,7 +32,7 @@ _cqa15_check() {
     staged_renames=$(git diff --cached --name-status --diff-filter=R -- 'assemblies/' 'modules/' 'titles/' 2>/dev/null || true)
 
     if [[ -n "$renamed_files" ]]; then
-        while IFS=$'\t' read -r _status old_file new_file; do
+        while IFS=$'\t' read -r status old_file new_file; do
             [[ -z "$old_file" ]] && continue
             cqa_fail_manual "$target" "" "Renamed in recent commit: $old_file -> $new_file -- may need redirect"
             needs_review=true
@@ -42,7 +40,7 @@ _cqa15_check() {
     fi
 
     if [[ -n "$staged_renames" ]]; then
-        while IFS=$'\t' read -r _status old_file new_file; do
+        while IFS=$'\t' read -r status old_file new_file; do
             [[ -z "$old_file" ]] && continue
             cqa_fail_manual "$target" "" "Renamed (staged): $old_file -> $new_file -- may need redirect"
             needs_review=true
@@ -53,7 +51,7 @@ _cqa15_check() {
     local deleted_files
     deleted_files=$(git diff --name-status --diff-filter=D HEAD~5..HEAD -- 'assemblies/' 'modules/' 'titles/' 2>/dev/null || true)
     if [[ -n "$deleted_files" ]]; then
-        while IFS=$'\t' read -r _status deleted_file; do
+        while IFS=$'\t' read -r status deleted_file; do
             [[ -z "$deleted_file" ]] && continue
             cqa_fail_manual "$target" "" "Deleted in recent commit: $deleted_file -- may need redirect"
             needs_review=true
@@ -63,7 +61,6 @@ _cqa15_check() {
     if [[ "$needs_review" == false ]]; then
         cqa_file_pass "$target"
     fi
-    return 0
 }
 
 cqa_run_for_each_title _cqa15_check

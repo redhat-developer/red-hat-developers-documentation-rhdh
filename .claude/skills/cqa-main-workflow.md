@@ -71,7 +71,7 @@ Or run individual scripts (all share a common interface via `cqa-lib.sh`):
 - [ ] **CQA #12:** [Grammar](cqa-12-content-is-grammatically-correct-and-follows-rules.md) - 0 errors, American English
 - [ ] **CQA #17:** [Disclaimers](cqa-17-includes-appropriate-legal-approved-disclaimers-f.md) - Legal-approved for Tech/Dev Preview
 - [ ] **CQA #14:** [No broken links](cqa-14-no-broken-links.md) - All xrefs/external links valid, build succeeds
-- [ ] **CQA #15:** [Redirects](cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh) - Redirects in place if needed
+- [ ] **CQA #15:** [Redirects](cqa-15-redirects.sh) - Redirects in place if needed
 
 ---
 

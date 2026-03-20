@@ -183,9 +183,9 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Build completes successfully
   - [ ] No xref errors in output
 
-- [ ] **CQA #15: Redirects** - [Skill](skills/cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh)
+- [ ] **CQA #15: Redirects** - [Skill](skills/cqa-15-redirects.sh)
   ```bash
-  ./build/scripts/cqa-15-redirects-if-needed-are-in-place-and-work-correc.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-15-redirects.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Redirects in place if files moved
   - [ ] Old URLs redirect to new locations
