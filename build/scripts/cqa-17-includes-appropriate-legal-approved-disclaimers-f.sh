@@ -25,7 +25,7 @@ cqa_parse_args "$0" "$@"
 _cqa17_check() {
     local target="$1"
 
-    cqa_header "17" "Verify Legal Disclaimers for Preview Features" "$target"
+    cqa_header "17" "Verify legal disclaimers for preview features" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

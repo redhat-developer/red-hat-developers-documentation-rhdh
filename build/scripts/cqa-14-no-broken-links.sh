@@ -21,7 +21,7 @@ cqa_parse_args "$0" "$@"
 _cqa14_check() {
     local target="$1"
 
-    cqa_header "14" "Verify No Broken Links" "$target"
+    cqa_header "14" "Verify no broken links" "$target"
 
     # Resolve :imagesdir: from the target, then fall back to artifacts/attributes.adoc
     local imagesdir=""

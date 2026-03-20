@@ -123,7 +123,7 @@ for script in "${CQA_SCRIPTS[@]}"; do
         cqa_name="${script#cqa-[0-9]*-}"
         cqa_name="${cqa_name%.sh}"
         cqa_name="${cqa_name//-/ }"
-        # Capitalize first letter
+        # Sentence case
         cqa_name="$(echo "${cqa_name:0:1}" | tr '[:lower:]' '[:upper:]')${cqa_name:1}"
     fi
 

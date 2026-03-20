@@ -60,7 +60,7 @@ except: pass
 _cqa01_check() {
     local target="$1"
 
-    cqa_header "1" "Vale AsciiDoc DITA Compliance" "$target"
+    cqa_header "1" "Vale AsciiDoc DITA compliance" "$target"
 
     # Collect files excluding attributes.adoc
     local vale_files=()

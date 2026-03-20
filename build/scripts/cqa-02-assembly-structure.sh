@@ -65,7 +65,7 @@ _fix_context_line() {
 _cqa02_check() {
     local target="$1"
 
-    cqa_header "2" "Verify Assembly Structure" "$target"
+    cqa_header "2" "Verify assembly structure" "$target"
 
     # Filter to assembly files only
     local assembly_files=()

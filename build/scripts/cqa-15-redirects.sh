@@ -19,7 +19,7 @@ cqa_parse_args "$0" "$@"
 _cqa15_check() {
     local target="$1"
 
-    cqa_header "15" "Check Redirects" "$target"
+    cqa_header "15" "Check redirects" "$target"
 
     cqa_file_start "$target"
 

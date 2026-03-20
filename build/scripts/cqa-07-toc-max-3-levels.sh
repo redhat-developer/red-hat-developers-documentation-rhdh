@@ -23,7 +23,7 @@ cqa_parse_args "$0" "$@"
 _cqa07_check() {
     local target="$1"
 
-    cqa_header "7" "Verify TOC Depth (Max 3 Levels)" "$target"
+    cqa_header "7" "Verify TOC depth (max 3 levels)" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

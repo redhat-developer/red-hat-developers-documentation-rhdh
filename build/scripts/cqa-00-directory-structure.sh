@@ -273,7 +273,7 @@ fi
 # Full repo mode (default — no positional arg)
 # ═══════════════════════════════════════════════════════════════════
 
-cqa_header "0" "Verify Directory Structure (<category>_<context> naming)"
+cqa_header "0" "Verify directory structure (<category>_<context> naming)"
 
 # ── Phase 0: Pre-computation ──
 
