@@ -32,6 +32,14 @@ debug() {
   fi
 }
 
+  if ! command -v yq >/dev/null 2>&1; then
+    echo -e "${red}[ERROR] yq is required but not found. Please install yq (jq wrapper, NOT the mikefarah version) from https://kislyuk.github.io/yq/${norm}"
+    exit 1
+  elif yq --help 2>&1 | grep -q mikefarah; then
+    echo -e "${red}[ERROR] mikefarah version of yq found. Please install the jq wrapper from https://kislyuk.github.io/yq/ ${norm}"
+    exit 1
+  fi
+
 usage() {
   cat <<EOF
 
@@ -184,13 +192,18 @@ generate_dynamic_plugins_table() {
 
       debug ".spec.packageName | .metadata.name: $Plugin"
 
+      # skip plugins for which there is metadata but which we don't include in default.packages.yaml
+      if [[ $(yq -r '.packages.enabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "" ]] && \
+         [[ $(yq -r '.packages.disabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "" ]]; then
+          debug "${red}Skip[0] Plugin = $Plugin not found in default.packages.yaml\n"; continue;
+      fi
+
       # If Plugin is still not a proper npm package name, try to construct it
       if [[ $Plugin != "@"* ]] && [[ $Plugin == "$Name" ]]; then
           Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
               -e 's|janus/idp-|janus-idp/|' \
               -e 's|red/hat-developer-hub-|red-hat-developer-hub/|' \
-              -e 's|backstage/community-|backstage-community/|' \
-              -e 's|parfuemerie/douglas-|parfuemerie-douglas/|')"
+              -e 's|backstage/community-|backstage-community/|')"
       fi
 
       # Extract lifecycle and path from YAML spec
@@ -207,6 +220,7 @@ generate_dynamic_plugins_table() {
           Path="${Path/-dynamic-dynamic/-dynamic}"
       fi
 
+      debug "Got: Path = $Path"
       # DEPRECATED :: Filter 0: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
       # Accept both patterns:
       #  - Frontend: ./dynamic-plugins/dist/<name>
@@ -229,16 +243,18 @@ generate_dynamic_plugins_table() {
       [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") == "@redhat"* ]] && \
         { debug "Skip[3] Plugin = $Plugin\n"; continue; }
 
-      # shellcheck disable=SC2016
-      found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-      # shellcheck disable=SC2016
-      found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-
-      Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-      if [[ $Path2 ]]; then
-          Path=$Path2
-      else
-          Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+      # DEPRECATED :: once wrappers are removed, we don't need this anymore
+      if [[ $Path ]] && [[ $Path == "./dynamic-plugins/dist/"* ]]; then
+        # shellcheck disable=SC2016
+        found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
+        # shellcheck disable=SC2016
+        found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
+        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
+        if [[ $Path2 ]]; then
+            Path=$Path2
+        else
+            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
+        fi
       fi
 
       # For extensions YAML files, skip the default config check for inclusion
@@ -258,6 +274,7 @@ generate_dynamic_plugins_table() {
           # * packages/app/package.json#.dependencies
           # * packages/backend/package.json#.dependencies
           # echo "[DEBUG] Check version of $Name is really $VersionJQ (from Path = $Path)..."
+          # shellcheck disable=SC2086
           match=$(grep "\"$Name\": \"" $pluginVersFile || true)
           Version=$VersionJQ
           if [[ $match ]]; then
@@ -289,25 +306,29 @@ generate_dynamic_plugins_table() {
           author=$(yq -r '.spec.author // "unknown"' "$y")
           support=$(yq -r '.spec.support // "unknown"' "$y")
 
-          if [[ $author == "Red Hat"* ]]; then
+          # only RH authoried content should show up as GA
+          # exception for the Roadie http-request scaffolder, too
+          if [[ $author == "Red Hat"* ]] || [[ $Plugin == "@roadiehq/scaffolder-backend-module-http-request" ]]; then
               if [[ $support == "production"* ]] || [[ $support == "generally-available"* ]]; then
                   Support_Level="Production"
               elif [[ $support == "tech-preview"* ]]; then
                   Support_Level="Red Hat Tech Preview"
+              elif [[ $support == "community"* ]] || [[ $support == "dev-preview"* ]]; then
+                  Support_Level="Community Support"
+              else
+                echo -e "${blue}[WARN] Could not compute support level for Path = $Path, Plugin = $Plugin" | tee -a "${ENABLED_PLUGINS}.errors"
               fi
           fi
 
-          # compute Default from dynamic-plugins.default.yaml
+          # compute Default (enabled or disabled status) from default.packages.yaml
           # shellcheck disable=SC2016
-          disabled=$(yq -r --arg Path "${Path/-dynamic/}" '.plugins[] | select(.package == $Path) | .disabled' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-          # shellcheck disable=SC2016
-          if [[ ! $disabled ]]; then disabled=$(yq -r --arg Path "${Path}" '.plugins[] | select(.package == $Path) | .disabled' "${rhdhtmpdir}"/dynamic-plugins.default.yaml); fi
-          # echo "Using Path = $Path got disabled = $disabled"
-          # null or false == enabled by default
           Default="Enabled"
-          if [[ $disabled == "true" ]]; then
-              Default="Disabled"
-          else
+          if [[ $(yq -r '.packages.disabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "$Plugin" ]]; then
+            Default="Disabled"
+          fi
+          # debug "Using Plugin = $Plugin got Default = $Default"
+          # null or false == enabled by default
+          if [[ $Default == "Enabled" ]]; then
               if [[ $Support_Level == "Production" ]]; then
                   # see https://issues.redhat.com/browse/RHIDP-3187 - only Production-level support (GA) plugins should be enabled by default
                   echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
@@ -315,10 +336,10 @@ generate_dynamic_plugins_table() {
                   # as discussed in RHDH SOS on Jul 14, we are now opening the door for TP plugins to be on by default.
                   # PM (Ben) and Support (Tim) are cool with this as long as the docs clearly state
                   # what is TP, and how to disable the TP content
-                  echo -e "${blue}[WARN] $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a ${ENABLED_PLUGINS}.errors
+                  echo -e "${blue}[WARN] $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a "${ENABLED_PLUGINS}.errors"
                   echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
               else
-                  echo -e "${red}[ERROR] $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a ${ENABLED_PLUGINS}.errors
+                  echo -e "${red}[ERROR] $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a "${ENABLED_PLUGINS}.errors"
               fi
           fi
 
@@ -327,9 +348,12 @@ generate_dynamic_plugins_table() {
           appConfig=$(yq -r '.spec.appConfigExamples[0].content // empty' "$y" 2>/dev/null)
           if [[ -n "$appConfig" && "$appConfig" != "null" ]]; then
               # Extract ${VARIABLE_NAME} patterns
+              # shellcheck disable=SC2016
               vars=$(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | sort -u)
               for var in $vars; do
-                  Required_Variables="${Required_Variables}\`$var\`\n\n"
+                  if [[ $var ]]; then
+                    Required_Variables="${Required_Variables}\`$var\`\n\n"
+                  fi
               done
           fi
           Required_Variables_CSV=$(echo -e "$Required_Variables" | tr -s "\n" ";")
@@ -380,11 +404,17 @@ generate_dynamic_plugins_table() {
           RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; Role="Backend"; else Role="Frontend"; fi
           if [[ $Plugin == *"scaffolder"* ]]; then RoleSort=3; fi
 
-          # TODO include missing data fields for Provider and Description - see https://issues.redhat.com/browse/RHIDP-3496 and https://issues.redhat.com/browse/RHIDP-3440
-
           # Use temporary files to allow sorting later
           key="$PrettyName-$RoleSort-$Role-$Plugin"
-          adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+          if [[ $Path ]]; then
+            # shellcheck disable=SC1087
+            adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
+          else
+            # TODO this error should never happen!
+            echo -e "${red}[ERROR] ! Path not found for $Plugin $Version ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
+            # shellcheck disable=SC1087
+            adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\n\n$Required_Variables"
+          fi
           csv_content="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Lifecycle\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
 
           # split into three tables based on support level
@@ -456,21 +486,6 @@ generate_dynamic_plugins_table() {
   # shellcheck disable=SC2206
   num_plugins+=($count)
 
-  # 3) Community
-  temp_file="$TEMP_DIR/adoc.community.tmp"
-  out_file="${0/.sh/.ref-community-plugins}"
-  rm -f "$out_file"
-  count=0
-  if [[ -f "$temp_file" ]]; then
-      sort "$temp_file" | while IFS='|' read -r key content; do
-          (( count = count + 1 ))
-          debug " * [$count] $key [ ${out_file##*/} ]"
-          echo -e "$content" >> "$out_file"
-      done
-      count=$(wc -l < "$temp_file")
-  fi
-  # shellcheck disable=SC2206
-  num_plugins+=($count)
 
   # 3) Deprecated
   temp_file="$TEMP_DIR/adoc.deprecated.tmp"
@@ -507,7 +522,7 @@ generate_dynamic_plugins_table() {
   count=1
   index=0
   empties=0
-  for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-community-plugins ref-deprecated-plugins; do
+  for d in ref-rh-supported-plugins ref-rh-tech-preview-plugins ref-deprecated-plugins; do
       (( index = count - 1 ))
       this_num_plugins=${num_plugins[$index]}
       echo -n -e "${green}[$count] Processing $d ${norm}..."
@@ -531,8 +546,14 @@ generate_dynamic_plugins_table() {
     exit 1
   fi
 
-  # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc
-  sed -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
+  # count enabled plugins
+
+  # shellcheck disable=SC2002
+  COUNT_ENABLED_PLUGINS=$(cat "$ENABLED_PLUGINS" | wc -l ) # if we use wc by itself we get the count AND the filename; only want the count
+  echo "Got COUNT_ENABLED_PLUGINS = $COUNT_ENABLED_PLUGINS preinstalled plugins"
+  # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc, and the counter
+  sed -r -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
+      -e "s/%%COUNT_ENABLED_PLUGINS%%/$COUNT_ENABLED_PLUGINS/" \
       "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.template.adoc}" > "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.adoc}"
 }
 
@@ -601,6 +622,7 @@ generate_migration_table() {
             # Extract data from the metadata file
             plugin_title=$(yq -r '.metadata.title // ""' "$metadata_file")
             plugin_name=$(yq -r '.metadata.name // ""' "$metadata_file")
+            plugin_version=$(yq -r '.spec.version // ""' "$metadata_file")
             dynamic_artifact=$(yq -r '.spec.dynamicArtifact // ""' "$metadata_file")
             support=$(yq -r '.spec.support // "unknown"' "$metadata_file")
 
@@ -631,13 +653,14 @@ generate_migration_table() {
 
             if [[ $QUIET -eq 0 ]]; then
                 echo " * Migration: $display_title"
+                echo "   Version: $plugin_version"
                 echo "   Old: $old_path"
                 echo "   New: $new_path"
             fi
 
             # Add to migration table (sorted by title)
             # shellcheck disable=SC2028
-            echo "${display_title}||*${display_title}*\n|\`${old_path}\`\n|\`${new_path}\`" >> "$MIGRATION_TABLE_FILE"
+            echo "${display_title}||*${display_title}*\n|${plugin_version}|\`${old_path}\`\n|\`${new_path}\`" >> "$MIGRATION_TABLE_FILE"
 
             migration_count=$((migration_count + 1))
         done
@@ -650,10 +673,11 @@ generate_migration_table() {
     # These plugins continue to be bundled in 1.9 while transitioning to ghcr.io
     # Format matches migration table: Plugin Name | Old Path | New Path
     # shellcheck disable=SC2129
-    echo -e "|*Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Scaffolder Backend Module Quay*\n|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Tekton*\n|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Scaffolder Backend ArgoCD*\n|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Quay*\n|1.28.1|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Scaffolder Backend Module Quay*\n|2.14.0|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Tekton*\n|3.33.3|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Roadie ArgoCD Backend*\n|4.6.0|\`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
+    echo -e "|*Scaffolder Backend ArgoCD*\n|1.8.1|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
     echo -e "${green}Found $migration_count community plugins to migrate${norm}"
 
     # Sort the migration table by plugin title and format for adoc
