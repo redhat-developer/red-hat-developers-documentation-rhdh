@@ -188,6 +188,8 @@ grep -r "The following" modules/ assemblies/
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script does:**
 - Checks for self-referential language ("This section...", "This document...", etc.)
 - Detects empty abstracts after `[role="_abstract"]`

@@ -43,6 +43,8 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script validates (12 checks):**
 - Content type is ASSEMBLY on first line, not repeated
 - Has `[role="_abstract"]` introduction, warns if length outside 50-300 chars

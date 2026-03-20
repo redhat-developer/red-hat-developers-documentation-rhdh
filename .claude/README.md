@@ -35,8 +35,8 @@ Comprehensive checklist template for CQA 2.1 compliance work. Contains:
 ### `skills/`
 CQA 2.1 compliance assessment skills:
 
-**Master Workflow:**
-- `cqa-master-workflow.md` - Complete CQA process orchestrating all 17 requirements in optimal order
+**Main Workflow:**
+- `cqa-main-workflow.md` - Complete CQA process orchestrating all 17 requirements in optimal order
 
 **Individual Skills (17 total):**
 - `cqa-01-*.md` through `cqa-17-*.md` - One skill per Pre-migration requirement

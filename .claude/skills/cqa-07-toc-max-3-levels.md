@@ -29,6 +29,8 @@ Content hierarchy should not exceed 3 levels in TOC to improve navigation and pr
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script validates:**
 - Scans all included .adoc files for heading depth
 - Identifies any headings deeper than level 3 (====)

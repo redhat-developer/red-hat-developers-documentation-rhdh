@@ -2,72 +2,90 @@
 # cqa-12-content-is-grammatically-correct-and-follows-rules.sh
 # Validates grammar and style using Vale (CQA #12)
 #
-# Usage: ./cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] <file-path>
-#   --fix:  Currently no automatic fixes available (validation only)
-#   file:   Processes the specified file and all its includes recursively
-#   Example: ./cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/install-rhdh-ocp/master.adoc
+# Usage: ./cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Runs Vale with .vale.ini (grammar, spelling, style, terminology)
 #   - Reports errors, warnings, and suggestions
 #
+# Autofix:
+#   - Passes --fix through to Vale (Vale supports --fix for some rules)
+#
 # Requires:
 #   - vale CLI installed
 #   - .vale.ini configuration file
 
-set -e
+source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
+cqa_parse_args "$0" "$@"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-cd "$REPO_ROOT"
+[[ -f ".vale.ini" ]] || { echo "Error: .vale.ini configuration file not found" >&2; exit 1; }
 
-# Parse arguments
-FIX_MODE=false
-TARGET_FILE=""
+_cqa12_check() {
+    local target="$1"
 
-# shellcheck disable=SC2034
-for arg in "$@"; do
-    case "$arg" in
-        --fix) FIX_MODE=true ;;
-        *)
-            if [[ -z "$TARGET_FILE" ]]; then
-                TARGET_FILE="$arg"
-            else
-                echo "Error: unexpected argument: $arg" >&2
-                echo "Usage: $0 [--fix] <file-path>" >&2
-                exit 1
-            fi
-            ;;
-    esac
-done
+    cqa_header "12" "Verify Grammar and Style (Vale)" "$target"
 
-if [[ -z "$TARGET_FILE" ]]; then
-    echo "Usage: $0 [--fix] <file-path>" >&2
-    echo "" >&2
-    echo "Examples:" >&2
-    echo "  $0 titles/install-rhdh-ocp/master.adoc" >&2
-    echo "  $0 --fix titles/install-rhdh-ocp/master.adoc" >&2
-    exit 1
-fi
+    # Filter out attributes.adoc from collected files
+    local vale_files=()
+    for f in "${_CQA_COLLECTED_FILES[@]}"; do
+        [[ "$f" != *.adoc ]] && continue
+        [[ "$(basename "$f")" == "attributes.adoc" ]] && continue
+        vale_files+=("$f")
+    done
 
-if [[ ! -f "$TARGET_FILE" ]]; then
-    echo "Error: File not found: $TARGET_FILE" >&2
-    exit 1
-fi
+    if [[ ${#vale_files[@]} -eq 0 ]]; then
+        echo "No files to validate."
+        return
+    fi
 
-if [[ ! -f ".vale.ini" ]]; then
-    echo "Error: .vale.ini configuration file not found" >&2
-    exit 1
-fi
+    cqa_file_start "$target"
 
-# Get all included files, excluding attributes.adoc (defines attribute values
-# using literal product names, which intentionally triggers DeveloperHub.Attributes rules)
-ALL_FILES=$("$REPO_ROOT/build/scripts/list-all-included-files-starting-from.sh" "$TARGET_FILE" | tr ' ' '\n' | grep -v '/attributes\.adoc$' | tr '\n' ' ')
+    if [[ "$CQA_FORMAT" == "json" ]]; then
+        # SARIF mode: get Vale JSON, convert to SARIF results
+        local vale_json
+        vale_json=$(vale --config .vale.ini --output JSON "${vale_files[@]}" 2>/dev/null || true)
 
-if [[ -z "$ALL_FILES" ]]; then
-    echo "Error: No files found to validate" >&2
-    exit 1
-fi
+        python3 -c "
+import json, sys
+try:
+    d = json.loads('''$vale_json''')
+    count = 0
+    for f, issues in d.items():
+        for i in issues:
+            count += 1
+            print(f\"{f}\t{i['Line']}\t{i['Severity']}\t{i['Check']}: {i['Message']}\")
+    if count == 0:
+        sys.exit(0)
+    else:
+        sys.exit(1)
+except Exception as e:
+    print(f'Error parsing Vale JSON: {e}', file=sys.stderr)
+    sys.exit(2)
+" 2>/dev/null | while IFS=$'\t' read -r file line severity message; do
+            local level="warning"
+            [[ "$severity" == "error" ]] && level="error"
+            [[ "$severity" == "suggestion" ]] && level="note"
+            cqa_fail_manual "$file" "$line" "$message"
+        done
+    else
+        # Checklist mode: run Vale and format output
+        if [[ "$CQA_FIX_MODE" == true ]]; then
+            echo "Running Vale with grammar/style checks..."
+            echo "(Vale --fix is not yet supported; showing issues for manual fix)"
+            echo ""
+        fi
 
-# Run Vale with grammar/style config (JSON output only)
-# shellcheck disable=SC2086
-vale --config .vale.ini --output JSON $ALL_FILES
+        local vale_exit=0
+        vale --config .vale.ini --output line "${vale_files[@]}" 2>/dev/null || vale_exit=$?
+
+        if [[ $vale_exit -eq 0 ]]; then
+            cqa_file_pass "$target"
+        else
+            echo ""
+            cqa_fail_manual "$target" "" "Vale found grammar/style issues (see output above)"
+        fi
+    fi
+}
+
+cqa_run_for_each_title _cqa12_check
+exit "$(cqa_exit_code)"

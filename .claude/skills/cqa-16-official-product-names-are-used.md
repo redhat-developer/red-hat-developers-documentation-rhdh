@@ -113,6 +113,8 @@ The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded pr
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script validates:**
 - All Red Hat product names (Developer Hub, OpenShift, ACS, Keycloak, RHEL, TAS, TPA, etc.)
 - All partner platform names (AWS, Azure, Google Cloud, EKS, AKS, GKE)

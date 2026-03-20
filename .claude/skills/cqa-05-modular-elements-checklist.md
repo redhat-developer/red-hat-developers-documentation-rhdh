@@ -31,6 +31,8 @@ All modules and assemblies must include required structural elements per the Red
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script validates:**
 
 The script checks all requirements from [modular-documentation-templates-checklist.md](../resources/modular-documentation-templates-checklist.md):

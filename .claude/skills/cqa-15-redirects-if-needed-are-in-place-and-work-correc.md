@@ -26,6 +26,8 @@
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script does:**
 - Checks git history for renamed files in recent 5 commits
 - Checks git history for deleted files in recent 5 commits

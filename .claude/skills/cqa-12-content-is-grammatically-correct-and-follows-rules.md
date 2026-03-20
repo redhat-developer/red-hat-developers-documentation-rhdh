@@ -33,6 +33,8 @@ Content must follow American English grammar, Red Hat style standards: correct g
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script does:**
 - Runs Vale with `.vale.ini` config on all included files
 - Reports grammar, spelling, style, and terminology issues

@@ -37,6 +37,8 @@ Short descriptions must follow AsciiDoc/DITA format requirements:
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script does:**
 - Checks for `[role="_abstract"]` marker presence
 - Validates character count (50-300 characters)

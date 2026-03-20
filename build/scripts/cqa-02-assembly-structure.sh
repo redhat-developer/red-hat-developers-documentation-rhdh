@@ -1,355 +1,254 @@
 #!/bin/bash
 # cqa-02-assembly-structure.sh - Validates assembly structure compliance (CQA #2)
-# Usage: ./cqa-02-assembly-structure.sh [--fix] <file-path>
+# Usage: ./cqa-02-assembly-structure.sh [--fix] [--all] <file-path>
+#
+# Checks:
+#   - Content type ASSEMBLY on first line, not repeated
+#   - [role="_abstract"] introduction present
+#   - Introduction length (50-300 chars for non-master files)
+#   - ID with _{context} suffix
+#   - :context: attribute after title
+#   - Context save/restore directives (non-master assemblies)
+#   - .Prerequisites as == heading (not block title)
+#   - .Additional resources with [role="_additional-resources"]
+#   - No level 3+ subheadings
+#   - No content between includes
+#
+# Autofix: content type, context save/restore, ID suffix, :context:, prerequisites heading,
+#          additional resources format
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# Parse arguments
-FIX_MODE=false
-TARGET_FILE=""
-for arg in "$@"; do
-    case "$arg" in
-        --fix) FIX_MODE=true ;;
-        *)
-            if [[ -z "$TARGET_FILE" ]]; then
-                TARGET_FILE="$arg"
-            else
-                echo "Error: unexpected argument: $arg" >&2
-                echo "Usage: $0 [--fix] <file-path>" >&2
-                exit 1
-            fi
-            ;;
-    esac
-done
-
-[[ -n "$TARGET_FILE" ]] || { echo "Usage: $0 [--fix] <file-path>" >&2; exit 1; }
-[[ -f "$TARGET_FILE" ]] || { echo "Error: File not found: $TARGET_FILE" >&2; exit 1; }
-
-# Get assembly files from the title's include tree
-mapfile -t ASSEMBLY_FILES < <("$SCRIPT_DIR/list-all-included-files-starting-from.sh" "$TARGET_FILE" | tr ' ' '\n' | grep -v '^$' | grep -E "assemblies/.*\.adoc$|titles/.*/master\.adoc$" || true)
-
-[[ ${#ASSEMBLY_FILES[@]} -gt 0 ]] || { echo "No assembly files found."; exit 0; }
-
-echo "=== CQA #2: Assembly Structure — $TARGET_FILE ==="
-[[ "$FIX_MODE" == true ]] && echo "FIX MODE - Will apply automatic fixes"
-
-TOTAL=0
-VIOLATIONS=0
-FIXED=0
+source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
+cqa_parse_args "$0" "$@"
 
 # Helper: get line number of first match
-lineno() { grep -n "$1" "$2" | cut -d: -f1; }
+_lineno() { grep -n "$1" "$2" 2>/dev/null | head -1 | cut -d: -f1; }
 
-# Fix helpers
-fix_content_type_first_line() {
+_fix_content_type_first_line() {
     local file="$1"
-    # Remove all content type lines, then insert on first line
     sed -i '/^:_mod-docs-content-type:/d' "$file"
     sed -i '1s/^/:_mod-docs-content-type: ASSEMBLY\n/' "$file"
-    echo "  >> Fixed: content type on first line"
-    FIXED=$((FIXED + 1))
 }
 
-fix_remove_duplicate_content_type() {
+_fix_add_context_save() {
     local file="$1"
-    # Keep only the first occurrence
-    awk '/^:_mod-docs-content-type:/ && ++n > 1 {next} 1' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-    echo "  >> Fixed: removed duplicate content type lines"
-    FIXED=$((FIXED + 1))
-}
-
-fix_add_context_save() {
-    local file="$1"
-    # Insert context save on line 2 (after content type on line 1)
     sed -i '1a\ifdef::context[:parent-context: {context}]' "$file"
-    echo "  >> Fixed: added context save on line 2"
-    FIXED=$((FIXED + 1))
 }
 
-fix_add_context_restore() {
+_fix_add_context_restore() {
     local file="$1"
-    # Remove existing partial context restore lines at end
     sed -i '/^ifdef::parent-context\[:context: {parent-context}\]$/d' "$file"
     sed -i '/^ifndef::parent-context\[:!context:\]$/d' "$file"
-    # Remove trailing blank lines
-    sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$file"
-    # Append context restore
-    printf '\nifdef::parent-context[:context: {parent-context}]\nifndef::parent-context[:!context:]\n' >> "$file"
-    echo "  >> Fixed: added context restore as last lines"
-    FIXED=$((FIXED + 1))
-}
-
-fix_remove_duplicate_context_save() {
-    local file="$1"
-    # Keep only the first ifdef::context[:parent-context line
-    awk '/^ifdef::context\[:parent-context/ && ++n > 1 {next} 1' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-    echo "  >> Fixed: removed duplicate context save lines"
-    FIXED=$((FIXED + 1))
-}
-
-fix_remove_duplicate_context_restore() {
-    local file="$1"
-    # Remove all occurrences, then re-add at the end via fix_add_context_restore
-    sed -i '/^ifdef::parent-context\[:context: {parent-context}\]$/d' "$file"
-    sed -i '/^ifndef::parent-context\[:!context:\]$/d' "$file"
-    # Remove trailing blank lines
     sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$file"
     printf '\nifdef::parent-context[:context: {parent-context}]\nifndef::parent-context[:!context:]\n' >> "$file"
-    echo "  >> Fixed: removed duplicate context restore lines"
-    FIXED=$((FIXED + 1))
 }
 
-fix_id_add_context_suffix() {
-    local file="$1"
-    # Find [id="..."] that doesn't end with _{context}"] and add the suffix
-    sed -i 's/\[id="\([^"]*[^}]\)"\]/[id="\1_{context}"]/' "$file"
-    echo "  >> Fixed: added _{context} suffix to ID"
-    FIXED=$((FIXED + 1))
-}
-
-fix_context_line() {
-    local file="$1"
-    local title_ln="$2"
-    # Remove any existing :context: lines
+_fix_context_line() {
+    local file="$1" title_ln="$2"
     sed -i '/^:context:/d' "$file"
-    # Derive value from ID (strip _{context} suffix)
     local id_value
     id_value=$(grep -m1 '\[id="' "$file" | sed 's/.*\[id="\([^"]*\)".*/\1/' | sed 's/_{context}$//')
     if [[ -n "$id_value" ]]; then
         sed -i "${title_ln}a\\\\n:context: ${id_value}" "$file"
-        echo "  >> Fixed: set :context: ${id_value} after title"
-        FIXED=$((FIXED + 1))
     fi
 }
 
-fix_prerequisites_heading() {
-    local file="$1"
-    sed -i 's/^\.Prerequisites$/== Prerequisites/' "$file"
-    echo "  >> Fixed: .Prerequisites -> == Prerequisites"
-    FIXED=$((FIXED + 1))
-}
+_cqa02_check() {
+    local target="$1"
 
-fix_additional_resources() {
-    local file="$1"
-    # Convert .Additional resources block title to [role="_additional-resources"] + == heading
-    if grep -q '^\.Additional resources' "$file"; then
-        sed -i 's/^\.Additional resources$/[role="_additional-resources"]\n== Additional resources/' "$file"
-        echo "  >> Fixed: .Additional resources -> [role=\"_additional-resources\"] == Additional resources"
-        FIXED=$((FIXED + 1))
-    # Add missing role attribute before existing == Additional resources heading
-    elif grep -q '^== Additional resources' "$file"; then
-        sed -i '/^== Additional resources/i\[role="_additional-resources"]' "$file"
-        echo "  >> Fixed: added [role=\"_additional-resources\"] before == Additional resources"
-        FIXED=$((FIXED + 1))
-    fi
-}
+    cqa_header "2" "Verify Assembly Structure" "$target"
 
-for file in "${ASSEMBLY_FILES[@]}"; do
-    [[ -f "$file" ]] || continue
-    TOTAL=$((TOTAL + 1))
-    V=0
-    IS_MASTER=$([[ "$(basename "$file")" == "master.adoc" ]] && echo true || echo false)
-
-    echo "Checking: $(basename "$file")"
-
-    # Check 1: Content type must be ASSEMBLY on first line, not repeated
-    FIRST_LINE=$(sed -n '1p' "$file")
-    if [[ "$FIRST_LINE" != ":_mod-docs-content-type: ASSEMBLY" ]]; then
-        CT=$(grep -m1 '^:_mod-docs-content-type:' "$file" | sed 's/:_mod-docs-content-type:[[:space:]]*//' | tr -d '[:space:]')
-        if [[ -z "$CT" ]]; then
-            echo "  ✗ Missing :_mod-docs-content-type: ASSEMBLY on first line"
-        elif [[ "$CT" != "ASSEMBLY" ]]; then
-            echo "  ✗ Content type is '$CT' (expected ASSEMBLY)"
-        else
-            echo "  ✗ :_mod-docs-content-type: ASSEMBLY must be on first line"
+    # Filter to assembly files only
+    local assembly_files=()
+    for f in "${_CQA_COLLECTED_FILES[@]}"; do
+        if echo "$f" | grep -qE "assemblies/.*\.adoc$|titles/.*/master\.adoc$"; then
+            assembly_files+=("$f")
         fi
-        V=$((V + 1))
-        [[ "$FIX_MODE" == true ]] && fix_content_type_first_line "$file"
-    fi
-    CT_COUNT=$(grep -c '^:_mod-docs-content-type:' "$file" || true)
-    if [[ $CT_COUNT -gt 1 ]]; then
-        echo "  ✗ :_mod-docs-content-type: appears $CT_COUNT times (must not be repeated)"
-        V=$((V + 1))
-        [[ "$FIX_MODE" == true ]] && fix_remove_duplicate_content_type "$file"
+    done
+
+    if [[ ${#assembly_files[@]} -eq 0 ]]; then
+        echo "No assembly files found."
+        return
     fi
 
-    # Check 2: Has abstract
-    grep -q '\[role="_abstract"\]' "$file" || { echo "  ✗ Missing [role=\"_abstract\"] introduction"; V=$((V + 1)); }
+    for file in "${assembly_files[@]}"; do
+        [[ -f "$file" ]] || continue
 
-    # Check 3: Introduction length (50-300 chars, skip master.adoc which uses :abstract: attribute)
-    if [[ "$IS_MASTER" == false ]]; then
-        ABSTRACT_LN=$(lineno '\[role="_abstract"\]' "$file" | head -1)
-        if [[ -n "$ABSTRACT_LN" ]]; then
-            INTRO=$(sed -n "$((ABSTRACT_LN + 1))p" "$file")
-            INTRO_LEN=${#INTRO}
-            if [[ $INTRO_LEN -lt 50 ]]; then
-                echo "  ⚠ Introduction too short (${INTRO_LEN} chars, recommend 50-300)"
-            elif [[ $INTRO_LEN -gt 300 ]]; then
-                echo "  ⚠ Introduction too long (${INTRO_LEN} chars, recommend 50-300)"
+        cqa_file_start "$file"
+        local is_master=$([[ "$(basename "$file")" == "master.adoc" ]] && echo true || echo false)
+
+        # Check 1: Content type on first line
+        local first_line
+        first_line=$(sed -n '1p' "$file")
+        if [[ "$first_line" != ":_mod-docs-content-type: ASSEMBLY" ]]; then
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                _fix_content_type_first_line "$file"
             fi
+            cqa_fail_autofix "$file" "1" "Content type ASSEMBLY not on first line" "Fixed content type on line 1"
         fi
-    fi
-
-    # Check 4: Has ID with _{context} (skip for title-level master.adoc)
-    if [[ "$IS_MASTER" == false ]]; then
-        if ! grep -q '\[id=".*_{context}"\]' "$file"; then
-            # Check if there's an [id="..."] without _{context}
-            if grep -q '\[id="[^"]*"\]' "$file"; then
-                echo "  ✗ ID missing _{context} suffix"
-                V=$((V + 1))
-                [[ "$FIX_MODE" == true ]] && fix_id_add_context_suffix "$file"
-            else
-                echo "  ✗ Missing [id=\"..._\{context\}\"] attribute"
-                V=$((V + 1))
+        local ct_count
+        ct_count=$(grep -c '^:_mod-docs-content-type:' "$file" || true)
+        if [[ $ct_count -gt 1 ]]; then
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                awk '/^:_mod-docs-content-type:/ && ++n > 1 {next} 1' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
             fi
+            cqa_fail_autofix "$file" "" "Content type appears $ct_count times" "Removed duplicates"
         fi
-    fi
 
-    # Check 5: :context: must be set after title, separated by a blank line (skip master.adoc)
-    CONTEXT_LN=$(lineno "^:context:" "$file" | head -1)
-    NEED_CTX_FIX=false
-    if [[ -z "$CONTEXT_LN" ]]; then
-        echo "  ✗ Missing :context: attribute"; V=$((V + 1))
-        NEED_CTX_FIX=true
-    elif [[ "$IS_MASTER" == false ]]; then
-        TITLE_LN_CHK=$(lineno "^= " "$file" | head -1)
-        if [[ -n "$TITLE_LN_CHK" ]]; then
-            if [[ "$CONTEXT_LN" -le "$TITLE_LN_CHK" ]]; then
-                echo "  ✗ :context: must appear after the title (= ...)"; V=$((V + 1))
-                NEED_CTX_FIX=true
-            else
-                LINE_AFTER_TITLE=$(sed -n "$((TITLE_LN_CHK + 1))p" "$file")
-                if [[ -n "$LINE_AFTER_TITLE" ]]; then
-                    echo "  ✗ Missing blank line between title and :context:"; V=$((V + 1))
-                    NEED_CTX_FIX=true
+        # Check 2: Has abstract
+        if ! grep -q '\[role="_abstract"\]' "$file"; then
+            cqa_delegated "$file" "" "9" "Missing [role=\"_abstract\"] introduction"
+        fi
+
+        # Check 3: Introduction length (non-master)
+        if [[ "$is_master" == false ]]; then
+            local abstract_ln
+            abstract_ln=$(_lineno '\[role="_abstract"\]' "$file")
+            if [[ -n "$abstract_ln" ]]; then
+                local intro
+                intro=$(sed -n "$((abstract_ln + 1))p" "$file")
+                local intro_len=${#intro}
+                if [[ $intro_len -lt 50 ]]; then
+                    cqa_delegated "$file" "$((abstract_ln + 1))" "8" "Introduction too short (${intro_len} chars, recommend 50-300)"
+                elif [[ $intro_len -gt 300 ]]; then
+                    cqa_delegated "$file" "$((abstract_ln + 1))" "8" "Introduction too long (${intro_len} chars, recommend 50-300)"
                 fi
             fi
         fi
-    fi
-    if [[ "$FIX_MODE" == true && "$NEED_CTX_FIX" == true && "$IS_MASTER" == false ]]; then
-        TITLE_LN_CHK=$(lineno "^= " "$file" | head -1)
-        [[ -n "$TITLE_LN_CHK" ]] && fix_context_line "$file" "$TITLE_LN_CHK"
-    fi
 
-    # Check 6: Context save/restore required, not repeated (skip master.adoc — title-level entry point)
-    if [[ "$IS_MASTER" == false ]]; then
-        SECOND_LINE=$(sed -n '2p' "$file")
-        if [[ "$SECOND_LINE" != ifdef::context* ]]; then
-            echo "  ✗ Missing context save on line 2 (ifdef::context[:parent-context: {context}])"
-            V=$((V + 1))
-            [[ "$FIX_MODE" == true ]] && fix_add_context_save "$file"
-        fi
-        SAVE_COUNT=$(grep -c "^ifdef::context\[:parent-context" "$file" || true)
-        if [[ $SAVE_COUNT -gt 1 ]]; then
-            echo "  ✗ Context save appears $SAVE_COUNT times (must not be repeated)"; V=$((V + 1))
-            [[ "$FIX_MODE" == true ]] && fix_remove_duplicate_context_save "$file"
+        # Check 4: ID with _{context} (non-master)
+        if [[ "$is_master" == false ]]; then
+            if ! grep -q '\[id=".*_{context}"\]' "$file"; then
+                if grep -q '\[id="[^"]*"\]' "$file"; then
+                    if [[ "$CQA_FIX_MODE" == true ]]; then
+                        sed -i 's/\[id="\([^"]*[^}]\)"\]/[id="\1_{context}"]/' "$file"
+                    fi
+                    cqa_fail_autofix "$file" "" "ID missing _{context} suffix" "Added _{context} suffix"
+                else
+                    cqa_fail_manual "$file" "" "Missing [id=\"..._{context}\"] attribute"
+                fi
+            fi
         fi
 
-        LAST_LINE=$(tail -1 "$file")
-        PENULT_LINE=$(tail -2 "$file" | head -1)
-        NEED_RESTORE=false
-        if [[ "$PENULT_LINE" != 'ifdef::parent-context[:context: {parent-context}]' ]]; then
-            echo "  ✗ Second-to-last line must be: ifdef::parent-context[:context: {parent-context}]"
-            V=$((V + 1)); NEED_RESTORE=true
+        # Check 5: :context: after title (non-master)
+        local context_ln
+        context_ln=$(_lineno "^:context:" "$file")
+        local need_ctx_fix=false
+        if [[ -z "$context_ln" ]]; then
+            cqa_fail_autofix "$file" "" "Missing :context: attribute" "Added :context:"
+            need_ctx_fix=true
+        elif [[ "$is_master" == false ]]; then
+            local title_ln_chk
+            title_ln_chk=$(_lineno "^= " "$file")
+            if [[ -n "$title_ln_chk" ]]; then
+                if [[ "$context_ln" -le "$title_ln_chk" ]]; then
+                    cqa_fail_autofix "$file" "$context_ln" ":context: must appear after the title" "Moved :context: after title"
+                    need_ctx_fix=true
+                fi
+            fi
         fi
-        if [[ "$LAST_LINE" != 'ifndef::parent-context[:!context:]' ]]; then
-            echo "  ✗ Last line must be: ifndef::parent-context[:!context:]"
-            V=$((V + 1)); NEED_RESTORE=true
-        fi
-        RESTORE_COUNT=$(grep -c "^ifdef::parent-context\[:context: {parent-context}\]" "$file" || true)
-        if [[ $RESTORE_COUNT -gt 1 ]]; then
-            echo "  ✗ Context restore appears $RESTORE_COUNT times (must not be repeated)"; V=$((V + 1))
-            [[ "$FIX_MODE" == true ]] && fix_remove_duplicate_context_restore "$file"
-        elif [[ "$FIX_MODE" == true && "$NEED_RESTORE" == true ]]; then
-            fix_add_context_restore "$file"
-        fi
-    fi
-
-    # Check 7: Prerequisites must use == heading, not .block title
-    if grep -q "^\.Prerequisites" "$file"; then
-        echo "  ✗ Uses .Prerequisites block title instead of == Prerequisites heading"
-        V=$((V + 1))
-        [[ "$FIX_MODE" == true ]] && fix_prerequisites_heading "$file"
-    fi
-
-    # Check 7b: Prerequisites must be followed by unnumbered list or include
-    PREREQ_HEADING_LN=$(lineno "^== Prerequisites" "$file" | head -1)
-    if [[ -n "$PREREQ_HEADING_LN" ]]; then
-        # Find first non-empty line after == Prerequisites
-        PREREQ_FIRST=$(awk "NR>$PREREQ_HEADING_LN && /^[^[:space:]]/ && !/^$/{print; exit}" "$file")
-        if [[ -n "$PREREQ_FIRST" && "$PREREQ_FIRST" != "* "* && "$PREREQ_FIRST" != include::* ]]; then
-            echo "  ✗ == Prerequisites must be followed by an unnumbered list (* ) or include::"; V=$((V + 1))
+        if [[ "$CQA_FIX_MODE" == true && "$need_ctx_fix" == true && "$is_master" == false ]]; then
+            local title_ln_chk
+            title_ln_chk=$(_lineno "^= " "$file")
+            [[ -n "$title_ln_chk" ]] && _fix_context_line "$file" "$title_ln_chk"
         fi
 
-        # Check 7c: Prerequisites count (max 10)
-        PREREQ_ITEMS=$(awk "NR>$PREREQ_HEADING_LN && /^== /{exit} NR>$PREREQ_HEADING_LN && /^\* /{n++} END{print n+0}" "$file")
-        [[ $PREREQ_ITEMS -gt 10 ]] && { echo "  ⚠ Prerequisites has $PREREQ_ITEMS items (max 10 recommended)"; }
-    fi
+        # Check 6: Context save/restore (non-master)
+        if [[ "$is_master" == false ]]; then
+            local second_line
+            second_line=$(sed -n '2p' "$file")
+            if [[ "$second_line" != ifdef::context* ]]; then
+                if [[ "$CQA_FIX_MODE" == true ]]; then
+                    _fix_add_context_save "$file"
+                fi
+                cqa_fail_autofix "$file" "2" "Missing context save on line 2" "Added context save"
+            fi
+            local save_count
+            save_count=$(grep -c "^ifdef::context\[:parent-context" "$file" || true)
+            if [[ $save_count -gt 1 ]]; then
+                if [[ "$CQA_FIX_MODE" == true ]]; then
+                    awk '/^ifdef::context\[:parent-context/ && ++n > 1 {next} 1' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+                fi
+                cqa_fail_autofix "$file" "" "Context save appears $save_count times" "Removed duplicates"
+            fi
 
-    # Check 8: No level 3+ subheadings
-    grep -q "^===[[:space:]]" "$file" && { echo "  ✗ Contains level 3+ subheadings (=== or deeper)"; V=$((V + 1)); }
-
-    # Check 9: Additional resources must use [role="_additional-resources"] + == heading
-    NEED_AR_FIX=false
-    if grep -q "^\.Additional resources" "$file"; then
-        echo "  ✗ Uses .Additional resources block title (must use [role=\"_additional-resources\"] + == heading)"
-        V=$((V + 1)); NEED_AR_FIX=true
-    elif grep -q "^== Additional resources" "$file"; then
-        if ! grep -q '\[role="_additional-resources"\]' "$file"; then
-            echo "  ✗ == Additional resources heading missing [role=\"_additional-resources\"] attribute"
-            V=$((V + 1)); NEED_AR_FIX=true
+            local last_line penult_line need_restore=false
+            last_line=$(tail -1 "$file")
+            penult_line=$(tail -2 "$file" | head -1)
+            if [[ "$penult_line" != 'ifdef::parent-context[:context: {parent-context}]' ]]; then
+                cqa_fail_autofix "$file" "" "Missing context restore (second-to-last line)" "Added context restore"
+                need_restore=true
+            fi
+            if [[ "$last_line" != 'ifndef::parent-context[:!context:]' ]]; then
+                cqa_fail_autofix "$file" "" "Missing context restore (last line)" "Added context restore"
+                need_restore=true
+            fi
+            if [[ "$CQA_FIX_MODE" == true && "$need_restore" == true ]]; then
+                _fix_add_context_restore "$file"
+            fi
         fi
-    fi
-    [[ "$FIX_MODE" == true && "$NEED_AR_FIX" == true ]] && fix_additional_resources "$file"
 
-    # Find module include line numbers (after title, excluding artifacts/)
-    TITLE_LN=$(lineno "^= " "$file" | head -1)
-    if [[ -n "$TITLE_LN" ]]; then
-        mapfile -t INCLUDE_LNS < <(tail -n +"$TITLE_LN" "$file" | grep -n "^include::" | grep -v "artifacts/" | cut -d: -f1 | while read -r n; do echo $((TITLE_LN + n - 1)); done)
-    else
-        INCLUDE_LNS=()
-    fi
-
-    if [[ ${#INCLUDE_LNS[@]} -gt 0 ]]; then
-        FIRST_INC=${INCLUDE_LNS[0]}
-        LAST_INC=${INCLUDE_LNS[-1]}
-
-        # Check 10: Prerequisites must be before first include
-        PREREQ_LN=$(lineno "^== Prerequisites" "$file" | head -1)
-        [[ -n "$PREREQ_LN" && "$PREREQ_LN" -gt "$FIRST_INC" ]] && { echo "  ✗ Prerequisites appears after include statements"; V=$((V + 1)); }
-
-        # Check 11: Additional resources must be after last include
-        RES_LN=$(grep -n "^\(\.Additional resources\|== Additional resources\)" "$file" | head -1 | cut -d: -f1)
-        [[ -n "$RES_LN" && "$RES_LN" -lt "$LAST_INC" ]] && { echo "  ✗ Additional resources appears before include statements"; V=$((V + 1)); }
-
-        # Check 12: No content between includes
-        if [[ "$FIRST_INC" != "$LAST_INC" ]]; then
-            BETWEEN=$(sed -n "$((FIRST_INC + 1)),$((LAST_INC - 1))p" "$file" | \
-                grep -v -E "^$|^include::|^//|^ifdef::|^ifndef::|^endif::|^\[role=|^\.Additional resources|^== " || true)
-            [[ -n "$BETWEEN" ]] && { echo "  ✗ Content between include statements ($(echo "$BETWEEN" | wc -l) lines)"; V=$((V + 1)); }
+        # Check 7: Prerequisites must use == heading
+        if grep -q "^\.Prerequisites" "$file"; then
+            local prereq_ln
+            prereq_ln=$(_lineno "^\.Prerequisites" "$file")
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                sed -i 's/^\.Prerequisites$/== Prerequisites/' "$file"
+            fi
+            cqa_fail_autofix "$file" "$prereq_ln" "Uses .Prerequisites block title instead of == heading" "Changed to == Prerequisites"
         fi
-    fi
 
-    [[ $V -eq 0 ]] && echo "  ✓ Structure compliant" || VIOLATIONS=$((VIOLATIONS + V))
-    echo ""
-done
+        # Check 8: No level 3+ subheadings
+        if grep -q "^===[[:space:]]" "$file"; then
+            local sub_ln
+            sub_ln=$(grep -n "^===[[:space:]]" "$file" | head -1 | cut -d: -f1)
+            cqa_fail_manual "$file" "$sub_ln" "Contains level 3+ subheadings (=== or deeper)"
+        fi
 
-echo "=== Summary ==="
-echo "Assemblies checked: $TOTAL"
-if [[ $VIOLATIONS -eq 0 ]]; then
-    echo "✓ All assemblies have compliant structure"
-    exit 0
-fi
-if [[ "$FIX_MODE" == true ]]; then
-    echo "✓ Applied $FIXED fix(es) for $VIOLATIONS violation(s)"
-    echo ""
-    echo "Re-run without --fix to verify remaining issues."
-else
-    echo "✗ Found $VIOLATIONS violation(s)"
-    echo ""
-    echo "Run with --fix to apply automatic fixes:"
-    echo "  $0 --fix $TARGET_FILE"
-fi
-exit 1
+        # Check 9: Additional resources format
+        local need_ar_fix=false
+        if grep -q "^\.Additional resources" "$file"; then
+            local ar_ln
+            ar_ln=$(_lineno "^\.Additional resources" "$file")
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                sed -i 's/^\.Additional resources$/[role="_additional-resources"]\n== Additional resources/' "$file"
+            fi
+            cqa_fail_autofix "$file" "$ar_ln" "Uses .Additional resources block title" "Changed to [role] + == heading"
+        elif grep -q "^== Additional resources" "$file"; then
+            if ! grep -q '\[role="_additional-resources"\]' "$file"; then
+                local ar_ln
+                ar_ln=$(_lineno "^== Additional resources" "$file")
+                if [[ "$CQA_FIX_MODE" == true ]]; then
+                    sed -i '/^== Additional resources/i\[role="_additional-resources"]' "$file"
+                fi
+                cqa_fail_autofix "$file" "$ar_ln" "Missing [role=\"_additional-resources\"] attribute" "Added role attribute"
+            fi
+        fi
+
+        # Check 10: No content between includes
+        local title_ln
+        title_ln=$(_lineno "^= " "$file")
+        if [[ -n "$title_ln" ]]; then
+            local -a include_lns
+            mapfile -t include_lns < <(tail -n +"$title_ln" "$file" | grep -n "^include::" | grep -v "artifacts/" | cut -d: -f1 | while read -r n; do echo $((title_ln + n - 1)); done)
+            if [[ ${#include_lns[@]} -gt 1 ]]; then
+                local first_inc=${include_lns[0]}
+                local last_inc=${include_lns[-1]}
+                local between
+                between=$(sed -n "$((first_inc + 1)),$((last_inc - 1))p" "$file" | \
+                    grep -v -E "^$|^include::|^//|^ifdef::|^ifndef::|^endif::|^\[role=|^\.Additional resources|^== " || true)
+                if [[ -n "$between" ]]; then
+                    local between_count
+                    between_count=$(echo "$between" | wc -l)
+                    cqa_fail_manual "$file" "$first_inc" "Content between include statements ($between_count lines)"
+                fi
+            fi
+        fi
+
+        if [[ "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then
+            cqa_file_pass "$file"
+        fi
+    done
+}
+
+cqa_run_for_each_title _cqa02_check
+exit "$(cqa_exit_code)"

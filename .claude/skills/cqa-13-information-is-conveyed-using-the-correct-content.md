@@ -83,6 +83,8 @@ While RHDH documentation primarily uses Product documentation with modular struc
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script does:**
 - Validates PROCEDURE files have `.Procedure` section with steps
 - Validates CONCEPT files do not have `.Procedure` sections
