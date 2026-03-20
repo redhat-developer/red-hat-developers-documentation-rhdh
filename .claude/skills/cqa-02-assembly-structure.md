@@ -2,161 +2,96 @@
 
 ## Assemblies should contain only an introductory section and include statements
 
+**Reference:** [Assembly template](../resources/assembly-template.adoc)
+
 **Quality Level:** Required/non-negotiable
 
 ## Requirement
 
-Assemblies must have this structure:
-1. **Introduction** - One or more paragraphs marked with `[role="_abstract"]`
-2. **Optional: Prerequisites** - Use second-level heading (`== Prerequisites`) so it appears in the TOC, consistent with Additional resources and Next steps
-3. **Include statements** - For modules only
-4. **Optional: Additional resources** - Links only, at the end after all includes
+Assemblies must follow the [assembly template](../resources/assembly-template.adoc). Required structure:
+1. **Content type** - `:_mod-docs-content-type: ASSEMBLY` on first line
+2. **Context save** - `ifdef::context[:parent-context: {context}]` on second line (skip for `master.adoc`)
+3. **ID** - `[id="assembly-name_{context}"]`
+4. **Title** - `= Assembly title`
+5. **Context set** - `:context: assembly-name`
+6. **Introduction** - A single paragraph marked with `[role="_abstract"]` (50-300 chars)
+7. **Optional: Prerequisites** - Use `== Prerequisites` heading (not `.Prerequisites` block title)
+8. **Include statements** - For modules only, no text between includes
+9. **Optional: Additional resources** - `[role="_additional-resources"]` then `== Additional resources`, links only, after all includes
+10. **Context restore** (if nestable) - `ifdef::parent-context[...]` and `ifndef::parent-context[...]`
 
 **DITA Constraint:** DITA maps do not accept text between include statements for modules.
 
-## Automated Validation
+## Automated Validation and Fixing
 
-### Run Complete Validation Script
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect assembly files without running the script.
 
 ```bash
-./build/scripts/cqa-02-assembly-structure.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-02-assembly-structure.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-02-assembly-structure.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-02-assembly-structure.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**What the script validates:**
-- Has `[role="_abstract"]` introduction
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
+**What the script validates (12 checks):**
+- Content type is ASSEMBLY on first line, not repeated
+- Has `[role="_abstract"]` introduction, warns if length outside 50-300 chars
+- Has `[id="..._{context}"]` attribute
+- Has `:context:` attribute set after title, separated by blank line
+- Context save on line 2, not repeated; context restore as exact last two lines (except `master.adoc`)
+- No `.Prerequisites` block title (must use `== Prerequisites` heading)
+- More than 10 prerequisites (warning)
+- No level 3+ subheadings (`===` or deeper)
+- `[role="_additional-resources"]` present if `== Additional resources` heading is used
+- Prerequisites before first include
+- Additional resources after last include
 - No content between include statements
-- `== Prerequisites` heading before first include (if present); `.Prerequisites` block title is an error
-- `.Additional resources` at end after all includes (if present)
-- Content type is ASSEMBLY
-- No level 2+ subheadings (=== or deeper)
-- No detailed content between abstract and includes
 
-**Target Results:**
-- ✅ All assemblies have compliant structure
-- ⚠️ Warnings indicate potential issues requiring manual review
+**Auto-fixable with `--fix`:**
+- Content type on first line (insert/move)
+- Remove duplicate content type lines
+- Add context save on line 2
+- Add context restore as last two lines
+- Remove duplicate context save/restore lines
+- `.Prerequisites` block title → `== Prerequisites` heading
+- `.Additional resources` block title → `[role="_additional-resources"]` + `== Additional resources` heading
+- Missing `[role="_additional-resources"]` before `== Additional resources` heading
+- Move `:context:` after title with blank line separator (if present but in wrong position)
+- Add `_{context}` suffix to ID if missing
+- Add missing `:context:` attribute (value derived from ID without `_{context}` suffix)
 
-**Example output:**
-```
-✓ All assemblies have compliant structure
-Note: Warnings indicate potential issues that require manual review
-```
+**Not auto-fixed (delegated):**
+- ID value mismatch with title — handled by [CQA #10 - Titles](cqa-10-titles-are-brief-complete-and-descriptive.md)
+- Introduction length (50-300 chars) — handled by [CQA #8 - Short descriptions](cqa-08-short-description-content.md)
 
-## Verification
-
-**Manual inspection of each assembly file:**
-
-1. **Check assembly structure:**
-   ```bash
-   # List all assembly files
-   find assemblies/ -name "assembly-*.adoc" -o -name "master.adoc"
-   ```
-
-2. **For each assembly, verify:**
-   - [ ] Has introduction paragraph(s) with `[role="_abstract"]`
-   - [ ] Only includes statements after introduction
-   - [ ] NO detailed content in assembly (move to modules)
-   - [ ] NO text between include statements
-   - [ ] Optional `== Prerequisites` heading before includes (if needed), using second-level heading for TOC visibility
-   - [ ] Optional `.Additional resources` is at end (after all includes)
-
-**What to look for:**
-
-✅ **Correct Structure:**
-```asciidoc
-= Assembly Title
-
-[role="_abstract"]
-Brief introduction explaining what user accomplishes.
-
-== Prerequisites
-* Prerequisite 1
-* Prerequisite 2
-
-include::modules/con-concept.adoc[leveloffset=+1]
-
-include::modules/proc-procedure.adoc[leveloffset=+1]
-
-.Additional resources
-* link:https://example.com[Related documentation]
-```
-
-❌ **Incorrect - Detailed content in assembly:**
-```asciidoc
-= Assembly Title
-
-[role="_abstract"]
-Introduction paragraph.
-
-This is a detailed explanation of concepts.  ← WRONG: Move to concept module
-
-include::modules/proc-procedure.adoc[leveloffset=+1]
-
-Here are additional details.  ← WRONG: No text between includes
-```
-
-## Common Violations and Fixes
-
-### Violation 1: Detailed content in assembly
-**Problem:** Assembly contains explanatory text, bullets, or detailed information
-
-**Fix:**
-1. Create a concept module (con-*.adoc) for explanatory content
-2. Move detailed text to the concept module
-3. Add include statement for the concept module
-4. Keep only brief introduction in assembly
-
-### Violation 2: Text between include statements
-**Problem:** Assembly has paragraphs or content between module includes
-
-**Fix:**
-1. Move the text into one of the included modules
-2. If text introduces a section, move it to the module being introduced
-3. If text is standalone, create a new concept module
-
-### Violation 3: Prerequisites in wrong location or format
-**Problem:** Prerequisites listed after includes, scattered throughout, or using block title syntax (`.Prerequisites`) instead of heading syntax
-
-**Fix:**
-1. Move all prerequisites to a single `== Prerequisites` section (second-level heading, not `.Prerequisites` block title)
-2. Place immediately after introduction, before first include
-3. Use bulleted list format
-4. Max 10 prerequisites
-5. The second-level heading ensures Prerequisites appears in the TOC, consistent with `== Additional resources` and `== Next steps`
-
-### Violation 4: Additional resources with descriptive text
-**Problem:** Additional resources section has explanatory content
-
-**Fix:**
-1. Keep only links in `.Additional resources`
-2. Remove descriptive text
-3. Link text should be descriptive enough (no extra explanation needed)
-
-## Notes
-
-**Reference:** This requirement aligns with DITA map structure constraints. DITA maps can only contain references to topics (modules), not inline content.
-
-**Vale Check Status:** This will be added to Vale asciidoctor-dita-vale check (rule: AssemblyContents)
-
-**Context Management:** Assemblies that include other assemblies must properly set and restore context:
-```asciidoc
-// At top of nested assembly
-ifdef::context[:parent-context: {context}]
-
-// At end of nested assembly
-ifdef::parent-context[:context: {parent-context}]
-ifndef::parent-context[:!context:]
-```
+**Not auto-fixed (manual):**
+- Content between include statements — requires moving text into modules
+- Missing `[role="_abstract"]` — delegated to [CQA #9 - Short description format](cqa-09-short-description-format.md)
+- Level 3+ subheadings — requires restructuring
+- Prerequisites count, order, completeness
+- Include order and additional resources link validity
 
 ## Assessment
 
 ```yaml
 
-title: 
+title:
 
 status: No data  # Meets criteria | Mostly meets | Mostly does not meet | Does not meet | Not applicable
 
 notes: |
 
-  
 
 ```

@@ -6,69 +6,61 @@
 
 **Quality Level:** Required/non-negotiable
 
-## Command
+## Automated Validation and Fixing
 
-**Run content type detection and validation:**
+**IMPORTANT:** ALWAYS use the script below.
+
 ```bash
-./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-03-content-is-modularized.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
 
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+
 **What the script does:**
-- Detects and validates `:_mod-docs-content-type:` metadata
-- Auto-fixes content type declarations where possible
-- Reports compliant, violation, and auto-fixed counts
+- Detects and validates `:_mod-docs-content-type:` metadata (must be first line)
+- Auto-fixes content type declarations in `--fix` mode
 - Validates PROCEDURE structure (numbered vs unnumbered lists)
+- Normalizes `.Procedure` and `.Verification` list formatting
 - Checks filename prefixes match declared types
 
 **Target Results:**
-- ✅ All modules have correct content type metadata (ASSEMBLY, CONCEPT, PROCEDURE, REFERENCE, SNIPPET)
+- ✅ All modules have correct content type metadata
 - ✅ All filenames use correct prefixes (`assembly-`, `con-`, `proc-`, `ref-`, `snip-`)
-- ✅ All declared types match actual content structure
 
-## Notes
+## Module Types
 
-**Modularization Requirements:**
+| Type | Prefix | Content | Title form |
+|------|--------|---------|------------|
+| **ASSEMBLY** | `assembly-` / `master.adoc` | Combines modules for a user story | Imperative or noun phrase |
+| **CONCEPT** | `con-` | Explains "what" and "why", no steps | Noun phrase |
+| **PROCEDURE** | `proc-` | Step-by-step instructions, standard sections only | Imperative |
+| **REFERENCE** | `ref-` | Lookup data (tables, lists) | Noun phrase |
+| **SNIPPET** | `snip-` | Reusable fragments, no structural elements | N/A |
 
-All content must follow Red Hat modular documentation structure:
-
-1. **Assemblies** - Combine modules to address a single user story
-   - Introduction paragraph (marked with `[role="_abstract"]`)
-   - Include statements for modules
-   - Optional: Prerequisites, Additional resources
-
-2. **Concept Modules** (`con-*.adoc`) - Explain "what" and "why"
-   - `:_mod-docs-content-type: CONCEPT`
-   - No step-by-step instructions
-   - Optional subheadings allowed
-
-3. **Procedure Modules** (`proc-*.adoc`) - Step-by-step instructions
-   - `:_mod-docs-content-type: PROCEDURE`
-   - Standard sections only: `.Prerequisites`, `.Procedure`, `.Verification`, `.Troubleshooting`, `.Next steps`
-   - NO custom subheadings
-
-4. **Reference Modules** (`ref-*.adoc`) - Lookup data
-   - `:_mod-docs-content-type: REFERENCE`
-   - Tables, lists, specifications
-   - Optional subheadings allowed for complex content
-
-5. **Snippets** (`snip-*.adoc`) - Reusable content fragments
-   - `:_mod-docs-content-type: SNIPPET`
-   - NO structural elements (anchors, H1 headings, block titles)
-
-**Critical Rule:** A module should not contain another module (no includes within modules)
-
-**Reference:** [Red Hat Modular Documentation Reference Guide](../resources/red-hat-modular-docs.md)
+**Critical Rule:** A module should not contain another module (no includes within modules).
 
 ## Assessment
 
 ```yaml
 
-title: 
+title:
 
 status: No data  # Meets criteria | Mostly meets | Mostly does not meet | Does not meet | Not applicable
 
 notes: |
 
-  
 
 ```

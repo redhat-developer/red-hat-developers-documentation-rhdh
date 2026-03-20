@@ -7,12 +7,28 @@
 **Quality Level:** Required/non-negotiable
 
 
-## Command
+## Automated Validation and Fixing
 
-**Run legal disclaimers verification:**
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
+
 ```bash
-./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
+
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
 
 **What the script does:**
 - Checks files mentioning "Technology Preview" include the official disclaimer snippet

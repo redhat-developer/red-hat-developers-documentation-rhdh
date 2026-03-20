@@ -2,11 +2,11 @@
 
 Individual assessment skills for each Pre-migration requirement.
 
-## Master Workflow
+## Main Workflow
 
-**START HERE:** [CQA Master Workflow](cqa-master-workflow.md) - Execute all 17 requirements in optimal order
+**START HERE:** [CQA Main Workflow](cqa-main-workflow.md) - Execute all 17 requirements in optimal order
 
-This master workflow orchestrates the individual skills below in the correct sequence aligned with the CQA 2.1 checklist. Use this for complete CQA compliance assessment.
+This main workflow orchestrates the individual skills below in the correct sequence aligned with the CQA 2.1 checklist. Use this for complete CQA compliance assessment.
 
 ---
 
@@ -55,7 +55,7 @@ This master workflow orchestrates the individual skills below in the correct seq
 
 14. [No broken links](cqa-14-no-broken-links.md)
 
-15. [Redirects (if needed) are in place and work correctly](cqa-15-redirects-if-needed-are-in-place-and-work-correc.md)
+15. [Redirects (if needed) are in place and work correctly](cqa-15-redirects.md)
 
 
 ## Legal and Branding

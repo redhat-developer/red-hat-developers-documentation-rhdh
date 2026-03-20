@@ -8,13 +8,28 @@ Content hierarchy should not exceed 3 levels in TOC to improve navigation and pr
 
 **Level counting:** For AEM migration, count from where your content starts (excluding Pantheon categories/book titles).
 
-## Automated Validation
+## Automated Validation and Fixing
 
-### Run Complete Validation Script
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
 
 ```bash
-./build/scripts/cqa-07-toc-max-3-levels.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-07-toc-max-3-levels.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-07-toc-max-3-levels.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-07-toc-max-3-levels.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
+
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
 
 **What the script validates:**
 - Scans all included .adoc files for heading depth

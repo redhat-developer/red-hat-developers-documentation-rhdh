@@ -60,4 +60,4 @@ done
 
 ## Usage in CQA Master Workflow
 
-Phase 0 uses this skill to ensure all resources are current before starting CQA 2.1 compliance assessment. See [cqa-master-workflow.md](cqa-master-workflow.md) Phase 0.
+Phase 0 uses this skill to ensure all resources are current before starting CQA 2.1 compliance assessment. See [cqa-main-workflow.md](cqa-main-workflow.md) Phase 0.

@@ -12,8 +12,8 @@ All module and assembly titles must be:
 - **Content-appropriate:** Match module type conventions
 
 **References:**
-- [Red Hat Supplementary Style Guide](../resources/red-hat-ssg.md) - Title capitalization and length
-- [Red Hat Peer Review Guide](../resources/red-hat-peer-review.md) - Style checklist and title standards
+- [Red Hat Supplementary Style Guide (CQA extract)](../resources/red-hat-ssg-for-cqa.md) - Title capitalization and length
+- [Red Hat Peer Review Guide (CQA extract)](../resources/red-hat-peer-review-for-cqa.md) - Style checklist and title standards
 - [Modular Documentation Reference Guide](../resources/red-hat-modular-docs.md) - Title forms by type
 
 ## Verification
@@ -93,13 +93,28 @@ done | sort -n
 - Include key technologies (OpenShift, Kubernetes, Helm)
 - Avoid marketing language ("amazing", "powerful")
 
-## Script Integration
+## Automated Validation and Fixing
 
-The title/ID/filename alignment script helps enforce title correctness:
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
 
 ```bash
-./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
+
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
 
 This script:
 - Converts gerunds to imperatives in procedure titles

@@ -12,12 +12,28 @@ If a procedure includes prerequisites:
 - Do not exceed 10 prerequisites
 - Do not include steps in prerequisites (prerequisites are completed states, not actions)
 
-## Command
+## Automated Validation and Fixing
 
-**Run procedure prerequisites verification:**
+**IMPORTANT:** ALWAYS run the script first, then fix. Do not manually inspect files without running the script.
+
 ```bash
-./build/scripts/cqa-11-procedures-prerequisites.sh [--fix] titles/<your-title>/master.adoc
+# 1. Report issues
+./build/scripts/cqa-11-procedures-prerequisites.sh titles/<your-title>/master.adoc
+
+# 2. Auto-fix what can be fixed
+./build/scripts/cqa-11-procedures-prerequisites.sh --fix titles/<your-title>/master.adoc
+
+# 3. Re-run to verify remaining issues
+./build/scripts/cqa-11-procedures-prerequisites.sh titles/<your-title>/master.adoc
+
+# 4. Attempt manual fixes for remaining issues
+
+# 5. Re-run to verify remaining issues
+
+# 6. If issues remain, report as failed and list the remaining issues
 ```
+
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
 
 **What the script does:**
 - Checks `.Prerequisites` label uses correct plural form
