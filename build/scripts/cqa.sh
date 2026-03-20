@@ -147,9 +147,9 @@ if [[ "$CQA_ALL_MODE" == true ]]; then
         echo '```'
         echo "./build/scripts/cqa.sh --fix --all"
         echo '```'
-        echo "To attempt manual fixes, copy-paste this prompt to Claude:"
+        echo "To fix remaining issues, copy-paste this prompt to Claude:"
         echo '```'
-        echo "Load .claude/skills/cqa-main-workflow.md and fix all remaining [MANUAL] issues across all titles."
+        echo "Run ./build/scripts/cqa.sh --all, then for each failing CQA check, read the matching .claude/skills/cqa-*.md skill file and fix the [MANUAL] issues following the skill instructions."
         echo '```'
         exit 1
     fi
@@ -185,7 +185,7 @@ if [[ $failed -gt 0 ]]; then
     echo "To auto-fix what can be auto-fixed, run:"
     echo "  ./build/scripts/cqa.sh --fix ${pass_args[*]}"
     echo ""
-    echo "To attempt manual fixes, copy-paste this prompt to Claude:"
-    echo "  Load .claude/skills/cqa-main-workflow.md and fix all remaining [MANUAL] issues for ${pass_args[*]}."
+    echo "To fix remaining issues, copy-paste this prompt to Claude:"
+    echo "  Run ./build/scripts/cqa.sh ${pass_args[*]}, then for each failing CQA check, read the matching .claude/skills/cqa-*.md skill file and fix the [MANUAL] issues following the skill instructions."
     exit 1
 fi
