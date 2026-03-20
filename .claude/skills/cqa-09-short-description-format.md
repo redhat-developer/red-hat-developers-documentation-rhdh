@@ -1,4 +1,4 @@
-# CQA #9 - Modularization
+# CQA-9 - Modularization
 
 ## Short description format requirements
 
@@ -14,7 +14,7 @@ Short descriptions must follow AsciiDoc/DITA format requirements:
 
 **Reference:** https://docs.google.com/presentation/d/1cl5PFL0SRV7M6GHBJOZ1jNMAtbVI_85iHKe5XWMV0ek/edit?slide=id.g37974b26b7e_0_2#slide=id.g37974b26b7e_0_2
 
-**Note:** For content quality requirements (WHY, keywords, self-referential language), see [CQA #8](cqa-08-short-description-content.md).
+**Note:** For content quality requirements (WHY, keywords, self-referential language), see [CQA-8](cqa-08-short-description-content.md).
 
 ## Automated Validation and Fixing
 
@@ -37,7 +37,7 @@ Short descriptions must follow AsciiDoc/DITA format requirements:
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script does:**
 - Checks for `[role="_abstract"]` marker presence

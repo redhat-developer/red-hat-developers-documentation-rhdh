@@ -1,4 +1,4 @@
-# CQA #5 - Modularization
+# CQA-5 - Modularization
 
 ## All required modular elements are present
 
@@ -31,7 +31,7 @@ All modules and assemblies must include required structural elements per the Red
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script validates:**
 

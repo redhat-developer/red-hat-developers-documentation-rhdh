@@ -1,4 +1,4 @@
-# CQA #15 - URLs and links
+# CQA-15 - URLs and links
 
 ## Redirects (if needed) are in place and work correctly
 
@@ -26,7 +26,7 @@
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script does:**
 - Checks git history for renamed files in recent 5 commits

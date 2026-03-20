@@ -33,9 +33,9 @@
 ./build/scripts/cqa-XX-*.sh --all
 ```
 
-Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` (applied), `[-> CQA #NN AUTOFIX]` / `[-> CQA #NN MANUAL]` (delegated).
+Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` (applied), `[-> CQA-NN AUTOFIX]` / `[-> CQA-NN MANUAL]` (delegated).
 
-- [ ] **CQA #0: Orphaned modules**
+- [ ] **CQA-0: Orphaned modules**
   ```bash
   ./build/scripts/cqa-00-orphaned-modules.sh [--fix]
   ```
@@ -43,7 +43,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] No orphaned images
   - [ ] Delete orphans: `./build/scripts/cqa-00-orphaned-modules.sh --fix`
 
-- [ ] **CQA #0: Directory structure**
+- [ ] **CQA-0: Directory structure**
   ```bash
   ./build/scripts/cqa-00-directory-structure.sh [--fix]
   ```
@@ -57,7 +57,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Vale styles synced
   - [ ] Red Hat style guides current
 
-- [ ] **CQA #3: Content is modularized** - [Skill](skills/cqa-03-content-is-modularized.md)
+- [ ] **CQA-3: Content is modularized** - [Skill](skills/cqa-03-content-is-modularized.md)
   ```bash
   ./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -65,7 +65,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Correct metadata (`:_mod-docs-content-type:`)
   - [ ] Correct filename prefixes (proc-, con-, ref-, assembly-)
 
-- [ ] **CQA #13: Correct content type** - [Skill](skills/cqa-13-information-is-conveyed-using-the-correct-content.md)
+- [ ] **CQA-13: Correct content type** - [Skill](skills/cqa-13-information-is-conveyed-using-the-correct-content.md)
   ```bash
   ./build/scripts/cqa-13-information-is-conveyed-using-the-correct-content.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -73,7 +73,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Procedures have `.Procedure` sections
   - [ ] No violations found
 
-- [ ] **CQA #10: Titles are brief, complete, and descriptive** - [Skill](skills/cqa-10-titles-are-brief-complete-and-descriptive.md)
+- [ ] **CQA-10: Titles are brief, complete, and descriptive** - [Skill](skills/cqa-10-titles-are-brief-complete-and-descriptive.md)
   ```bash
   ./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -85,7 +85,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] All xrefs updated for changed IDs
   - [ ] All includes updated for renamed files
 
-- [ ] **CQA #8: Short description content** - [Skill](skills/cqa-08-short-description-content.md)
+- [ ] **CQA-8: Short description content** - [Skill](skills/cqa-08-short-description-content.md)
   ```bash
   ./build/scripts/cqa-08-short-description-content.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -93,7 +93,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Not self-referential ("This section describes...")
   - [ ] Explains value/purpose
 
-- [ ] **CQA #9: Short description format** - [Skill](skills/cqa-09-short-description-format.md)
+- [ ] **CQA-9: Short description format** - [Skill](skills/cqa-09-short-description-format.md)
   ```bash
   ./build/scripts/cqa-09-short-description-format.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -101,7 +101,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] 50-300 characters
   - [ ] No empty line after marker
 
-- [ ] **CQA #11: Procedures have prerequisites** - [Skill](skills/cqa-11-procedures-prerequisites.md)
+- [ ] **CQA-11: Procedures have prerequisites** - [Skill](skills/cqa-11-procedures-prerequisites.md)
   ```bash
   ./build/scripts/cqa-11-procedures-prerequisites.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -110,7 +110,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Use completed states ("You have installed...")
   - [ ] Link to procedures when possible
 
-- [ ] **CQA #2: Assembly structure** - [Skill](skills/cqa-02-assembly-structure.md)
+- [ ] **CQA-2: Assembly structure** - [Skill](skills/cqa-02-assembly-structure.md)
   ```bash
   ./build/scripts/cqa-02-assembly-structure.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -119,7 +119,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Context restoration at end (`:context: {parent-context}`)
   - [ ] Proper leveloffset on includes
 
-- [ ] **CQA #5: Required elements** - [Skill](skills/cqa-05-modular-elements-checklist.md)
+- [ ] **CQA-5: Required elements** - [Skill](skills/cqa-05-modular-elements-checklist.md)
   ```bash
   ./build/scripts/cqa-05-modular-elements-checklist.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -128,7 +128,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Concepts: title, abstract, content
   - [ ] References: title, abstract, data
 
-- [ ] **CQA #4: Official templates** - [Skill](skills/cqa-04-modules-use-official-templates.md)
+- [ ] **CQA-4: Official templates** - [Skill](skills/cqa-04-modules-use-official-templates.md)
   ```bash
   ./build/scripts/cqa-04-modules-use-official-templates.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -136,7 +136,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] PROCEDURE template structure followed
   - [ ] REFERENCE template structure followed
 
-- [ ] **CQA #6: Assembly tells one story** - [Skill](skills/cqa-06-assemblies-use-the-official-template-assemblies-ar.md)
+- [ ] **CQA-6: Assembly tells one story** - [Skill](skills/cqa-06-assemblies-use-the-official-template-assemblies-ar.md)
   ```bash
   ./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -144,7 +144,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] No overlapping content with other assemblies
   - [ ] Clear purpose statement
 
-- [ ] **CQA #7: TOC depth max 3 levels** - [Skill](skills/cqa-07-toc-max-3-levels.md)
+- [ ] **CQA-7: TOC depth max 3 levels** - [Skill](skills/cqa-07-toc-max-3-levels.md)
   ```bash
   ./build/scripts/cqa-07-toc-max-3-levels.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -152,7 +152,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] No excessive nesting
   - [ ] Proper leveloffset usage
 
-- [ ] **CQA #16: Official product names** - [Skill](skills/cqa-16-official-product-names-are-used.md)
+- [ ] **CQA-16: Official product names** - [Skill](skills/cqa-16-official-product-names-are-used.md)
   ```bash
   ./build/scripts/cqa-16-official-product-names-are-used.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -160,7 +160,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Follow Red Hat OPL (Official Product List)
   - [ ] No hardcoded product names
 
-- [ ] **CQA #1: Vale DITA** - [Skill](skills/cqa-01-asciidoctor-dita-vale.md)
+- [ ] **CQA-1: Vale DITA** - [Skill](skills/cqa-01-asciidoctor-dita-vale.md)
   ```bash
   ./build/scripts/cqa-01-asciidoctor-dita-vale.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -170,7 +170,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Final error count: 0
   - [ ] Final warning count: _____
 
-- [ ] **CQA #12: Grammar** - [Skill](skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md)
+- [ ] **CQA-12: Grammar** - [Skill](skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md)
   ```bash
   ./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -181,7 +181,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Final error count: 0
   - [ ] Final warning count: 0
 
-- [ ] **CQA #17: Disclaimers** - [Skill](skills/cqa-17-includes-appropriate-legal-approved-disclaimers-f.md)
+- [ ] **CQA-17: Disclaimers** - [Skill](skills/cqa-17-includes-appropriate-legal-approved-disclaimers-f.md)
   ```bash
   ./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -189,7 +189,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Developer Preview disclaimer if applicable
   - [ ] Legal-approved text used
 
-- [ ] **CQA #14: No broken links** - [Skill](skills/cqa-14-no-broken-links.md)
+- [ ] **CQA-14: No broken links** - [Skill](skills/cqa-14-no-broken-links.md)
   ```bash
   ./build/scripts/cqa-14-no-broken-links.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -198,7 +198,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Build completes successfully
   - [ ] No xref errors in output
 
-- [ ] **CQA #15: Redirects** - [Skill](skills/cqa-15-redirects.sh)
+- [ ] **CQA-15: Redirects** - [Skill](skills/cqa-15-redirects.sh)
   ```bash
   ./build/scripts/cqa-15-redirects.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -222,24 +222,24 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 ## Completion Checklist
 
 **All 18 Requirements:**
-- [ ] CQA #0: Orphaned modules ✓
-- [ ] CQA #1: Vale DITA ✓
-- [ ] CQA #2: Assembly structure ✓
-- [ ] CQA #3: Modularized ✓
-- [ ] CQA #4: Templates ✓
-- [ ] CQA #5: Required elements ✓
-- [ ] CQA #6: One story ✓
-- [ ] CQA #7: TOC depth ✓
-- [ ] CQA #8: Short desc content ✓
-- [ ] CQA #9: Short desc format ✓
-- [ ] CQA #10: Titles ✓
-- [ ] CQA #11: Prerequisites ✓
-- [ ] CQA #12: Grammar ✓
-- [ ] CQA #13: Content type ✓
-- [ ] CQA #14: No broken links ✓
-- [ ] CQA #15: Redirects ✓
-- [ ] CQA #16: Product names ✓
-- [ ] CQA #17: Disclaimers ✓
+- [ ] CQA-0: Orphaned modules ✓
+- [ ] CQA-1: Vale DITA ✓
+- [ ] CQA-2: Assembly structure ✓
+- [ ] CQA-3: Modularized ✓
+- [ ] CQA-4: Templates ✓
+- [ ] CQA-5: Required elements ✓
+- [ ] CQA-6: One story ✓
+- [ ] CQA-7: TOC depth ✓
+- [ ] CQA-8: Short desc content ✓
+- [ ] CQA-9: Short desc format ✓
+- [ ] CQA-10: Titles ✓
+- [ ] CQA-11: Prerequisites ✓
+- [ ] CQA-12: Grammar ✓
+- [ ] CQA-13: Content type ✓
+- [ ] CQA-14: No broken links ✓
+- [ ] CQA-15: Redirects ✓
+- [ ] CQA-16: Product names ✓
+- [ ] CQA-17: Disclaimers ✓
 
 **Final Steps:**
 - [ ] All automation scripts run

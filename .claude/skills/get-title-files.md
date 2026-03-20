@@ -32,9 +32,9 @@ done
 ## When Used
 
 Used by CQA requirements that validate all title content:
-- CQA #1: Vale DITA validation
-- CQA #8: Short description content
-- CQA #9: Short description format
-- CQA #10: Title/ID/filename alignment
-- CQA #12: Grammar and style validation
-- CQA #16: Product name usage
+- CQA-1: Vale DITA validation
+- CQA-8: Short description content
+- CQA-9: Short description format
+- CQA-10: Title/ID/filename alignment
+- CQA-12: Grammar and style validation
+- CQA-16: Product name usage

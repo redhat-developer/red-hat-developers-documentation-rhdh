@@ -1,4 +1,4 @@
-# CQA #14 - URLs and links
+# CQA-14 - URLs and links
 
 ## No broken links
 
@@ -30,7 +30,7 @@ All links in the documentation must be valid and accessible. This includes:
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script does:**
 - Checks `include::` references point to existing files

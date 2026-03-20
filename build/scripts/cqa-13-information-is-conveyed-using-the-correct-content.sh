@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-13-information-is-conveyed-using-the-correct-content.sh
-# Validates content matches its declared content type (CQA #13)
+# Validates content matches its declared content type (CQA-13)
 #
 # Usage: ./cqa-13-information-is-conveyed-using-the-correct-content.sh [--fix] [--all] <file-path>
 #

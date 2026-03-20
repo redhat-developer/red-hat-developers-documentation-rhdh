@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh
-# Validates Technology Preview and Developer Preview disclaimers (CQA #17)
+# Validates Technology Preview and Developer Preview disclaimers (CQA-17)
 #
 # Usage: ./cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh [--fix] [--all] <file-path>
 #

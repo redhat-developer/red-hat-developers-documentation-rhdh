@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-15-redirects.sh
-# Checks if redirects are needed and in place (CQA #15)
+# Checks if redirects are needed and in place (CQA-15)
 #
 # Usage: ./cqa-15-redirects.sh [--fix] [--all] <file-path>
 #

@@ -1,4 +1,4 @@
-# CQA #10 - Modularization
+# CQA-10 - Modularization
 
 ## Titles are brief, complete, and descriptive
 
@@ -114,7 +114,7 @@ done | sort -n
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 This script:
 - Converts gerunds to imperatives in procedure titles

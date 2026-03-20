@@ -48,7 +48,7 @@ See `.claude/skills/update-all-resources.md` for details.
 
 ### Pull Request Guidelines
 
-**Never use `#` notation for CQA numbers** in PR descriptions (e.g., write "CQA 1" not "CQA #1"). GitHub auto-links `#number` to unrelated issues/PRs.
+**Never use `#` notation for CQA numbers** in PR descriptions (e.g., write "CQA 1" not "CQA-1"). GitHub auto-links `#number` to unrelated issues/PRs.
 
 PR description format is in `.claude/cqa-checklist.md`.
 

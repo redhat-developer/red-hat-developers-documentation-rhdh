@@ -1,6 +1,6 @@
 #!/bin/bash
 # cqa-05-modular-elements-checklist.sh
-# Validates all required modular elements per CQA #5
+# Validates all required modular elements per CQA-5
 #
 # Usage: ./cqa-05-modular-elements-checklist.sh [--fix] [--all] <file-path>
 #

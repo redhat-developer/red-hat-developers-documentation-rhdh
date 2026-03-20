@@ -1,4 +1,4 @@
-# CQA #12 - Editorial
+# CQA-12 - Editorial
 
 ## Content is grammatically correct and follows rules of American English grammar
 
@@ -33,7 +33,7 @@ Content must follow American English grammar, Red Hat style standards: correct g
 # 6. If issues remain, report as failed and list the remaining issues
 ```
 
-**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA #NN]`.
+**Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script does:**
 - Runs Vale with `.vale.ini` config on all included files
@@ -57,7 +57,7 @@ The script handles file discovery, filtering (e.g., excluding `attributes.adoc`)
 
 **What it validates:**
 ✅ Grammar (RedHat), Spelling, Terminology, Style (Google/Microsoft), Conscious language, Capitalization
-❌ DITA compatibility (use `.vale-dita-only.ini` / CQA #1 script instead)
+❌ DITA compatibility (use `.vale-dita-only.ini` / CQA-1 script instead)
 
 ### Step 3: Review Vale Alerts
 

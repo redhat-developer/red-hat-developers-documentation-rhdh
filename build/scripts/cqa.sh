@@ -119,16 +119,16 @@ if [[ "$CQA_ALL_MODE" == true ]]; then
         output=$("$script_path" "${pass_args[@]}" 2>&1 || true)
 
         # Extract the CQA header line for the check name
-        cqa_name=$(echo "$output" | grep "^## CQA #" | head -1 | sed 's/^## CQA #[0-9]*: //')
+        cqa_name=$(echo "$output" | grep "^## CQA-" | head -1 | sed 's/^## CQA-[0-9]*: //')
 
         # Collect issue lines (AUTOFIX, MANUAL, FIXED, delegated) — file path is included by cqa-lib.sh
         script_issues=$(echo "$output" | grep -E '^- \[ \] \[' | grep -E '\[AUTOFIX\]|\[MANUAL\]|\[-> CQA' || true)
 
         if [[ -z "$script_issues" ]]; then
-            echo "- [x] **CQA #${cqa_num}:** ${cqa_name}"
+            echo "- [x] **CQA-${cqa_num}:** ${cqa_name}"
             passed=$((passed + 1))
         else
-            echo "- [ ] **CQA #${cqa_num}:** ${cqa_name}"
+            echo "- [ ] **CQA-${cqa_num}:** ${cqa_name}"
             failed=$((failed + 1))
 
             echo "$script_issues" | sed 's/^- \[ \] //' | while IFS= read -r line; do
@@ -143,14 +143,9 @@ if [[ "$CQA_ALL_MODE" == true ]]; then
 
     if [[ $failed -gt 0 ]]; then
         echo ""
-        echo "To auto-fix what can be auto-fixed, run:"
-        echo '```'
-        echo "./build/scripts/cqa.sh --fix --all"
-        echo '```'
-        echo "To fix remaining issues, copy-paste this prompt to Claude:"
-        echo '```'
-        echo "Run ./build/scripts/cqa.sh --all, then for each failing CQA check, read the matching .claude/skills/cqa-*.md skill file and fix the [MANUAL] issues following the skill instructions."
-        echo '```'
+        echo "To auto-fix what can be auto-fixed, run: \`./build/scripts/cqa.sh --fix --all\`"
+        echo ""
+        echo "To fix remaining issues, copy-paste this prompt to Claude: \`Run ./build/scripts/cqa.sh --all, then for each failing CQA check, read the matching .claude/skills/cqa-*.md skill file and fix the [MANUAL] issues following the skill instructions.\`"
         exit 1
     fi
     exit 0
