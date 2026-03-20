@@ -220,6 +220,12 @@ _cqa02_check() {
             local ar_ln
             ar_ln=$(_lineno "^\.Additional resources" "$file")
             if [[ "$CQA_FIX_MODE" == true ]]; then
+                # Remove any preceding [role="_additional-resources"] line (hybrid case)
+                local prev_ln=$((ar_ln - 1))
+                if [[ "$prev_ln" -gt 0 ]] && sed -n "${prev_ln}p" "$file" | grep -q '\[role="_additional-resources"\]'; then
+                    sed -i "${prev_ln}d" "$file"
+                    ar_ln=$((ar_ln - 1))
+                fi
                 sed -i 's/^\.Additional resources$/[role="_additional-resources"]\n== Additional resources/' "$file"
             fi
             cqa_fail_autofix "$file" "$ar_ln" "Uses .Additional resources block title" "Changed to [role] + == heading"

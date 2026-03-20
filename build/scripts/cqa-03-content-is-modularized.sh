@@ -64,7 +64,14 @@ _fix_section_lists() {
     grep -q "^\.${section}" "$file" 2>/dev/null || return 1
 
     local after
-    after=$(awk "/^\\.${section}\$/{flag=1; next} flag && /^\\.(Prerequisites|Procedure|Verification|Troubleshooting|Next steps|Additional)/{exit} flag" "$file" 2>/dev/null)
+    # Extract section content, skipping lines inside blocks (----, ...., ++++, --)
+    after=$(awk "
+        /^\\.${section}\$/{flag=1; next}
+        flag && /^\\.(Prerequisites|Procedure|Verification|Troubleshooting|Next steps|Additional)/{exit}
+        flag && /^(----+|\\.\\.\\.\\.+|\\+\\+\\+\\++)\$/{blk=!blk; next}
+        flag && /^--\$/{oblk=!oblk; next}
+        flag && !blk && !oblk
+    " "$file" 2>/dev/null)
 
     local includes unnumbered nested numbered
     includes=$(echo "$after" | grep -c "$_PATTERN_INCLUDE" || true)
@@ -155,7 +162,14 @@ _cqa03_check() {
             # Validate PROCEDURE structure
             if grep -q "^\.Procedure" "$file" 2>/dev/null; then
                 local after
-                after=$(awk '/^\.Procedure$/{flag=1; next} flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit} flag' "$file" 2>/dev/null)
+                # Extract .Procedure content, skipping lines inside blocks
+                after=$(awk '
+                    /^\.Procedure$/{flag=1; next}
+                    flag && /^\.(Prerequisites|Verification|Troubleshooting|Next steps|Additional)/{exit}
+                    flag && /^(----+|\.\.\.\.+|\+\+\+\++)$/{blk=!blk; next}
+                    flag && /^--$/{oblk=!oblk; next}
+                    flag && !blk && !oblk
+                ' "$file" 2>/dev/null)
                 local numbered
                 numbered=$(echo "$after" | grep -cE "^\\.+ " || true)
                 local unnumbered

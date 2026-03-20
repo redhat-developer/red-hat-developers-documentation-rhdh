@@ -8,6 +8,7 @@
 #   - PROCEDURE files have .Procedure section with numbered steps
 #   - CONCEPT files do not have .Procedure sections
 #   - REFERENCE files do not have .Procedure sections
+#   - ASSEMBLY files have include:: directives
 #   - Filename prefix matches content type
 #
 # Autofix:
@@ -57,6 +58,12 @@ _cqa13_check() {
             REFERENCE)
                 if grep -q "^\.Procedure" "$file" 2>/dev/null; then
                     cqa_fail_manual "$file" "" "REFERENCE has .Procedure section (should be PROCEDURE type or remove steps)"
+                    file_has_issue=true
+                fi
+                ;;
+            ASSEMBLY)
+                if ! grep -q "^include::" "$file" 2>/dev/null; then
+                    cqa_fail_manual "$file" "" "ASSEMBLY has no include:: directives (should be CONCEPT, REFERENCE, or PROCEDURE)"
                     file_has_issue=true
                 fi
                 ;;

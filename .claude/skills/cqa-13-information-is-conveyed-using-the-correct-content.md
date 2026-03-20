@@ -89,7 +89,7 @@ While RHDH documentation primarily uses Product documentation with modular struc
 - Validates PROCEDURE files have `.Procedure` section with steps
 - Validates CONCEPT files do not have `.Procedure` sections
 - Validates REFERENCE files do not have `.Procedure` sections
-- Validates ASSEMBLY files contain only intro + includes
+- Validates ASSEMBLY files have `include::` directives (no includes = wrong content type)
 - Checks filename prefix matches content type (proc-, con-, ref-, assembly-)
 
 **Target Results:**

@@ -42,18 +42,21 @@ _cqa06_check() {
         local include_count
         include_count=$(grep -c "^include::" "$file" 2>/dev/null || true)
 
-        # Check for excessive nested assembly includes
-        local assembly_includes
-        assembly_includes=$(grep "^include::" "$file" 2>/dev/null | grep -c "assembly-" || true)
-        if [[ $assembly_includes -gt 3 ]]; then
-            cqa_fail_manual "$file" "" "Has $assembly_includes nested assembly includes (may cover multiple user stories, max 3)"
-            file_has_issue=true
-        fi
+        # Skip user story checks for master.adoc (title-level assemblies aggregate multiple user stories)
+        if [[ "$(basename "$file")" != "master.adoc" ]]; then
+            # Check for excessive nested assembly includes
+            local assembly_includes
+            assembly_includes=$(grep "^include::" "$file" 2>/dev/null | grep -c "assembly-" || true)
+            if [[ $assembly_includes -gt 3 ]]; then
+                cqa_fail_manual "$file" "" "Has $assembly_includes nested assembly includes (may cover multiple user stories, max 3)"
+                file_has_issue=true
+            fi
 
-        # Check for excessive module count
-        if [[ $include_count -gt 15 ]]; then
-            cqa_fail_manual "$file" "" "Has $include_count includes (consider splitting -- may cover multiple user stories, max 15)"
-            file_has_issue=true
+            # Check for excessive module count
+            if [[ $include_count -gt 15 ]]; then
+                cqa_fail_manual "$file" "" "Has $include_count includes (consider splitting -- may cover multiple user stories, max 15)"
+                file_has_issue=true
+            fi
         fi
 
         # Check assembly has a title
