@@ -99,88 +99,58 @@ SARIF_EOF
     exit 0
 fi
 
-# ── Summary checklist mode (--all) ──
-if [[ "$CQA_ALL_MODE" == true ]]; then
-    echo "## CQA Summary Checklist"
-    echo ""
+# ── Checklist mode (both --all and single title) ──
+echo "## CQA Summary Checklist"
+echo ""
 
-    for script in "${CQA_SCRIPTS[@]}"; do
-        script_path="${CQA_SCRIPT_DIR}/${script}"
-        [[ -x "$script_path" ]] || continue
-
-        total=$((total + 1))
-
-        # Extract CQA number from filename (strip prefix and leading zeros)
-        cqa_num="${script#cqa-}"
-        cqa_num="${cqa_num%%-*}"
-        cqa_num=$((10#$cqa_num))
-
-        # Run script, capture output
-        output=$("$script_path" "${pass_args[@]}" 2>&1 || true)
-
-        # Extract the CQA header line for the check name
-        cqa_name=$(echo "$output" | grep "^## CQA-" | head -1 | sed 's/^## CQA-[0-9]*: //')
-
-        # Collect issue lines (AUTOFIX, MANUAL, FIXED, delegated) — file path is included by cqa-lib.sh
-        script_issues=$(echo "$output" | grep -E '^- \[ \] \[' | grep -E '\[AUTOFIX\]|\[MANUAL\]|\[-> CQA' || true)
-
-        if [[ -z "$script_issues" ]]; then
-            echo "- [x] **CQA-${cqa_num}:** ${cqa_name}"
-            passed=$((passed + 1))
-        else
-            echo "- [ ] **CQA-${cqa_num}:** ${cqa_name}"
-            failed=$((failed + 1))
-
-            echo "$script_issues" | sed 's/^- \[ \] //' | while IFS= read -r line; do
-                echo "    - ${line}"
-            done
-        fi
-    done
-
-    echo ""
-    echo "---"
-    echo "**Total:** ${total} checks | ${passed} passed | ${failed} with issues"
-
-    if [[ $failed -gt 0 ]]; then
-        echo ""
-        echo "To auto-fix what can be auto-fixed, run: \`./build/scripts/cqa.sh --fix --all\`"
-        echo ""
-        echo "To fix remaining issues, copy-paste this prompt to Claude: \`Run ./build/scripts/cqa.sh --all, then for each failing CQA check, read the matching .claude/skills/cqa-*.md skill file and fix the [MANUAL] issues following the skill instructions.\`"
-        exit 1
-    fi
-    exit 0
-fi
-
-# ── Verbose mode (single title): show full output from each script ──
 for script in "${CQA_SCRIPTS[@]}"; do
     script_path="${CQA_SCRIPT_DIR}/${script}"
-    if [[ ! -x "$script_path" ]]; then
-        echo "WARNING: Script not found or not executable: $script_path" >&2
-        continue
-    fi
+    [[ -x "$script_path" ]] || continue
 
     total=$((total + 1))
-    echo ""
-    echo "========================================"
 
-    if "$script_path" "${pass_args[@]}"; then
+    # Extract CQA number from filename (strip prefix and leading zeros)
+    cqa_num="${script#cqa-}"
+    cqa_num="${cqa_num%%-*}"
+    cqa_num=$((10#$cqa_num))
+
+    # Run script, capture output
+    output=$("$script_path" "${pass_args[@]}" 2>&1 || true)
+
+    # Extract the CQA header line for the check name; fall back to script filename
+    cqa_name=$(echo "$output" | grep "^## CQA" | head -1 | sed 's/^## CQA[# -]*[0-9]*[: ]*//')
+    if [[ -z "$cqa_name" ]]; then
+        cqa_name="${script#cqa-[0-9]*-}"
+        cqa_name="${cqa_name%.sh}"
+        cqa_name="${cqa_name//-/ }"
+        # Capitalize first letter
+        cqa_name="$(echo "${cqa_name:0:1}" | tr '[:lower:]' '[:upper:]')${cqa_name:1}"
+    fi
+
+    # Collect issue lines (AUTOFIX, MANUAL, FIXED, delegated) — file path is included by cqa-lib.sh
+    script_issues=$(echo "$output" | grep -E '^- \[ \] \[' | grep -E '\[AUTOFIX\]|\[MANUAL\]|\[-> CQA' || true)
+
+    if [[ -z "$script_issues" ]]; then
+        echo "- [x] **CQA-${cqa_num}:** ${cqa_name}"
         passed=$((passed + 1))
     else
+        echo "- [ ] **CQA-${cqa_num}:** ${cqa_name}"
         failed=$((failed + 1))
+
+        echo "$script_issues" | sed 's/^- \[ \] //' | while IFS= read -r line; do
+            echo "    - ${line}"
+        done
     fi
 done
 
 echo ""
-echo "========================================"
-echo "## CQA Summary"
-echo "Scripts run: $total | Passed: $passed | Failed: $failed"
+echo "---"
+echo "**Total:** ${total} checks | ${passed} passed | ${failed} with issues"
 
 if [[ $failed -gt 0 ]]; then
     echo ""
-    echo "To auto-fix what can be auto-fixed, run:"
-    echo "  ./build/scripts/cqa.sh --fix ${pass_args[*]}"
+    echo "To auto-fix what can be auto-fixed, run: \`./build/scripts/cqa.sh --fix ${pass_args[*]}\`"
     echo ""
-    echo "To fix remaining issues, copy-paste this prompt to Claude:"
-    echo "  Run ./build/scripts/cqa.sh ${pass_args[*]}, then for each failing CQA check, read the matching .claude/skills/cqa-*.md skill file and fix the [MANUAL] issues following the skill instructions."
+    echo "To fix remaining issues, copy-paste this prompt to Claude: \`Run ./build/scripts/cqa.sh ${pass_args[*]}, then for each failing CQA check, read the matching .claude/skills/cqa-*.md skill file and fix the [MANUAL] issues following the skill instructions.\`"
     exit 1
 fi
