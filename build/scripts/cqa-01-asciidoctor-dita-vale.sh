@@ -196,11 +196,16 @@ except: pass
             esac
         done
     else
-        if vale --config .vale-dita-only.ini --output line "${vale_files[@]}" 2>/dev/null; then
+        local vale_output
+        vale_output=$(vale --config .vale-dita-only.ini --output line "${vale_files[@]}" 2>/dev/null || true)
+        if [[ -z "$vale_output" ]]; then
             cqa_file_pass "$target"
         else
+            local total_count
+            total_count=$(echo "$vale_output" | wc -l)
+            echo "$vale_output" | head -20
             echo ""
-            cqa_fail_manual "$target" "" "Vale found DITA compliance issues (see output above). Run with --fix to auto-resolve."
+            cqa_fail_autofix "$target" "" "Vale found ${total_count} DITA compliance issues" "Run with --fix to auto-resolve"
         fi
     fi
 }

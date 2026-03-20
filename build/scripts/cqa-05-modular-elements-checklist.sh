@@ -76,7 +76,15 @@ _cqa05_check() {
             fi
         else
             if ! grep -q '\[id=".*_{context}"\]' "$file" && ! grep -q "\[id='.*_{context}'\]" "$file"; then
-                cqa_delegated "$file" "" "2" "Missing or incorrect topic ID (must include _{context})"
+                if grep -q '\[id="[^"]*"\]' "$file"; then
+                    # Has an ID but missing _{context} suffix — autofix
+                    if [[ "$CQA_FIX_MODE" == true ]]; then
+                        sed -i 's/\[id="\([^"]*[^}]\)"\]/[id="\1_{context}"]/' "$file"
+                    fi
+                    cqa_fail_autofix "$file" "" "Topic ID missing _{context} suffix" "Added _{context} suffix"
+                else
+                    cqa_fail_manual "$file" "" "Missing [id=\"..._{context}\"] topic ID"
+                fi
             fi
         fi
 
@@ -155,8 +163,15 @@ _cqa05_check() {
             fi
         fi
 
-        # Concept/Reference checks: only .Additional resources and .Next steps allowed
+        # Concept/Reference checks
         if [[ "$content_type" == "CONCEPT" || "$content_type" == "REFERENCE" ]]; then
+            # Subheadings: == (H2) allowed for complex content, but === (H3) or deeper forbidden
+            if grep -E "^===[[:space:]]" "$file" > /dev/null 2>&1; then
+                local sh_ln
+                sh_ln=$(grep -En "^===[[:space:]]" "$file" | head -1 | cut -d: -f1)
+                cqa_fail_manual "$file" "$sh_ln" "${content_type} contains level 3+ subheadings (=== or deeper) -- only == (H2) subheadings allowed"
+            fi
+            # Block titles: only .Additional resources and .Next steps allowed
             if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" > /dev/null 2>&1; then
                 local bt_ln
                 bt_ln=$(grep -En "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" | head -1 | cut -d: -f1)
@@ -166,8 +181,13 @@ _cqa05_check() {
             fi
         fi
 
-        # Procedure checks
+        # Procedure checks: no subheadings allowed at all
         if [[ "$content_type" == "PROCEDURE" ]]; then
+            if grep -E "^==[[:space:]]" "$file" > /dev/null 2>&1; then
+                local sh_ln
+                sh_ln=$(grep -En "^==[[:space:]]" "$file" | head -1 | cut -d: -f1)
+                cqa_fail_manual "$file" "$sh_ln" "Procedure contains subheadings (== or deeper) -- procedures must not have subheadings"
+            fi
             if ! grep -q "^\.Procedure$" "$file"; then
                 cqa_delegated "$file" "" "4" "Missing .Procedure block title"
             else
