@@ -343,13 +343,6 @@ cqa_pass() {
     local line="${1:-}"
     local desc="$2"
     _CQA_TOTAL_PASS=$((_CQA_TOTAL_PASS + 1))
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
-        if [[ -n "$line" ]]; then
-            echo -e "- [x] Line ${line}: ${desc}"
-        else
-            echo -e "- [x] ${desc}"
-        fi
-    fi
     # SARIF: passes are not reported
     return 0
 }
@@ -449,9 +442,7 @@ cqa_delegated() {
 # Mark file as all-passed (call if no issues were found for the file)
 cqa_file_pass() {
     local file="${1:-$_CQA_CURRENT_FILE}"
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" && "$_CQA_CURRENT_FILE_HAS_ISSUES" == false && "$CQA_ALL_MODE" == false ]]; then
-        echo -e "${_C_GREEN}-  [x]${_C_NC} ${file}"
-    fi
+    # Suppress per-file pass output — only errors are shown
     return 0
 }
 
