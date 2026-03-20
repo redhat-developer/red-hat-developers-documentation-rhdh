@@ -53,6 +53,7 @@ try:
             print(f\"{f}\t{i['Line']}\t{kind}\t{target}\t{fix_type}\t{check}: {i['Message']}\")
 except: pass
 " 2>/dev/null
+    return 0
 }
 
 # shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
