@@ -1,6 +1,6 @@
 # CQA 2.1 Main Workflow
 
-Execute all 18 CQA requirements in optimal order. Each links to detailed skill with commands, criteria, and fixes.
+Execute all 19 CQA requirements in optimal order. Each links to detailed skill with commands, criteria, and fixes.
 
 **CRITICAL EXECUTION RULES:**
 1. **Run skills in the exact order listed** - The sequence is optimized to minimize conflicts
@@ -23,7 +23,7 @@ Execute all 18 CQA requirements in optimal order. Each links to detailed skill w
 
 ## Unified Script Interface
 
-Run all 18 CQA checks in workflow order with `cqa.sh`:
+Run all 19 CQA checks in workflow order with `cqa.sh`:
 
 ```bash
 # Run all checks for a title
@@ -55,6 +55,7 @@ Or run individual scripts (all share a common interface via `cqa-lib.sh`):
 **For each requirement below:** Run validation/fixes until no new changes occur. **For the entire sequence:** Re-run all requirements until the full workflow is stable.
 
 - [ ] **CQA #0:** Orphaned modules — `cqa-00-orphaned-modules.sh` — Find/delete unreferenced files
+- [ ] **CQA #0:** Directory structure — `cqa-00-directory-structure.sh` — Verify `<category>_<context>` naming
 - [ ] Resources current. [Update all resources](update-all-resources.md)
 - [ ] **CQA #3:** [Content is modularized](cqa-03-content-is-modularized.md) - Modular structure, correct metadata/prefixes
 - [ ] **CQA #13:** [Correct content type](cqa-13-information-is-conveyed-using-the-correct-content.md) - Content matches declared type

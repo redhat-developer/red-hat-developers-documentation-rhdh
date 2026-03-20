@@ -23,6 +23,7 @@ cqa_parse_args "$0" "$@"
 # CQA scripts in optimal workflow order (matches cqa-main-workflow.md)
 CQA_SCRIPTS=(
     "cqa-00-orphaned-modules.sh"
+    "cqa-00-directory-structure.sh"
     "cqa-03-content-is-modularized.sh"
     "cqa-13-information-is-conveyed-using-the-correct-content.sh"
     "cqa-10-titles-are-brief-complete-and-descriptive.sh"

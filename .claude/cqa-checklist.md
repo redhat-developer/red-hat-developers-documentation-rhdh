@@ -43,6 +43,13 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] No orphaned images
   - [ ] Delete orphans: `./build/scripts/cqa-00-orphaned-modules.sh --fix`
 
+- [ ] **CQA #0: Directory structure**
+  ```bash
+  ./build/scripts/cqa-00-directory-structure.sh [--fix]
+  ```
+  - [ ] All directories follow `<category>_<context>` naming
+  - [ ] Fix misnamed dirs: `./build/scripts/cqa-00-directory-structure.sh --fix`
+
 - [ ] **Resources current** - [Update all resources](skills/update-all-resources.md)
   ```bash
   ./build/scripts/update-cqa-resources.sh
@@ -275,7 +282,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - Vale DITA: 0 errors, X acceptable warnings
   - Vale style: 0 errors, 0 warnings
   - Build: successful
-  - All 17 CQA requirements met
+  - All 19 CQA requirements met
   - Idempotency verified
 
   ## Changes Made

@@ -9,8 +9,10 @@ All directories follow `<category>_<context>` naming:
 ```
 titles/<category>_<context>/master.adoc
 assemblies/<category>_<context>/         # owned by one title
+assemblies/<category>_shared/            # shared within a category
 assemblies/shared/                       # shared across categories
 modules/<category>_<context>/            # owned by one title
+modules/<category>_shared/               # shared within a category
 modules/shared/                          # shared across categories
 images/<category>_<context>/             # owned by one title
 images/shared/                           # shared across categories
@@ -29,12 +31,12 @@ The `:context:` value is derived automatically from the `:title:` attribute in m
 ## Script Usage
 
 ```bash
-./build/scripts/align-title-directories.sh --list                              # show all titles
-./build/scripts/align-title-directories.sh --all                               # dry-run all titles
-./build/scripts/align-title-directories.sh --all --exec                        # execute all titles
-./build/scripts/align-title-directories.sh <title-dir>                         # dry-run single title
-./build/scripts/align-title-directories.sh --exec <title-dir>                  # execute single title
-./build/scripts/align-title-directories.sh --exec <title-dir> <new-context>    # explicit context
+./build/scripts/cqa-00-directory-structure.sh                              # report misnamed dirs (full repo)
+./build/scripts/cqa-00-directory-structure.sh --fix                        # execute renames (full repo)
+./build/scripts/cqa-00-directory-structure.sh <title-dir>                  # report single title
+./build/scripts/cqa-00-directory-structure.sh --fix <title-dir>            # execute single title
+./build/scripts/cqa-00-directory-structure.sh --fix <title-dir> <context>  # explicit context
+./build/scripts/cqa-00-directory-structure.sh --format json                # SARIF output
 ```
 
 ## Script Phases
@@ -73,11 +75,11 @@ For each title, follow this checklist in order:
 
 1. **Preview changes** (dry-run):
    ```bash
-   ./build/scripts/align-title-directories.sh titles/<old-dir>
+   ./build/scripts/cqa-00-directory-structure.sh titles/<old-dir>
    ```
 2. **Execute**:
    ```bash
-   ./build/scripts/align-title-directories.sh --exec titles/<old-dir>
+   ./build/scripts/cqa-00-directory-structure.sh --fix titles/<old-dir>
    ```
 3. **If single assembly**: Inline assembly content into master.adoc without adding a second level heading, then delete the assembly file
 4. **Verify** `[id="{context}"]` and `= {title}` are present in master.adoc
@@ -102,4 +104,4 @@ For each title, follow this checklist in order:
 
 - Do NOT commit this skill file or memory changes
 - Build using `./build/scripts/build-ccutil.sh` and fix errors before committing
-- The `--all` mode is idempotent: running it again on an already-aligned repo produces no changes
+- The full repo mode is idempotent: running it again on an already-aligned repo produces no changes
