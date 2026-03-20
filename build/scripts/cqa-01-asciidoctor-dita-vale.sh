@@ -25,6 +25,37 @@ CQA_DELEGATES_TO=("ShortDescription:8" "DocumentId:10")
 
 [[ -f ".vale-dita-only.ini" ]] || { echo "Error: .vale-dita-only.ini not found" >&2; exit 1; }
 
+# Parse Vale JSON output into TSV (file, line, kind, delegate_to, fix_type, message)
+# Uses '-' as placeholder for empty fields to avoid bash read collapsing consecutive tabs
+_vale_json_to_tsv() {
+    python3 -c "
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    for f, issues in d.items():
+        for i in issues:
+            check = i['Check']
+            kind = 'autofix'
+            target = '-'
+            fix_type = 'autofix'
+            if 'ShortDescription' in check:
+                kind = 'delegated'
+                target = '8'
+                fix_type = 'manual'
+            elif 'DocumentId' in check:
+                kind = 'delegated'
+                target = '10'
+                fix_type = 'manual'
+            elif check in ('AsciiDocDITA.DocumentTitle', 'AsciiDocDITA.TaskTitle',
+                           'AsciiDocDITA.ConceptLink', 'AsciiDocDITA.AssemblyContents',
+                           'AsciiDocDITA.RelatedLinks', 'AsciiDocDITA.ExampleBlock'):
+                kind = 'manual'
+            print(f\"{f}\t{i['Line']}\t{kind}\t{target}\t{fix_type}\t{check}: {i['Message']}\")
+except: pass
+" 2>/dev/null
+    return 0
+}
+
 # shellcheck disable=SC2329  # Invoked indirectly via cqa_run_for_each_title
 _cqa01_check() {
     local target="$1"
@@ -159,53 +190,24 @@ except: pass
     fi
 
     # --- Report mode ---
-    if [[ "$CQA_FORMAT" == "json" ]]; then
-        local vale_json
-        vale_json=$(vale --config .vale-dita-only.ini --output JSON "${vale_files[@]}" 2>/dev/null || true)
-        # Parse and add to SARIF
-        echo "$vale_json" | python3 -c "
-import json, sys
-try:
-    d = json.load(sys.stdin)
-    for f, issues in d.items():
-        for i in issues:
-            check = i['Check']
-            kind = 'autofix'
-            target = ''
-            fix_type = 'autofix'
-            if 'ShortDescription' in check:
-                kind = 'delegated'
-                target = '8'
-                fix_type = 'manual'
-            elif 'DocumentId' in check:
-                kind = 'delegated'
-                target = '10'
-                fix_type = 'manual'
-            elif check in ('AsciiDocDITA.DocumentTitle', 'AsciiDocDITA.TaskTitle',
-                           'AsciiDocDITA.ConceptLink', 'AsciiDocDITA.AssemblyContents',
-                           'AsciiDocDITA.RelatedLinks', 'AsciiDocDITA.ExampleBlock'):
-                kind = 'manual'
-            print(f\"{f}\t{i['Line']}\t{kind}\t{target}\t{fix_type}\t{check}: {i['Message']}\")
-except: pass
-" 2>/dev/null | while IFS=$'\t' read -r file line kind delegate_to fix_type message; do
+    local vale_json
+    vale_json=$(vale --config .vale-dita-only.ini --output JSON "${vale_files[@]}" 2>/dev/null || true)
+
+    local issues_tsv
+    issues_tsv=$(echo "$vale_json" | _vale_json_to_tsv)
+
+    if [[ -z "$issues_tsv" ]]; then
+        cqa_file_pass "$target"
+    else
+        while IFS=$'\t' read -r file line kind delegate_to fix_type message; do
+            [[ -z "$file" ]] && continue
+            [[ "$delegate_to" == "-" ]] && delegate_to=""
             case "$kind" in
                 autofix) cqa_fail_autofix "$file" "$line" "$message" ;;
                 manual)  cqa_fail_manual "$file" "$line" "$message" ;;
                 delegated) cqa_delegated "$file" "$line" "$delegate_to" "$message" "$fix_type" ;;
             esac
-        done
-    else
-        local vale_output
-        vale_output=$(vale --config .vale-dita-only.ini --output line "${vale_files[@]}" 2>/dev/null || true)
-        if [[ -z "$vale_output" ]]; then
-            cqa_file_pass "$target"
-        else
-            local total_count
-            total_count=$(echo "$vale_output" | wc -l)
-            echo "$vale_output" | head -20
-            echo ""
-            cqa_fail_autofix "$target" "" "Vale found ${total_count} DITA compliance issues" "Run with --fix to auto-resolve"
-        fi
+        done <<< "$issues_tsv"
     fi
     return 0
 }

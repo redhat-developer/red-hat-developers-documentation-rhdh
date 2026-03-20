@@ -449,27 +449,40 @@ cqa_delegated() {
 # Mark file as all-passed (call if no issues were found for the file)
 cqa_file_pass() {
     local file="${1:-$_CQA_CURRENT_FILE}"
-    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" && "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then
+    if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" && "$_CQA_CURRENT_FILE_HAS_ISSUES" == false && "$CQA_ALL_MODE" == false ]]; then
         echo -e "${_C_GREEN}-  [x]${_C_NC} ${file}"
     fi
     return 0
 }
 
-# Print section header
+# Print section header (once per script invocation in --all mode)
+_CQA_HEADER_PRINTED=false
 cqa_header() {
     local cqa_num="$1"
     local title="$2"
     local target="${3:-}"
 
     if [[ "$CQA_FORMAT" == "$_CQA_FMT_CHECKLIST" ]]; then
-        echo "## CQA #${cqa_num}: ${title}"
-        if [[ -n "$target" ]]; then
-            echo "Processing: ${target}"
+        if [[ "$CQA_ALL_MODE" == true ]]; then
+            # In --all mode, print the header only once
+            if [[ "$_CQA_HEADER_PRINTED" == false ]]; then
+                echo "## CQA #${cqa_num}: ${title}"
+                if [[ "$CQA_FIX_MODE" == true ]]; then
+                    echo -e "${_C_YELLOW}Mode: --fix${_C_NC}"
+                fi
+                echo ""
+                _CQA_HEADER_PRINTED=true
+            fi
+        else
+            echo "## CQA #${cqa_num}: ${title}"
+            if [[ -n "$target" ]]; then
+                echo "Processing: ${target}"
+            fi
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                echo -e "${_C_YELLOW}Mode: --fix${_C_NC}"
+            fi
+            echo ""
         fi
-        if [[ "$CQA_FIX_MODE" == true ]]; then
-            echo -e "${_C_YELLOW}Mode: --fix${_C_NC}"
-        fi
-        echo ""
     fi
 
     cqa_set_tool_info "cqa-${cqa_num}"
@@ -625,15 +638,9 @@ cqa_run_for_each_title() {
             # Multiple titles: run each, then grand summary
             local grand_files=0 grand_issues=0 grand_autofix=0 grand_fixed=0 grand_manual=0 grand_delegated=0
             for target in "${CQA_TARGET_FILES[@]}"; do
-                echo ""
-                echo "---"
-                echo "**Title: $(dirname "$target" | sed 's|titles/||')**"
-                echo ""
-
                 cqa_reset_counters
-                cqa_collect_files "$target"
-                "$callback" "$target"
-                cqa_summary
+                cqa_collect_files "$target" || true
+                "$callback" "$target" || true
 
                 grand_files=$((grand_files + _CQA_TOTAL_FILES))
                 grand_issues=$((grand_issues + _CQA_FILES_WITH_ISSUES))
@@ -644,8 +651,7 @@ cqa_run_for_each_title() {
             done
 
             echo ""
-            echo "---"
-            echo "## Grand Total (${#CQA_TARGET_FILES[@]} titles)"
+            echo "### Summary"
             echo "Files: ${grand_files} checked, ${grand_issues} with issues"
             if [[ "$CQA_FIX_MODE" == true ]]; then
                 echo "Fixed: ${grand_fixed} automatically"
