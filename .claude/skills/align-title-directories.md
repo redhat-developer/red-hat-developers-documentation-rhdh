@@ -64,8 +64,8 @@ Resources used by multiple titles stay in `*/shared/`. The script determines thi
 
 ## Companion Scripts
 
-- `./build/scripts/fix-orphaned-modules.sh` - Find orphaned .adoc files and images (dry-run)
-- `./build/scripts/fix-orphaned-modules.sh --execute` - Delete orphaned files
+- `./build/scripts/cqa-00-orphaned-modules.sh` - Find orphaned .adoc files and images
+- `./build/scripts/cqa-00-orphaned-modules.sh --fix` - Delete orphaned files
 
 ## Per-Title Checklist
 

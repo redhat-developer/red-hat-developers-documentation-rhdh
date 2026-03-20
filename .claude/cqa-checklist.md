@@ -33,7 +33,15 @@
 ./build/scripts/cqa-XX-*.sh --all
 ```
 
-Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` (applied), `[-> CQA #NN]` (delegated to another CQA).
+Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` (applied), `[-> CQA #NN AUTOFIX]` / `[-> CQA #NN MANUAL]` (delegated).
+
+- [ ] **CQA #0: Orphaned modules**
+  ```bash
+  ./build/scripts/cqa-00-orphaned-modules.sh [--fix]
+  ```
+  - [ ] No orphaned .adoc files
+  - [ ] No orphaned images
+  - [ ] Delete orphans: `./build/scripts/cqa-00-orphaned-modules.sh --fix`
 
 - [ ] **Resources current** - [Update all resources](skills/update-all-resources.md)
   ```bash
@@ -195,14 +203,6 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 
 ### Cleanup & Verification
 
-- [ ] **Remove orphaned modules**
-  ```bash
-  ./build/scripts/fix-orphaned-modules.sh
-  ```
-  - [ ] Review list: _____ files found
-  - [ ] Verify truly orphaned
-  - [ ] Delete: `./build/scripts/fix-orphaned-modules.sh --execute`
-
 - [ ] **Verify .claude/settings.json** (if updated)
   - [ ] Permissions alphabetically sorted
   - [ ] Uses wildcard patterns (not individual files)
@@ -214,7 +214,8 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 
 ## Completion Checklist
 
-**All 17 Requirements:**
+**All 18 Requirements:**
+- [ ] CQA #0: Orphaned modules ✓
 - [ ] CQA #1: Vale DITA ✓
 - [ ] CQA #2: Assembly structure ✓
 - [ ] CQA #3: Modularized ✓
@@ -236,7 +237,6 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 **Final Steps:**
 - [ ] All automation scripts run
 - [ ] All manual assessments complete
-- [ ] Orphaned modules removed
 - [ ] .claude/settings.json verified (if updated)
 
 ---
