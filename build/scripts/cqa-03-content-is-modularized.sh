@@ -156,7 +156,10 @@ _cqa03_check() {
                 numbered=$(echo "$after" | grep -cE "^\\.+ " || true)
                 local unnumbered
                 unnumbered=$(echo "$after" | grep -c "^\* " || true)
-                if [[ $numbered -eq 1 && $unnumbered -eq 0 ]]; then
+                local includes
+                includes=$(echo "$after" | grep -c "^include::" || true)
+                # Skip single-step check if there are includes (they may contain additional steps)
+                if [[ $numbered -eq 1 && $unnumbered -eq 0 && $includes -eq 0 ]]; then
                     local proc_ln
                     proc_ln=$(grep -n "^\.Procedure$" "$file" | head -1 | cut -d: -f1)
                     cqa_fail_manual "$file" "$proc_ln" ".Procedure has only 1 numbered step (should be multiple or 1 unnumbered)"

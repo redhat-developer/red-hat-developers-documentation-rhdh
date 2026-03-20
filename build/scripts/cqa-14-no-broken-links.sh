@@ -23,9 +23,12 @@ _cqa14_check() {
 
     cqa_header "14" "Verify No Broken Links" "$target"
 
-    # Resolve :imagesdir: from the target (master.adoc or nearest parent)
+    # Resolve :imagesdir: from the target, then fall back to artifacts/attributes.adoc
     local imagesdir=""
     imagesdir=$(grep -m1 '^:imagesdir:' "$target" 2>/dev/null | sed 's/^:imagesdir: *//' || true)
+    if [[ -z "$imagesdir" ]] && [[ -f "artifacts/attributes.adoc" ]]; then
+        imagesdir=$(grep -m1 '^:imagesdir:' "artifacts/attributes.adoc" 2>/dev/null | sed 's/^:imagesdir: *//' || true)
+    fi
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue
