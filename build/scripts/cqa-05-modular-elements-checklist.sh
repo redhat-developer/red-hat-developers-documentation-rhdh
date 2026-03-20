@@ -172,13 +172,12 @@ _cqa05_check() {
                 cqa_fail_manual "$file" "$sh_ln" "${content_type} contains level 3+ subheadings (=== or deeper) -- only == (H2) subheadings allowed"
             fi
             # Block titles: only .Additional resources and .Next steps allowed
-            if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" > /dev/null 2>&1; then
-                local bt_ln
-                bt_ln=$(grep -En "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" | head -1 | cut -d: -f1)
-                local bt_text
+            while IFS= read -r bt_match; do
+                local bt_ln bt_text
+                bt_ln=$(echo "$bt_match" | cut -d: -f1)
                 bt_text=$(sed -n "${bt_ln}p" "$file")
                 cqa_fail_manual "$file" "$bt_ln" "Non-standard block title: ${bt_text}"
-            fi
+            done < <(grep -En "$PATTERN_BLOCK_TITLE" "$file" | grep -v "\.Additional resources" | grep -v "\.Next steps" || true)
         fi
 
         # Procedure checks: no subheadings allowed at all
@@ -202,11 +201,9 @@ _cqa05_check() {
             fi
 
             local allowed_blocks="^\\.Prerequisites$|^\\.Prerequisite$|^\\.Procedure$|^\\.Verification$|^\\.Results$|^\\.Result$|^\\.Troubleshooting$|^\\.Troubleshooting steps$|^\\.Troubleshooting step$|^\\.Next steps$|^\\.Next step$|^\\.Additional resources$"
-            if grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" > /dev/null 2>&1; then
-                local violating
-                violating=$(grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" | head -1)
+            while IFS= read -r violating; do
                 cqa_fail_manual "$file" "" "Non-standard block title: $violating"
-            fi
+            done < <(grep -E "$PATTERN_BLOCK_TITLE" "$file" | grep -v -E "$allowed_blocks" || true)
         fi
 
         if [[ "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then
