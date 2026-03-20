@@ -26,7 +26,7 @@ cqa_parse_args "$0" "$@"
 _cqa13_check() {
     local target="$1"
 
-    cqa_header "13" "Verify Content Matches Declared Type" "$target"
+    cqa_header "13" "Verify content matches declared type" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

@@ -54,7 +54,7 @@ SELF_REF_REMOVABLE=(
 _cqa08_check() {
     local target="$1"
 
-    cqa_header "8" "Verify Short Description Content Quality" "$target"
+    cqa_header "8" "Verify short description content quality" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

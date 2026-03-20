@@ -7,12 +7,11 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "## Lint: CQA Scripts"
+echo "## Lint: CQA scripts"
 echo ""
 
 errors=0
 for script in "$SCRIPT_DIR"/*.sh; do
-    bn=$(basename "$script")
     if ! shellcheck -S warning -e SC2034,SC2329,SC1091 "$script" 2>/dev/null; then
         errors=$((errors + 1))
     fi

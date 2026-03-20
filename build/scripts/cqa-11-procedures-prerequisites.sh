@@ -25,7 +25,7 @@ cqa_parse_args "$0" "$@"
 _cqa11_check() {
     local target="$1"
 
-    cqa_header "11" "Verify Procedure Prerequisites" "$target"
+    cqa_header "11" "Verify procedure prerequisites" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

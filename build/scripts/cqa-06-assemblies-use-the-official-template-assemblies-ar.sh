@@ -25,7 +25,7 @@ cqa_parse_args "$0" "$@"
 _cqa06_check() {
     local target="$1"
 
-    cqa_header "6" "Verify Assemblies Follow Official Template (One User Story)" "$target"
+    cqa_header "6" "Verify assemblies follow official template (one user story)" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ "$file" != *.adoc ]] && continue

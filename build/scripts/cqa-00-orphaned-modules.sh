@@ -43,7 +43,7 @@ for arg in "$@"; do
     _prev_arg="$arg"
 done
 
-cqa_header "0" "Find Orphaned Modules and Images"
+cqa_header "0" "Find orphaned modules and images"
 
 # ── Collect all include:: references ──
 declare -A INCLUDED_BASENAMES=()

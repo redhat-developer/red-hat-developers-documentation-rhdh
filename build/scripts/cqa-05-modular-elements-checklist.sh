@@ -27,7 +27,7 @@ readonly PATTERN_BLOCK_TITLE='^\.[A-Z]'
 _cqa05_check() {
     local target="$1"
 
-    cqa_header "5" "Verify Required Modular Elements" "$target"
+    cqa_header "5" "Verify required modular elements" "$target"
 
     for file in "${_CQA_COLLECTED_FILES[@]}"; do
         [[ -f "$file" ]] || continue
