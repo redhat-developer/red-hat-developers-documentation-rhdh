@@ -21,27 +21,27 @@
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _lineno() {
     local pattern="$1"
     local file="$2"
     grep -n "$pattern" "$file" 2>/dev/null | head -1 | cut -d: -f1
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_content_type_first_line() {
     local file="$1"
     sed -i '/^:_mod-docs-content-type:/d' "$file"
     sed -i '1s/^/:_mod-docs-content-type: ASSEMBLY\n/' "$file"
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_add_context_save() {
     local file="$1"
     sed -i '1a\ifdef::context[:parent-context: {context}]' "$file"
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_add_context_restore() {
     local file="$1"
     sed -i '/^ifdef::parent-context\[:context: {parent-context}\]$/d' "$file"
@@ -50,7 +50,7 @@ _fix_add_context_restore() {
     printf '\nifdef::parent-context[:context: {parent-context}]\nifndef::parent-context[:!context:]\n' >> "$file"
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_context_line() {
     local file="$1" title_ln="$2"
     sed -i '/^:context:/d' "$file"
@@ -61,7 +61,7 @@ _fix_context_line() {
     fi
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _cqa02_check() {
     local target="$1"
 
