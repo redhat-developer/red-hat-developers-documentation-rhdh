@@ -17,7 +17,7 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 1. [Content passes AsciiDoc DITA Vale validation](cqa-01-asciidoctor-dita-vale.md)
 
-2. [Assembly structure](cqa-02-assembly-structure.md)
+2. [Assembly structure](cqa-02-assembly-template.md)
 
 
 ## Modularization
@@ -28,7 +28,7 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 5. [All required modular elements are present](cqa-05-modular-elements-checklist.md)
 
-6. [Assemblies use the official template.Assemblies are one user story.](cqa-06-assemblies-structure.md)
+6. [Assemblies use the official template.Assemblies are one user story.](cqa-06-assembly-scope.md)
 
 7. [TOC depth: Maximum 3 levels](cqa-07-toc-max-3-levels.md)
 

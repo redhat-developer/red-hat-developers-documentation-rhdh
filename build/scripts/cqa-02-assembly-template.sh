@@ -1,6 +1,6 @@
 #!/bin/bash
-# cqa-02-assembly-structure.sh - Validates assembly structure compliance (CQA-2)
-# Usage: ./cqa-02-assembly-structure.sh [--fix] [--all] <file-path>
+# cqa-02-assembly-template.sh - Validates assembly structure compliance (CQA-2)
+# Usage: ./cqa-02-assembly-template.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Content type ASSEMBLY on first line, not repeated

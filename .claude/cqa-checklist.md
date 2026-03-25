@@ -110,9 +110,9 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Use completed states ("You have installed...")
   - [ ] Link to procedures when possible
 
-- [ ] **CQA-2: Assembly structure** - [Skill](skills/cqa-02-assembly-structure.md)
+- [ ] **CQA-2: Assembly structure** - [Skill](skills/cqa-02-assembly-template.md)
   ```bash
-  ./build/scripts/cqa-02-assembly-structure.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-02-assembly-template.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Introduction paragraph (context)
   - [ ] Include statements only (no inline content)
@@ -136,9 +136,9 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] PROCEDURE template structure followed
   - [ ] REFERENCE template structure followed
 
-- [ ] **CQA-6: Assembly tells one story** - [Skill](skills/cqa-06-assemblies-structure.md)
+- [ ] **CQA-6: Assembly tells one story** - [Skill](skills/cqa-06-assembly-scope.md)
   ```bash
-  ./build/scripts/cqa-06-assemblies-structure.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-06-assembly-scope.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Single user story per assembly
   - [ ] No overlapping content with other assemblies

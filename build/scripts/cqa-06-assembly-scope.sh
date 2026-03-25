@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-06-assemblies-structure.sh
+# cqa-06-assembly-scope.sh
 # Validates assemblies follow the official template and tell one user story (CQA-6)
 #
-# Usage: ./cqa-06-assemblies-structure.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-06-assembly-scope.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Assembly has exactly one user story (single focus topic)

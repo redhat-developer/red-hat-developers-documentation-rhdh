@@ -63,10 +63,10 @@ Or run individual scripts (all share a common interface via `cqa-lib.sh`):
 - [ ] **CQA-8:** [Short description content](cqa-08-short-description-content.md) - WHY user should read, benefit-focused
 - [ ] **CQA-9:** [Short description format](cqa-09-short-description-format.md) - `[role="_abstract"]`, 50-300 chars
 - [ ] **CQA-11:** [Prerequisites](cqa-11-procedures-prerequisites.md) - `.Prerequisites` label, max 10 items, completed states
-- [ ] **CQA-2:** [Assembly structure](cqa-02-assembly-structure.md) - Introduction + includes only
+- [ ] **CQA-2:** [Assembly structure](cqa-02-assembly-template.md) - Introduction + includes only
 - [ ] **CQA-5:** [Required elements](cqa-05-modular-elements-checklist.md) - All mandatory elements present
 - [ ] **CQA-4:** [Official templates](cqa-04-modules-use-official-templates.md) - CONCEPT, PROCEDURE, REFERENCE templates
-- [ ] **CQA-6:** [Assembly one story](cqa-06-assemblies-structure.md) - Single user story
+- [ ] **CQA-6:** [Assembly one story](cqa-06-assembly-scope.md) - Single user story
 - [ ] **CQA-7:** [TOC depth](cqa-07-toc-max-3-levels.md) - Max 3 levels
 - [ ] **CQA-16:** [Product names](cqa-16-official-product-names.md) - Use attributes, follow OPL
 - [ ] **CQA-1:** [Vale DITA](cqa-01-asciidoctor-dita-vale.md) - 0 errors, acceptable warnings only
