@@ -136,9 +136,9 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] PROCEDURE template structure followed
   - [ ] REFERENCE template structure followed
 
-- [ ] **CQA-6: Assembly tells one story** - [Skill](skills/cqa-06-assemblies-use-the-official-template-assemblies-ar.md)
+- [ ] **CQA-6: Assembly tells one story** - [Skill](skills/cqa-06-assemblies-structure.md)
   ```bash
-  ./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-06-assemblies-structure.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Single user story per assembly
   - [ ] No overlapping content with other assemblies
@@ -152,7 +152,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] No excessive nesting
   - [ ] Proper leveloffset usage
 
-- [ ] **CQA-16: Official product names** - [Skill](skills/cqa-16-official-product-names-are-used.md)
+- [ ] **CQA-16: Official product names** - [Skill](skills/cqa-16-official-product-names.md)
   ```bash
   ./build/scripts/cqa-16-official-product-names-are-used.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -170,7 +170,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Final error count: 0
   - [ ] Final warning count: _____
 
-- [ ] **CQA-12: Grammar** - [Skill](skills/cqa-12-content-is-grammatically-correct-and-follows-rules.md)
+- [ ] **CQA-12: Grammar** - [Skill](skills/cqa-12-grammar-and-style-guide.md)
   ```bash
   ./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] titles/<your-title>/master.adoc
   ```
@@ -181,7 +181,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Final error count: 0
   - [ ] Final warning count: 0
 
-- [ ] **CQA-17: Disclaimers** - [Skill](skills/cqa-17-includes-appropriate-legal-approved-disclaimers-f.md)
+- [ ] **CQA-17: Disclaimers** - [Skill](skills/cqa-17-include-legal-approved-disclaimers.md)
   ```bash
   ./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh [--fix] titles/<your-title>/master.adoc
   ```

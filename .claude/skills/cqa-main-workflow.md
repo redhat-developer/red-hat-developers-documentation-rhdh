@@ -66,12 +66,12 @@ Or run individual scripts (all share a common interface via `cqa-lib.sh`):
 - [ ] **CQA-2:** [Assembly structure](cqa-02-assembly-structure.md) - Introduction + includes only
 - [ ] **CQA-5:** [Required elements](cqa-05-modular-elements-checklist.md) - All mandatory elements present
 - [ ] **CQA-4:** [Official templates](cqa-04-modules-use-official-templates.md) - CONCEPT, PROCEDURE, REFERENCE templates
-- [ ] **CQA-6:** [Assembly one story](cqa-06-assemblies-use-the-official-template-assemblies-ar.md) - Single user story
+- [ ] **CQA-6:** [Assembly one story](cqa-06-assemblies-structure.md) - Single user story
 - [ ] **CQA-7:** [TOC depth](cqa-07-toc-max-3-levels.md) - Max 3 levels
-- [ ] **CQA-16:** [Product names](cqa-16-official-product-names-are-used.md) - Use attributes, follow OPL
+- [ ] **CQA-16:** [Product names](cqa-16-official-product-names.md) - Use attributes, follow OPL
 - [ ] **CQA-1:** [Vale DITA](cqa-01-asciidoctor-dita-vale.md) - 0 errors, acceptable warnings only
-- [ ] **CQA-12:** [Grammar](cqa-12-content-is-grammatically-correct-and-follows-rules.md) - 0 errors, American English
-- [ ] **CQA-17:** [Disclaimers](cqa-17-includes-appropriate-legal-approved-disclaimers-f.md) - Legal-approved for Tech/Dev Preview
+- [ ] **CQA-12:** [Grammar](cqa-12-grammar-and-style-guide.md) - 0 errors, American English
+- [ ] **CQA-17:** [Disclaimers](cqa-17-include-legal-approved-disclaimers.md) - Legal-approved for Tech/Dev Preview
 - [ ] **CQA-14:** [No broken links](cqa-14-no-broken-links.md) - All xrefs/external links valid, build succeeds
 - [ ] **CQA-15:** [Redirects](cqa-15-redirects.sh) - Redirects in place if needed
 

@@ -28,7 +28,7 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 5. [All required modular elements are present](cqa-05-modular-elements-checklist.md)
 
-6. [Assemblies use the official template.Assemblies are one user story.](cqa-06-assemblies-use-the-official-template-assemblies-ar.md)
+6. [Assemblies use the official template.Assemblies are one user story.](cqa-06-assemblies-structure.md)
 
 7. [TOC depth: Maximum 3 levels](cqa-07-toc-max-3-levels.md)
 
@@ -46,7 +46,7 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 ## Editorial
 
-12. [Content is grammatically correct and follows rules of American English grammar](cqa-12-content-is-grammatically-correct-and-follows-rules.md)
+12. [Content is grammatically correct and follows rules of American English grammar](cqa-12-grammar-and-style-guide.md)
 
 13. [Information is conveyed using the correct content type](cqa-13-information-is-conveyed-using-the-correct-content.md)
 
@@ -60,9 +60,9 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 ## Legal and Branding
 
-16. [Official product names are used](cqa-16-official-product-names-are-used.md)
+16. [Official product names are used](cqa-16-official-product-names.md)
 
-17. [Includes appropriate, legal-approved disclaimers for Technology Preview and Deve](cqa-17-includes-appropriate-legal-approved-disclaimers-f.md)
+17. [Legal-approved disclaimers for preview features](cqa-17-include-legal-approved-disclaimers.md)
 
 ---
 

@@ -33,7 +33,7 @@ CQA_SCRIPTS=(
     "cqa-02-assembly-structure.sh"
     "cqa-05-modular-elements-checklist.sh"
     "cqa-04-modules-use-official-templates.sh"
-    "cqa-06-assemblies-use-the-official-template-assemblies-ar.sh"
+    "cqa-06-assemblies-structure.sh"
     "cqa-07-toc-max-3-levels.sh"
     "cqa-16-official-product-names-are-used.sh"
     "cqa-01-asciidoctor-dita-vale.sh"

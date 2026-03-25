@@ -13,13 +13,13 @@
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-06-assemblies-structure.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-06-assemblies-structure.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-06-assemblies-use-the-official-template-assemblies-ar.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-06-assemblies-structure.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 
