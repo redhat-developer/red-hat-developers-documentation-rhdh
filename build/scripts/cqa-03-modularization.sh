@@ -1,6 +1,6 @@
 #!/bin/bash
-# cqa-03-content-is-modularized.sh - Validates content type metadata (CQA-3)
-# Usage: ./cqa-03-content-is-modularized.sh [--fix] [--all] <file-path>
+# cqa-03-modularization.sh - Validates content type metadata (CQA-3)
+# Usage: ./cqa-03-modularization.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Content type metadata present and correct (:_mod-docs-content-type:)

@@ -68,13 +68,13 @@ While RHDH documentation primarily uses Product documentation with modular struc
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-13-information-is-conveyed-using-the-correct-content.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-13-content-type.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-13-information-is-conveyed-using-the-correct-content.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-13-content-type.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-13-information-is-conveyed-using-the-correct-content.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-13-content-type.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 

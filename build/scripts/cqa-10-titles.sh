@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-10-titles-are-brief-complete-and-descriptive.sh
+# cqa-10-titles.sh
 # Aligns title, ID, context, and filename per CQA rules (CQA-10)
 #
-# Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-10-titles.sh [--fix] [--all] <file-path>
 #
 # Autofix:
 #   - Converts gerund titles to imperative (160+ rules)

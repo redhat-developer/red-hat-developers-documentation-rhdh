@@ -73,7 +73,7 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 - Add missing `:context:` attribute (value derived from ID without `_{context}` suffix)
 
 **Not auto-fixed (delegated):**
-- ID value mismatch with title — handled by [CQA-10 - Titles](cqa-10-titles-are-brief-complete-and-descriptive.md)
+- ID value mismatch with title — handled by [CQA-10 - Titles](cqa-10-titles.md)
 - Introduction length (50-300 chars) — handled by [CQA-8 - Short descriptions](cqa-08-short-description-content.md)
 
 **Not auto-fixed (manual):**

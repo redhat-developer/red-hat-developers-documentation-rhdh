@@ -57,25 +57,25 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Vale styles synced
   - [ ] Red Hat style guides current
 
-- [ ] **CQA-3: Content is modularized** - [Skill](skills/cqa-03-content-is-modularized.md)
+- [ ] **CQA-3: Content is modularized** - [Skill](skills/cqa-03-modularization.md)
   ```bash
-  ./build/scripts/cqa-03-content-is-modularized.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-03-modularization.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Modular structure (assemblies include modules)
   - [ ] Correct metadata (`:_mod-docs-content-type:`)
   - [ ] Correct filename prefixes (proc-, con-, ref-, assembly-)
 
-- [ ] **CQA-13: Correct content type** - [Skill](skills/cqa-13-information-is-conveyed-using-the-correct-content.md)
+- [ ] **CQA-13: Correct content type** - [Skill](skills/cqa-13-content-type.md)
   ```bash
-  ./build/scripts/cqa-13-information-is-conveyed-using-the-correct-content.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-13-content-type.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Content matches declared type (PROCEDURE/CONCEPT/REFERENCE/ASSEMBLY)
   - [ ] Procedures have `.Procedure` sections
   - [ ] No violations found
 
-- [ ] **CQA-10: Titles are brief, complete, and descriptive** - [Skill](skills/cqa-10-titles-are-brief-complete-and-descriptive.md)
+- [ ] **CQA-10: Titles are brief, complete, and descriptive** - [Skill](skills/cqa-10-titles.md)
   ```bash
-  ./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-10-titles.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Procedures: imperative form ("Install" not "Installing")
   - [ ] Concepts: noun phrases ("Configuration options")
@@ -128,9 +128,9 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
   - [ ] Concepts: title, abstract, content
   - [ ] References: title, abstract, data
 
-- [ ] **CQA-4: Official templates** - [Skill](skills/cqa-04-modules-use-official-templates.md)
+- [ ] **CQA-4: Official templates** - [Skill](skills/cqa-04-module-templates.md)
   ```bash
-  ./build/scripts/cqa-04-modules-use-official-templates.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-04-module-templates.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] CONCEPT template structure followed
   - [ ] PROCEDURE template structure followed
@@ -154,7 +154,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 
 - [ ] **CQA-16: Official product names** - [Skill](skills/cqa-16-official-product-names.md)
   ```bash
-  ./build/scripts/cqa-16-official-product-names-are-used.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-16-official-product-names.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Use attributes ({product}, {ocp-short}, etc.)
   - [ ] Follow Red Hat OPL (Official Product List)
@@ -172,7 +172,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 
 - [ ] **CQA-12: Grammar** - [Skill](skills/cqa-12-grammar-and-style-guide.md)
   ```bash
-  ./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-12-grammar-and-style-guide.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] 0 errors
   - [ ] American English
@@ -183,7 +183,7 @@ Output markers: `[AUTOFIX]` (auto-fixable), `[MANUAL]` (needs human), `[FIXED]` 
 
 - [ ] **CQA-17: Disclaimers** - [Skill](skills/cqa-17-include-legal-approved-disclaimers.md)
   ```bash
-  ./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh [--fix] titles/<your-title>/master.adoc
+  ./build/scripts/cqa-17-include-legal-approved-disclaimers.sh [--fix] titles/<your-title>/master.adoc
   ```
   - [ ] Tech Preview disclaimer if applicable
   - [ ] Developer Preview disclaimer if applicable

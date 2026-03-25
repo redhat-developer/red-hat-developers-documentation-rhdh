@@ -14,13 +14,13 @@ All modules must follow official Red Hat modular documentation templates for the
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-04-modules-use-official-templates.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-04-module-templates.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-04-modules-use-official-templates.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-04-module-templates.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-04-modules-use-official-templates.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-04-module-templates.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 
@@ -106,7 +106,7 @@ Brief intro to reference data.
 
 ## Validation Workflow
 
-1. Run: `./build/scripts/cqa-04-modules-use-official-templates.sh --fix titles/<your-title>/master.adoc`
+1. Run: `./build/scripts/cqa-04-module-templates.sh --fix titles/<your-title>/master.adoc`
 2. Check violations:
    - PROCEDURE: `grep -rn "^===" modules/proc-*.adoc` (should be empty)
    - All: Verify intro paragraph present

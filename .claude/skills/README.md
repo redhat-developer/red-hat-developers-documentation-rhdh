@@ -22,9 +22,9 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 ## Modularization
 
-3. [Content is modularized](cqa-03-content-is-modularized.md)
+3. [Content is modularized](cqa-03-modularization.md)
 
-4. [Modules use the official templates](cqa-04-modules-use-official-templates.md)
+4. [Modules use the official templates](cqa-04-module-templates.md)
 
 5. [All required modular elements are present](cqa-05-modular-elements-checklist.md)
 
@@ -36,7 +36,7 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 9. [Short description format requirements](cqa-09-short-description-format.md)
 
-10. [Titles are brief, complete, and descriptive](cqa-10-titles-are-brief-complete-and-descriptive.md)
+10. [Titles are brief, complete, and descriptive](cqa-10-titles.md)
 
 
 ## Procedures
@@ -48,7 +48,7 @@ This main workflow orchestrates the individual skills below in the correct seque
 
 12. [Content is grammatically correct and follows rules of American English grammar](cqa-12-grammar-and-style-guide.md)
 
-13. [Information is conveyed using the correct content type](cqa-13-information-is-conveyed-using-the-correct-content.md)
+13. [Information is conveyed using the correct content type](cqa-13-content-type.md)
 
 
 ## URLs and links

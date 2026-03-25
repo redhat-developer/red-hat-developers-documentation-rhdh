@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-16-official-product-names-are-used.sh
+# cqa-16-official-product-names.sh
 # Verify and fix official product name usage per CQA requirement #16
 #
-# Usage: ./cqa-16-official-product-names-are-used.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-16-official-product-names.sh [--fix] [--all] <file-path>
 #
 # Checks for hardcoded product names that should use AsciiDoc attributes.
 # See .vale-styles/DeveloperHub/Attributes.yml for the full list.

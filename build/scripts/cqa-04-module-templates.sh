@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-04-modules-use-official-templates.sh
+# cqa-04-module-templates.sh
 # Verify modules use official Red Hat modular documentation templates (CQA-4)
 #
-# Usage: ./cqa-04-modules-use-official-templates.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-04-module-templates.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - PROCEDURE modules must not have custom subheadings (===)

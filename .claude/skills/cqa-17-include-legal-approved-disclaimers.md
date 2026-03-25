@@ -13,13 +13,13 @@
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-17-include-legal-approved-disclaimers.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-17-include-legal-approved-disclaimers.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-17-includes-appropriate-legal-approved-disclaimers-f.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-17-include-legal-approved-disclaimers.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 
