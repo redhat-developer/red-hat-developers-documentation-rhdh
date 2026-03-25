@@ -47,6 +47,7 @@ _detect_content_type() {
 _count_type_occurrences() {
     local file="$1"
     grep -c "^:_mod-docs-content-type:" "$file" 2>/dev/null || echo "0"
+    return 0
 }
 
 # shellcheck disable=SC2329
@@ -98,6 +99,7 @@ _fix_section_lists() {
                 sed -i "/^\.${section}/,/^[^[:space:]]/{s/^\(\.\.\?\.* \)/* /}" "$file" ;;
             mixed-to-numbered|unnumbered-to-numbered)
                 sed -i "/^\.${section}\$/,/^\.(Prerequisites|Procedure|Verification|Troubleshooting|Next steps|Additional)/{/^\./!s/^\* /. /}" "$file" ;;
+            *) ;;
         esac
     fi
 
@@ -108,6 +110,7 @@ _fix_section_lists() {
         single-to-unnumbered)   cqa_fail_autofix "$file" "$section_ln" "Single numbered step in .${section} -- convert to unnumbered" "Converted to unnumbered" ;;
         mixed-to-numbered)      cqa_fail_autofix "$file" "$section_ln" "Mixed list in .${section} -- convert to numbered" "Converted to numbered" ;;
         unnumbered-to-numbered) cqa_fail_autofix "$file" "$section_ln" "Multiple unnumbered items in .${section} -- convert to numbered" "Converted to numbered" ;;
+        *) ;;
     esac
     return 0
 }

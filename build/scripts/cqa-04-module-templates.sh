@@ -54,21 +54,19 @@ _cqa04_check() {
         fi
 
         # Check 2: PROCEDURE modules must have .Procedure section
-        if [[ "$content_type" == "PROCEDURE" ]]; then
-            if ! grep -q "^\.Procedure" "$file" 2>/dev/null; then
-                if [[ "$CQA_FIX_MODE" == true ]]; then
-                    # Find the first ordered list item and insert .Procedure before it
-                    local first_ol
-                    first_ol=$(grep -n '^\. ' "$file" | head -1 | cut -d: -f1)
-                    if [[ -n "$first_ol" ]]; then
-                        sed -i "${first_ol}i\\\\.Procedure" "$file"
-                        cqa_fail_autofix "$file" "$first_ol" "Missing .Procedure section" "Inserted .Procedure before first numbered list"
-                    else
-                        cqa_fail_manual "$file" "" "Missing .Procedure section (no numbered list found to insert before)"
-                    fi
+        if [[ "$content_type" == "PROCEDURE" ]] && ! grep -q "^\.Procedure" "$file" 2>/dev/null; then
+            if [[ "$CQA_FIX_MODE" == true ]]; then
+                # Find the first ordered list item and insert .Procedure before it
+                local first_ol
+                first_ol=$(grep -n '^\. ' "$file" | head -1 | cut -d: -f1)
+                if [[ -n "$first_ol" ]]; then
+                    sed -i "${first_ol}i\\\\.Procedure" "$file"
+                    cqa_fail_autofix "$file" "$first_ol" "Missing .Procedure section" "Inserted .Procedure before first numbered list"
                 else
-                    cqa_fail_autofix "$file" "" "Missing .Procedure section" "Insert .Procedure before numbered steps"
+                    cqa_fail_manual "$file" "" "Missing .Procedure section (no numbered list found to insert before)"
                 fi
+            else
+                cqa_fail_autofix "$file" "" "Missing .Procedure section" "Insert .Procedure before numbered steps"
             fi
         fi
 
@@ -92,10 +90,8 @@ _cqa04_check() {
         fi
 
         # Check 5: CONCEPT modules must not have .Procedure sections
-        if [[ "$content_type" == "CONCEPT" ]]; then
-            if grep -q "^\.Procedure" "$file" 2>/dev/null; then
-                cqa_fail_manual "$file" "" "CONCEPT module has .Procedure section (move to a PROCEDURE module)"
-            fi
+        if [[ "$content_type" == "CONCEPT" ]] && grep -q "^\.Procedure" "$file" 2>/dev/null; then
+            cqa_fail_manual "$file" "" "CONCEPT module has .Procedure section (move to a PROCEDURE module)"
         fi
 
         if [[ "$_CQA_CURRENT_FILE_HAS_ISSUES" == false ]]; then

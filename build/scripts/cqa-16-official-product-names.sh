@@ -126,12 +126,10 @@ _cqa16_check() {
                 fi
 
                 # If this pattern is a substring of a parent pattern, check for parent
-                if [[ -n "$parent_pattern" ]]; then
-                    if echo "$line_content" | grep -q "$parent_pattern"; then
-                        local standalone="${line_content//$parent_pattern/}"
-                        if ! echo "$standalone" | grep -q "$pattern"; then
-                            continue
-                        fi
+                if [[ -n "$parent_pattern" ]] && echo "$line_content" | grep -q "$parent_pattern"; then
+                    local standalone="${line_content//$parent_pattern/}"
+                    if ! echo "$standalone" | grep -q "$pattern"; then
+                        continue
                     fi
                 fi
 
@@ -158,6 +156,7 @@ _cqa16_check() {
             cqa_file_pass "$file"
         fi
     done
+    return 0
 }
 
 cqa_run_for_each_title _cqa16_check

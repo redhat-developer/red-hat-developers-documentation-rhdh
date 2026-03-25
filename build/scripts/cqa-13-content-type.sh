@@ -67,6 +67,7 @@ _cqa13_check() {
                     file_has_issue=true
                 fi
                 ;;
+            *) ;;
         esac
 
         # Check filename prefix matches content type
@@ -78,6 +79,7 @@ _cqa13_check() {
             CONCEPT)    expected_prefix="con-" ;;
             REFERENCE)  expected_prefix="ref-" ;;
             ASSEMBLY)   expected_prefix="assembly-" ;;
+            *) ;;
         esac
 
         if [[ -n "$expected_prefix" ]] && [[ ! "$basename_file" =~ ^${expected_prefix} ]]; then
