@@ -40,33 +40,35 @@ _cqa17_check() {
         cqa_compute_block_ranges "$file"
 
         # Check for Technology Preview mentions (outside source blocks)
+        # Detects both raw text and {technology-preview} attribute usage
         local has_tp_mention=false
         while IFS=: read -r tp_ln _; do
             [[ -z "$tp_ln" ]] && continue
             cqa_is_in_block "$file" "$tp_ln" && continue
             has_tp_mention=true
             break
-        done < <(grep -ni "technology preview" "$file" 2>/dev/null || true)
+        done < <(grep -ni "technology preview\|{technology-preview}" "$file" 2>/dev/null || true)
 
-        if [[ "$has_tp_mention" == true ]] && ! grep -q "include::.*snip-.*tech.*preview\|include::.*snip-.*tp-\|{technology-preview}\|access.redhat.com/support/offerings/techpreview" "$file" 2>/dev/null; then
+        if [[ "$has_tp_mention" == true ]] && ! grep -q "include::.*snip-.*tech.*preview\|include::.*snip-.*tp-\|access.redhat.com/support/offerings/techpreview" "$file" 2>/dev/null; then
             local line_num
-            line_num=$(grep -ni "technology preview" "$file" | head -1 | cut -d: -f1)
+            line_num=$(grep -ni "technology preview\|{technology-preview}" "$file" | head -1 | cut -d: -f1)
             cqa_fail_manual "$file" "$line_num" "Mentions 'Technology Preview' but may not include official disclaimer snippet"
             file_has_issue=true
         fi
 
         # Check for Developer Preview mentions (outside source blocks)
+        # Detects both raw text and {developer-preview} attribute usage
         local has_dp_mention=false
         while IFS=: read -r dp_ln _; do
             [[ -z "$dp_ln" ]] && continue
             cqa_is_in_block "$file" "$dp_ln" && continue
             has_dp_mention=true
             break
-        done < <(grep -ni "developer preview" "$file" 2>/dev/null || true)
+        done < <(grep -ni "developer preview\|{developer-preview}" "$file" 2>/dev/null || true)
 
-        if [[ "$has_dp_mention" == true ]] && ! grep -q "include::.*snip-.*dev.*preview\|include::.*snip-.*dp-\|{developer-preview}" "$file" 2>/dev/null; then
+        if [[ "$has_dp_mention" == true ]] && ! grep -q "include::.*snip-.*dev.*preview\|include::.*snip-.*dp-\|access.redhat.com/support/offerings/devpreview" "$file" 2>/dev/null; then
             local line_num
-            line_num=$(grep -ni "developer preview" "$file" | head -1 | cut -d: -f1)
+            line_num=$(grep -ni "developer preview\|{developer-preview}" "$file" | head -1 | cut -d: -f1)
             cqa_fail_manual "$file" "$line_num" "Mentions 'Developer Preview' but may not include official disclaimer snippet"
             file_has_issue=true
         fi

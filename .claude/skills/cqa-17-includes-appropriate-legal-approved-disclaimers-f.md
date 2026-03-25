@@ -31,10 +31,13 @@
 **Additional options:** Use `--all` to run across all titles. Output markers: `[AUTOFIX]`, `[FIXED]`, `[MANUAL]`, `[-> CQA-NN]`.
 
 **What the script does:**
-- Checks files mentioning "Technology Preview" include the official disclaimer snippet
-- Checks files mentioning "Developer Preview" include the official disclaimer snippet
-- Looks for `include::.*snip-.*tech.*preview` or `{technology-preview}` attribute references
+- Detects both raw text ("Technology Preview", "Developer Preview") and attribute usage (`{technology-preview}`, `{developer-preview}`)
+- Checks that files with preview mentions include the official disclaimer snippet (`include::.*snip-.*tech.*preview` or `include::.*snip-.*dev.*preview`) or the support scope URL
 - Skips snippet files (they ARE the disclaimers) and attributes.adoc
+
+**Attributes:** Use `{developer-preview}` and `{technology-preview}` attributes (defined in `artifacts/attributes.adoc`) instead of raw text. The Vale `DeveloperHub.Attributes` check enforces this.
+
+**Snippet placement:** Include the disclaimer snippet AFTER the `[role="_abstract"]` paragraph, not before it.
 
 **Target Results:**
 - ✅ All preview feature mentions have appropriate disclaimers
