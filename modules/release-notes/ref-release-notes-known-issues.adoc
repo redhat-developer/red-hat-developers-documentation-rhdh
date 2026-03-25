@@ -5,6 +5,7 @@
 
 This section lists known issues in {product} {product-version}.
 
+////
 [id="known-issue-rhdhbugs-2240"]
 == Existing Operator users with Orchestator 1.7 require a manual update in their dynamic-plugins ConfigMap
 
@@ -40,6 +41,7 @@ data:
 * link:https://issues.redhat.com/browse/RHDHBUGS-2240[RHDHBUGS-2240]
 
 // Link in comment to facilitate reviews: https://issues.redhat.com/browse/RHDHBUGS-2240
+////
 
 [id="known-issue-rhdhbugs-2227"]
 == Deployment update error with dynamic plugin configuration
@@ -249,4 +251,37 @@ spec:
 // Link in comment to facilitate reviews: https://issues.redhat.com/browse/RHDHBUGS-664
 
 
+[id="known-issue-rhdhbugs-2861"]
+== 1.8.5 upgrade for Orchestrator users with Operator deployments requires updating the dynamic-plugins ConfigMap
+
+If you have an existing Operator-backed instance of {product-short} with the Orchestrator, you must update your dynamic-plugins ConfigMap to set the version of the Orchestrator plugins to 1.8.9 once the {product-short} Operator is upgraded to 1.8.5.
+Otherwise, the {product-short} instance will not be upgraded at all.
+
+.Example of a dynamic-plugins ConfigMap enabling the Orchestrator plugins in 1.8.9 for Operator-backed instances
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: &#34;@redhat/backstage-plugin-orchestrator@1.8.9&#34;
+        disabled: false
+      - package: &#34;@redhat/backstage-plugin-orchestrator-backend-dynamic@1.8.9&#34;
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: &#34;@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.8.9&#34;
+        disabled: false
+      - package: &#34;@redhat/backstage-plugin-orchestrator-form-widgets@1.8.9&#34;
+        disabled: false
+----
+
+
+.Additional resources
+* link:https://redhat.atlassian.net/browse/RHDHBUGS-2861[RHDHBUGS-2861]
 
