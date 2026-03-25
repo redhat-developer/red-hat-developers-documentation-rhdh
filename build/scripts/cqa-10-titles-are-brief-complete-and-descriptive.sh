@@ -139,6 +139,8 @@ _title_to_id_form() {
         sed 's/{rhbk-brand-name}/rhbk/g' | sed 's/{rhbk}/rhbk/g' | \
         sed 's/{azure-brand-name}/microsoft-azure/g' | \
         sed 's/{ocp-brand-name}/ocp/g' | sed 's/{ocp-short}/ocp/g' | \
+        sed 's/{technology-preview}/technology-preview/g' | \
+        sed 's/{developer-preview}/developer-preview/g' | \
         sed 's/{[^}]*}//g'
 }
 
