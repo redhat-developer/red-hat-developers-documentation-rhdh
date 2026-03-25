@@ -44,7 +44,7 @@
 | `AsciiDocDITA.ShortDescription` | **Delegated to [CQA-8](cqa-08-short-description-content.md).** Add `[role="_abstract"]` before the first paragraph after the title. Ensure the paragraph is 50-300 chars. |
 | `AsciiDocDITA.AuthorLine` | **Auto-fixed.** Add a blank line after the title. The author line is not supported in DITA topics. |
 | `AsciiDocDITA.DocumentTitle` | Add a level 0 heading (`= Title`). For master.adoc, ensure `= {title}` is present. |
-| `AsciiDocDITA.DocumentId` | **Delegated to [CQA-10](cqa-10-titles-are-brief-complete-and-descriptive.md).** Add `[id="{context}"]` before the level 0 heading. |
+| `AsciiDocDITA.DocumentId` | **Delegated to [CQA-10](cqa-10-titles.md).** Add `[id="{context}"]` before the level 0 heading. |
 | `AsciiDocDITA.BlockTitle` | **Auto-fixed.** Convert to a lead-in sentence ending with `:`. Block titles (`.Something`) are only valid for examples, figures, and tables. Skips block titles before tables, examples, source blocks, and images. |
 | `AsciiDocDITA.TaskContents` | **Auto-fixed.** Add `.Procedure` before the first numbered steps list. |
 | `AsciiDocDITA.TaskTitle` | Unsupported sub-heading inside a procedure module. Remove the heading, or convert to a `.Procedure` block title or bold lead-in text. |
@@ -64,7 +64,7 @@
 
 **Delegated:**
 - ShortDescription — [CQA-8](cqa-08-short-description-content.md)
-- DocumentId — [CQA-10](cqa-10-titles-are-brief-complete-and-descriptive.md)
+- DocumentId — [CQA-10](cqa-10-titles.md)
 
 **Not auto-fixed (manual):**
 - DocumentTitle — requires writing a title

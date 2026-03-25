@@ -18,13 +18,13 @@ Content must follow American English grammar, Red Hat style standards: correct g
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-12-grammar-and-style-guide.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-12-grammar-and-style-guide.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-12-grammar-and-style-guide.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 
@@ -50,7 +50,7 @@ Content must follow American English grammar, Red Hat style standards: correct g
 **IMPORTANT:** Always use the associated script to run Vale. Do NOT run `vale` directly.
 
 ```bash
-./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<title-name>/master.adoc
+./build/scripts/cqa-12-grammar-and-style-guide.sh titles/<title-name>/master.adoc
 ```
 
 The script handles file discovery, filtering (e.g., excluding `attributes.adoc`), and outputs JSON.
@@ -85,7 +85,7 @@ The script handles file discovery, filtering (e.g., excluding `attributes.adoc`)
 
 ## Validation Workflow
 
-1. Run the script: `./build/scripts/cqa-12-content-is-grammatically-correct-and-follows-rules.sh titles/<your-title>/master.adoc`
+1. Run the script: `./build/scripts/cqa-12-grammar-and-style-guide.sh titles/<your-title>/master.adoc`
 2. Fix all errors (❌ severity)
 3. Fix all warnings (⚠️ severity)
 4. Fix all suggestions (💡 severity) unless clearly false positive

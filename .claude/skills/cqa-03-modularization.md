@@ -12,13 +12,13 @@
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-03-modularization.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-03-content-is-modularized.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-03-modularization.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-03-content-is-modularized.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-03-modularization.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 

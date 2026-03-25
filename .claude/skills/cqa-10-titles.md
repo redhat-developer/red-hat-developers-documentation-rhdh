@@ -99,13 +99,13 @@ done | sort -n
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-10-titles.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-10-titles.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-10-titles-are-brief-complete-and-descriptive.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-10-titles.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 

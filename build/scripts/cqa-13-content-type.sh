@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-13-information-is-conveyed-using-the-correct-content.sh
+# cqa-13-content-type.sh
 # Validates content matches its declared content type (CQA-13)
 #
-# Usage: ./cqa-13-information-is-conveyed-using-the-correct-content.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-13-content-type.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - PROCEDURE files have .Procedure section with numbered steps
@@ -67,6 +67,7 @@ _cqa13_check() {
                     file_has_issue=true
                 fi
                 ;;
+            *) ;;
         esac
 
         # Check filename prefix matches content type
@@ -78,6 +79,7 @@ _cqa13_check() {
             CONCEPT)    expected_prefix="con-" ;;
             REFERENCE)  expected_prefix="ref-" ;;
             ASSEMBLY)   expected_prefix="assembly-" ;;
+            *) ;;
         esac
 
         if [[ -n "$expected_prefix" ]] && [[ ! "$basename_file" =~ ^${expected_prefix} ]]; then

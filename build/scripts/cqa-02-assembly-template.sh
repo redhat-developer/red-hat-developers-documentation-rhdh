@@ -1,6 +1,6 @@
 #!/bin/bash
-# cqa-02-assembly-structure.sh - Validates assembly structure compliance (CQA-2)
-# Usage: ./cqa-02-assembly-structure.sh [--fix] [--all] <file-path>
+# cqa-02-assembly-template.sh - Validates assembly structure compliance (CQA-2)
+# Usage: ./cqa-02-assembly-template.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Content type ASSEMBLY on first line, not repeated
@@ -21,36 +21,40 @@
 source "$(dirname "${BASH_SOURCE[0]}")/cqa-lib.sh"
 cqa_parse_args "$0" "$@"
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _lineno() {
     local pattern="$1"
     local file="$2"
     grep -n "$pattern" "$file" 2>/dev/null | head -1 | cut -d: -f1
+    return 0
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_content_type_first_line() {
     local file="$1"
     sed -i '/^:_mod-docs-content-type:/d' "$file"
     sed -i '1s/^/:_mod-docs-content-type: ASSEMBLY\n/' "$file"
+    return 0
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_add_context_save() {
     local file="$1"
     sed -i '1a\ifdef::context[:parent-context: {context}]' "$file"
+    return 0
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_add_context_restore() {
     local file="$1"
     sed -i '/^ifdef::parent-context\[:context: {parent-context}\]$/d' "$file"
     sed -i '/^ifndef::parent-context\[:!context:\]$/d' "$file"
     sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$file"
     printf '\nifdef::parent-context[:context: {parent-context}]\nifndef::parent-context[:!context:]\n' >> "$file"
+    return 0
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _fix_context_line() {
     local file="$1" title_ln="$2"
     sed -i '/^:context:/d' "$file"
@@ -59,9 +63,10 @@ _fix_context_line() {
     if [[ -n "$id_value" ]]; then
         sed -i "${title_ln}a\\\\n:context: ${id_value}" "$file"
     fi
+    return 0
 }
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 _cqa02_check() {
     local target="$1"
 
@@ -127,16 +132,14 @@ _cqa02_check() {
         fi
 
         # Check 4: ID with _{context} (non-master)
-        if [[ "$is_master" == false ]]; then
-            if ! grep -q '\[id=".*_{context}"\]' "$file"; then
-                if grep -q '\[id="[^"]*"\]' "$file"; then
-                    if [[ "$CQA_FIX_MODE" == true ]]; then
-                        sed -i 's/\[id="\([^"]*[^}]\)"\]/[id="\1_{context}"]/' "$file"
-                    fi
-                    cqa_fail_autofix "$file" "" "ID missing _{context} suffix" "Added _{context} suffix"
-                else
-                    cqa_fail_manual "$file" "" "Missing [id=\"..._{context}\"] attribute"
+        if [[ "$is_master" == false ]] && ! grep -q '\[id=".*_{context}"\]' "$file"; then
+            if grep -q '\[id="[^"]*"\]' "$file"; then
+                if [[ "$CQA_FIX_MODE" == true ]]; then
+                    sed -i 's/\[id="\([^"]*[^}]\)"\]/[id="\1_{context}"]/' "$file"
                 fi
+                cqa_fail_autofix "$file" "" "ID missing _{context} suffix" "Added _{context} suffix"
+            else
+                cqa_fail_manual "$file" "" "Missing [id=\"..._{context}\"] attribute"
             fi
         fi
 
@@ -150,11 +153,9 @@ _cqa02_check() {
         elif [[ "$is_master" == false ]]; then
             local title_ln_chk
             title_ln_chk=$(_lineno "^= " "$file")
-            if [[ -n "$title_ln_chk" ]]; then
-                if [[ "$context_ln" -le "$title_ln_chk" ]]; then
-                    cqa_fail_autofix "$file" "$context_ln" ":context: must appear after the title" "Moved :context: after title"
-                    need_ctx_fix=true
-                fi
+            if [[ -n "$title_ln_chk" ]] && [[ "$context_ln" -le "$title_ln_chk" ]]; then
+                cqa_fail_autofix "$file" "$context_ln" ":context: must appear after the title" "Moved :context: after title"
+                need_ctx_fix=true
             fi
         fi
         if [[ "$CQA_FIX_MODE" == true && "$need_ctx_fix" == true && "$is_master" == false ]]; then

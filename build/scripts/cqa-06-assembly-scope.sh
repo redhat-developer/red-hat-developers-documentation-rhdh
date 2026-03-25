@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-06-assemblies-use-the-official-template-assemblies-ar.sh
+# cqa-06-assembly-scope.sh
 # Validates assemblies follow the official template and tell one user story (CQA-6)
 #
-# Usage: ./cqa-06-assemblies-use-the-official-template-assemblies-ar.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-06-assembly-scope.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Assembly has exactly one user story (single focus topic)
@@ -69,6 +69,7 @@ _cqa06_check() {
             cqa_file_pass "$file"
         fi
     done
+    return 0
 }
 
 cqa_run_for_each_title _cqa06_check

@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-12-content-is-grammatically-correct-and-follows-rules.sh
+# cqa-12-grammar-and-style-guide.sh
 # Validates grammar and style using Vale (CQA-12)
 #
-# Usage: ./cqa-12-content-is-grammatically-correct-and-follows-rules.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-12-grammar-and-style-guide.sh [--fix] [--all] <file-path>
 #
 # Checks:
 #   - Runs Vale with .vale.ini (grammar, spelling, style, terminology)

@@ -98,13 +98,13 @@ The Vale rule `.vale-styles/DeveloperHub/Attributes.yml` checks for hardcoded pr
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-16-official-product-names-are-used.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-16-official-product-names.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-16-official-product-names-are-used.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-16-official-product-names.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-16-official-product-names-are-used.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-16-official-product-names.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 

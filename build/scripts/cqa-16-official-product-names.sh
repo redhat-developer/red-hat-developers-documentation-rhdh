@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-16-official-product-names-are-used.sh
+# cqa-16-official-product-names.sh
 # Verify and fix official product name usage per CQA requirement #16
 #
-# Usage: ./cqa-16-official-product-names-are-used.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-16-official-product-names.sh [--fix] [--all] <file-path>
 #
 # Checks for hardcoded product names that should use AsciiDoc attributes.
 # See .vale-styles/DeveloperHub/Attributes.yml for the full list.
@@ -126,12 +126,10 @@ _cqa16_check() {
                 fi
 
                 # If this pattern is a substring of a parent pattern, check for parent
-                if [[ -n "$parent_pattern" ]]; then
-                    if echo "$line_content" | grep -q "$parent_pattern"; then
-                        local standalone="${line_content//$parent_pattern/}"
-                        if ! echo "$standalone" | grep -q "$pattern"; then
-                            continue
-                        fi
+                if [[ -n "$parent_pattern" ]] && echo "$line_content" | grep -q "$parent_pattern"; then
+                    local standalone="${line_content//$parent_pattern/}"
+                    if ! echo "$standalone" | grep -q "$pattern"; then
+                        continue
                     fi
                 fi
 
@@ -158,6 +156,7 @@ _cqa16_check() {
             cqa_file_pass "$file"
         fi
     done
+    return 0
 }
 
 cqa_run_for_each_title _cqa16_check

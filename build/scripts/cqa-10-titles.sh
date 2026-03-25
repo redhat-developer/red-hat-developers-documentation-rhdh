@@ -1,8 +1,8 @@
 #!/bin/bash
-# cqa-10-titles-are-brief-complete-and-descriptive.sh
+# cqa-10-titles.sh
 # Aligns title, ID, context, and filename per CQA rules (CQA-10)
 #
-# Usage: ./cqa-10-titles-are-brief-complete-and-descriptive.sh [--fix] [--all] <file-path>
+# Usage: ./cqa-10-titles.sh [--fix] [--all] <file-path>
 #
 # Autofix:
 #   - Converts gerund titles to imperative (160+ rules)
@@ -139,6 +139,8 @@ _title_to_id_form() {
         sed 's/{rhbk-brand-name}/rhbk/g' | sed 's/{rhbk}/rhbk/g' | \
         sed 's/{azure-brand-name}/microsoft-azure/g' | \
         sed 's/{ocp-brand-name}/ocp/g' | sed 's/{ocp-short}/ocp/g' | \
+        sed 's/{technology-preview}/technology-preview/g' | \
+        sed 's/{developer-preview}/developer-preview/g' | \
         sed 's/{[^}]*}//g'
 }
 

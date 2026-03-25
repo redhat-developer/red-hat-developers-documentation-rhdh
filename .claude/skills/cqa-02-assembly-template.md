@@ -28,13 +28,13 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 
 ```bash
 # 1. Report issues
-./build/scripts/cqa-02-assembly-structure.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-02-assembly-template.sh titles/<your-title>/master.adoc
 
 # 2. Auto-fix what can be fixed
-./build/scripts/cqa-02-assembly-structure.sh --fix titles/<your-title>/master.adoc
+./build/scripts/cqa-02-assembly-template.sh --fix titles/<your-title>/master.adoc
 
 # 3. Re-run to verify remaining issues
-./build/scripts/cqa-02-assembly-structure.sh titles/<your-title>/master.adoc
+./build/scripts/cqa-02-assembly-template.sh titles/<your-title>/master.adoc
 
 # 4. Attempt manual fixes for remaining issues
 
@@ -73,7 +73,7 @@ Assemblies must follow the [assembly template](../resources/assembly-template.ad
 - Add missing `:context:` attribute (value derived from ID without `_{context}` suffix)
 
 **Not auto-fixed (delegated):**
-- ID value mismatch with title — handled by [CQA-10 - Titles](cqa-10-titles-are-brief-complete-and-descriptive.md)
+- ID value mismatch with title — handled by [CQA-10 - Titles](cqa-10-titles.md)
 - Introduction length (50-300 chars) — handled by [CQA-8 - Short descriptions](cqa-08-short-description-content.md)
 
 **Not auto-fixed (manual):**
