@@ -132,18 +132,11 @@ To display user icons from external providers such as Gravatar or GitLab, includ
 +
 [IMPORTANT]
 ====
-* {product} {product-version} supports vLLM, native OpenAI, Vertex AI, and Ollama providers. While the vLLM provider uses the OpenAI API schema, it does not support the official OpenAI service (api.openai.com). To use official OpenAI credentials, you must use the native OpenAI provider instead of vLLM. Using OpenAI credentials with the vLLM provider causes errors or improper responses.
-
-* You must declare the safety model environmental variables (`SAFTEY_MODEL`, `SAFETY_URL`, and `SAFETY_API_KEY`). If these are not configured correctly, Llama Stack container runtime errors occur, resulting in user interface failures.
+* {product} {product-version} supports vLLM, native OpenAI, Vertex AI, and Ollama providers. The vLLM provider uses the OpenAI API schema but it does not support the official OpenAI service (api.openai.com). To use official OpenAI credentials, you must use the native OpenAI provider instead of vLLM. Using OpenAI credentials with the vLLM provider causes errors or improper responses.
 ====
 
 .. In the {ocp-short} web console, navigate to *Secrets*.
 .. Click *Create* -> *Key/value secret*, select *YAML view*, and add the following structure:
-+
-[TIP]
-====
-To integrate {ls-short} effectively with Model Context Protocol (MCP), you must pass the correct authorization headers. For details instructions, see {model-context-protocol-link}#proc-configuring-mpc-clients-to-access-the-rhdh-server_assembly-model-context-protocol-tools[Configuring MCP clients to access the {product-very-short} server].
-====
 +
 [source,yaml]
 ----
@@ -173,10 +166,10 @@ stringData:
 +
 where:
 
-`ENABLE_VLLM`:: Enables the vLLM provider. Set to true to activate.
-`ENABLE_OPENAI`:: Enables the OpenAI provider. Set to true to activate.
-`ENABLE_VERTEX_AI`:: Enables the Vertex AI provider. Set to true to activate.
-`ENABLE_OLLAMA`:: Enables the Ollama provider. Set to true to activate.
+`ENABLE_VLLM`:: Enables the vLLM provider. Set to `true` to activate.
+`ENABLE_OPENAI`:: Enables the OpenAI provider. Set to `true` to activate.
+`ENABLE_VERTEX_AI`:: Enables the Vertex AI provider. Set to `true` to activate.
+`ENABLE_OLLAMA`:: Enables the Ollama provider. Set to `true` to activate.
 +
 [NOTE]
 ====
@@ -191,9 +184,14 @@ To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
 `VERTEX_AI_LOCATION`:: The {gcp-brand-name} region required to access Gemini through Vertex AI.
 `GOOGLE_APPLICATION_CREDENTIALS`:: The credentials required to authenticate with {gcp-brand-name} to access Vertex AI.
 `OLLAMA_URL`:: The URL for the Ollama service.
-`SAFETY_MODEL`:: The identifier for the safety model. The recommended value is llama-guard3:8b.
-`SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`).
-`SAFETY_API_KEY`:: The API key required to authenticate with the safety model, if applicable.
+`SAFETY_MODEL`:: The identifier for the safety model. You must use `llama-guard3:8b` as it is the default model optimized by Llama Stack for safety classification.
+`SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`) so the Llama Stack can correctly route moderation requests to the API.
+`SAFETY_API_KEY`:: The authentication token from your safety model required to secure the moderation channel and prevent unauthorized access to your safety infrastructure.
++
+[TIP]
+====
+To integrate {ls-short} effectively with Model Context Protocol (MCP), you must pass the correct authorization headers. For details instructions, see {model-context-protocol-link}#proc-configuring-mpc-clients-to-access-the-rhdh-server_assembly-model-context-protocol-tools[Configuring MCP clients to access the {product-very-short} server].
+====
 .. Click *Create*.
 
 . Update the dynamic plugins ConfigMap: Add the {ls-short} plugin image to your existing dynamic plugins ConfigMap (`dynamic-plugins-rhdh`).
