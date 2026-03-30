@@ -4,26 +4,21 @@
 = Upgrade {product-very-short} from 1.8 to {product-version} using the Helm Chart
 
 [role="_abstract"]
-When upgrading the {product} {product-very-short} Helm release to {product-version}, if you use custom `values.yaml` files to override specific lists in the default configuration, you must manually update the files to include some new defaults. This requirement is due to a known Helm limitation where the tool does not perform a "deep merge" on list fields. Instead, if a list is defined in a custom values file, it completely replaces the corresponding list in the default values. If you have custom overrides for specific lists, they will inadvertently strip out the new mandatory configurations required for the *Extensions Catalog Index* feature introduced in {product-version}. If you do not include the new default volume mounts and environment variables in your custom `values.yaml` will result in the application failing to initialize or failing to discover dynamic plugins correctly.
+When upgrading the {product} {product-very-short} Helm release to {product-version}, if you use custom `values.yaml` files to override specific lists in the default configuration, you must manually update the files to include some new defaults.
+
+This requirement is due to a known Helm limitation where the tool does not perform a "deep merge" on list fields. Instead, if a list is defined in a custom values file, it completely replaces the corresponding list in the default values. If you have custom overrides for specific lists, they will inadvertently strip out the new mandatory configurations required for the *Extensions Catalog Index* feature introduced in {product-version}. If you do not include the new default volume mounts and environment variables in your custom `values.yaml` will result in the application failing to initialize or failing to discover dynamic plugins correctly.
 
 .Prerequisites
 
 * You have a running instance of {product} 1.8 deployed using the Helm chart.
 
-* You use a custom `values.yaml` file that overrides any of the following affected fields:
+* Your custom `values.yaml` file overrides any of the following affected fields:
 
   ** `upstream.backstage.extraVolumeMounts`
   ** `upstream.backstage.extraVolumes`
   ** `upstream.backstage.initContainers`
 
 .Procedure
-
-. View the full list of default values for {product-version} by running the following command:
-+
-[source,terminal,subs="+attributes,+quotes"]
-----
-helm show values redhat-developer-hub --repo https://charts.openshift.io --version {product-bundle-version}
-----
 
 . Manually merge the new default items into your custom configuration. Make sure your custom `values.yaml` includes the following highlighted items within their respective lists to avoid configuration loss:
 +
@@ -58,6 +53,16 @@ upstream:
             mountPath: /extensions
         ### ... other fields omitted for brevity
 ----
+
+[TIP]
+====
+To inspect the full list of default values for {product-version}, run the following command:
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+helm show values redhat-developer-hub --repo https://charts.openshift.io --version {product-bundle-version}
+----
+====
 
 .Verification
 
