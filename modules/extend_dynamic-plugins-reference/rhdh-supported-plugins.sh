@@ -243,20 +243,6 @@ generate_dynamic_plugins_table() {
       [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") == "@redhat"* ]] && \
         { debug "Skip[3] Plugin = $Plugin\n"; continue; }
 
-      # DEPRECATED :: once wrappers are removed, we don't need this anymore
-      if [[ $Path ]] && [[ $Path == "./dynamic-plugins/dist/"* ]]; then
-        # shellcheck disable=SC2016
-        found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-        # shellcheck disable=SC2016
-        found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-        if [[ $Path2 ]]; then
-            Path=$Path2
-        else
-            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
-        fi
-      fi
-
       # For extensions YAML files, skip the default config check for inclusion
       if [[ "$y" == *"/metadata/"* ]]; then
           # Process extensions packages regardless of default config
@@ -439,9 +425,6 @@ generate_dynamic_plugins_table() {
           fi
           csv_key="$SupportSort-$PrettyName-$RoleSort-$Role-$Plugin"
           echo "$csv_key|$csv_content" >> "$TEMP_DIR/csv.tmp"
-      else
-          (( tot-- )) || true
-          echo -e "${blue}        Skip: not in rhdh/dynamic-plugins.default.yaml !${norm}"
       fi
       echo
   done
