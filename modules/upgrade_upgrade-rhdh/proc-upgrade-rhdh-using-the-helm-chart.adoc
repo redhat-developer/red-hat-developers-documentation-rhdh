@@ -1,0 +1,64 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-upgrade-rhdh-using-the-helm-chart_{context}"]
+= Upgrade {product-very-short} from 1.8 to {product-version} using the Helm Chart
+
+[role="_abstract"]
+When upgrading the {product} {product-very-short} Helm release to {product-version}, if you use custom `values.yaml` files to override specific lists in the default configuration, you must manually update the files to include some new defaults. This requirement is due to a known Helm limitation where the tool does not perform a "deep merge" on list fields. Instead, if a list is defined in a custom values file, it completely replaces the corresponding list in the default values. If you have custom overrides for specific lists, they will inadvertently strip out the new mandatory configurations required for the *Extensions Catalog Index* feature introduced in {product-version}. If you do not include the new default volume mounts and environment variables in your custom `values.yaml` will result in the application failing to initialize or failing to discover dynamic plugins correctly.
+
+.Prerequisites
+
+* You have a running instance of {product} 1.8 deployed using the Helm chart.
+
+* You use a custom `values.yaml` file that overrides any of the following affected fields:
+
+  ** `upstream.backstage.extraVolumeMounts`
+  ** `upstream.backstage.extraVolumes`
+  ** `upstream.backstage.initContainers`
+
+.Procedure
+
+. View the full list of default values for {product-version} by running the following command:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+helm show values redhat-developer-hub --repo https://charts.openshift.io --version {product-bundle-version}
+----
+
+. Manually merge the new default items into your custom configuration. Make sure your custom `values.yaml` includes the following highlighted items within their respective lists to avoid configuration loss:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+upstream:
+  backstage:
+    extraVolumeMounts:
+      # TODO: In addition to your custom mounts and the {product-very-short} defaults, ensure this item is present (defined in the default {product-very-short} chart):
+      - name: extensions-catalog
+        mountPath: /extensions
+
+    extraVolumes:
+      # TODO: In addition to your custom volumes and the {product-very-short} defaults, ensure this item is present (defined in the default {product-very-short} chart):
+      - name: extensions-catalog
+        emptyDir: {}
+
+    initContainers:
+      # TODO: Ensure the 'install-dynamic-plugins' container includes these environment variables and volume mounts:
+      - name: install-dynamic-plugins
+        env:
+          # TODO: In addition to your custom env vars and the {product-very-short} defaults for the install-dynamic-plugins init container,
+          # ensure the following items are present (defined in the default {product-very-short} chart):
+          - name: CATALOG_INDEX_IMAGE
+            value: '{{ .Values.global.catalogIndex.image.registry }}/{{ .Values.global.catalogIndex.image.repository }}:{{ .Values.global.catalogIndex.image.tag }}'
+          - name: CATALOG_ENTITIES_EXTRACT_DIR
+            value: '/extensions'
+        volumeMounts:
+          # TODO: In addition to your custom volume mounts and the {product-very-short} defaults for the install-dynamic-plugins init container,
+          # ensure the following item is present (defined in the default {product-very-short} chart):
+          - name: extensions-catalog
+            mountPath: /extensions
+        ### ... other fields omitted for brevity
+----
+
+.Verification
+
+* Verify that the {product} application successfully initializes.
