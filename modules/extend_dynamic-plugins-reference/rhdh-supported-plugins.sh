@@ -157,7 +157,7 @@ generate_dynamic_plugins_table() {
   fi
   jq -r '.dependencies' "${rhdhtmpdir}"/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> "$pluginVersFile"
   # Use LC_ALL=C for consistent sorting across different locales
-  cat "$pluginVersFile" | sort -u > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
+  sort -u "$pluginVersFile" > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
 
   rm -fr /tmp/warnings_"${BRANCH}".txt
 
