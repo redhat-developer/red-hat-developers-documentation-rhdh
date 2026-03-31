@@ -708,6 +708,19 @@ popd >/dev/null || exit
 # see https://issues.redhat.com/browse/RHIDP-3187 - only GA plugins should be enabled by default
 if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;sort -u "${ENABLED_PLUGINS}.errors"; fi
 
+# clean up CQA warnings
+pushd "${SCRIPT_DIR}"/../.. >/dev/null || exit
+  for d in \
+    ref-community-plugins-migration-to-the-github-container-registry.adoc \
+    ref-deprecated-plugins.adoc \
+    ref-other-installable-plugins.adoc \
+    ref-supported-plugins.adoc \
+    ref-technology-preview-plugins.adoc \
+    ; do
+    ./build/scripts/cqa-16-official-product-names.sh --fix modules/extend_dynamic-plugins-reference/$d >/dev/null 2>&1
+  done
+popd >/dev/null || exit
+
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
 rm -rf "$TEMP_DIR"
