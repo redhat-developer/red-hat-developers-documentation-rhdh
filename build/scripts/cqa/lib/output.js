@@ -36,7 +36,7 @@ export function renderSummary({ filesChecked, filesWithIssues, autofixable, manu
     `Violations: ${autofixable + manual + delegated} total (${autofixable} autofixable, ${manual} manual, ${delegated} delegated)`,
   ];
   if (!fixMode && autofixable > 0) {
-    lines.push(`Run with --fix to auto-resolve ${autofixable} issue${autofixable === 1 ? '' : 's'}.`);
+    lines.push(`Run \`node build/scripts/cqa/index.js --fix --all\` to auto-resolve ${autofixable} issue${autofixable === 1 ? '' : 's'}.`);
   }
   return lines.join('\n');
 }
