@@ -89,10 +89,12 @@ function collectIncludes(root) {
   for (const file of walkAdoc(root)) {
     for (const line of readLines(file)) {
       if (!line.startsWith('include::')) continue;
-      const path = line.slice('include::'.length).replace(/\[[\s\S]*$/, '').trim();
+      const raw = line.slice('include::'.length);
+      const bracketIdx = raw.indexOf('[');
+      const path = (bracketIdx >= 0 ? raw.slice(0, bracketIdx) : raw).trim();
       const bn = basename(path);
       if (bn.includes('{')) {
-        includedPatterns.push(patternToRegex(bn));
+        includedPatterns.push(patternToGlob(bn));
       } else {
         includedBasenames.add(bn);
       }
@@ -127,13 +129,26 @@ function collectImageRefsFromFile(file, referenced) {
 
 // ── Pure utilities ────────────────────────────────────────────────────────────
 
-function patternToRegex(bn) {
-  const escaped = bn.replaceAll('.', String.raw`\.`).replaceAll(/\{[^}]*\}/g, '[^.]+');
-  return new RegExp(`^${escaped}$`);
+function patternToGlob(bn) {
+  // Split on {attr} placeholders, returning fixed segments
+  return bn.split(/\{[^}]*\}/);
 }
 
 function isIncluded(bn, basenames, patterns) {
-  return basenames.has(bn) || patterns.some(re => re.test(bn));
+  if (basenames.has(bn)) return true;
+  return patterns.some(segments => {
+    if (segments.length <= 1) return bn === (segments[0] || '');
+    // Check that bn starts with first segment, ends with last, and contains middle segments in order
+    if (!bn.startsWith(segments[0])) return false;
+    if (!bn.endsWith(segments[segments.length - 1])) return false;
+    let pos = segments[0].length;
+    for (let i = 1; i < segments.length - 1; i++) {
+      const idx = bn.indexOf(segments[i], pos);
+      if (idx < 0) return false;
+      pos = idx + segments[i].length;
+    }
+    return true;
+  });
 }
 
 function* walkAdoc(dir) {
