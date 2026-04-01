@@ -18,6 +18,7 @@ const PROC_MODULE_RE = /include::.*\/(proc-|ref-|con-)/;
 const CONTENT_TYPE_ATTR = ':_mod-docs-content-type:';
 const SECTION_STOP_RE = /^\.(Prerequisites|Procedure|Verification|Troubleshooting|Next steps|Additional)/;
 const BLOCK_DELIM_RE = /^(-{4,}|\.{4,}|\+{4,})$/;
+const INCLUDE_RE = /^include::/;
 
 export default class Cqa03Modularization extends Checker {
   id = '03';
