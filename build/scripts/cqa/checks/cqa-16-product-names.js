@@ -225,8 +225,8 @@ function fixFile(root, file) {
       if (!attrLine.includes('subs=')) {
         // No subs at all — add both +attributes and +quotes
         fixedLines[attrIdx] = attrLine.replace(']', ',subs="+attributes,+quotes"]');
-      } else if (!attrLine.includes('+attributes')) {
-        // Has subs but missing +attributes — append it
+      } else if (!attrLine.includes('+attributes') && !attrLine.includes('attributes+')) {
+        // Has subs but missing +attributes/attributes+ — append it
         fixedLines[attrIdx] = attrLine.replace(/subs="([^"]*)"/, 'subs="$1,+attributes"');
       }
     } else {
