@@ -1,0 +1,72 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="create-a-tgz-file-with-dynamic-packages_{context}"]
+= Create a TGZ file with dynamic packages
+
+[role="_abstract"]
+Use this procedure to package a dynamic plugin as a TGZ file and host it on a web server.
+
+.Prerequisites
+{context}
+ifeval::["{context}" == "assembly-package-publish-third-party-dynamic-plugin"]
+* You have exported a {plugin-type-name} dynamic plugin package. For more information, see xref:export-plugins-in-rhdh_plugins-in-rhdh[].
+endif::[]
+
+.Procedure
+. Navigate to the `dist-dynamic` directory.
+. Run the following command to create a `tgz` archive:
++
+--
+[source,terminal]
+----
+$ npm pack
+----
+You can obtain the integrity hash from the output of the `npm pack` command by using the `--json` flag as follows:
+
+[source,terminal]
+----
+$ npm pack --json | head -n 10
+----
+--
+
+. Host the archive on a web server accessible to your {product-very-short} instance, and reference its URL in the `dynamic-plugin-config.yaml` file as follows:
++
+--
+[source,yaml]
+----
+plugins:
+  - package: https://example.com/backstage-plugin-myplugin-1.0.0.tgz
+    integrity: sha512-<hash>
+----
+--
+. Run the following command to package the plugins:
++
+--
+[source,terminal]
+----
+$ npm pack --pack-destination ~/test/dynamic-plugins-root/
+----
+
+[TIP]
+====
+To create a plugin registry using HTTP server on {ocp-short}, run the following commands:
+
+[source,terminal, subs="+attributes"]
+----
+$ oc project {my-product-namespace}
+$ oc new-build httpd --name=plugin-registry --binary
+$ oc start-build plugin-registry --from-dir=dynamic-plugins-root --wait
+$ oc new-app --image-stream=plugin-registry
+----
+====
+--
+
+. Configure your {product-very-short} to use plugins from the HTTP server by editing the `dynamic-plugin-config.yaml` file:
++
+--
+[source,yaml]
+----
+plugins:
+  - package: http://plugin-registry:8080/backstage-plugin-myplugin-1.9.6.tgz
+----
+--

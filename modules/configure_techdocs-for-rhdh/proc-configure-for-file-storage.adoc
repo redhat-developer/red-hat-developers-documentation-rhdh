@@ -1,0 +1,48 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-for-file-storage_{context}"]
+= Configure {odf-name} for file storage
+
+[role="_abstract"]
+You can configure {odf-name} to store the files that TechDocs generates instead of relying on other cloud storage solutions.
+
+{odf-name} provides an `ObjectBucketClaim` custom resource (CR) that you can use to request an S3-compatible bucket backend.
+You must install the {odf-name} Operator to use this feature.
+
+[NOTE]
+====
+For air-gapped environments, using {odf-name} is the recommended storage for TechDocs.
+====
+
+.Prerequisites
+* An {ocp-short} administrator has installed the {odf-name} Operator in {ocp-brand-name}, created an {odf-name} cluster and configured the `StorageSystem` schema.
+For more information, see {odf-docs-link}/html-single/deploying_openshift_data_foundation_using_amazon_web_services/index[Deploying {odf-name} using {aws-brand-name}].
+
+.Procedure
+* Create an `ObjectBucketClaim` CR where the generated TechDocs files are stored.
+For example:
++
+[source,yaml]
+----
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: <rhdh_bucket_claim_name>
+spec:
+  generateBucketName: <rhdh_bucket_claim_name>
+  storageClassName: openshift-storage.noobaa.io
+----
++
+[NOTE]
+====
+Creating the {product-short} `ObjectBucketClaim` CR automatically creates both the {product-short} `ObjectBucketClaim` config map and secret.
+The config map and secret have the same name as the `ObjectBucketClaim` CR.
+====
++
+After you create the `ObjectBucketClaim` CR, you can use the information stored in the config map and secret to make the information accessible to the {product-short} container as environment variables.
+Depending on the method that you used to install {product-short}, you add the access information to either the {product} Helm chart or Operator configuration.
+
+[role="_additional-resources"]
+.Additional resources
+* {odf-docs-link}[{odf-name}]
+* {odf-docs-link}/html-single/managing_hybrid_and_multicloud_resources/object-bucket-claim#object-bucket-claim[Object Bucket Claim]

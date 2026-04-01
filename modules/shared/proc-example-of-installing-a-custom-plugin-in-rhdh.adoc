@@ -1,0 +1,134 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="example-of-installing-a-custom-plugin-in-rhdh_{context}"]
+= Example of installing a custom plugin in {product}
+
+[role="_abstract"]
+This example demonstrates how to package and install dynamic plugins by using the {product-custom-resource-type} *Entity Feedback* community plugin that is not included in {product} pre-installed dynamic plugins. 
+
+*Limitations:*
+
+* You need to ensure that you build your custom plugin with a compatible version of {product-custom-resource-type}. In {product-short}, click *Settings*. Your custom plugin must be compatible with the *{product-custom-resource-type} Version* (or the closest earlier version) that the *Metadata* section of {product} displays.
++
+For example, if you view the link:https://github.com/backstage/community-plugins/commits/main/workspaces/entity-feedback/backstage.json[history] of the `backstage.json` file for the *Entity Feedback* plugin, the `1fc87de` commit is the closest earlier version to {product-custom-resource-type} version of 1.39.1.
++
+image::extend_installing-and-viewing-plugins-in-rhdh/custom-limitations.png["backstage.json file history in GitHub"]
+
+
+.Prerequisites
+* Your local environment meets the following requirements:
+
+* *Node.js:* Version 22.x
+* *Yarn:* Version 4.x
+* *git CLI*
+* *jq CLI:* Command-line JSON processor
+* *OpenShift CLI (oc):* The client for interacting with your OpenShift cluster.
+* *Container runtime:* You need either podman or docker to package the plugin into an OCI image and to log in to registries.
+* *Container registry access:* Access to an OCI-compliant container registry, such as the internal OpenShift registry or a public registry such as Quay.io.
+//* *Command-line tool to build and package plugins:* The `@red-hat-developer-hub/cli` package. For compatibility with the most recent features and fixes, use the latest version (`@latest` tag) version of the  `@red-hat-developer-hub/cli` package.
+
+.Procedure
+. Clone the source code for the *Entity Feedback* plugin, as follows:
++
+[source,terminal]
+----
+$ git clone https://github.com/backstage/community-plugins.git
+$ cd community-plugins
+----
+
+. Prepare your environment to build the plugin by enabling Yarn for your Node.js installation, as follows:
++
+[source,terminal]
+----
+$ corepack enable yarn
+----
+
+. Install the dependencies, compile the code, and build the plugins, as follows:
++
+[source,terminal]
+----
+$ cd workspaces/entity-feedback
+$ yarn install
+$ yarn tsc
+$ yarn build:all
+----
++
+[NOTE]
+====
+After this step, with upstream {backstage}, you publish the built plugins to a NPM or NPM-compatible registry. In this example, as you are building this plugin to support dynamic loading by {product}, you can skip the `npm publish` step that publishes the plugin to a NPM registry. Instead, you can package the plugin for dynamic loading and publish it as a container image on `Quay.io` or your preferred container registry.
+====
+
+. Prepare the *Entity Feedback* front-end plugin by using the {product} CLI. The following command uses the plugin files in the `dist` folder that the `yarn build:all` command generated, and creates a new `dist-scalprum` folder that has the necessary configuration and source files to enable dynamic loading:
++
+[source,terminal]
+----
+$ cd plugins/entity-feedback
+$ npx @red-hat-developer-hub/cli@latest plugin export
+----
++
+When this command packages a front-end plugin, it uses a default Scalprum configuration if one is not found. The Scalprum configuration specifies the plugin entry point and exports, and then builds a `dist-scalprum` folder that has the dynamic plugin. The following example shows the default Scalprum configuration. However, you can add a `scalprum` key to the `package.json` file used by your plugin to set custom values, if necessary:
++
+[source,json]
+----
+{
+  "name": "backstage-community.plugin-entity-feedback",
+  "exposedModules": {
+    "PluginRoot": "./src/index.ts"
+  }
+}
+----
++
+{product} uses the following `plugin-manifest.json` file to load the plugin. This file is in the `dist-dynamic/dist-scalprum` folder:
++
+[source,json]
+----
+{
+  "name": "backstage-community.plugin-entity-feedback",
+  "version": "0.6.0",
+  "extensions": [],
+  "registrationMethod": "callback",
+  "baseURL": "auto",
+  "loadScripts": [
+    "backstage-community.plugin-entity-feedback.fd691533c03cb52c30ac.js"
+  ],
+  "buildHash": "fd691533c03cb52c30acbb5a80197c9d"
+}
+----
+
+. Package the plugin into a container image and publish it to Quay.io or your preferred container registry:
++
+[source,terminal]
+----
+$ export QUAY_USER=replace-with-your-username
+$ export PLUGIN_NAME=entity-feedback-plugin
+$ export VERSION=$(cat package.json | jq .version -r)
+
+$ npx @red-hat-developer-hub/cli@latest plugin package \
+  --tag quay.io/$QUAY_USER/$PLUGIN_NAME:$VERSION
+
+$ podman login quay.io
+$ podman push quay.io/$QUAY_USER/$PLUGIN_NAME:$VERSION
+----
+
+. Repeat the same steps for the backend plugin. Backend plugins do not require Scalprum, and the export generates a `dist-dynamic` folder instead of a `dist-scalprum` folder:
++
+[source,terminal]
+----
+$ cd ../entity-feedback-backend/
+$ npx @red-hat-developer-hub/cli@latest plugin export
+
+$ export QUAY_USER=replace-with-your-username
+$ export PLUGIN_NAME=entity-feedback-plugin-backend
+$ export VERSION=$(cat package.json | jq .version -r)
+
+$ npx @red-hat-developer-hub/cli@latest plugin package \
+  --tag quay.io/$QUAY_USER/$PLUGIN_NAME:$VERSION
+
+$ podman push quay.io/$QUAY_USER/$PLUGIN_NAME:$VERSION
+----
++
+Those commands publish two container images to your container registry. 
++
+The following image shows the container images published to Quay.io:
++
+image::extend_installing-and-viewing-plugins-in-rhdh/custom-container-images.png["Container images published to Quay.io"]

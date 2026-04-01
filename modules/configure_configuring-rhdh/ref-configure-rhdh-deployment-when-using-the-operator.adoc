@@ -1,0 +1,149 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="configure-rhdh-deployment-when-using-the-operator_{context}"]
+= Configure {product} deployment when using the Operator
+
+[role="_abstract"]
+Configure {product} deployment by using the `spec.deployment.patch` field in the {product} Operator custom resource to control the Deployment resource.
+
+Create a `{product-custom-resource-type}` CR with the following fields:
+
+--
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+----
+
+`labels`::
+Add labels to the {product-short} pod.
++
+For example, to add the label `my=true`:
++
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          metadata:
+            labels:
+              my: true
+----
+
+`volumes`::
++
+--
+
+Add an additional volume named `my-volume` and mount it under `/my/path` in the {product-short} application container.
+
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                volumeMounts:
+                  - mountPath: /my/path
+                    name: my-volume
+            volumes:
+              - ephemeral:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: "special"
+                name: my-volume
+----
+
+Replace the default `dynamic-plugins-root` volume with a persistent volume claim (PVC) named `dynamic-plugins-root`.
+Note the `$patch: replace` directive, otherwise the system adds a new volume.
+
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: dynamic-plugins-root
+                persistentVolumeClaim:
+                  claimName: dynamic-plugins-root
+----
+
+--
+
+`cpu` request::
+
+Set the CPU request for the {product-short} application container to 250m.
++
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                resources:
+                  requests:
+                    cpu: 250m
+----
+
+`my-sidecar` container::
+
+Add a new `my-sidecar` sidecar container into the {product-short} Pod.
++
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: my-sidecar
+                image: quay.io/my-org/my-sidecar:latest
+----
+
+--
+
+[role="_additional-resources"]
+.Additional resources
+* https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format[Strategic Merge Patch]

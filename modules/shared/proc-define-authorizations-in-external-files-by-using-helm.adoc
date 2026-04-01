@@ -1,0 +1,110 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="define-authorizations-in-external-files-by-using-helm_{context}"]
+= Define authorizations in external files by using Helm
+
+[role="_abstract"]
+Define permissions and roles in external CSV and YAML files and configure {product-short} to use them with Helm.
+
+To automate {product} maintenance, you can define permissions and roles in external files, before starting {product-short}.
+You need to prepare your files, upload them to your {ocp-short} project,
+and configure {product-short} to use the external files.
+
+.Prerequisites
+* xref:enable-and-give-access-to-the-role-based-access-control-rbac-feature_authorization-in-rhdh[You enabled the RBAC feature].
+
+.Procedure
+. Define your policies in a `rbac-policies.csv` CSV file by using the following format:
+
+.. Define role permissions:
++
+[source,csv,subs="+quotes"]
+----
+p, _<role_entity_reference>_, _<permission>_, _<action>_, _<allow_or_deny>_
+----
+
+_<role_entity_reference>_::
+Role entity reference, such as: `role:default/guest`.
+
+_<permission>_::
+Permission, such as: `bulk.import`, `catalog.entity.read`, or `catalog.entity.refresh`, or permission resource type, such as: `bulk-import` or `catalog-entity`.
++
+See: xref:permission-policies-reference_authorization-in-rhdh[Permission policies reference].
+_<action>_::
+Action type, such as: `use`, `read`, `create`, `update`, `delete`.
+
+_<allow_or_deny>_::
+Access granted: `allow` or `deny`.
+
+.. Assign the role to a group or a user:
++
+[source,csv,subs="+quotes"]
+----
+g, _<group_or_user>_, _<role_entity_reference>_
+----
+
+_<group_or_user>_::
+Group, such as: `user:default/mygroup`, or user, such as: `user:default/myuser`.
++
+Sample `rbac-policies.csv`:
++
+[source,csv,subs="+quotes"]
+----
+p, role:default/guests, catalog-entity, read, allow
+p, role:default/guests, catalog.entity.create, create, allow
+g, user:default/my-user, role:default/guests
+g, group:default/my-group, role:default/guests
+----
+
+. Define your conditional policies in a `rbac-conditional-policies.yaml` YAML file by using the following format:
++
+[source,yaml,subs="+quotes"]
+----
+result: CONDITIONAL
+roleEntityRef: _<role_entity_reference>_
+pluginId: _<plugin_id>_
+permissionMapping:
+  - read
+  - update
+  - delete
+conditions: _<conditions>_
+----
++
+See: xref:conditional-policies-reference_authorization-in-rhdh[Conditional policies reference].
+
+. Upload your `rbac-policies.csv` and `rbac-conditional-policies.yaml` files to a `rbac-policies` config map in your {ocp-short} project containing {product-short}.
++
+[source,terminal]
+----
+$ oc create configmap rbac-policies \
+     --from-file=rbac-policies.csv \
+     --from-file=rbac-conditional-policies.yaml
+----
+
+. Update your {product-short} `{product-custom-resource-type}` Helm chart to mount in the {product-short} filesystem your files from the `rbac-policies` config map:
+
+.. In the {product-short} Helm Chart, go to *Root Schema -> {product-custom-resource-type} chart schema -> {product-custom-resource-type} parameters -> {product-custom-resource-type} container additional volume mounts*.
+
+.. Select *Add {product-custom-resource-type} container additional volume mounts* and add the following values:
+
+mountPath:: `/opt/app-root/src/rbac`
+Name:: `rbac-policies`
+
+.. Add the RBAC policy to the *{product-custom-resource-type} container additional volumes* in the {product-short} Helm Chart:
+
+name:: `rbac-policies`
+configMap::
+defaultMode::: `420`
+name::: `rbac-policies`
+
+. Update your {product-short} `{my-app-config-file}` configuration file to use the `rbac-policies.csv` and `rbac-conditional-policies.yaml` external files:
++
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    conditionalPoliciesFile: /opt/app-root/src/rbac-conditional-policies.yaml
+    policies-csv-file: /opt/app-root/src/rbac-policies.csv
+    policyFileReload: true
+----

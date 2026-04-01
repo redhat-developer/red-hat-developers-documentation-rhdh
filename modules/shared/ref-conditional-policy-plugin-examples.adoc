@@ -1,0 +1,63 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="conditional-policy-plugin-examples_{context}"]
+= Conditional policy plugin examples
+
+[role="_abstract"]
+Reference information about conditional policy examples for Keycloak and Quay plugins demonstrating access control patterns.
+
+The following examples can be used with {product-short} plugins.
+These examples can help you determine how to define conditional policies:
+
+Conditional policy defined for Keycloak plugin:
+
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["update", "delete"],
+  "conditions": {
+    "not": {
+      "rule": "HAS_ANNOTATION",
+      "resourceType": "catalog-entity",
+      "params": { "annotation": "keycloak.org/realm", "value": "<YOUR_REALM>" }
+    }
+  }
+}
+----
+
+The previous example of Keycloak plugin prevents users in the `role:default/developer` from updating or deleting users that are ingested into the catalog from the Keycloak plugin.
+
+[NOTE]
+====
+In the previous example, the annotation `keycloak.org/realm` requires the value of `<YOUR_REALM>`.
+====
+
+Conditional policy defined for Quay plugin:
+
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/developer",
+  "pluginId": "scaffolder",
+  "resourceType": "scaffolder-action",
+  "permissionMapping": ["use"],
+  "conditions": {
+    "not": {
+      "rule": "HAS_ACTION_ID",
+      "resourceType": "scaffolder-action",
+      "params": { "actionId": "quay:create-repository" }
+    }
+  }
+}
+----
+
+The previous example of Quay plugin prevents the role `role:default/developer` from using the Quay scaffolder action.
+Note that `permissionMapping` contains `use`, signifying that `scaffolder-action` resource type permission does not have a permission policy.
+
+.Additional resources
+* xref:permission-policies-reference_authorization-in-rhdh[]

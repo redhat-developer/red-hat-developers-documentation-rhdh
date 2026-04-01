@@ -1,0 +1,120 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="install-rhdh-on-ocp-in-a-partially-disconnected-environment-with-the-helm-chart_{context}"]
+= Install {product} on {ocp-short} in a partially disconnected environment with the Helm chart
+
+[role="_abstract"]
+Mirror Helm chart images directly to a target registry in a partially disconnected {ocp-short} environment.
+
+If your network has access to the `registry.redhat.io` registry and the `charts.openshift.io` Helm chart repository, you can deploy your {product} instance in your partially disconnected environment.
+
+.Prerequisites
+
+* You have installed {ocp-brand-name} {ocp-version-min} or later.
+* You have access to the `charts.openshift.io` Helm chart repository.
+* You have access to the `registry.redhat.io`.
+* You have access to a mirror registry that the disconnected cluster can reach, for example, the {ocp-short} image registry. For more information about exposing the {ocp-short} image registry, see {ocp-docs-link}/html-single/registry/index#securing-exposing-registry[Exposing the registry].
+* You have logged in to your target mirror registry and have permissions to push images to it. For more information, see {ocp-docs-link}/html-single/disconnected_environments/index#installation-adding-registry-pull-secret_about-installing-oc-mirror-v2[Configuring credentials for mirroring images].
+* You have installed the {openshift-cli} on your workstation.
+* Recommended on {ocp-short}: You have installed the `oc-mirror` OpenShift CLI (`oc`) plugin *v2*. For more information, see {ocp-docs-link}/html-single/disconnected_environments/index#installation-oc-mirror-installing-plugin_about-installing-oc-mirror-v2[Installing the oc-mirror OpenShift CLI plugin].
+* You have an account in https://developers.redhat.com/[{rhdeveloper-name}] portal.
+* Make sure that your system meets the minimum sizing requirements. See {about-book-link}#rhdh-sizing_about-rhdh[Sizing requirements for {product}].
+
+.Procedure
+. Log in to your {ocp-short} account using the {openshift-cli} by running the following command:
++
+[source,terminal,subs="attributes+"]
+----
+$ oc login -u <user> -p <password> https://api.<hostname>:6443
+----
+
+. From your disconnected cluster, log in to the image registry that you want to mirror, for example, the {ocp-short} image registry.
+. Create an `ImageSetConfiguration.yaml` file to specify the resources that you want to mirror. For example:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: mirror.openshift.io/v2alpha1
+kind: ImageSetConfiguration
+mirror:
+  helm:
+    repositories:
+      - name: openshift-charts
+        url: https://charts.openshift.io
+        charts:
+          - name: redhat-developer-hub
+            version: "{product-version}"
+----
+`version: "{product-version}"`:: Enter the {product} version to mirror.
+
+. Mirror the resources specified in the image set configuration file directly to the target registry by running the `oc-mirror` command. For example:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc-mirror --config=_<mirror_config_directory>_/ImageSetConfiguration.yaml _<target_mirror_registry>_
+----
++
+--
+where:
+
+`<mirror_config_directory>` :: Specifies the location of your image set configuration file on your system, for example, `.user`.
+
+`<target_mirror_registry>` :: Specifies the location and name of your target mirror registry, for example,`docker://registry.example:5000`.
+--
++
+[NOTE]
+====
+Running the `oc-mirror` command creates a local workspace that has the Helm chart and a `ImageContentSourcePolicy` (ICSP) manifest. The ICSP manifest has an automatically-generated `imageContentSourcePolicy.yaml` file that you must apply against the cluster in a later step.
+====
++
+. In your workspace, locate the `ImageDigestMirrorSet` (IDMS) and `ImageTagMirrorSet` (ITMS) files by running the `ls` command. For example:
++
+[source,terminal,subs="+quotes"]
+----
+$ ls _<workspace_directory>/working-dir/cluster-resources/_
+----
++
+--
+where:
+
+`<workspace_directory>` :: Specifies the name of your workspace directory, for example, `oc-mirror-workspace`.
+
+`<results_directory>` :: Specifies the name of your results directory, for example, `results-1738070846`.
+--
++
+. To configure image mirroring, deploy the IDMS and ITMS files in the disconnected cluster by running the `oc` apply command. For example:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc apply -f <workspace_directory>/working-dir/cluster-resources
+----
++
+--
+where:
+
+`<workspace_directory>` :: Enter the name of your workspace directory, for example, `oc-mirror-workspace`.
+
+`<results_directory>` :: Enter the name of your results directory, for example, `results-1738070846`.
+--
+. In your air-gapped environment, deploy the Helm chart to the namespace that you want to use by running the `helm install` command with `namespace` and `set` options. For example:
++
+[source,terminal,subs="+quotes"]
+----
+CLUSTER_ROUTER_BASE=$(oc get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
+
+helm install _<rhdh_instance>_ _<workspace_directory>_/_<results_directory>_/charts/_<archive_file>_ --namespace _<your_namespace>_ --create-namespace \
+  --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE"
+----
++
+--
+where:
+
+`<rhdh_instance>` :: Specifies the name of your {product} instance, for example, `my-rhdh`.
+
+`<workspace_directory>` :: Specifies the name of your workspace directory, for example, `oc-mirror-workspace`.
+
+`<results_directory>` :: Specifies the name of your results directory, for example, `results-1738070846`.
+
+`<archive_file>` :: Specifies the name of the archive file containing the resources that you want to mirror, for example, `redhat-developer-hub-1.4.1.tgz`.
+
+`<your_namespace>` :: Specifies the namespace that you want to deploy the Helm chart to, for example, `{my-product-namespace}`.
+--

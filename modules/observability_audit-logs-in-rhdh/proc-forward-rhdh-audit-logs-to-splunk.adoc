@@ -1,0 +1,178 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="forward-rhdh-audit-logs-to-splunk_{context}"]
+= Forward {product} audit logs to Splunk
+
+[role="_abstract"]
+Forward audit logs from {product-short} to Splunk by using the {logging-short} Operator and a ClusterLogForwarder instance.
+
+.Prerequisites
+
+* You have a cluster running on a supported {ocp-short} version.
+* You have an account with `cluster-admin` privileges.
+* You have a Splunk Cloud account or Splunk Enterprise installation.
+
+.Procedure
+
+. Log in to your {ocp-short} cluster.
+. Install the {logging-short} Operator in the `openshift-logging` namespace and switch to the namespace:
++
+[source,terminal]
+----
+$ oc project openshift-logging
+----
+. Create a `serviceAccount` named `log-collector`:
++
+[source,terminal]
+----
+$ oc create sa log-collector
+----
+. Bind the `collect-application-logs` role to the `serviceAccount`:
++
+[source,terminal]
+----
+$ oc create clusterrolebinding log-collector --clusterrole=collect-application-logs --serviceaccount=openshift-logging:log-collector
+----
+. Generate a `hecToken` in your Splunk instance.
+. Create a key/value secret in the `openshift-logging` namespace and verify the secret:
++
+[source,terminal]
+----
+$ oc -n openshift-logging create secret generic splunk-secret --from-literal=hecToken=<HEC_Token>
+----
++
+[source,terminal]
+----
+$ oc -n openshift-logging get secret/splunk-secret -o yaml
+----
+. Create a basic `ClusterLogForwarder`resource YAML file as follows:
++
+[source,yaml]
+----
+apiVersion: logging.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: instance
+  namespace: openshift-logging
+----
++
+For more information, see {ocp-docs-link}/html-single/logging/index#logging-create-clf_configuring-log-forwarding[Creating a log forwarder].
+. Define the following `ClusterLogForwarder` configuration using OpenShift web console or OpenShift CLI:
+.. Specify the `log-collector` as `serviceAccount` in the YAML file:
++
+[source,yaml]
+----
+serviceAccount:
+  name: log-collector
+----
+.. Configure `inputs` to specify the type and source of logs to forward.
+The following configuration enables the forwarder to capture logs from all applications in a provided namespace:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+inputs:
+  - name: my-app-logs-input
+    type: application
+    application:
+      includes:
+        - namespace: {my-product-namespace}
+      containerLimit:
+        maxRecordsPerSecond: 100
+----
++
+For more information, see {ocp-docs-link}/html-single/logging/index#cluster-logging-collector-log-forward-logs-from-application-pods_configuring-log-forwarding[Forwarding application logs from specific pods].
+.. Configure outputs to specify where to send the captured logs.
+In this step, focus on the `splunk` type.
+You can either use the `tls.insecureSkipVerify` option if the Splunk endpoint uses self-signed TLS certificates (not recommended) or supply the certificate chain by using a Secret.
++
+[source,yaml]
+----
+outputs:
+  - name: splunk-receiver-application
+    type: splunk
+    splunk:
+      authentication:
+        token:
+          key: hecToken
+          secretName: splunk-secret
+      index: main
+      url: 'https://my-splunk-instance-link'
+      rateLimit:
+        maxRecordsPerSecond: 250
+----
++
+For more information, see {ocp-docs-link}/html-single/logging/index#logging-forward-splunk_configuring-log-forwarding[Forwarding logs to Splunk] in {ocp-short} documentation.
+.. Optional: Filter logs to include only audit logs:
++
+[source,yaml]
+----
+filters:
+  - name: audit-logs-only
+    type: drop
+    drop:
+      - test:
+        - field: .message
+          notMatches: isAuditEvent
+----
++
+For more information, see {ocp-docs-link}/html-single/logging/index#logging-content-filtering[Filtering logs by content] in {ocp-short} documentation.
+.. Configure pipelines to route logs from specific inputs to designated outputs.
+Use the names of the defined inputs and outputs to specify `inputRefs` and `outputRefs` in each pipeline:
++
+[source,yaml]
+----
+pipelines:
+  - name: my-app-logs-pipeline
+    detectMultilineErrors: true
+    inputRefs:
+      - my-app-logs-input
+    outputRefs:
+      - splunk-receiver-application
+    filterRefs:
+      - audit-logs-only
+----
+
+. Run the following command to apply the `ClusterLogForwarder` configuration:
++
+[source,terminal]
+----
+$ oc apply -f <ClusterLogForwarder-configuration.yaml>
+----
+. Optional: To reduce the risk of log loss, configure your `ClusterLogForwarder` pods using the following options:
+.. Define the resource requests and limits for the log collector as follows:
++
+[source,yaml]
+----
+collector:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 64Mi
+      ephemeral-storage: 250Mi
+    limits:
+      cpu: 500m
+      memory: 128Mi
+      ephemeral-storage: 500Mi
+----
+.. Define `tuning` options for log delivery, including `delivery`, `compression`, and `RetryDuration`.
+You can apply tuning per output as needed.
++
+[source,yaml]
+----
+tuning:
+  delivery: AtLeastOnce
+  compression: none
+  minRetryDuration: 1s
+  maxRetryDuration: 10s
+----
++
+`AtLeastOnce`::
+The `AtLeastOnce` delivery mode ensures that if the log forwarder crashes or restarts, the forwarder re-sends any logs read but not yet delivered to their destination.
+The forwarder might duplicate some logs after a crash.
+
+.Verification
+. Verify that your Splunk instance receives logs by viewing them in the Splunk dashboard.
+. Troubleshoot any issues using {ocp-short} and Splunk logs as needed.
+
+
+

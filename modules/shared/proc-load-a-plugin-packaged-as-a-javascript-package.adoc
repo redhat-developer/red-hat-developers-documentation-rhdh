@@ -1,0 +1,71 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="load-a-plugin-packaged-as-a-javascript-package_{context}"]
+= Load a plugin packaged as a JavaScript package
+
+[role="_abstract"]
+Use this procedure to load a dynamic plugin from a JavaScript package into {product}.
+
+.Prerequisites
+* You have packaged the {plugin-type-name} plugin as a dynamic plugin in a JavaScript package.
++
+For more information about packaging a {plugin-type-name} plugin, see xref:package-and-publish-plugins-as-dynamic-plugins_plugins-in-rhdh[].
+
+.Procedure
+. Run the following command to obtain the integrity hash from the NPM registry:
++
+--
+[source,terminal]
+----
+$ npm view --registry <registry_link> <npm_package>@<version> dist.integrity
+----
+--
+
+. Specify the package name, version, and its integrity hash in the `dynamic-plugins.yaml` file as follows:
++
+--
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: @example/backstage-plugin-myplugin@1.0.0
+    integrity: sha512-9WlbgEdadJNeQxdn1973r5E4kNFvnT9GjLD627GWgrhCaxjCmxqdNW08cj+Bf47mwAtZMt1Ttyo+ZhDRDj9PoA==
+----
+--
+
+. If you are using a custom NPM registry, create a `.npmrc` file with the registry URL and authentication details:
++
+--
+[source,text]
+----
+registry=<registry_link>
+//<registry_link>:_authToken=<auth_token>
+----
+--
+
+. When using {ocp-short} or Kubernetes:
++
+--
+. Use the Helm chart to add the `.npmrc` file by creating a secret. For example:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: `_<release_name>_-dynamic-plugins-npmrc`
+type: Opaque
+stringData:
+  .npmrc: |
+    registry=<registry_link>
+    //<registry_link>:_authToken=<auth_token>
+----
++
+Replace `_<release_name>_` with your Helm release name. This name is a unique identifier for each chart installation in the Kubernetes cluster.
+
+. For {product-very-short} Helm chart, name the secret using the following format for automatic mounting:
++
+`_<release_name>_-dynamic-plugins-npmrc`
+--
+
+. To apply the changes, restart the {product-very-short} application.

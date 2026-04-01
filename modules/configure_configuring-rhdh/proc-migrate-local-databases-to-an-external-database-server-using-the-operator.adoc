@@ -1,0 +1,135 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-local-databases-to-an-external-database-server-using-the-operator_{context}"]
+= Migrate local databases to an external database server using the Operator
+
+[role="_abstract"]
+Migrate data from a local PostgreSQL server to an external PostgreSQL service by using PostgreSQL utilities such as `pg_dump` and `psql`.
+
+[NOTE]
+====
+The following procedure uses a database copy script to do a quick migration.
+====
+
+.Prerequisites
+
+* You have installed the link:https://www.postgresql.org/docs/current/app-pgdump.html[`pg_dump`] and link:https://www.postgresql.org/docs/current/app-psql.html[`psql`] utilities on your local machine.
+* For data export, you have the PostgreSQL user privileges to make a full dump of local databases.
+* For data import, you have the PostgreSQL admin privileges to create an external database and populate it with database dumps.
+
+.Procedure
+
+. Configure port forwarding for the local PostgreSQL database pod by running the following command on a terminal:
++
+[source,terminal]
+----
+$ oc port-forward -n <your_namespace> <pgsql_pod_name> <forward_to_port>:<forward_from_port>
+----
+Where:
+. The `<pgsql_pod_name>` variable denotes the name of a PostgreSQL pod with the format `backstage-psql-<deployment_name>-<_index>`.
+. The `<forward_to_port>` variable denotes the port of your choice to forward PostgreSQL data to.
+. The `<forward_from_port>` variable denotes the local PostgreSQL instance port, such as `5432`.
++
+[source,terminal]
+----
+$ oc port-forward -n developer-hub backstage-psql-developer-hub-0 15432:5432
+----
+
+. Make a copy of the following `db_copy.sh` script and edit the details based on your configuration:
++
+[source,terminal]
+----
+#!/bin/bash
+
+to_host=<db_service_host>
+to_port=5432
+to_user=postgres
+
+from_host=127.0.0.1
+from_port=15432
+from_user=postgres
+
+allDB=("backstage_plugin_app" "backstage_plugin_auth" "backstage_plugin_catalog" "backstage_plugin_permission" "backstage_plugin_scaffolder" "backstage_plugin_search")
+
+for db in ${!allDB[@]};
+do
+  db=${allDB[$db]}
+  echo Copying database: $db
+  PGPASSWORD=$TO_PSW psql -h $to_host -p $to_port -U $to_user -c "create database $db;"
+  pg_dump -h $from_host -p $from_port -U $from_user -d $db | PGPASSWORD=$TO_PSW psql -h $to_host -p $to_port -U $to_user -d $db
+done
+----
++
+Where:
+
+`to_host`:: The destination hostname, for example `<db_instance_name>.rds.amazonaws.com`.
+`to_port`:: The destination port, such as `5432`.
+`to_user`:: The destination server username, for example `postgres`.
+`from_host`:: The source hostname, such as `127.0.0.1`.
+`from_port`:: The source port number, such as the `<forward_to_port>` variable.
+`from_user`:: The source server username, for example `postgres`.
+`allDB`:: Database names to import, in double quotes separated by spaces.
+
+. Create a destination database for copying the data:
++
+[source,terminal]
+----
+/bin/bash TO_PSW=<destination_db_password> /path/to/db_copy.sh
+----
++
+Replace `<destination_db_password>` with the password to connect to the destination database.
++
+[NOTE]
+====
+You can stop port forwarding when the copying of the data is complete. For more information about handling large databases and using the compression tools, see the link:https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-LARGE[Handling Large Databases] section on the PostgreSQL website.
+====
+
+. Reconfigure your `{product-custom-resource-type}` custom resource (CR). For more information, see {configuring-book-link}#configure-postgresql-instance-using-operator_configuring-external-postgresql-databases[Configure an external PostgreSQL instance using the Operator].
+. Check that the following code is present at the end of your `{product-custom-resource-type}` CR after reconfiguration:
++
+[source,yaml,subs="+attributes"]
+----
+# ...
+spec:
+  database:
+    enableLocalDb: false
+  application:
+  # ...
+    extraFiles:
+      secrets:
+        - name: {my-product-database-certificates-secrets}
+          key: postgres-crt.pem
+    extraEnvs:
+      secrets:
+        - name: {my-product-database-secrets}
+# ...
+----
++
+[NOTE]
+====
+Reconfiguring the `{product-custom-resource-type}` CR deletes the corresponding `StatefulSet` and `Pod` objects, but does not delete the `PersistenceVolumeClaim` object. Use the following command to delete the local `PersistenceVolumeClaim` object:
+
+[source,terminal]
+----
+oc -n developer-hub delete pvc <local_psql_pvc_name>
+----
+where, the `<local_psql_pvc_name>` variable is in the `data-<psql_pod_name>` format.
+====
+
+. Apply the configuration changes.
+
+
+.Verification
+
+. Verify that your {product-very-short} instance is running with the migrated data and does not contain the local PostgreSQL database by running the following command:
++
+[source,terminal]
+----
+oc get pods -n <your_namespace>
+----
+
+. Check the output for the following details:
+. The `backstage-developer-hub-xxx` pod is in running state.
+. The `backstage-psql-developer-hub-0` pod is not available.
++
+You can also verify these details by using the *Topology* view in the {ocp-short} web console.

@@ -1,0 +1,99 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="conditional-policy-with-criteria_{context}"]
+= Conditional policy with criteria
+
+[role="_abstract"]
+Reference information about defining conditional policies with criteria to control access based on multiple rules combined with logical operators.
+
+Consider a condition with criteria, which displays catalogs only if user is a member of owner group OR displays list of all catalog user groups.
+
+To add the criteria, you can add another rule as `IS_ENTITY_KIND` in the condition as follows:
+
+[source,json]
+----
+{
+  "anyOf": [
+    {
+      "rule": "IS_ENTITY_OWNER",
+      "resourceType": "catalog-entity",
+      "params": {
+        "claims": ["group:default/team-a"]
+      }
+    },
+    {
+      "rule": "IS_ENTITY_KIND",
+      "resourceType": "catalog-entity",
+      "params": {
+        "kinds": ["Group"]
+      }
+    }
+  ]
+}
+----
+
+[NOTE]
+====
+Running conditions in parallel during creation is not supported.
+Therefore, consider defining nested conditional policies based on the available criteria.
+====
++
+Example of nested conditions:
++
+[source,json]
+----
+{
+  "anyOf": [
+    {
+      "rule": "IS_ENTITY_OWNER",
+      "resourceType": "catalog-entity",
+      "params": {
+        "claims": ["group:default/team-a"]
+      }
+    },
+    {
+      "rule": "IS_ENTITY_KIND",
+      "resourceType": "catalog-entity",
+      "params": {
+        "kinds": ["Group"]
+      }
+    }
+  ],
+  "not": {
+    "rule": "IS_ENTITY_KIND",
+    "resourceType": "catalog-entity",
+    "params": { "kinds": ["Api"] }
+  }
+}
+----
+
+You can apply the previous example condition to the RBAC REST API by adding additional parameters as follows:
+
+[source,json]
+----
+{
+  "result": "CONDITIONAL",
+  "roleEntityRef": "role:default/test",
+  "pluginId": "catalog",
+  "resourceType": "catalog-entity",
+  "permissionMapping": ["read"],
+  "conditions": {
+    "anyOf": [
+      {
+        "rule": "IS_ENTITY_OWNER",
+        "resourceType": "catalog-entity",
+        "params": {
+          "claims": ["group:default/team-a"]
+        }
+      },
+      {
+        "rule": "IS_ENTITY_KIND",
+        "resourceType": "catalog-entity",
+        "params": {
+          "kinds": ["Group"]
+        }
+      }
+    ]
+  }
+}
+----

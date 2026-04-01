@@ -1,0 +1,33 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="verify-logical-flow-in-scorecard-threshold-rules_{context}"]
+= Verify logical flow in Scorecard threshold rules
+
+[role="_abstract"]
+To ensure Scorecard assigns the correct health status, order rules carefully, because the evaluation stops at the first matching rule.
+
+`Evaluation order for rules`::
+
+To ensure the system evaluates all values correctly, sequence rules from the most strict (smallest range) value to the least strict (largest range). If rules are ordered incorrectly, a broad rule can prevent the system from reaching stricter rules.
+
+`Problematic rule order example`::
+
+If rules are ordered incorrectly, a less restrictive rule can prevent stricter rules from being evaluated:
+
+. `warning: <50`: Any value less than 50 triggers the warning rule and stops evaluation.
+. `success: <10`: This rule is not evaluated because all values less than 10 have already matched the preceding warning rule.
+
+`Correct ordering example`::
+
+The following example demonstrates the correct sequence for successes, warnings, and errors:
+
+[source,yaml]
+----
+rules:
+  - key: success
+    expression: '<10'     # Most restrictive: Only values below 10
+  - key: warning
+    expression: '10-50'   # Values between 10 and 50
+  - key: error
+    expression: '>50'     # Least restrictive: All values above 50
+----

@@ -1,0 +1,100 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="install-dynamic-plugins-with-the-rhdh-operator_{context}"]
+= Install dynamic plugins with the {product} Operator
+
+[role="_abstract"]
+You can store the configuration for dynamic plugins in a `ConfigMap` object that your `{product-custom-resource-type}` custom resource (CR) can reference.
+
+Dynamic plugins might require you to configure certain Kubernetes resources. The documentation refers to these resources as `plugin dependencies`. For more information, see xref:dynamic-plugins-dependency-management_{context}[Dynamic plugins dependency management].
+
+In {product} ({product-very-short}), you can automatically create these resources when you apply the {product-custom-resource-type} CR to the cluster.
+
+[NOTE]
+====
+If the `pluginConfig` field references environment variables, you must define the variables in your `_<my_product_secrets>_` secret.
+====
+
+.Procedure
+
+. From the {ocp-short} web console, select the *ConfigMaps* tab.
+. Click *Create ConfigMap*.
+. From the *Create ConfigMap* page, select the *YAML view* option in *Configure via* and edit the file, if needed.
++
+The following example shows a `ConfigMap` object using the GitHub dynamic plugin:
++
+[source, yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-dynamic'
+        disabled: false
+        pluginConfig:
+          catalog:
+            providers:
+              github:
+                organization: "${GITHUB_ORG}"
+                schedule:
+                  frequency: { minutes: 1 }
+                  timeout: { minutes: 1 }
+                  initialDelay: { seconds: 100 }
+----
+
+. Click *Create*.
+. Go to the *Topology* view.
+. Click the overflow menu for the {product} instance that you want to use and select *Edit {product-custom-resource-type}* to load the YAML view of the {product} instance.
++
+image::extend_installing-and-viewing-plugins-in-rhdh/operator-install-2.png["Editing {product-custom-resource-type} from the Topology view"]
+
+. Add the `dynamicPluginsConfigMapName` field to your `{product-custom-resource-type}` CR. For example:
++
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: my-rhdh
+spec:
+  application:
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+----
+. Click *Save*.
+. Navigate back to the *Topology* view and wait for the {product} pod to start.
+. Click the *Open URL* icon to start using the {product} platform with the new configuration changes.
+
+.Verification
+
+* Ensure that the system loads the dynamic plugins configuration, by appending `/api/dynamic-plugins-info/loaded-plugins` to your {product} root URL and checking the list of plugins:
++
+The following example shows a list of plugins:
++
+[source,json]
+----
+[
+  {
+    "name": "backstage-plugin-catalog-backend-module-github-dynamic",
+    "version": "0.5.2",
+    "platform": "node",
+    "role": "backend-plugin-module"
+  },
+  {
+    "name": "backstage-plugin-techdocs",
+    "version": "1.10.0",
+    "role": "frontend-plugin",
+    "platform": "web"
+  },
+  {
+    "name": "backstage-plugin-techdocs-backend-dynamic",
+    "version": "1.9.5",
+    "platform": "node",
+    "role": "backend-plugin"
+  },
+]
+----

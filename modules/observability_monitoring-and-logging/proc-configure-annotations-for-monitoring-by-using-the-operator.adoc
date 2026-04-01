@@ -1,0 +1,47 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-annotations-for-monitoring-by-using-the-operator_{context}"]
+= Configure annotations for {aks-short} monitoring by using the Operator
+
+[role="_abstract"]
+Configure the pod annotations for monitoring {product-short} specific metrics on {aks-name} ({aks-short}) by using the {product} Operator.
+
+.Procedure
+
+. As an administrator of the Operator, edit the default configuration to add Prometheus annotations:
++
+[source,bash]
+----
+# Update OPERATOR_NS accordingly
+OPERATOR_NS=rhdh-operator
+$ kubectl edit configmap backstage-default-config -n "${OPERATOR_NS}"
+----
+
+. Find the `deployment.yaml` key in the ConfigMap and add the annotations to the `spec.template.metadata.annotations` field:
++
+[source,yaml]
+----
+deployment.yaml: |-
+  apiVersion: apps/v1
+  kind: Deployment
+  # --- truncated ---
+  spec:
+    template:
+      # --- truncated ---
+      metadata:
+        labels:
+         rhdh.redhat.com/app:  # placeholder for 'backstage-<cr_name>'
+        # --- truncated ---
+        annotations:
+          prometheus.io/scrape: 'true'
+          prometheus.io/path: '/metrics'
+          prometheus.io/port: '9464'
+          prometheus.io/scheme: 'http'
+  # --- truncated ---
+----
+
+. Save your changes.
+
+.Verification
+
+* Navigate to the corresponding {azure-short} Monitor Workspace and view the metrics under *Monitoring -> Metrics*.
