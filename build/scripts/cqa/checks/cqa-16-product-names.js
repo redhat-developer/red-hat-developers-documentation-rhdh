@@ -196,6 +196,8 @@ function fixFile(root, file) {
     if (inPassthrough) return line;
 
     let result = line;
+    // Context-aware: 'kind: Backstage' is a CR type, not a product name
+    result = result.replaceAll('kind: Backstage', 'kind: {product-custom-resource-type}');
     for (const entry of PATTERNS) {
       if (!result.includes(entry.pattern)) continue;
       const fixAttr = entry.replacement.split('|')[0];
