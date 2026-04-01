@@ -641,9 +641,9 @@ generate_migration_table() {
             old_path="./dynamic-plugins/dist/${plugin_name}"
 
             # Extract new path - get the base URL without the version/integrity part
-            # Format: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0!backstage-community-plugin-jenkins
+            # Format: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
             # We want: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:<tag>
-            # First remove everything after the ! (integrity hash), then remove the tag to get base
+            # Remove the tag to get the base path
             artifact_without_hash="${dynamic_artifact%%!*}"
             new_path_base="${artifact_without_hash%:*}"
             new_path="${new_path_base}:<tag>"
