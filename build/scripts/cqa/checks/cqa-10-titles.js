@@ -110,8 +110,8 @@ function resolveAttr(name, fileLines, attrLines) {
 function expandAttributes(text, fileLines, attrLines) {
   let out = text;
   let iterations = 0;
-  while (/{[^}]+}/.test(out) && iterations++ < 10) {
-    out = out.replaceAll(/{([^}]+)}/g, (_, name) => resolveAttr(name, fileLines, attrLines));
+  while (/\{[a-zA-Z0-9_-]+\}/.test(out) && iterations++ < 10) {
+    out = out.replaceAll(/\{([a-zA-Z0-9_-]+)\}/g, (_, name) => resolveAttr(name, fileLines, attrLines));
   }
   return out;
 }
@@ -128,7 +128,7 @@ function titleToId(titleRaw) {
     .replaceAll('{ocp-brand-name}', 'ocp').replaceAll('{ocp-short}', 'ocp')
     .replaceAll('{technology-preview}', 'technology-preview')
     .replaceAll('{developer-preview}', 'developer-preview')
-    .replaceAll(/\{[^}]*\}/g, '');
+    .replaceAll(/\{[a-zA-Z0-9_-]*\}/g, '');
 
   return t.toLowerCase()
     .replaceAll(/[^a-z0-9-]+/g, '-')
@@ -224,7 +224,7 @@ function fixGerunds(title) {
   });
 
   // Fix words after "and"
-  result = result.replaceAll(/(\s+and\s+)([A-Za-z]+ing)(\s)/g, (_, before, word, after) =>
+  result = result.replaceAll(/( and )([A-Za-z]+ing)( )/g, (_, before, word, after) =>
     before + gerundToImperative(word) + after
   );
 

@@ -11,7 +11,7 @@
 
 import { readdirSync, existsSync, readFileSync, mkdirSync, rmdirSync } from 'node:fs';
 import { resolve, basename, dirname, join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { Checker, autofix, manual } from '../lib/checker.js';
 import { repoRoot, repoRelative } from '../lib/asciidoc.js';
 
@@ -535,7 +535,7 @@ function* globAdoc(dir, maxDepth = 3, depth = 1) {
 
 function gitMv(root, src, dest) {
   try {
-    execSync(`git mv "${src}" "${dest}"`, { cwd: root, stdio: 'pipe' });
+    execFileSync('git', ['mv', src, dest], { cwd: root, stdio: 'pipe' });
   } catch (e) {
     console.error(`git mv failed: ${src} → ${dest}: ${e.message}`);
   }
@@ -565,7 +565,7 @@ function removeEmptyDirs(dir) {
 
 function runSed(root, expr, file) {
   try {
-    execSync(`sed -i '${expr}' "${file}"`, { cwd: root, stdio: 'pipe' });
+    execFileSync('sed', ['-i', expr, file], { cwd: root, stdio: 'pipe' });
   } catch { /* ignore */ }
 }
 

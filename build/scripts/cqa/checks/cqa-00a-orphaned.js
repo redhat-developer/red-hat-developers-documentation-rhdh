@@ -11,7 +11,7 @@
 
 import { readdirSync, existsSync, rmSync, readFileSync } from 'node:fs';
 import { resolve, basename, join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { Checker, autofix } from '../lib/checker.js';
 import { repoRoot, repoRelative } from '../lib/asciidoc.js';
 
@@ -39,7 +39,7 @@ export default class Cqa00aOrphaned extends Checker {
       const abs = resolve(root, iss.file);
       if (!existsSync(abs)) continue;
       try {
-        execSync(`git rm -q "${abs}"`, { cwd: root, stdio: 'pipe' });
+        execFileSync('git', ['rm', '-q', abs], { cwd: root, stdio: 'pipe' });
       } catch {
         rmSync(abs);
       }
@@ -89,7 +89,7 @@ function collectIncludes(root) {
   for (const file of walkAdoc(root)) {
     for (const line of readLines(file)) {
       if (!line.startsWith('include::')) continue;
-      const path = line.slice('include::'.length).replace(/\[.*$/, '').trim();
+      const path = line.slice('include::'.length).replace(/\[[\s\S]*$/, '').trim();
       const bn = basename(path);
       if (bn.includes('{')) {
         includedPatterns.push(patternToRegex(bn));
@@ -124,7 +124,7 @@ function collectImageRefs(root) {
 // ── Pure utilities ────────────────────────────────────────────────────────────
 
 function patternToRegex(bn) {
-  const escaped = bn.replaceAll('.', String.raw`\.`).replaceAll(/\{[^}]*\}/g, '.*');
+  const escaped = bn.replaceAll('.', String.raw`\.`).replaceAll(/\{[^}]*\}/g, '[^.]+');
   return new RegExp(`^${escaped}$`);
 }
 
