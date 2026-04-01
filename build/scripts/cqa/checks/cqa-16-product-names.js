@@ -14,7 +14,7 @@ import { resolve, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { Checker, autofix } from '../lib/checker.js';
 import {
-  repoRoot, collectTitle, getContentType,
+  repoRoot, collectTitle, getContentType, getLines,
   computeBlockRanges, isInBlock, invalidateCache,
 } from '../lib/asciidoc.js';
 import { hasValeCache, getCachedIssues } from '../lib/vale.js';
@@ -59,6 +59,7 @@ const PATTERNS = [
   { pattern: 'Microsoft Azure', replacement: '{azure-brand-name}' },
   { pattern: 'Google Cloud', replacement: '{gcp-brand-name}' },
   { pattern: 'RHDH Local', replacement: '{product-local-very-short}' },
+  { pattern: 'rhdh-cli', replacement: '{product-cli}' },
   { pattern: 'Backstage', replacement: '{backstage}' },
   { pattern: 'RHDH', replacement: '{product-very-short}' },
   { pattern: 'RHOCP', replacement: '{ocp-very-short}' },
@@ -98,6 +99,7 @@ export default class Cqa16ProductNames extends Checker {
       for (const f of adocFiles) {
         for (const iss of getCachedIssues(f)) {
           if (iss.Check !== 'DeveloperHub.ProductNames') continue;
+          if (isUnfixableLine(f, iss.Line)) continue;
           issues.push(autofix(f, `${iss.Check}: ${iss.Message}`, iss.Line));
         }
       }
@@ -146,12 +148,23 @@ function runValeAndClassify(root, configPath, files) {
   for (const [file, fileIssues] of Object.entries(data)) {
     const relPath = file.startsWith(root) ? file.slice(root.length + 1) : file;
     for (const iss of fileIssues) {
+      if (isUnfixableLine(relPath, iss.Line)) continue;
       issues.push(autofix(relPath, `${iss.Check}: ${iss.Message}`, iss.Line));
     }
   }
 
   return issues;
 }
+
+// Skip lines that the fix won't touch: comments and attribute definitions
+function isUnfixableLine(file, lineNum) {
+  const lines = getLines(file);
+  const line = lines[lineNum - 1] || '';
+  return line.startsWith('//') || /^:[a-zA-Z]/.test(line);
+}
+
+// Blocks that need subs="+attributes,+quotes" for attribute resolution
+const NEEDS_SUBS_DELIMS = new Set(['----', '....']);
 
 // ── Fix ───────────────────────────────────────────────────────────────────────
 
@@ -163,11 +176,18 @@ function fixFile(root, file) {
   const lines = content.split('\n');
 
   const blockRanges = computeBlockRanges(file);
+  const modifiedBlocks = new Set();
+
   const fixedLines = lines.map((line, i) => {
     const lineNum = i + 1;
-    if (isInBlock(blockRanges, lineNum)) return line;
     if (/^:[a-zA-Z]/.test(line)) return line;
     if (line.startsWith('//')) return line;
+
+    // Skip passthrough blocks (++++): attributes never resolve there
+    const inPassthrough = blockRanges.some(
+      r => r.delim === '++++' && lineNum > r.start && lineNum < r.end
+    );
+    if (inPassthrough) return line;
 
     let result = line;
     for (const entry of PATTERNS) {
@@ -175,8 +195,39 @@ function fixFile(root, file) {
       const fixAttr = entry.replacement.split('|')[0];
       result = result.replaceAll(entry.pattern, fixAttr);
     }
+
+    // Track which listing/literal blocks were modified (need subs)
+    if (result !== line) {
+      const blockIdx = blockRanges.findIndex(
+        r => NEEDS_SUBS_DELIMS.has(r.delim) && lineNum > r.start && lineNum < r.end
+      );
+      if (blockIdx !== -1) modifiedBlocks.add(blockIdx);
+    }
+
     return result;
   });
+
+  // Add subs="+attributes,+quotes" to modified listing/literal blocks
+  // Process in reverse order to avoid line number shifts from splicing
+  for (const blockIdx of [...modifiedBlocks].sort((a, b) => b - a)) {
+    const block = blockRanges[blockIdx];
+    const delimIdx = block.start - 1; // 0-based index of opening delimiter
+    const attrIdx = delimIdx - 1;     // line before delimiter
+
+    if (attrIdx >= 0 && fixedLines[attrIdx].startsWith('[')) {
+      const attrLine = fixedLines[attrIdx];
+      if (!attrLine.includes('subs=')) {
+        // No subs at all — add both +attributes and +quotes
+        fixedLines[attrIdx] = attrLine.replace(']', ',subs="+attributes,+quotes"]');
+      } else if (!attrLine.includes('+attributes')) {
+        // Has subs but missing +attributes — append it
+        fixedLines[attrIdx] = attrLine.replace(/subs="([^"]*)"/, 'subs="$1,+attributes"');
+      }
+    } else {
+      // No attribute line before delimiter — insert one
+      fixedLines.splice(delimIdx, 0, '[subs="+attributes,+quotes"]');
+    }
+  }
 
   content = fixedLines.join('\n');
   content = content.replaceAll('{{', '{').replaceAll('}}', '}');

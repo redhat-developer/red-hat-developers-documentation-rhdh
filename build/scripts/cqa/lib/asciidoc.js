@@ -128,7 +128,7 @@ const BLOCK_DELIMITERS = new Set(['----', '....', '++++', '====', '|===']);
  * Use this to skip pattern matching inside code examples.
  *
  * @param {string} filePath
- * @returns {Array<{start: number, end: number}>}
+ * @returns {Array<{start: number, end: number, delim: string}>}
  */
 export function computeBlockRanges(filePath) {
   const lines = getLines(filePath);
@@ -144,7 +144,7 @@ export function computeBlockRanges(filePath) {
         openLine = i + 1; // 1-based
       }
     } else if (line === openDelim) {
-      ranges.push({ start: openLine, end: i + 1 });
+      ranges.push({ start: openLine, end: i + 1, delim: openDelim });
       openDelim = null;
       openLine = -1;
     }
