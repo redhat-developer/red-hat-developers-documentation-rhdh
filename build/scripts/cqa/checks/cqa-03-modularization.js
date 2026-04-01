@@ -210,7 +210,7 @@ function fixSectionLists(abs, lines, sectionName) {
   if (!lines.includes(`.${sectionName}`)) return;
 
   const content = extractSectionContent(lines, sectionName);
-  if (content.some(l => INCLUDE_RE.test(l))) return;
+  if (content.some(l => l.startsWith('include::'))) return;
 
   const numbered = content.filter(l => /^\.+ /.test(l)).length;
   const unnumbered = content.filter(l => l.startsWith('* ')).length;

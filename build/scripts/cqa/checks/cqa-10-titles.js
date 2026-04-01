@@ -89,15 +89,36 @@ function gerundToImperative(word) {
 
 // ── Attribute expansion ───────────────────────────────────────────────────────
 
-const KNOWN_ATTRS = {
-  'product-very-short': 'rhdh', 'product-short': 'rhdh', 'product': 'rhdh',
-  'product-custom-resource-type': '', 'rhbk-brand-name': 'rhbk', 'rhbk': 'rhbk',
-  'azure-brand-name': 'microsoft-azure', 'ocp-brand-name': 'ocp', 'ocp-short': 'ocp',
-  'technology-preview': 'technology-preview', 'developer-preview': 'developer-preview',
-};
+// Parsed lazily from artifacts/attributes.adoc on first use.
+let _attrsCache = null;
+
+function loadKnownAttrs() {
+  if (_attrsCache) return _attrsCache;
+  _attrsCache = {};
+  const root = repoRoot();
+  const attrFile = resolve(root, 'artifacts/attributes.adoc');
+  if (!existsSync(attrFile)) return _attrsCache;
+  for (const line of readFileSync(attrFile, 'utf8').split('\n')) {
+    if (!line.startsWith(':')) continue;
+    const m = /^:([a-zA-Z][a-zA-Z0-9_-]*):\s*(.*)/.exec(line);
+    if (!m) continue;
+    const [, name, rawValue] = m;
+    // Skip internal/structural attrs (paths, URLs, versions, book links, etc.)
+    if (name.endsWith('-link') || name.endsWith('-title') || name.startsWith('_')) continue;
+    if (rawValue.startsWith('link:') || rawValue.startsWith('http')) continue;
+    // Resolve nested {attr} references in values
+    let value = rawValue;
+    for (let i = 0; i < 5 && value.includes('{'); i++) {
+      value = value.replaceAll(/\{([a-zA-Z0-9_-]+)\}/g, (_, ref) => _attrsCache[ref] ?? '');
+    }
+    _attrsCache[name] = value.toLowerCase().replaceAll(/\s+/g, '-');
+  }
+  return _attrsCache;
+}
 
 function resolveAttr(name, fileLines, attrLines) {
-  if (KNOWN_ATTRS[name] !== undefined) return KNOWN_ATTRS[name];
+  const known = loadKnownAttrs();
+  if (known[name] !== undefined) return known[name];
   const re = new RegExp(String.raw`^:${name}:\s*(.*)`);
   for (const lines of [fileLines, attrLines]) {
     for (const l of lines) {
@@ -119,17 +140,26 @@ function expandAttributes(text, fileLines, attrLines) {
 
 // ── Title-to-ID conversion ────────────────────────────────────────────────────
 
+// Attrs expanded in IDs/filenames — only core product identities that should
+// appear in module names. All other attrs are stripped from IDs.
+const ID_ATTRS = {
+  'product': 'rhdh', 'product-short': 'rhdh', 'product-very-short': 'rhdh',
+  'product-local': 'rhdh-local', 'product-local-very-short': 'rhdh-local',
+  'product-cli': 'rhdh-cli', 'product-custom-resource-type': '',
+  'technology-preview': 'technology-preview', 'developer-preview': 'developer-preview',
+  'rhbk-brand-name': 'rhbk', 'rhbk': 'rhbk',
+  'azure-brand-name': 'microsoft-azure',
+  'ocp-brand-name': 'ocp', 'ocp-short': 'ocp',
+};
+
 function titleToId(titleRaw) {
   let t = titleRaw;
-  // Apply known attribute substitutions for ID derivation
-  t = t.replaceAll('{product-very-short}', 'rhdh').replaceAll('{product-short}', 'rhdh')
-    .replaceAll('{product}', 'rhdh').replaceAll('{product-custom-resource-type}', '')
-    .replaceAll('{rhbk-brand-name}', 'rhbk').replaceAll('{rhbk}', 'rhbk')
-    .replaceAll('{azure-brand-name}', 'microsoft-azure')
-    .replaceAll('{ocp-brand-name}', 'ocp').replaceAll('{ocp-short}', 'ocp')
-    .replaceAll('{technology-preview}', 'technology-preview')
-    .replaceAll('{developer-preview}', 'developer-preview')
-    .replaceAll(/\{[a-zA-Z0-9_-]*\}/g, '');
+  // Apply ID-relevant attribute substitutions
+  for (const [attr, slug] of Object.entries(ID_ATTRS)) {
+    t = t.replaceAll(`{${attr}}`, slug);
+  }
+  // Strip remaining attrs — they don't belong in IDs
+  t = t.replaceAll(/\{[a-zA-Z0-9_-]*\}/g, '');
 
   return t.toLowerCase()
     .replaceAll(/[^a-z0-9-]+/g, '-')
