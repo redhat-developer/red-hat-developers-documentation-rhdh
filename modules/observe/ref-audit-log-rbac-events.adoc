@@ -1,0 +1,102 @@
+:_mod-docs-content-type: REFERENCE
+[id="ref-audit-log-rbac-events_{context}"]
+= RBAC audit log events
+
+[role="_abstract"]
+The Role-Based Access Control (RBAC) backend plugin in Red Hat Developer Hub provides audit logging to track administrative changes, permission evaluations, and policy updates.
+
+Administrators can use these logs to monitor who performed an action, when it occurred, and the outcome of the operation. Each audit log entry includes an `eventId` that represents a logical group of actions.
+
+== RBAC event types
+
+The following table describes the audit log events for the RBAC plugin:
+
+[cols="1,1,2", options="header"]
+|===
+| Event ID | Action | Description
+
+| `role-write`
+| Create, Update, Delete
+| Triggered when an RBAC role is created, modified, or removed via the REST API, CSV file, or configuration.
+
+| `role-read`
+| Read
+| Triggered when an administrator retrieves information about one or all RBAC roles.
+
+| `policy-write`
+| Create, Update, Delete
+| Triggered when permission policies are modified.
+
+| `policy-read`
+| Read
+| Triggered when permission policies are retrieved.
+
+| `condition-write`
+| Create, Update, Delete
+| Triggered when conditional policies (e.g., via YAML file or REST API) are modified.
+
+| `condition-read`
+| Read
+| Triggered when conditional policies are retrieved.
+
+| `permission-evaluation`
+| Evaluate
+| Triggered when the RBAC system evaluates if a user has the required permissions to perform an action on a resource.
+
+| `plugin-policies-read`
+| Read
+| Triggered when listing available permission policies for plugins.
+
+| `plugin-ids-write`
+| Update
+| Triggered when the list of plugins supporting the permission framework is updated.
+|===
+
+== Audit log metadata fields
+
+RBAC audit logs contain a `meta` object with event-specific details. The following table describes common metadata fields found in RBAC events:
+
+[cols="1,2", options="header"]
+|===
+| Field | Description
+
+| `source`
+| The origin of the event, such as `rest`, `csv-file`, `configuration`, or `externalProviderPluginId`.
+
+| `actionType`
+| The specific modification performed: `create`, `update`, `delete`, or `create_or_update`.
+
+| `roleEntityRef`
+| The entity reference of the role affected by the event.
+
+| `members`
+| A list of users or groups associated with the role.
+
+| `decision`
+| In evaluation events, indicates the policy decision (e.g., `allow`, `deny`).
+
+| `result`
+| The final outcome of a permission check, such as `AuthorizeResult`.
+|===
+
+== Example audit log entries
+
+The following examples show how RBAC events appear in the Developer Hub logs:
+
+.Example: RBAC role creation (initiated)
+[source,text]
+----
+[backend]: 2025-03-25T17:24:17.438Z permission info permission.role-write isAuditEvent=true eventId="role-write" severityLevel="medium" actor={"actorId":"user:default/admin","ip":"::1"} request={"url":"/api/permission/roles","method":"POST"} meta={"actionType":"create", "source":"rest"} status="initiated"
+----
+
+.Example: RBAC role creation (succeeded)
+[source,text]
+----
+[backend]: 2025-03-25T17:24:17.458Z permission info permission.role-write isAuditEvent=true eventId="role-write" severityLevel="medium" actor={"actorId":"user:default/admin"} request={"url":"/api/permission/roles","method":"POST"} meta={"actionType":"create", "source":"rest","roleEntityRef":"role:default/test-role"} status="succeeded"
+----
+
+.Example: Permission evaluation
+[source,text]
+----
+[backend]: 2025-03-25T17:25:00.123Z permission info permission-evaluation isAuditEvent=true eventId="permission-evaluation" actor={"actorId":"user:default/jdow"} meta={"userEntityRef":"user:default/jdow","permissionName":"catalog.entity.read","action":"read"} status="succeeded"
+----
