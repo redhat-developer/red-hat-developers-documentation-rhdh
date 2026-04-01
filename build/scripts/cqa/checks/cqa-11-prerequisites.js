@@ -62,7 +62,7 @@ function checkFile(file) {
   }
 
   // Check 2 & 3: count items in .Prerequisites section
-  const prereqIdx = lines.findIndex(l => l === '.Prerequisites');
+  const prereqIdx = lines.indexOf('.Prerequisites');
   if (prereqIdx !== -1) {
     const prereqLine = prereqIdx + 1;
     const { bulleted, numbered } = extractPrereqCounts(lines, prereqIdx);

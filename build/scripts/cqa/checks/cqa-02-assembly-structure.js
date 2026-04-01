@@ -60,7 +60,7 @@ export default class Cqa02AssemblyStructure extends Checker {
 // ── Per-file check ────────────────────────────────────────────────────────────
 
 function checkAbstractAndIntro(file, lines, isMaster) {
-  if (!lines.some(l => l === '[role="_abstract"]')) {
+  if (!lines.includes('[role="_abstract"]')) {
     return [delegate(file, '09', 'Missing [role="_abstract"] introduction')];
   }
   if (isMaster) return [];
@@ -115,9 +115,11 @@ function checkFile(root, file) {
 
   if (!isMaster) {
     // 4-5. ID and context attribute
-    issues.push(...checkIdAndContext(file, lines));
-    // 6. Context save/restore
-    issues.push(...checkContextSaveRestore(file, lines));
+    issues.push(
+      ...checkIdAndContext(file, lines),
+      // 6. Context save/restore
+      ...checkContextSaveRestore(file, lines),
+    );
   }
 
   // 7. .Prerequisites block title
@@ -167,9 +169,9 @@ function checkContextSaveRestore(file, lines) {
 }
 
 function checkAdditionalResources(file, lines) {
-  const hasBlockTitle = lines.some(l => l === '.Additional resources');
-  const hasHeading = lines.some(l => l === '== Additional resources');
-  const hasRole = lines.some(l => l === '[role="_additional-resources"]');
+  const hasBlockTitle = lines.includes('.Additional resources');
+  const hasHeading = lines.includes('== Additional resources');
+  const hasRole = lines.includes('[role="_additional-resources"]');
 
   if (hasBlockTitle) {
     const idx = lines.indexOf('.Additional resources');
@@ -307,7 +309,7 @@ function fixAdditionalResources(rawLines) {
 
   // == Additional resources without role → add role before
   const headingIdx = lines.indexOf('== Additional resources');
-  if (headingIdx !== -1 && !lines.some(l => l === '[role="_additional-resources"]')) {
+  if (headingIdx !== -1 && !lines.includes('[role="_additional-resources"]')) {
     rawLines.splice(headingIdx, 0, '[role="_additional-resources"]');
   }
 

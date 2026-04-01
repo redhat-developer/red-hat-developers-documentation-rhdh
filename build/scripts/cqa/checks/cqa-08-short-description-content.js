@@ -67,7 +67,7 @@ export default class Cqa08ShortDescriptionContent extends Checker {
 
 function checkFile(file) {
   const lines = getLines(file);
-  const abstractIdx = lines.findIndex(l => l === '[role="_abstract"]');
+  const abstractIdx = lines.indexOf('[role="_abstract"]');
 
   if (abstractIdx === -1) {
     return [delegate(file, '09', 'Missing [role="_abstract"] marker')];
@@ -105,7 +105,7 @@ function fixFile(root, file) {
   if (!existsSync(abs)) return;
 
   const lines = readFileSync(abs, 'utf8').split('\n').map(l => l.trimEnd());
-  const abstractIdx = lines.findIndex(l => l === '[role="_abstract"]');
+  const abstractIdx = lines.indexOf('[role="_abstract"]');
   if (abstractIdx === -1) return;
 
   const abstractText = lines[abstractIdx + 1] ?? '';

@@ -15,7 +15,7 @@ import { execFileSync } from 'node:child_process';
 import { Checker, autofix } from '../lib/checker.js';
 import {
   repoRoot, collectTitle, getContentType, getLines,
-  computeBlockRanges, isInBlock, invalidateCache,
+  computeBlockRanges, invalidateCache,
 } from '../lib/asciidoc.js';
 import { hasValeCache, getCachedIssues } from '../lib/vale.js';
 
@@ -85,27 +85,12 @@ export default class Cqa16ProductNames extends Checker {
   check(masterAdocPath) {
     const root = repoRoot();
     const files = collectTitle(resolve(root, masterAdocPath));
-    const adocFiles = files
-      .filter(f => {
-        if (!f.endsWith('.adoc')) return false;
-        if (basename(f) === 'attributes.adoc') return false;
-        if (getContentType(f) === 'SNIPPET') return false;
-        return true;
-      });
+    const adocFiles = files.filter(isCheckableAdocFile);
 
     if (adocFiles.length === 0) return [];
 
     if (hasValeCache()) {
-      // Use pre-computed cache — filter for DeveloperHub.ProductNames
-      const issues = [];
-      for (const f of adocFiles) {
-        for (const iss of getCachedIssues(f)) {
-          if (iss.Check !== 'DeveloperHub.ProductNames') continue;
-          if (isUnfixableLine(f, iss.Line)) continue;
-          issues.push(autofix(f, `${iss.Check}: ${iss.Message}`, iss.Line));
-        }
-      }
-      return issues;
+      return collectCachedProductNameIssues(adocFiles);
     }
 
     // Fallback: run Vale directly
@@ -123,6 +108,25 @@ export default class Cqa16ProductNames extends Checker {
       fixFile(root, file);
     }
   }
+}
+
+function isCheckableAdocFile(f) {
+  if (!f.endsWith('.adoc')) return false;
+  if (basename(f) === 'attributes.adoc') return false;
+  if (getContentType(f) === 'SNIPPET') return false;
+  return true;
+}
+
+function collectCachedProductNameIssues(adocFiles) {
+  const issues = [];
+  for (const f of adocFiles) {
+    for (const iss of getCachedIssues(f)) {
+      if (iss.Check !== 'DeveloperHub.ProductNames') continue;
+      if (isUnfixableLine(f, iss.Line)) continue;
+      issues.push(autofix(f, `${iss.Check}: ${iss.Message}`, iss.Line));
+    }
+  }
+  return issues;
 }
 
 // ── Vale detection (fallback) ────────────────────────────────────────────────

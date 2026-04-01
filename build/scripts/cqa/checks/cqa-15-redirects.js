@@ -53,7 +53,7 @@ function gitDiff(root, ...args) {
       cwd: root,
       encoding: 'utf8',
     });
-    return output.trim().split('\n').filter(l => l);
+    return output.trim().split('\n').filter(Boolean);
   } catch {
     return [];
   }

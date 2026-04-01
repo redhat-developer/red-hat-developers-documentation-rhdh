@@ -84,7 +84,7 @@ function detectContentType(lines, bn) {
   if (hasIncludes && lines.some(l => PROC_MODULE_RE.test(l))) return 'ASSEMBLY';
 
   // Content-based: has .Procedure → PROCEDURE
-  if (lines.some(l => l === '.Procedure')) return 'PROCEDURE';
+  if (lines.includes('.Procedure')) return 'PROCEDURE';
 
   // Filename-based
   if (stem.startsWith('assembly-') || stem === 'master') return 'ASSEMBLY';
@@ -157,7 +157,7 @@ function extractSectionContent(lines, sectionName) {
 }
 
 function checkSectionLists(file, lines, sectionName) {
-  if (!lines.some(l => l === `.${sectionName}`)) return [];
+  if (!lines.includes(`.${sectionName}`)) return [];
 
   const content = extractSectionContent(lines, sectionName);
   if (content.some(l => l.startsWith('include::'))) return [];
@@ -181,7 +181,7 @@ function checkSectionLists(file, lines, sectionName) {
 }
 
 function checkProcedureStructure(file, lines) {
-  if (!lines.some(l => l === '.Procedure')) return [];
+  if (!lines.includes('.Procedure')) return [];
 
   const content = extractSectionContent(lines, 'Procedure');
   if (content.some(l => l.startsWith('include::'))) return [];
@@ -207,7 +207,7 @@ function fixContentType(abs, lines, detected) {
 }
 
 function fixSectionLists(abs, lines, sectionName) {
-  if (!lines.some(l => l === `.${sectionName}`)) return;
+  if (!lines.includes(`.${sectionName}`)) return;
 
   const content = extractSectionContent(lines, sectionName);
   if (content.some(l => INCLUDE_RE.test(l))) return;
