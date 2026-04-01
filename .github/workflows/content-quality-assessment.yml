@@ -93,18 +93,30 @@ jobs:
 
       - name: Copy trusted scripts into PR content
         run: |
-          cp trusted-scripts/build/scripts/cqa-lib.sh pr-content/build/scripts/cqa-lib.sh
-          cp trusted-scripts/build/scripts/cqa.sh pr-content/build/scripts/cqa.sh
-          for script in trusted-scripts/build/scripts/cqa-[0-9]*.sh; do
-            cp "$script" "pr-content/build/scripts/$(basename "$script")"
-          done
-          chmod +x pr-content/build/scripts/cqa*.sh
+          rm -rf pr-content/build/scripts/cqa
+          cp -r trusted-scripts/build/scripts/cqa pr-content/build/scripts/cqa
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install Vale
+        run: |
+          wget -q https://github.com/errata-ai/vale/releases/download/v3.9.5/vale_3.9.5_Linux_64-bit.tar.gz
+          tar -xzf vale_3.9.5_Linux_64-bit.tar.gz -C /usr/local/bin vale
+          vale --version
+
+      - name: Sync Vale styles
+        run: |
+          cd pr-content
+          vale sync
 
       - name: Run CQA checks (checklist)
         id: cqa-checklist
         run: |
           cd pr-content
-          OUTPUT=$(./build/scripts/cqa.sh --all 2>&1 || true)
+          OUTPUT=$(node build/scripts/cqa/index.js --all 2>&1 || true)
           echo "output<<EOF" >> $GITHUB_OUTPUT
           echo "$OUTPUT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
