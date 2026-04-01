@@ -10,6 +10,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { GIT } from '../lib/bin.js';
 import { basename } from 'node:path';
 import { Checker, manual } from '../lib/checker.js';
 import { repoRoot } from '../lib/asciidoc.js';
@@ -49,7 +50,7 @@ export default class Cqa15Redirects extends Checker {
 
 function gitDiff(root, ...args) {
   try {
-    const output = execFileSync('git', ['diff', 'HEAD~5..HEAD', ...args], {
+    const output = execFileSync(GIT, ['diff', 'HEAD~5..HEAD', ...args], {
       cwd: root,
       encoding: 'utf8',
     });

@@ -12,6 +12,7 @@
 import { readdirSync, existsSync, rmSync, readFileSync } from 'node:fs';
 import { resolve, basename, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { GIT } from '../lib/bin.js';
 import { Checker, autofix } from '../lib/checker.js';
 import { repoRoot, repoRelative } from '../lib/asciidoc.js';
 
@@ -39,7 +40,7 @@ export default class Cqa00aOrphaned extends Checker {
       const abs = resolve(root, iss.file);
       if (!existsSync(abs)) continue;
       try {
-        execFileSync('git', ['rm', '-q', abs], { cwd: root, stdio: 'pipe' });
+        execFileSync(GIT, ['rm', '-q', abs], { cwd: root, stdio: 'pipe' });
       } catch {
         rmSync(abs);
       }

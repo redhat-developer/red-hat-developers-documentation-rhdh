@@ -9,6 +9,7 @@
 import { existsSync, realpathSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
 import { execFileSync, execFile } from 'node:child_process';
+import { VALE } from './bin.js';
 import { repoRoot } from './asciidoc.js';
 
 // Cache: Map<relPath, Array<{Check, Message, Line, Severity, ...}>>
@@ -25,7 +26,7 @@ export function preRunVale(targets) {
 
   let jsonStr;
   try {
-    jsonStr = execFileSync('vale', [
+    jsonStr = execFileSync(VALE, [
       '--config', valeConfig,
       '--output', 'JSON',
       ...targets,
@@ -49,7 +50,7 @@ export function preRunValeAsync(targets) {
   if (!existsSync(valeConfig)) { _cache = new Map(); return Promise.resolve(); }
 
   return new Promise((res) => {
-    execFile('vale', [
+    execFile(VALE, [
       '--config', valeConfig,
       '--output', 'JSON',
       ...targets,

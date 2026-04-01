@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { VALE } from '../lib/bin.js';
 import { Checker, autofix } from '../lib/checker.js';
 import {
   repoRoot, collectTitle, getContentType, getLines,
@@ -140,7 +141,7 @@ function collectCachedProductNameIssues(adocFiles) {
 function runValeAndClassify(root, configPath, files) {
   let jsonStr;
   try {
-    jsonStr = execFileSync('vale', [
+    jsonStr = execFileSync(VALE, [
       '--config', configPath,
       '--output', 'JSON',
       ...files,
