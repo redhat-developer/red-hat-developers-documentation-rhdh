@@ -115,10 +115,10 @@ function checkNestedAssembly(file, lines) {
   const RESTORE_1 = 'ifdef::parent-context[:context: {parent-context}]';
   const RESTORE_2 = 'ifndef::parent-context[:!context:]';
 
-  if (!lines.some(l => l === SAVE)) {
+  if (!lines.includes(SAVE)) {
     issues.push(delegate(file, '02', 'Nested assembly missing parent-context preservation at top', null, true));
   }
-  if (!lines.some(l => l === RESTORE_1) || !lines.some(l => l === RESTORE_2)) {
+  if (!lines.includes(RESTORE_1) || !lines.includes(RESTORE_2)) {
     issues.push(delegate(file, '02', 'Nested assembly missing context restoration at bottom', null, true));
   }
   if (!lines.some(l => l.startsWith(':context: '))) {
@@ -141,7 +141,7 @@ function checkGeneral(file, lines, isMaster, contentType) {
     issues.push(manual(file, `Has ${h1Count} H1 titles (should be exactly 1)`));
   }
 
-  if (!lines.some(l => l === '[role="_abstract"]')) {
+  if (!lines.includes('[role="_abstract"]')) {
     issues.push(delegate(file, '09', 'Missing [role="_abstract"] short introduction', null, true));
   }
 
@@ -202,10 +202,8 @@ function checkProcedure(file, lines) {
     issues.push(manual(file, 'Procedure contains subheadings (== or deeper) -- procedures must not have subheadings', subheadingIdx + 1));
   }
 
-  const hasProcedureExact = lines.some(l => l === '.Procedure');
-  if (!hasProcedureExact) {
-    issues.push(delegate(file, '04', 'Missing .Procedure block title', null, true));
-  } else {
+  const hasProcedureExact = lines.includes('.Procedure');
+  if (hasProcedureExact) {
     const procCount = lines.filter(l => l === '.Procedure' || l.startsWith('.Procedure ')).length;
     if (procCount > 1) {
       issues.push(manual(file, `Has ${procCount} .Procedure block titles (should be exactly 1)`));
@@ -213,6 +211,8 @@ function checkProcedure(file, lines) {
     if (lines.some(l => l.startsWith('.Procedure '))) {
       issues.push(manual(file, ".Procedure block title has embellishments (should be just '.Procedure')"));
     }
+  } else {
+    issues.push(delegate(file, '04', 'Missing .Procedure block title', null, true));
   }
 
   for (const l of lines) {

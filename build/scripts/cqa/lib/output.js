@@ -9,7 +9,7 @@
  */
 
 export function renderIssue(issue, fixed = false) {
-  const loc = issue.line != null ? ` Line ${issue.line}:` : '';
+  const loc = issue.line == null ? '' : ` Line ${issue.line}:`;
   if (issue.delegateTo) {
     const kind = issue.fixable ? 'AUTOFIX' : 'MANUAL';
     return `- [ ] [-> CQA-${issue.delegateTo} ${kind}] ${issue.file}:${loc} ${issue.message}`;
@@ -36,7 +36,7 @@ export function renderSummary({ filesChecked, filesWithIssues, autofixable, manu
     `Violations: ${autofixable + manual + delegated} total (${autofixable} autofixable, ${manual} manual, ${delegated} delegated)`,
   ];
   if (!fixMode && autofixable > 0) {
-    lines.push(`Run with --fix to auto-resolve ${autofixable} issue${autofixable !== 1 ? 's' : ''}.`);
+    lines.push(`Run with --fix to auto-resolve ${autofixable} issue${autofixable === 1 ? '' : 's'}.`);
   }
   return lines.join('\n');
 }

@@ -16,7 +16,8 @@ import { repoRoot, collectTitle } from '../lib/asciidoc.js';
 import { hasValeCache, getCachedIssues } from '../lib/vale.js';
 
 // Filter for fallback mode (Vale --filter syntax)
-const VALE_FILTER = '.Name != "DeveloperHub.ProductNames" and .Name not matches "^AsciiDocDITA\\\\."';
+const VALE_FILTER = String.raw`.Name != "DeveloperHub.ProductNames" and .Name not matches "^AsciiDocDITA\\."`;
+
 
 export default class Cqa12Grammar extends Checker {
   id = '12';
@@ -31,17 +32,7 @@ export default class Cqa12Grammar extends Checker {
     if (adocFiles.length === 0) return [];
 
     if (hasValeCache()) {
-      // Use pre-computed cache — filter out CQA-01 and CQA-16 rules
-      const issues = [];
-      for (const f of adocFiles) {
-        for (const iss of getCachedIssues(f)) {
-          if (iss.Severity !== 'error') continue;
-          if (iss.Check.startsWith('AsciiDocDITA.')) continue;
-          if (iss.Check === 'DeveloperHub.ProductNames') continue;
-          issues.push(manual(f, `${iss.Check}: ${iss.Message}`, iss.Line));
-        }
-      }
-      return issues;
+      return collectCachedGrammarIssues(adocFiles);
     }
 
     // Fallback: run Vale directly with --filter
@@ -53,6 +44,23 @@ export default class Cqa12Grammar extends Checker {
   }
 
   // No fix() — all CQA-12 issues are manual
+}
+
+function isGrammarRelevantError(iss) {
+  return iss.Severity === 'error' &&
+         !iss.Check.startsWith('AsciiDocDITA.') &&
+         iss.Check !== 'DeveloperHub.ProductNames';
+}
+
+function collectCachedGrammarIssues(adocFiles) {
+  const issues = [];
+  for (const f of adocFiles) {
+    for (const iss of getCachedIssues(f)) {
+      if (!isGrammarRelevantError(iss)) continue;
+      issues.push(manual(f, `${iss.Check}: ${iss.Message}`, iss.Line));
+    }
+  }
+  return issues;
 }
 
 function runValeAndClassify(root, configPath, files) {

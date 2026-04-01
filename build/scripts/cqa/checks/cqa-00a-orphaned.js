@@ -108,17 +108,21 @@ function collectImageRefs(root) {
     const abs = resolve(root, dir);
     if (!existsSync(abs)) continue;
     for (const file of walkAdoc(abs)) {
-      for (const line of readLines(file)) {
-        for (const m of line.matchAll(IMAGE_RE)) {
-          const ref = m[1];
-          if (!ref.startsWith('http://') && !ref.startsWith('https://')) {
-            referenced.add(basename(ref));
-          }
-        }
-      }
+      collectImageRefsFromFile(file, referenced);
     }
   }
   return referenced;
+}
+
+function collectImageRefsFromFile(file, referenced) {
+  for (const line of readLines(file)) {
+    for (const m of line.matchAll(IMAGE_RE)) {
+      const ref = m[1];
+      if (!ref.startsWith('http://') && !ref.startsWith('https://')) {
+        referenced.add(basename(ref));
+      }
+    }
+  }
 }
 
 // ── Pure utilities ────────────────────────────────────────────────────────────

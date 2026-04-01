@@ -69,52 +69,12 @@ export default class Cqa00bDirectoryStructure extends Checker {
     const modDirOwners = buildModDirOwners(root, dirCtx, asmFileOwners);
     const imgFileOwners = buildImgFileOwners(root, dirCtx, modDirOwners, asmFileOwners);
 
-    // Report misnamed title dirs
-    for (const [d, ctx] of Object.entries(dirCtx)) {
-      const expected = ctxDest[ctx];
-      if (d !== expected) {
-        issues.push(autofix(`titles/${d}`, `Title dir should be titles/${expected}`));
-      }
-    }
-
-    // Report misnamed assembly dirs
-    for (const asmDir of listDirs(resolve(root, 'assemblies'))) {
-      if (asmDir === SHARED || asmDir === 'modules') continue;
-      const allOwners = collectAsmDirOwners(root, asmDir, asmFileOwners);
-      if (allOwners.length === 0) continue;
-      const dest = computeDest(allOwners, ctxCat, ctxDest);
-      if (asmDir !== dest) {
-        issues.push(autofix(`assemblies/${asmDir}`, `Assembly dir should be assemblies/${dest}`));
-      }
-    }
-
-    // Report flat assembly files (in assemblies/ root, not in a subdir)
-    for (const f of listAdocFiles(resolve(root, 'assemblies'))) {
-      const bn = basename(f);
-      const owners = uniqueSorted((asmFileOwners[bn] || []).flat());
-      if (owners.length === 0) continue;
-      const dest = computeDest(owners, ctxCat, ctxDest);
-      issues.push(autofix(repoRelative(f), `Flat assembly should be in assemblies/${dest}/`));
-    }
-
-    // Report misnamed module dirs
-    for (const [md, owners] of Object.entries(modDirOwners)) {
-      if (!existsSync(resolve(root, 'modules', md))) continue;
-      const dest = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
-      if (md !== dest) {
-        issues.push(autofix(`modules/${md}`, `Module dir should be modules/${dest}`));
-      }
-    }
-
-    // Report misplaced image files
-    for (const [ref, owners] of Object.entries(imgFileOwners)) {
-      if (!existsSync(resolve(root, 'images', ref))) continue;
-      const dest = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
-      const oldDir = dirname(ref);
-      if (oldDir !== dest) {
-        issues.push(autofix(`images/${ref}`, `Image should be in images/${dest}/`));
-      }
-    }
+    // Report misnamed directories and misplaced files
+    reportMisnamedTitleDirs(dirCtx, ctxDest, issues);
+    reportMisnamedAsmDirs(root, asmFileOwners, ctxCat, ctxDest, issues);
+    reportFlatAsmFiles(root, asmFileOwners, ctxCat, ctxDest, issues);
+    reportMisnamedModDirs(root, modDirOwners, ctxCat, ctxDest, issues);
+    reportMisplacedImages(root, imgFileOwners, ctxCat, ctxDest, issues);
 
     return issues;
   }
@@ -130,91 +90,75 @@ export default class Cqa00bDirectoryStructure extends Checker {
     const modDirOwners = buildModDirOwners(root, dirCtx, asmFileOwners);
     const imgFileOwners = buildImgFileOwners(root, dirCtx, modDirOwners, asmFileOwners);
 
-    const asmDirDest = {};
-    for (const asmDir of listDirs(resolve(root, 'assemblies'))) {
-      if (asmDir === SHARED || asmDir === 'modules') continue;
-      const allOwners = collectAsmDirOwners(root, asmDir, asmFileOwners);
-      if (allOwners.length === 0) continue;
-      asmDirDest[asmDir] = computeDest(allOwners, ctxCat, ctxDest);
-    }
-
-    const flatAsmDest = {};
-    for (const f of listAdocFiles(resolve(root, 'assemblies'))) {
-      const bn = basename(f);
-      const owners = uniqueSorted((asmFileOwners[bn] || []).flat());
-      if (owners.length === 0) continue;
-      flatAsmDest[bn] = computeDest(owners, ctxCat, ctxDest);
-    }
-
-    const modDirDest = {};
-    for (const [md, owners] of Object.entries(modDirOwners)) {
-      if (!existsSync(resolve(root, 'modules', md))) continue;
-      modDirDest[md] = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
-    }
-
-    const imgFileDest = {};
-    for (const [ref, owners] of Object.entries(imgFileOwners)) {
-      if (!existsSync(resolve(root, 'images', ref))) continue;
-      const dest = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
-      const oldDir = dirname(ref);
-      if (oldDir !== dest) imgFileDest[ref] = dest;
-    }
+    const asmDirDest = computeAsmDirDest(root, asmFileOwners, ctxCat, ctxDest);
+    const flatAsmDest = computeFlatAsmDest(root, asmFileOwners, ctxCat, ctxDest);
+    const modDirDest = computeModDirDest(root, modDirOwners, ctxCat, ctxDest);
+    const imgFileDest = computeImgFileDest(root, imgFileOwners, ctxCat, ctxDest);
 
     // Phase 1: title dirs
-    for (const [d, ctx] of Object.entries(dirCtx)) {
-      const newDir = ctxDest[ctx];
-      if (d !== newDir) gitMv(root, `titles/${d}`, `titles/${newDir}`);
-    }
-
+    fixTitleDirs(root, dirCtx, ctxDest);
     // Phase 2: assembly dirs then flat files
-    for (const [oldDir, newDir] of Object.entries(asmDirDest)) {
-      if (oldDir === newDir) continue;
-      if (!existsSync(resolve(root, 'assemblies', oldDir))) continue;
-      moveDirContents(root, `assemblies/${oldDir}`, `assemblies/${newDir}`);
-    }
-    for (const [bn, dest] of Object.entries(flatAsmDest)) {
-      if (!existsSync(resolve(root, 'assemblies', bn))) continue;
-      mkdirSync(resolve(root, 'assemblies', dest), { recursive: true });
-      gitMv(root, `assemblies/${bn}`, `assemblies/${dest}/${bn}`);
-    }
-
+    fixAsmDirs(root, asmDirDest);
+    fixFlatAsmFiles(root, flatAsmDest);
     // Phase 3: module dirs
-    for (const [oldDir, newDir] of Object.entries(modDirDest)) {
-      if (oldDir === newDir) continue;
-      if (!existsSync(resolve(root, 'modules', oldDir))) continue;
-      moveDirContents(root, `modules/${oldDir}`, `modules/${newDir}`);
-    }
-
+    fixModDirs(root, modDirDest);
     // Phase 4: image files
-    for (const [ref, dest] of Object.entries(imgFileDest)) {
-      if (!existsSync(resolve(root, 'images', ref))) continue;
-      const bn = basename(ref);
-      mkdirSync(resolve(root, 'images', dest), { recursive: true });
-      gitMv(root, `images/${ref}`, `images/${dest}/${bn}`);
-    }
-    removeEmptyDirs(resolve(root, 'images'));
-
+    fixImageFiles(root, imgFileDest);
     // Phase 5: update include paths across all .adoc files
-    // (sed operations — build combined sed expression)
-    const masterSed = buildSedExpr({ asmDirDest, flatAsmDest, modDirDest, imgFileDest, mode: 'master' });
-    if (masterSed) {
-      for (const master of globAdoc(resolve(root, 'titles'), 2)) {
-        runSed(root, masterSed, repoRelative(master));
-      }
-    }
+    fixIncludePaths(root, { asmDirDest, flatAsmDest, modDirDest, imgFileDest });
+  }
+}
 
-    const asmSed = buildSedExpr({ asmDirDest, flatAsmDest, modDirDest, imgFileDest, mode: 'assembly' });
-    if (asmSed) {
-      for (const asm of globAdoc(resolve(root, 'assemblies'), 2)) {
-        runSed(root, asmSed, repoRelative(asm));
-      }
-    }
+// ── Check reporting helpers ──────────────────────────────────────────────────
 
-    const modSed = buildSedExpr({ imgFileDest, mode: 'module' });
-    if (modSed) {
-      for (const mod of globAdoc(resolve(root, 'modules'), 3)) {
-        runSed(root, modSed, repoRelative(mod));
-      }
+function reportMisnamedTitleDirs(dirCtx, ctxDest, issues) {
+  for (const [d, ctx] of Object.entries(dirCtx)) {
+    const expected = ctxDest[ctx];
+    if (d !== expected) {
+      issues.push(autofix(`titles/${d}`, `Title dir should be titles/${expected}`));
+    }
+  }
+}
+
+function reportMisnamedAsmDirs(root, asmFileOwners, ctxCat, ctxDest, issues) {
+  for (const asmDir of listDirs(resolve(root, 'assemblies'))) {
+    if (asmDir === SHARED || asmDir === 'modules') continue;
+    const allOwners = collectAsmDirOwners(root, asmDir, asmFileOwners);
+    if (allOwners.length === 0) continue;
+    const dest = computeDest(allOwners, ctxCat, ctxDest);
+    if (asmDir !== dest) {
+      issues.push(autofix(`assemblies/${asmDir}`, `Assembly dir should be assemblies/${dest}`));
+    }
+  }
+}
+
+function reportFlatAsmFiles(root, asmFileOwners, ctxCat, ctxDest, issues) {
+  for (const f of listAdocFiles(resolve(root, 'assemblies'))) {
+    const bn = basename(f);
+    const owners = uniqueSorted((asmFileOwners[bn] || []).flat());
+    if (owners.length === 0) continue;
+    const dest = computeDest(owners, ctxCat, ctxDest);
+    issues.push(autofix(repoRelative(f), `Flat assembly should be in assemblies/${dest}/`));
+  }
+}
+
+function reportMisnamedModDirs(root, modDirOwners, ctxCat, ctxDest, issues) {
+  for (const [md, owners] of Object.entries(modDirOwners)) {
+    if (!existsSync(resolve(root, 'modules', md))) continue;
+    const dest = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
+    if (md !== dest) {
+      issues.push(autofix(`modules/${md}`, `Module dir should be modules/${dest}`));
+    }
+  }
+}
+
+function reportMisplacedImages(root, imgFileOwners, ctxCat, ctxDest, issues) {
+  for (const [ref, owners] of Object.entries(imgFileOwners)) {
+    if (!existsSync(resolve(root, 'images', ref))) continue;
+    const dest = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
+    const oldDir = dirname(ref);
+    if (oldDir !== dest) {
+      issues.push(autofix(`images/${ref}`, `Image should be in images/${dest}/`));
     }
   }
 }
@@ -275,34 +219,45 @@ function propagateSubAssemblyOwners(root, asmFileOwners) {
     for (const [af, parentOwners] of Object.entries(asmFileOwners)) {
       const abs = resolve(root, 'assemblies', af);
       if (!existsSync(abs)) continue;
-      const asmDir = dirname(af);
-
-      // sub-assemblies in same dir
-      for (const sub of extractIncludes(abs, 'assembly-')) {
-        const subPath = asmDir !== '.' ? `${asmDir}/${sub}` : sub;
-        const before = (asmFileOwners[subPath] || []).join(',');
-        const merged = uniqueSorted([...(asmFileOwners[subPath] || []), ...parentOwners]);
-        if (merged.join(',') !== before) {
-          asmFileOwners[subPath] = merged;
-          changed = true;
-        }
-      }
-      // sub-assemblies via ../assemblies/ path
-      for (const sub of extractIncludes(abs, '../assemblies/')) {
-        const before = (asmFileOwners[sub] || []).join(',');
-        const merged = uniqueSorted([...(asmFileOwners[sub] || []), ...parentOwners]);
-        if (merged.join(',') !== before) {
-          asmFileOwners[sub] = merged;
-          changed = true;
-        }
-      }
+      changed = propagateFromAssembly(abs, af, parentOwners, asmFileOwners) || changed;
     }
   }
 }
 
+function propagateFromAssembly(abs, af, parentOwners, asmFileOwners) {
+  let changed = false;
+  const asmDir = dirname(af);
+
+  // sub-assemblies in same dir
+  for (const sub of extractIncludes(abs, 'assembly-')) {
+    const subPath = asmDir === '.' ? sub : `${asmDir}/${sub}`;
+    changed = mergeOwners(asmFileOwners, subPath, parentOwners) || changed;
+  }
+  // sub-assemblies via ../assemblies/ path
+  for (const sub of extractIncludes(abs, '../assemblies/')) {
+    changed = mergeOwners(asmFileOwners, sub, parentOwners) || changed;
+  }
+  return changed;
+}
+
+function mergeOwners(ownersMap, key, newOwners) {
+  const before = (ownersMap[key] || []).join(',');
+  const merged = uniqueSorted([...(ownersMap[key] || []), ...newOwners]);
+  if (merged.join(',') !== before) {
+    ownersMap[key] = merged;
+    return true;
+  }
+  return false;
+}
+
 function buildModDirOwners(root, dirCtx, asmFileOwners) {
   const owners = {};
+  collectModDirOwnersFromTitles(root, dirCtx, owners);
+  collectModDirOwnersFromAssemblies(root, asmFileOwners, owners);
+  return owners;
+}
 
+function collectModDirOwnersFromTitles(root, dirCtx, owners) {
   for (const [d, ctx] of Object.entries(dirCtx)) {
     const master = resolve(root, 'titles', d, 'master.adoc');
     if (!existsSync(master)) continue;
@@ -312,65 +267,82 @@ function buildModDirOwners(root, dirCtx, asmFileOwners) {
       if (!owners[md].includes(ctx)) owners[md].push(ctx);
     }
   }
+}
 
+function collectModDirOwnersFromAssemblies(root, asmFileOwners, owners) {
   for (const [af, afOwners] of Object.entries(asmFileOwners)) {
     const abs = resolve(root, 'assemblies', af);
     if (!existsSync(abs)) continue;
     for (const md of extractModDirs(abs)) {
       if (md === SHARED) continue;
-      owners[md] = owners[md] || [];
-      for (const o of afOwners) {
-        if (!owners[md].includes(o)) owners[md].push(o);
-      }
+      addAllOwners(owners, md, afOwners);
     }
   }
+}
 
-  return owners;
+function addAllOwners(owners, key, newOwners) {
+  owners[key] = owners[key] || [];
+  for (const o of newOwners) {
+    if (!owners[key].includes(o)) owners[key].push(o);
+  }
 }
 
 function buildImgFileOwners(root, dirCtx, modDirOwners, asmFileOwners) {
   const owners = {};
-
   const addOwner = (ref, ctx) => {
     owners[ref] = owners[ref] || [];
     if (!owners[ref].includes(ctx)) owners[ref].push(ctx);
   };
 
-  // From title masters
+  collectImgOwnersFromTitles(root, dirCtx, addOwner);
+  collectImgOwnersFromModules(root, modDirOwners, addOwner);
+  collectImgOwnersFromSharedModules(root, dirCtx, asmFileOwners, addOwner);
+  collectImgOwnersFromAssemblies(root, asmFileOwners, addOwner);
+
+  return owners;
+}
+
+function collectImgOwnersFromTitles(root, dirCtx, addOwner) {
   for (const [d, ctx] of Object.entries(dirCtx)) {
     const master = resolve(root, 'titles', d, 'master.adoc');
     if (!existsSync(master)) continue;
     for (const ref of extractImageRefs(master)) addOwner(ref, ctx);
   }
+}
 
-  // From non-shared module files
+function collectImgOwnersFromModules(root, modDirOwners, addOwner) {
   for (const [md, mdOwners] of Object.entries(modDirOwners)) {
     if (md === SHARED) continue;
     const modDir = resolve(root, 'modules', md);
     if (!existsSync(modDir)) continue;
-    for (const f of listAdocFilesInDir(modDir)) {
-      for (const ref of extractImageRefs(f)) {
-        for (const o of mdOwners) addOwner(ref, o);
-      }
+    collectImgOwnersFromDir(modDir, mdOwners, addOwner);
+  }
+}
+
+function collectImgOwnersFromDir(dir, dirOwners, addOwner) {
+  for (const f of listAdocFilesInDir(dir)) {
+    for (const ref of extractImageRefs(f)) {
+      for (const o of dirOwners) addOwner(ref, o);
     }
   }
+}
 
-  // From shared module files — ownership comes from which titles include them
+function collectImgOwnersFromSharedModules(root, dirCtx, asmFileOwners, addOwner) {
   const sharedModDir = resolve(root, 'modules', SHARED);
-  if (existsSync(sharedModDir)) {
-    // Build map: shared module basename → which titles/assemblies include it
-    const sharedModOwners = buildSharedModOwners(root, dirCtx, asmFileOwners);
-    for (const f of listAdocFilesInDir(sharedModDir)) {
-      const bn = basename(f);
-      const shOwners = sharedModOwners[bn] || [];
-      if (shOwners.length === 0) continue;
-      for (const ref of extractImageRefs(f)) {
-        for (const o of shOwners) addOwner(ref, o);
-      }
+  if (!existsSync(sharedModDir)) return;
+
+  const sharedModOwners = buildSharedModOwners(root, dirCtx, asmFileOwners);
+  for (const f of listAdocFilesInDir(sharedModDir)) {
+    const bn = basename(f);
+    const shOwners = sharedModOwners[bn] || [];
+    if (shOwners.length === 0) continue;
+    for (const ref of extractImageRefs(f)) {
+      for (const o of shOwners) addOwner(ref, o);
     }
   }
+}
 
-  // From assembly files
+function collectImgOwnersFromAssemblies(root, asmFileOwners, addOwner) {
   for (const [af, afOwners] of Object.entries(asmFileOwners)) {
     const abs = resolve(root, 'assemblies', af);
     if (!existsSync(abs)) continue;
@@ -378,8 +350,6 @@ function buildImgFileOwners(root, dirCtx, modDirOwners, asmFileOwners) {
       for (const o of afOwners) addOwner(ref, o);
     }
   }
-
-  return owners;
 }
 
 function buildSharedModOwners(root, dirCtx, asmFileOwners) {
@@ -389,31 +359,37 @@ function buildSharedModOwners(root, dirCtx, asmFileOwners) {
     if (!owners[bn].includes(ctx)) owners[bn].push(ctx);
   };
 
-  const SHARED_MOD_RE = /modules\/shared\/([^[]+)/g;
+  collectSharedModOwnersFromTitles(root, dirCtx, addOwner);
+  collectSharedModOwnersFromAssemblies(root, asmFileOwners, addOwner);
 
-  // From title masters
+  return owners;
+}
+
+const SHARED_MOD_RE = /modules\/shared\/([^[]+)/g;
+
+function collectSharedModOwnersFromTitles(root, dirCtx, addOwner) {
   for (const [d, ctx] of Object.entries(dirCtx)) {
     const master = resolve(root, 'titles', d, 'master.adoc');
     if (!existsSync(master)) continue;
-    for (const line of readLines(master)) {
-      if (line.startsWith('//')) continue;
-      for (const m of line.matchAll(SHARED_MOD_RE)) addOwner(basename(m[1]), ctx);
-    }
+    collectSharedModRefsFromFile(master, [ctx], addOwner);
   }
+}
 
-  // From assembly files
+function collectSharedModOwnersFromAssemblies(root, asmFileOwners, addOwner) {
   for (const [af, afOwners] of Object.entries(asmFileOwners)) {
     const abs = resolve(root, 'assemblies', af);
     if (!existsSync(abs)) continue;
-    for (const line of readLines(abs)) {
-      if (line.startsWith('//')) continue;
-      for (const m of line.matchAll(SHARED_MOD_RE)) {
-        for (const o of afOwners) addOwner(basename(m[1]), o);
-      }
+    collectSharedModRefsFromFile(abs, afOwners, addOwner);
+  }
+}
+
+function collectSharedModRefsFromFile(file, fileOwners, addOwner) {
+  for (const line of readLines(file)) {
+    if (line.startsWith('//')) continue;
+    for (const m of line.matchAll(SHARED_MOD_RE)) {
+      for (const o of fileOwners) addOwner(basename(m[1]), o);
     }
   }
-
-  return owners;
 }
 
 // ── computeDest ───────────────────────────────────────────────────────────────
@@ -531,6 +507,116 @@ function* globAdoc(dir, maxDepth = 3, depth = 1) {
   }
 }
 
+// ── Fix destination computation ──────────────────────────────────────────────
+
+function computeAsmDirDest(root, asmFileOwners, ctxCat, ctxDest) {
+  const dest = {};
+  for (const asmDir of listDirs(resolve(root, 'assemblies'))) {
+    if (asmDir === SHARED || asmDir === 'modules') continue;
+    const allOwners = collectAsmDirOwners(root, asmDir, asmFileOwners);
+    if (allOwners.length === 0) continue;
+    dest[asmDir] = computeDest(allOwners, ctxCat, ctxDest);
+  }
+  return dest;
+}
+
+function computeFlatAsmDest(root, asmFileOwners, ctxCat, ctxDest) {
+  const dest = {};
+  for (const f of listAdocFiles(resolve(root, 'assemblies'))) {
+    const bn = basename(f);
+    const owners = uniqueSorted((asmFileOwners[bn] || []).flat());
+    if (owners.length === 0) continue;
+    dest[bn] = computeDest(owners, ctxCat, ctxDest);
+  }
+  return dest;
+}
+
+function computeModDirDest(root, modDirOwners, ctxCat, ctxDest) {
+  const dest = {};
+  for (const [md, owners] of Object.entries(modDirOwners)) {
+    if (!existsSync(resolve(root, 'modules', md))) continue;
+    dest[md] = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
+  }
+  return dest;
+}
+
+function computeImgFileDest(root, imgFileOwners, ctxCat, ctxDest) {
+  const dest = {};
+  for (const [ref, owners] of Object.entries(imgFileOwners)) {
+    if (!existsSync(resolve(root, 'images', ref))) continue;
+    const d = computeDest(uniqueSorted(owners), ctxCat, ctxDest);
+    const oldDir = dirname(ref);
+    if (oldDir !== d) dest[ref] = d;
+  }
+  return dest;
+}
+
+// ── Fix phase helpers ────────────────────────────────────────────────────────
+
+function fixTitleDirs(root, dirCtx, ctxDest) {
+  for (const [d, ctx] of Object.entries(dirCtx)) {
+    const newDir = ctxDest[ctx];
+    if (d !== newDir) gitMv(root, `titles/${d}`, `titles/${newDir}`);
+  }
+}
+
+function fixAsmDirs(root, asmDirDest) {
+  for (const [oldDir, newDir] of Object.entries(asmDirDest)) {
+    if (oldDir === newDir) continue;
+    if (!existsSync(resolve(root, 'assemblies', oldDir))) continue;
+    moveDirContents(root, `assemblies/${oldDir}`, `assemblies/${newDir}`);
+  }
+}
+
+function fixFlatAsmFiles(root, flatAsmDest) {
+  for (const [bn, dest] of Object.entries(flatAsmDest)) {
+    if (!existsSync(resolve(root, 'assemblies', bn))) continue;
+    mkdirSync(resolve(root, 'assemblies', dest), { recursive: true });
+    gitMv(root, `assemblies/${bn}`, `assemblies/${dest}/${bn}`);
+  }
+}
+
+function fixModDirs(root, modDirDest) {
+  for (const [oldDir, newDir] of Object.entries(modDirDest)) {
+    if (oldDir === newDir) continue;
+    if (!existsSync(resolve(root, 'modules', oldDir))) continue;
+    moveDirContents(root, `modules/${oldDir}`, `modules/${newDir}`);
+  }
+}
+
+function fixImageFiles(root, imgFileDest) {
+  for (const [ref, dest] of Object.entries(imgFileDest)) {
+    if (!existsSync(resolve(root, 'images', ref))) continue;
+    const bn = basename(ref);
+    mkdirSync(resolve(root, 'images', dest), { recursive: true });
+    gitMv(root, `images/${ref}`, `images/${dest}/${bn}`);
+  }
+  removeEmptyDirs(resolve(root, 'images'));
+}
+
+function fixIncludePaths(root, { asmDirDest, flatAsmDest, modDirDest, imgFileDest }) {
+  const masterSed = buildSedExpr({ asmDirDest, flatAsmDest, modDirDest, imgFileDest, mode: 'master' });
+  if (masterSed) {
+    for (const master of globAdoc(resolve(root, 'titles'), 2)) {
+      runSed(root, masterSed, repoRelative(master));
+    }
+  }
+
+  const asmSed = buildSedExpr({ asmDirDest, flatAsmDest, modDirDest, imgFileDest, mode: 'assembly' });
+  if (asmSed) {
+    for (const asm of globAdoc(resolve(root, 'assemblies'), 2)) {
+      runSed(root, asmSed, repoRelative(asm));
+    }
+  }
+
+  const modSed = buildSedExpr({ imgFileDest, mode: 'module' });
+  if (modSed) {
+    for (const mod of globAdoc(resolve(root, 'modules'), 3)) {
+      runSed(root, modSed, repoRelative(mod));
+    }
+  }
+}
+
 // ── Fix helpers ───────────────────────────────────────────────────────────────
 
 function gitMv(root, src, dest) {
@@ -573,21 +659,31 @@ function buildSedExpr({ asmDirDest = {}, flatAsmDest = {}, modDirDest = {}, imgF
   const parts = [];
 
   if (mode === 'master' || mode === 'assembly') {
-    for (const [old, newDir] of Object.entries(asmDirDest)) {
-      if (old === newDir) continue;
-      const prefix = mode === 'assembly' ? '../assemblies/' : 'assemblies/';
-      parts.push(`s|include::${prefix}${old}/|include::${prefix}${newDir}/|g`);
-    }
-    for (const [bn, dest] of Object.entries(flatAsmDest)) {
-      if (mode === 'master') parts.push(`s|include::assemblies/${bn}|include::assemblies/${dest}/${bn}|g`);
-    }
-    for (const [old, newDir] of Object.entries(modDirDest)) {
-      if (old === newDir) continue;
-      const prefix = mode === 'assembly' ? '../modules/' : 'modules/';
-      parts.push(`s|include::${prefix}${old}/|include::${prefix}${newDir}/|g`);
-    }
+    buildIncludeSedParts(parts, asmDirDest, flatAsmDest, modDirDest, mode);
   }
 
+  buildImageSedParts(parts, imgFileDest);
+
+  return parts.join(';');
+}
+
+function buildIncludeSedParts(parts, asmDirDest, flatAsmDest, modDirDest, mode) {
+  for (const [old, newDir] of Object.entries(asmDirDest)) {
+    if (old === newDir) continue;
+    const prefix = mode === 'assembly' ? '../assemblies/' : 'assemblies/';
+    parts.push(`s|include::${prefix}${old}/|include::${prefix}${newDir}/|g`);
+  }
+  for (const [bn, dest] of Object.entries(flatAsmDest)) {
+    if (mode === 'master') parts.push(`s|include::assemblies/${bn}|include::assemblies/${dest}/${bn}|g`);
+  }
+  for (const [old, newDir] of Object.entries(modDirDest)) {
+    if (old === newDir) continue;
+    const prefix = mode === 'assembly' ? '../modules/' : 'modules/';
+    parts.push(`s|include::${prefix}${old}/|include::${prefix}${newDir}/|g`);
+  }
+}
+
+function buildImageSedParts(parts, imgFileDest) {
   for (const [ref, dest] of Object.entries(imgFileDest)) {
     const bn = basename(ref);
     const oldDir = dirname(ref);
@@ -596,8 +692,6 @@ function buildSedExpr({ asmDirDest = {}, flatAsmDest = {}, modDirDest = {}, imgF
       `s|image:${oldDir}/${bn}|image:${dest}/${bn}|g`,
     );
   }
-
-  return parts.join(';');
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────

@@ -56,14 +56,16 @@ function checkFile(root, file) {
   const lines = getLines(file);
   const issues = [];
 
-  issues.push(...checkContentStructure(file, contentType, lines));
-  issues.push(...checkFilenamePrefix(file, contentType, bn));
+  issues.push(
+    ...checkContentStructure(file, contentType, lines),
+    ...checkFilenamePrefix(file, contentType, bn),
+  );
 
   return issues;
 }
 
 function checkContentStructure(file, contentType, lines) {
-  const hasProcedure = lines.some(l => l === '.Procedure');
+  const hasProcedure = lines.includes('.Procedure');
   const hasIncludes = lines.some(l => l.startsWith('include::'));
 
   switch (contentType) {

@@ -134,6 +134,14 @@ function collectCheckIssues(checker, titles) {
 // ── Run all checks across all titles (--all mode) ─────────────────────────
 
 async function runAllChecks(checks, titles, fixMode) {
+  const results = await collectAllResults(checks, titles, fixMode);
+
+  // Output in alphabetical order by check ID
+  const sortedChecks = [...checks].sort((a, b) => a.id.localeCompare(b.id));
+  printAllChecksReport(sortedChecks, results, fixMode);
+}
+
+async function collectAllResults(checks, titles, fixMode) {
   const root = repoRoot();
 
   // Split checks into Vale-based and non-Vale
@@ -165,10 +173,46 @@ async function runAllChecks(checks, titles, fixMode) {
   }
 
   clearValeCache();
+  return results;
+}
 
-  // Output in alphabetical order by check ID
-  const sortedChecks = [...checks].sort((a, b) => a.id.localeCompare(b.id));
+function classifyIssues(allIssues) {
+  let autofixable = 0, manualCount = 0, delegated = 0;
+  for (const iss of allIssues) {
+    if (iss.delegateTo) delegated++;
+    else if (iss.fixable) autofixable++;
+    else manualCount++;
+  }
+  return { autofixable, manualCount, delegated };
+}
 
+function printCheckResult(checker, allIssues, fixedIssues) {
+  const nonDelegatedIssues = allIssues.filter(i => !i.delegateTo);
+  const pass = nonDelegatedIssues.length === 0;
+
+  if (pass) {
+    console.log(`- [x] **CQA-${checker.id}:** ${checker.name}`);
+    return true;
+  }
+
+  console.log(`- [ ] **CQA-${checker.id}:** ${checker.name} (${nonDelegatedIssues.length} issues)`);
+
+  const byFile = new Map();
+  for (const iss of nonDelegatedIssues) {
+    if (!byFile.has(iss.file)) byFile.set(iss.file, []);
+    byFile.get(iss.file).push(iss);
+  }
+
+  for (const [, fileIssues] of byFile) {
+    for (const iss of fileIssues) {
+      const wasFixed = fixedIssues.some(f => f.file === iss.file && f.message === iss.message);
+      console.log(`  ${renderIssue(iss, wasFixed)}`);
+    }
+  }
+  return false;
+}
+
+function printAllChecksReport(sortedChecks, results, fixMode) {
   console.log('# CQA Report\n');
 
   let totalAutofixable = 0, totalManual = 0, totalDelegated = 0, totalFixed = 0;
@@ -176,36 +220,12 @@ async function runAllChecks(checks, titles, fixMode) {
 
   for (const checker of sortedChecks) {
     const { allIssues, fixedIssues } = results.get(checker.id);
+    const { autofixable, manualCount, delegated } = classifyIssues(allIssues);
 
-    let autofixable = 0, manualCount = 0, delegated = 0;
-    for (const iss of allIssues) {
-      if (iss.delegateTo) delegated++;
-      else if (iss.fixable) autofixable++;
-      else manualCount++;
-    }
-
-    const nonDelegatedIssues = allIssues.filter(i => !i.delegateTo);
-    const pass = nonDelegatedIssues.length === 0;
-
-    if (pass) {
+    if (printCheckResult(checker, allIssues, fixedIssues)) {
       checksPass++;
-      console.log(`- [x] **CQA-${checker.id}:** ${checker.name}`);
     } else {
       checksFail++;
-      console.log(`- [ ] **CQA-${checker.id}:** ${checker.name} (${nonDelegatedIssues.length} issues)`);
-
-      const byFile = new Map();
-      for (const iss of nonDelegatedIssues) {
-        if (!byFile.has(iss.file)) byFile.set(iss.file, []);
-        byFile.get(iss.file).push(iss);
-      }
-
-      for (const [, fileIssues] of byFile) {
-        for (const iss of fileIssues) {
-          const wasFixed = fixedIssues.some(f => f.file === iss.file && f.message === iss.message);
-          console.log(`  ${renderIssue(iss, wasFixed)}`);
-        }
-      }
     }
 
     totalAutofixable += autofixable;
@@ -214,6 +234,10 @@ async function runAllChecks(checks, titles, fixMode) {
     totalFixed += fixedIssues.length;
   }
 
+  printFinalSummary({ checksPass, checksFail, totalAutofixable, totalManual, totalDelegated, totalFixed, fixMode });
+}
+
+function printFinalSummary({ checksPass, checksFail, totalAutofixable, totalManual, totalDelegated, totalFixed, fixMode }) {
   console.log('\n---\n');
   console.log(`## Summary\n`);
   console.log(`Checks: ${checksPass + checksFail} total, ${checksPass} pass, ${checksFail} fail`);
@@ -221,10 +245,11 @@ async function runAllChecks(checks, titles, fixMode) {
   if (totalIssues > 0) {
     console.log(`Issues: ${totalIssues} total (${totalAutofixable} autofixable, ${totalManual} manual, ${totalDelegated} delegated)`);
   }
-  if (fixMode && totalFixed > 0) {
-    console.log(`Fixed: ${totalFixed}`);
-  }
-  if (!fixMode && totalAutofixable > 0) {
+  if (fixMode) {
+    if (totalFixed > 0) {
+      console.log(`Fixed: ${totalFixed}`);
+    }
+  } else if (totalAutofixable > 0) {
     console.log(`Run with --fix to auto-resolve ${totalAutofixable} issue${totalAutofixable !== 1 ? 's' : ''}.`);
   }
 }
@@ -283,8 +308,7 @@ Output markers:
   [-> CQA-NN]     Delegated to another check`);
 }
 
-async function main() {
-  const args = process.argv.slice(2);
+function parseArgs(args) {
   let fixMode = false;
   let allMode = false;
   let onlyCheck = null;
@@ -298,13 +322,45 @@ async function main() {
     else if (!args[i].startsWith('--')) { positional.push(args[i]); }
   }
 
-  // Derive repo root from the first title path (supports worktree testing)
+  return { fixMode, allMode, onlyCheck, positional };
+}
+
+function initRepoRoot(positional) {
   const firstTitle = positional[0];
   if (firstTitle) {
     const absTitle = resolve(firstTitle);
     const gitRoot = execFileSync('git', ['-C', dirname(absTitle), 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     setRepoRoot(gitRoot);
   }
+}
+
+function preRunValeForTitle(title, checks) {
+  const hasValeChecks = checks.some(c => VALE_CHECK_IDS.has(c.id));
+  if (!hasValeChecks) return;
+
+  const root = repoRoot();
+  const files = collectTitle(resolve(root, title));
+  const valeFiles = files
+    .filter(f => f.endsWith('.adoc') && basename(f) !== 'attributes.adoc')
+    .map(f => resolve(root, f))
+    .filter(f => existsSync(f));
+  if (valeFiles.length > 0) preRunVale(valeFiles);
+}
+
+function runPerTitleMode(checks, titles, fixMode) {
+  for (const title of titles) {
+    preRunValeForTitle(title, checks);
+    for (const checker of checks) {
+      runCheckSingle(checker, title, fixMode);
+    }
+    clearValeCache();
+  }
+}
+
+async function main() {
+  const { fixMode, allMode, onlyCheck, positional } = parseArgs(process.argv.slice(2));
+
+  initRepoRoot(positional);
 
   const checks = await loadChecks(onlyCheck);
 
@@ -324,26 +380,7 @@ async function main() {
   if (allMode) {
     await runAllChecks(checks, titles, fixMode);
   } else {
-    // Per-title mode: pre-run Vale once per title (optimization 3)
-    const hasValeChecks = checks.some(c => VALE_CHECK_IDS.has(c.id));
-    for (const title of titles) {
-      if (hasValeChecks) {
-        // Single Vale run covering all files for this title
-        const root = repoRoot();
-        const files = collectTitle(resolve(root, title));
-        const valeFiles = files
-          .filter(f => f.endsWith('.adoc') && basename(f) !== 'attributes.adoc')
-          .map(f => resolve(root, f))
-          .filter(f => existsSync(f));
-        if (valeFiles.length > 0) preRunVale(valeFiles);
-      }
-
-      for (const checker of checks) {
-        runCheckSingle(checker, title, fixMode);
-      }
-
-      clearValeCache();
-    }
+    runPerTitleMode(checks, titles, fixMode);
   }
 }
 

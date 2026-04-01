@@ -73,7 +73,7 @@ function gerundToImperative(word) {
   const consonants = 'bcdfghjkmnpqrtvwxyz';
   if (stem.length >= 3 && lastTwo[0] === lastTwo[1] && consonants.includes(lastTwo[0])) {
     result = stem.slice(0, -1);
-  } else if (/v$/.test(stem)) {
+  } else if (stem.endsWith('v')) {
     result = stem + 'e';
   } else if (/[aeiou]z$/.test(stem)) {
     result = stem + 'e';
@@ -260,7 +260,7 @@ export default class Cqa10Titles extends Checker {
       }
 
       const result = analyzeFile(root, file, attrLines);
-      if (!result || !result.changed) continue;
+      if (!result?.changed) continue;
 
       issues.push(...issuesFromResult(file, result));
     }
@@ -303,7 +303,7 @@ function applyFix(root, file, attrLines) {
   if (!existsSync(abs)) return;
 
   const result = analyzeFile(root, file, attrLines);
-  if (!result || !result.changed) return;
+  if (!result?.changed) return;
 
   let text = readFileSync(abs, 'utf8');
 

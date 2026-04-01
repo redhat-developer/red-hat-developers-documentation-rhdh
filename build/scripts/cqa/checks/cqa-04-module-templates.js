@@ -76,11 +76,11 @@ function checkFile(file, contentType) {
     issues.push(...checkProcedure(file, lines));
   }
 
-  if (!lines.some(l => l === '[role="_abstract"]')) {
+  if (!lines.includes('[role="_abstract"]')) {
     issues.push(delegate(file, '09', 'Missing [role="_abstract"] intro paragraph', null, true));
   }
 
-  if (contentType === 'CONCEPT' && lines.some(l => l === '.Procedure')) {
+  if (contentType === 'CONCEPT' && lines.includes('.Procedure')) {
     issues.push(manual(file, 'CONCEPT module has .Procedure section (move to a PROCEDURE module)'));
   }
 

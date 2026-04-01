@@ -10,7 +10,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve, basename } from 'node:path';
+import { resolve } from 'node:path';
 import { Checker, autofix, manual } from '../lib/checker.js';
 import { repoRoot, collectTitle, getContentType, getLines } from '../lib/asciidoc.js';
 
@@ -49,7 +49,7 @@ export default class Cqa09ShortDescriptionFormat extends Checker {
 
 function checkFile(file) {
   const lines = getLines(file);
-  const abstractIdx = lines.findIndex(l => l === '[role="_abstract"]');
+  const abstractIdx = lines.indexOf('[role="_abstract"]');
 
   if (abstractIdx === -1) {
     return [autofix(file, 'Missing [role="_abstract"] marker')];
@@ -69,7 +69,7 @@ function checkFile(file) {
     if (!l || l.startsWith('.') || l.startsWith('include::')) break;
     abstractText += l + ' ';
   }
-  abstractText = abstractText.trim().replace(/\s+/g, ' ');
+  abstractText = abstractText.trim().replaceAll(/\s+/g, ' ');
 
   // Resolve single attribute reference like {abstract}
   if (/^\{[a-z][-a-z0-9]*\}$/.test(abstractText)) {
@@ -98,7 +98,7 @@ function fixFile(root, file) {
   const rawLines = readFileSync(abs, 'utf8').split('\n');
   const lines = rawLines.map(l => l.trimEnd());
 
-  const abstractIdx = lines.findIndex(l => l === '[role="_abstract"]');
+  const abstractIdx = lines.indexOf('[role="_abstract"]');
 
   if (abstractIdx === -1) {
     insertAbstractMarker(abs, rawLines, lines);

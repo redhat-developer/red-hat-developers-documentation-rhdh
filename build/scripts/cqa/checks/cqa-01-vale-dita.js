@@ -50,14 +50,7 @@ export default class Cqa01ValeDita extends Checker {
 
     let valeIssues;
     if (hasValeCache()) {
-      // Use pre-computed cache — filter for AsciiDocDITA.* rules
-      valeIssues = [];
-      for (const f of adocFiles) {
-        for (const iss of getCachedIssues(f)) {
-          if (!iss.Check.startsWith('AsciiDocDITA.')) continue;
-          valeIssues.push({ file: f, line: iss.Line, check: iss.Check, message: iss.Message });
-        }
-      }
+      valeIssues = collectCachedDitaIssues(adocFiles);
     } else {
       // Fallback: run Vale directly
       const valeConfig = resolve(root, '.vale-dita-only.ini');
@@ -87,6 +80,19 @@ export default class Cqa01ValeDita extends Checker {
     const valeIssues = runVale(root, valeConfig, absFiles);
     applyFixes(root, valeIssues);
   }
+}
+
+// ── Cache helpers ───────────────────────────────────────────────────────────
+
+function collectCachedDitaIssues(adocFiles) {
+  const valeIssues = [];
+  for (const f of adocFiles) {
+    for (const iss of getCachedIssues(f)) {
+      if (!iss.Check.startsWith('AsciiDocDITA.')) continue;
+      valeIssues.push({ file: f, line: iss.Line, check: iss.Check, message: iss.Message });
+    }
+  }
+  return valeIssues;
 }
 
 // ── Vale invocation (fallback / fix mode) ───────────────────────────────────
@@ -216,7 +222,7 @@ function fixBlockTitle(lines, valeLine) {
 }
 
 function fixTaskContents(lines, _valeLine) {
-  const firstOl = lines.findIndex(l => /^\. /.test(l));
+  const firstOl = lines.findIndex(l => l.startsWith('. '));
   if (firstOl === -1) return false;
   lines.splice(firstOl, 0, '.Procedure');
   return true;
