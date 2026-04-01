@@ -131,7 +131,17 @@ function collectImageRefsFromFile(file, referenced) {
 
 function patternToGlob(bn) {
   // Split on {attr} placeholders, returning fixed segments
-  return bn.split(/\{[^}]*\}/);
+  const segments = [];
+  let pos = 0;
+  let open = bn.indexOf('{', pos);
+  while (open >= 0) {
+    segments.push(bn.slice(pos, open));
+    const close = bn.indexOf('}', open + 1);
+    pos = close >= 0 ? close + 1 : bn.length;
+    open = bn.indexOf('{', pos);
+  }
+  segments.push(bn.slice(pos));
+  return segments;
 }
 
 function isIncluded(bn, basenames, patterns) {
