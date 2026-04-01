@@ -11,6 +11,7 @@
 import { existsSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { VALE } from '../lib/bin.js';
 import { Checker, manual } from '../lib/checker.js';
 import { repoRoot, collectTitle } from '../lib/asciidoc.js';
 import { hasValeCache, getCachedIssues } from '../lib/vale.js';
@@ -66,7 +67,7 @@ function collectCachedGrammarIssues(adocFiles) {
 function runValeAndClassify(root, configPath, files) {
   let jsonStr;
   try {
-    jsonStr = execFileSync('vale', [
+    jsonStr = execFileSync(VALE, [
       '--config', configPath,
       '--filter', VALE_FILTER,
       '--output', 'JSON',

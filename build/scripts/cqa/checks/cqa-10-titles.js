@@ -15,6 +15,7 @@
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, renameSync } from 'node:fs';
 import { resolve, basename, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { GIT } from '../lib/bin.js';
 import { Checker, autofix, manual, delegate } from '../lib/checker.js';
 import { repoRoot, collectTitle, getContentType, getLines } from '../lib/asciidoc.js';
 
@@ -329,7 +330,7 @@ function applyFix(root, file, attrLines) {
   if (result.currentFilename !== result.expectedFilename) {
     const newAbs = resolve(dirname(abs), result.expectedFilename);
     try {
-      execFileSync('git', ['mv', abs, newAbs], { cwd: root });
+      execFileSync(GIT, ['mv', abs, newAbs], { cwd: root });
     } catch {
       renameSync(abs, newAbs);
     }

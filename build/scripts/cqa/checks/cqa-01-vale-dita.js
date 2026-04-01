@@ -23,6 +23,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { VALE } from '../lib/bin.js';
 import { Checker, autofix, manual, delegate } from '../lib/checker.js';
 import { repoRoot, collectTitle, invalidateCache } from '../lib/asciidoc.js';
 import { hasValeCache, getCachedIssues } from '../lib/vale.js';
@@ -99,7 +100,7 @@ function collectCachedDitaIssues(adocFiles) {
 
 function runVale(root, configPath, files) {
   try {
-    const output = execFileSync('vale', [
+    const output = execFileSync(VALE, [
       '--config', configPath,
       '--output', 'JSON',
       ...files,

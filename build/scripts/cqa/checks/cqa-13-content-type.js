@@ -13,6 +13,7 @@
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, renameSync } from 'node:fs';
 import { resolve, basename, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { GIT } from '../lib/bin.js';
 import { Checker, autofix, manual } from '../lib/checker.js';
 import { repoRoot, collectTitle, getContentType, getLines } from '../lib/asciidoc.js';
 
@@ -114,7 +115,7 @@ function fixPrefixMismatch(root, file) {
   if (abs === newAbs) return;
 
   try {
-    execFileSync('git', ['mv', abs, newAbs], { cwd: root });
+    execFileSync(GIT, ['mv', abs, newAbs], { cwd: root });
   } catch {
     renameSync(abs, newAbs);
   }

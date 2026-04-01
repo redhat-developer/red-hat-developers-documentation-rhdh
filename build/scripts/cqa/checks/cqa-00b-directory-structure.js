@@ -12,6 +12,7 @@
 import { readdirSync, existsSync, readFileSync, mkdirSync, rmdirSync } from 'node:fs';
 import { resolve, basename, dirname, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { GIT, SED } from '../lib/bin.js';
 import { Checker, autofix, manual } from '../lib/checker.js';
 import { repoRoot, repoRelative } from '../lib/asciidoc.js';
 
@@ -621,7 +622,7 @@ function fixIncludePaths(root, { asmDirDest, flatAsmDest, modDirDest, imgFileDes
 
 function gitMv(root, src, dest) {
   try {
-    execFileSync('git', ['mv', src, dest], { cwd: root, stdio: 'pipe' });
+    execFileSync(GIT, ['mv', src, dest], { cwd: root, stdio: 'pipe' });
   } catch (e) {
     console.error(`git mv failed: ${src} → ${dest}: ${e.message}`);
   }
@@ -651,7 +652,7 @@ function removeEmptyDirs(dir) {
 
 function runSed(root, expr, file) {
   try {
-    execFileSync('sed', ['-i', expr, file], { cwd: root, stdio: 'pipe' });
+    execFileSync(SED, ['-i', expr, file], { cwd: root, stdio: 'pipe' });
   } catch { /* ignore */ }
 }
 

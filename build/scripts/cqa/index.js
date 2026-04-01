@@ -13,6 +13,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { GIT } from './lib/bin.js';
 import { repoRoot, repoRelative, setRepoRoot, collectTitle } from './lib/asciidoc.js';
 import { preRunVale, preRunValeAsync, clearValeCache } from './lib/vale.js';
 import { renderCheckHeader, renderFileHeader, renderIssue, renderSummary } from './lib/output.js';
@@ -329,7 +330,7 @@ function initRepoRoot(positional) {
   const firstTitle = positional[0];
   if (firstTitle) {
     const absTitle = resolve(firstTitle);
-    const gitRoot = execFileSync('git', ['-C', dirname(absTitle), 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+    const gitRoot = execFileSync(GIT, ['-C', dirname(absTitle), 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     setRepoRoot(gitRoot);
   }
 }
