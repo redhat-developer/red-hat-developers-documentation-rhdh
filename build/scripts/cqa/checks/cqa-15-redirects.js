@@ -5,7 +5,8 @@
  *   - Deleted title master.adoc files (title removed)
  *   - Changed :title: in master.adoc (title renamed)
  *
- * Uses git diff HEAD~5..HEAD to detect changes.
+ * Uses git diff to detect changes against the base branch (CQA_BASE_REF env var)
+ * or HEAD~5 as a fallback for local runs.
  * All violations are MANUAL — redirect implementation is platform-dependent.
  */
 
@@ -49,10 +50,12 @@ export default class Cqa15Redirects extends Checker {
 }
 
 function gitDiff(root, ...args) {
+  const baseRef = process.env.CQA_BASE_REF || 'HEAD~5';
   try {
-    const output = execFileSync(GIT, ['diff', 'HEAD~5..HEAD', ...args], {
+    const output = execFileSync(GIT, ['diff', `${baseRef}..HEAD`, ...args], {
       cwd: root,
       encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     return output.trim().split('\n').filter(Boolean);
   } catch {
