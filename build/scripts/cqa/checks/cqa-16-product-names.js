@@ -78,6 +78,12 @@ const PATTERNS = [
   { pattern: 'GKE', replacement: '{gke-short}' },
 ];
 
+// Attribute names inserted by fix — used to collapse double-brace artifacts
+const INSERTED_ATTRS = new Set([
+  ...PATTERNS.map(e => e.replacement.split('|')[0].slice(1, -1)),
+  'product-custom-resource-type',
+]);
+
 export default class Cqa16ProductNames extends Checker {
   id = '16';
   name = 'Verify official product names';
@@ -239,8 +245,10 @@ function fixFile(root, file) {
 
   content = fixedLines.join('\n');
   // Fix double-bracing artifacts from replacements (e.g., {RHDH} → {{product-very-short}})
-  // Only collapse double braces around known attribute references, not arbitrary text like {{inherit}}
-  content = content.replaceAll(/\{\{([a-zA-Z][a-zA-Z0-9_-]*)\}\}/g, '{$1}');
+  // Only collapse double braces around attributes we actually insert
+  for (const attrName of INSERTED_ATTRS) {
+    content = content.replaceAll(`{{${attrName}}}`, `{${attrName}}`);
+  }
 
   writeFileSync(abs, content, 'utf8');
   invalidateCache(file);
