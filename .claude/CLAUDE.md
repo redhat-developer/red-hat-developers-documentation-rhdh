@@ -2,25 +2,22 @@
 
 ## CQA Compliance
 
-When editing `.adoc` files, ALWAYS run the relevant CQA scripts to validate and fix changes before considering the task done. Run all 19 checks at once with `build/scripts/cqa.sh`, or run individual scripts. All share a common interface via `build/scripts/cqa-lib.sh`:
+When editing `.adoc` files, ALWAYS run the relevant CQA checks to validate and fix changes before considering the task done:
 
 ```bash
 # Report issues for a title
-./build/scripts/cqa.sh titles/<title>/master.adoc
+node build/scripts/cqa/index.js titles/<title>/master.adoc
 
 # Auto-fix issues
-./build/scripts/cqa.sh --fix titles/<title>/master.adoc
+node build/scripts/cqa/index.js --fix titles/<title>/master.adoc
 
-# Run across all titles
-./build/scripts/cqa.sh --all
-
-# Auto-fix across all titles
-./build/scripts/cqa.sh --fix --all
+# Run a single check
+node build/scripts/cqa/index.js --check NN titles/<title>/master.adoc
 ```
 
 Output markers: `[AUTOFIX]` (auto-fixable), `[FIXED]` (applied), `[MANUAL]` (needs human), `[-> CQA-NN AUTOFIX]` / `[-> CQA-NN MANUAL]` (delegated).
 
-For full CQA workflow, load `.claude/skills/cqa-main-workflow.md`. Individual skill files are in `.claude/skills/cqa-*.md`.
+The `project-cqa` plugin (`.claude/plugins/project-cqa/`) provides skills for the full CQA workflow and individual checks. The CQA spec is at `.claude/plugins/project-cqa/resources/cqa-spec.md`.
 
 ## Pull Requests
 
@@ -35,7 +32,7 @@ When creating PRs, follow `.github/pull_request_template.md`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `content-quality-assessment.yml` | PR (`.adoc`, `build/scripts/`) | Runs `cqa.sh --all` on entire repo. Posts checklist as PR comment, uploads SARIF to Code Scanning. Scripts sourced from `main` branch (not base) for backport compatibility. |
+| `content-quality-assessment.yml` | PR (`.adoc`, `build/scripts/`) | Runs `node build/scripts/cqa/index.js --all` on entire repo. Posts checklist as PR comment. Scripts sourced from `main` branch (not base) for backport compatibility. |
 | `build-asciidoc.yml` | Push to main/release | Builds AsciiDoc docs and deploys to GitHub Pages. Cleans up merged PR preview branches. |
 | `pr.yml` | PR | Builds HTML preview, deploys to `gh-pages`, posts preview URL as PR comment. |
 | `style-guide.yml` | PR | Runs Vale linter on `assemblies/` for style guide compliance. |
