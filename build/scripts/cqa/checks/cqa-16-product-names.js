@@ -232,7 +232,9 @@ function fixFile(root, file) {
   }
 
   content = fixedLines.join('\n');
-  content = content.replaceAll('{{', '{').replaceAll('}}', '}');
+  // Fix double-bracing artifacts from replacements (e.g., {RHDH} → {{product-very-short}})
+  // Only collapse double braces around known attribute references, not arbitrary text like {{inherit}}
+  content = content.replaceAll(/\{\{([a-zA-Z][a-zA-Z0-9_-]*)\}\}/g, '{$1}');
 
   writeFileSync(abs, content, 'utf8');
   invalidateCache(file);
