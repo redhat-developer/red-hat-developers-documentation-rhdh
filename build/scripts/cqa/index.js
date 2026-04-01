@@ -251,7 +251,7 @@ function printFinalSummary({ checksPass, checksFail, totalAutofixable, totalManu
       console.log(`Fixed: ${totalFixed}`);
     }
   } else if (totalAutofixable > 0) {
-    console.log(`Run with --fix to auto-resolve ${totalAutofixable} issue${totalAutofixable === 1 ? '' : 's'}.`);
+    console.log(`Run \`node build/scripts/cqa/index.js --fix --all\` to auto-resolve ${totalAutofixable} issue${totalAutofixable === 1 ? '' : 's'}.`);
   }
 }
 
