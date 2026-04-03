@@ -11,12 +11,13 @@
  *   node build/scripts/build-orchestrator.js -b main --jobs 4
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, renameSync, copyFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { execSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { cpus } from 'node:os';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { get as httpsGet } from 'node:https';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -30,6 +31,7 @@ const EXCLUDED_TITLES = /rhdh-plugins-reference/;
 const CCUTIL_IMAGE = 'quay.io/ivanhorvath/ccutil:amazing';
 const HTMLTEST_IMAGE = 'docker.io/wjdp/htmltest:latest';
 const PAGES_BASE = 'https://redhat-developer.github.io/red-hat-developers-documentation-rhdh';
+const SAFE_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
 
 // ── Argument parsing ─────────────────────────────────────────────────────────
 
@@ -127,36 +129,22 @@ class Semaphore {
   }
 }
 
-// ── Single title build ───────────────────────────────────────────────────────
+// ── Spawn helper (shared by buildTitle and runHtmltest) ─────────────────────
 
-function buildTitle(title, branch, repoRoot, verbose) {
+function spawnCapture(command, args, { cwd, verbose, groupName }) {
   return new Promise((resolve) => {
     const start = Date.now();
-    const dest = join('titles-generated', branch, title.name);
     let output = '';
 
-    // Clean previous build artifacts
-    const buildDir = join(repoRoot, title.dir, 'build');
-    try { rmSync(buildDir, { recursive: true, force: true }); } catch {}
-
-    // Build with ccutil via Podman
-    const podmanArgs = [
-      'run', '--rm',
-      '--volume', `${repoRoot}:/docs:z`,
-      '--workdir', `/docs/${title.dir}`,
-      CCUTIL_IMAGE,
-      'ccutil', 'compile',
-      '--format', 'html-single',
-      '--lang', 'en-US',
-      '--doctype', 'article',
-    ];
-
-    if (verbose) {
-      console.log(`::group::${title.name}`);
-      console.log(`podman ${podmanArgs.join(' ')}`);
+    if (verbose && groupName) {
+      console.log(`::group::${groupName}`);
+      console.log(`${command} ${args.join(' ')}`);
     }
 
-    const proc = spawn('podman', podmanArgs, { cwd: repoRoot });
+    const proc = spawn(command, args, {
+      cwd,
+      env: { ...process.env, PATH: SAFE_PATH },
+    });
 
     proc.stdout.on('data', (data) => {
       output += data.toString();
@@ -169,43 +157,66 @@ function buildTitle(title, branch, repoRoot, verbose) {
     });
 
     proc.on('close', (code) => {
-      if (verbose) console.log('::endgroup::');
-
+      if (verbose && groupName) console.log('::endgroup::');
       const duration = Math.round((Date.now() - start) / 1000);
-
-      if (code !== 0) {
-        resolve({ title: title.name, status: 'failed', duration, output, errors: [] });
-        return;
-      }
-
-      // Move compiled output to destination
-      const srcDir = join(repoRoot, title.dir, 'build', 'tmp', 'en-US', 'html-single');
-      const destDir = join(repoRoot, dest);
-      try {
-        rmSync(destDir, { recursive: true, force: true });
-        execSync(`mv -f "${srcDir}" "${destDir}"`, { cwd: repoRoot });
-      } catch (err) {
-        resolve({ title: title.name, status: 'failed', duration, output: output + '\n' + err.message, errors: [] });
-        return;
-      }
-
-      // Copy referenced images
-      try {
-        copyImages(destDir, repoRoot);
-      } catch (err) {
-        // Non-fatal: image copy failures shouldn't fail the build
-        output += `\nWarning: image copy issue: ${err.message}`;
-      }
-
-      resolve({ title: title.name, status: 'passed', duration, output, errors: [] });
+      resolve({ code, duration, output });
     });
 
     proc.on('error', (err) => {
-      if (verbose) console.log('::endgroup::');
+      if (verbose && groupName) console.log('::endgroup::');
       const duration = Math.round((Date.now() - start) / 1000);
-      resolve({ title: title.name, status: 'failed', duration, output: err.message, errors: [] });
+      resolve({ code: 1, duration, output: err.message });
     });
   });
+}
+
+// ── Single title build ───────────────────────────────────────────────────────
+
+async function buildTitle(title, branch, repoRoot, verbose) {
+  const dest = join('titles-generated', branch, title.name);
+
+  // Clean previous build artifacts
+  const buildDir = join(repoRoot, title.dir, 'build');
+  try { rmSync(buildDir, { recursive: true, force: true }); } catch {}
+
+  const podmanArgs = [
+    'run', '--rm',
+    '--volume', `${repoRoot}:/docs:z`,
+    '--workdir', `/docs/${title.dir}`,
+    CCUTIL_IMAGE,
+    'ccutil', 'compile',
+    '--format', 'html-single',
+    '--lang', 'en-US',
+    '--doctype', 'article',
+  ];
+
+  const { code, duration, output } = await spawnCapture('podman', podmanArgs, {
+    cwd: repoRoot, verbose, groupName: title.name,
+  });
+
+  if (code !== 0) {
+    return { title: title.name, status: 'failed', duration, output, errors: [] };
+  }
+
+  // Move compiled output to destination
+  const srcDir = join(repoRoot, title.dir, 'build', 'tmp', 'en-US', 'html-single');
+  const destDir = join(repoRoot, dest);
+  try {
+    rmSync(destDir, { recursive: true, force: true });
+    renameSync(srcDir, destDir);
+  } catch (err) {
+    return { title: title.name, status: 'failed', duration, output: output + '\n' + err.message, errors: [] };
+  }
+
+  // Copy referenced images
+  let finalOutput = output;
+  try {
+    copyImages(destDir, repoRoot);
+  } catch (err) {
+    finalOutput += `\nWarning: image copy issue: ${err.message}`;
+  }
+
+  return { title: title.name, status: 'passed', duration, output: finalOutput, errors: [] };
 }
 
 function copyImages(destDir, repoRoot) {
@@ -227,7 +238,7 @@ function copyImages(destDir, repoRoot) {
     const srcImage = resolve(repoRoot, im);
     if (existsSync(srcImage)) {
       try {
-        execSync(`rsync -q "${srcImage}" "${imDir}/"`, { cwd: repoRoot });
+        copyFileSync(srcImage, join(imDir, im.split('/').pop()));
       } catch {}
     }
   }
@@ -235,41 +246,15 @@ function copyImages(destDir, repoRoot) {
 
 // ── htmltest ─────────────────────────────────────────────────────────────────
 
-function runHtmltest(repoRoot, verbose) {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    let output = '';
+async function runHtmltest(repoRoot, verbose) {
+  const { code, duration, output } = await spawnCapture('podman', [
+    'run', '--rm',
+    '--volume', `${repoRoot}:/test:z`,
+    HTMLTEST_IMAGE,
+    '-c', '.htmltest.yml',
+  ], { cwd: repoRoot, verbose, groupName: 'htmltest' });
 
-    if (verbose) console.log('::group::htmltest');
-
-    const proc = spawn('podman', [
-      'run', '--rm',
-      '--volume', `${repoRoot}:/test:z`,
-      HTMLTEST_IMAGE,
-      '-c', '.htmltest.yml',
-    ], { cwd: repoRoot });
-
-    proc.stdout.on('data', (data) => {
-      output += data.toString();
-      if (verbose) process.stdout.write(data);
-    });
-
-    proc.stderr.on('data', (data) => {
-      output += data.toString();
-      if (verbose) process.stderr.write(data);
-    });
-
-    proc.on('close', (code) => {
-      if (verbose) console.log('::endgroup::');
-      const duration = Math.round((Date.now() - start) / 1000);
-      resolve({ status: code === 0 ? 'passed' : 'failed', duration, output });
-    });
-
-    proc.on('error', (err) => {
-      if (verbose) console.log('::endgroup::');
-      resolve({ status: 'failed', duration: 0, output: err.message });
-    });
-  });
+  return { status: code === 0 ? 'passed' : 'failed', duration, output };
 }
 
 // ── Index HTML generation ────────────────────────────────────────────────────
@@ -287,7 +272,27 @@ function generateBranchIndex(branch, results, repoRoot) {
   writeFileSync(join(indexDir, 'index.html'), html);
 }
 
-function updateRootIndex(branch, repoRoot) {
+function fetchUrl(url) {
+  return new Promise((resolve, reject) => {
+    httpsGet(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        fetchUrl(res.headers.location).then(resolve, reject);
+        return;
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        reject(new Error(`HTTP ${res.statusCode}`));
+        return;
+      }
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => resolve(data));
+      res.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
+async function updateRootIndex(branch, repoRoot) {
   const isPR = branch.startsWith('pr-');
   const indexFile = isPR ? 'pulls.html' : 'index.html';
   const indexPath = join(repoRoot, 'titles-generated', indexFile);
@@ -295,7 +300,8 @@ function updateRootIndex(branch, repoRoot) {
 
   // Fetch existing index from GitHub Pages
   try {
-    execSync(`curl -sSL "${url}" -o "${indexPath}"`, { cwd: repoRoot, timeout: 30000 });
+    const data = await fetchUrl(url);
+    writeFileSync(indexPath, data);
   } catch {
     // If fetch fails, create a minimal file
     writeFileSync(indexPath, '<html><body><ul>\n</ul></body></html>');
@@ -447,7 +453,7 @@ async function main() {
   generateBranchIndex(args.branch, buildResults, repoRoot);
 
   // Update root index
-  updateRootIndex(args.branch, repoRoot);
+  await updateRootIndex(args.branch, repoRoot);
 
   // Run htmltest
   console.log('\nRunning link validation (htmltest)...');
