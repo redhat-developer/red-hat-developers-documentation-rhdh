@@ -24,7 +24,7 @@ const __dirname = dirname(__filename);
 
 const EXCLUDED_TITLES = /rhdh-plugins-reference/;
 const CCUTIL_IMAGE = 'quay.io/ivanhorvath/ccutil:amazing';
-const HTMLTEST_IMAGE = 'docker.io/wjdp/htmltest:latest';
+const LYCHEE_VERSION = 'v0.23.0';
 const PAGES_BASE = 'https://redhat-developer.github.io/red-hat-developers-documentation-rhdh';
 const SAFE_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
 
@@ -127,7 +127,7 @@ class Semaphore {
   }
 }
 
-// ── Spawn helper (shared by buildTitle and runHtmltest) ─────────────────────
+// ── Spawn helper (shared by buildTitle and runLychee) ──────────────────────
 
 function spawnCapture(command, args, { cwd, verbose, groupName }) {
   return new Promise((resolve) => {
@@ -242,17 +242,102 @@ function copyImages(destDir, repoRoot) {
   }
 }
 
-// ── htmltest ─────────────────────────────────────────────────────────────────
+// ── lychee link checker ─────────────────────────────────────────────────────
 
-async function runHtmltest(repoRoot, verbose) {
-  const { code, duration, output } = await spawnCapture('podman', [
-    'run', '--rm',
-    '--volume', `${repoRoot}:/test:z`,
-    HTMLTEST_IMAGE,
-    '-c', '.htmltest.yml',
-  ], { cwd: repoRoot, verbose, groupName: 'htmltest' });
+async function ensureLychee(repoRoot) {
+  // Check PATH first
+  try {
+    const { code } = await spawnCapture('lychee', ['--version'], { cwd: repoRoot, verbose: false });
+    if (code === 0) return 'lychee';
+  } catch {}
 
-  return { status: code === 0 ? 'passed' : 'failed', duration, output };
+  // Download to local cache
+  const cacheDir = join(repoRoot, 'build', '.cache');
+  const lychee = join(cacheDir, 'lychee');
+  if (existsSync(lychee)) return lychee;
+
+  console.log('Downloading lychee...');
+  mkdirSync(cacheDir, { recursive: true });
+  const url = `https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz`;
+  const dl = await spawnCapture('sh', ['-c', `curl -sSfL "${url}" | tar xz -C "${cacheDir}" lychee`],
+    { cwd: repoRoot, verbose: false });
+  if (dl.code !== 0 || !existsSync(lychee)) {
+    throw new Error(`Failed to download lychee: ${dl.output}`);
+  }
+  return lychee;
+}
+
+async function runLychee(repoRoot, verbose) {
+  const lycheeBin = await ensureLychee(repoRoot);
+  const { code, duration, output } = await spawnCapture(lycheeBin, [
+    '--config', join(repoRoot, 'lychee.toml'),
+    '--format', 'json',
+    join(repoRoot, 'titles-generated'),
+  ], { cwd: repoRoot, verbose, groupName: 'lychee' });
+
+  let errors = [];
+  let stats = { total: 0, successful: 0, errors: 0, excludes: 0, timeouts: 0 };
+  try {
+    // Extract JSON from output (stderr warnings may precede the JSON)
+    const jsonStart = output.indexOf('{');
+    const jsonStr = jsonStart >= 0 ? output.slice(jsonStart) : output;
+    const report = JSON.parse(jsonStr);
+    stats = {
+      total: report.total || 0,
+      successful: report.successful || 0,
+      errors: report.errors || 0,
+      excludes: report.excludes || 0,
+      timeouts: report.timeouts || 0,
+    };
+    if (code !== 0 && report.error_map) {
+      // Collect each broken URL per source file (no deduplication)
+      const brokenEntries = [];
+      for (const [htmlFile, details] of Object.entries(report.error_map)) {
+        for (const d of details) {
+          brokenEntries.push({ htmlFile, ...d });
+        }
+      }
+      // Trace each broken URL back to .adoc source files
+      errors = await Promise.all(brokenEntries.map(async (d) => {
+        const status = typeof d.status === 'object' ? d.status.text : String(d.status);
+        const statusCode = typeof d.status === 'object' && d.status.code ? `[${d.status.code}] ` : '';
+        const sources = await traceUrlToSource(d.url, repoRoot);
+        // Fall back to the HTML file path when .adoc tracing finds nothing
+        if (sources.length === 0 && d.htmlFile) {
+          sources.push(d.htmlFile.replace(repoRoot + '/', ''));
+        }
+        return {
+          line: `${statusCode}${d.url}`,
+          sources,
+          patternId: 'lychee-broken-link',
+          cause: `Link check failed: ${status}`,
+          fix: 'Fix the broken link or add to .lycheeignore',
+        };
+      }));
+    }
+  } catch {
+    // JSON parse failed — fall back to raw output
+  }
+
+  return { status: code === 0 ? 'passed' : 'failed', duration, output, errors, stats };
+}
+
+// ── Source tracing — find .adoc origin of broken URLs ───────────────────────
+
+async function traceUrlToSource(url, repoRoot) {
+  // Strip anchors and trailing slashes for grep
+  let searchUrl = url;
+  const hashIdx = searchUrl.indexOf('#');
+  if (hashIdx >= 0) searchUrl = searchUrl.slice(0, hashIdx);
+  if (searchUrl.endsWith('/')) searchUrl = searchUrl.slice(0, -1);
+  const { code, output } = await spawnCapture('grep', [
+    '-rn', '--include=*.adoc', '-l', searchUrl,
+    join(repoRoot, 'modules'),
+    join(repoRoot, 'assemblies'),
+    join(repoRoot, 'artifacts'),
+  ], { cwd: repoRoot, verbose: false });
+  if (code !== 0 || !output.trim()) return [];
+  return output.trim().split('\n').map(f => f.replace(repoRoot + '/', ''));
 }
 
 // ── Index HTML generation ────────────────────────────────────────────────────
@@ -331,24 +416,31 @@ function printFailedTitle(r) {
   console.log(`  Output (last 5 lines):\n${lastLines.map(l => '    ' + l).join('\n')}`);
 }
 
-function printHtmltestSummary(htmltestResult) {
-  console.log('\n=== Link Validation (htmltest) ===');
-  if (htmltestResult.status === 'passed') {
-    console.log('All links valid');
+function printLycheeSummary(lycheeResult) {
+  console.log('\n=== Link Validation (lychee) ===');
+  const s = lycheeResult.stats || {};
+  console.log(`Total: ${s.total} | OK: ${s.successful} | Errors: ${s.errors} | Excluded: ${s.excludes} | Timeouts: ${s.timeouts}`);
+  if (lycheeResult.status === 'passed') {
     return;
   }
   console.log('Link validation failed');
-  if (htmltestResult.errors && htmltestResult.errors.length > 0) {
-    for (const e of htmltestResult.errors) {
-      console.log(`  ${e.line}`);
+  if (lycheeResult.errors && lycheeResult.errors.length > 0) {
+    for (const e of lycheeResult.errors) {
+      if (e.sources && e.sources.length > 0) {
+        for (const s of e.sources) {
+          console.log(`  - [ ] ${s} -> ${e.line}`);
+        }
+      } else {
+        console.log(`  - [ ] ${e.line}`);
+      }
     }
     return;
   }
-  const lastLines = htmltestResult.output.trim().split('\n').slice(-10);
+  const lastLines = lycheeResult.output.trim().split('\n').slice(-10);
   console.log(lastLines.map(l => '  ' + l).join('\n'));
 }
 
-function printSummary(results, htmltestResult, patterns, totalDuration) {
+function printSummary(results, lycheeResult, patterns, totalDuration) {
   const passed = results.filter(r => r.status === 'passed').length;
   const failed = results.filter(r => r.status === 'failed').length;
 
@@ -359,14 +451,14 @@ function printSummary(results, htmltestResult, patterns, totalDuration) {
     printFailedTitle(r);
   }
 
-  if (htmltestResult) {
-    printHtmltestSummary(htmltestResult);
+  if (lycheeResult) {
+    printLycheeSummary(lycheeResult);
   }
 }
 
 // ── JSON report ──────────────────────────────────────────────────────────────
 
-function writeReport(branch, results, htmltestResult, concurrency, totalDuration, repoRoot) {
+function writeReport(branch, results, lycheeResult, concurrency, totalDuration, repoRoot) {
   const passed = results.filter(r => r.status === 'passed').length;
   const failed = results.filter(r => r.status === 'failed').length;
 
@@ -387,9 +479,10 @@ function writeReport(branch, results, htmltestResult, concurrency, totalDuration
       duration: r.duration,
       errors: r.errors,
     })),
-    htmltest: htmltestResult ? {
-      status: htmltestResult.status,
-      errors: htmltestResult.errors || [],
+    lychee: lycheeResult ? {
+      status: lycheeResult.status,
+      stats: lycheeResult.stats || {},
+      errors: lycheeResult.errors || [],
     } : null,
   };
 
@@ -459,21 +552,23 @@ async function main() {
   // Update root index
   await updateRootIndex(args.branch, repoRoot);
 
-  // Run htmltest
-  console.log('\nRunning link validation (htmltest)...');
-  const htmltestResult = await runHtmltest(repoRoot, args.verbose);
-  htmltestResult.errors = classifyErrors(htmltestResult.output, patterns);
+  // Run lychee link validation
+  console.log('\nRunning link validation (lychee)...');
+  const lycheeResult = await runLychee(repoRoot, args.verbose);
+  if (lycheeResult.errors.length === 0) {
+    lycheeResult.errors = classifyErrors(lycheeResult.output, patterns);
+  }
 
   const totalDuration = Math.round((Date.now() - totalStart) / 1000);
 
   // Print summary
-  printSummary(buildResults, htmltestResult, patterns, totalDuration);
+  printSummary(buildResults, lycheeResult, patterns, totalDuration);
 
   // Write JSON report
-  writeReport(args.branch, buildResults, htmltestResult, args.jobs, totalDuration, repoRoot);
+  writeReport(args.branch, buildResults, lycheeResult, args.jobs, totalDuration, repoRoot);
 
-  // Exit with error if any builds or htmltest failed
-  const hasFailed = buildResults.some(r => r.status === 'failed') || htmltestResult.status === 'failed';
+  // Exit with error if any builds or lychee failed
+  const hasFailed = buildResults.some(r => r.status === 'failed') || lycheeResult.status === 'failed';
   process.exit(hasFailed ? 1 : 0);
 }
 
