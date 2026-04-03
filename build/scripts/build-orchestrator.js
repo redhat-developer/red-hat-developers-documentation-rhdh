@@ -326,7 +326,10 @@ async function runLychee(repoRoot, verbose) {
 
 async function traceUrlToSource(url, repoRoot) {
   // Strip anchors and trailing slashes for grep
-  const searchUrl = url.replace(/#.*$/, '').replace(/\/$/, '');
+  let searchUrl = url;
+  const hashIdx = searchUrl.indexOf('#');
+  if (hashIdx >= 0) searchUrl = searchUrl.slice(0, hashIdx);
+  if (searchUrl.endsWith('/')) searchUrl = searchUrl.slice(0, -1);
   const { code, output } = await spawnCapture('grep', [
     '-rn', '--include=*.adoc', '-l', searchUrl,
     join(repoRoot, 'modules'),
