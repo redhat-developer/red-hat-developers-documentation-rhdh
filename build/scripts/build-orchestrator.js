@@ -41,7 +41,7 @@ function parseArgs(argv) {
     switch (argv[i]) {
       case '-b': args.branch = argv[++i]; break;
       case '--verbose': args.verbose = true; break;
-      case '--jobs': args.jobs = parseInt(argv[++i], 10); break;
+      case '--jobs': args.jobs = Number.parseInt(argv[++i], 10); break;
     }
   }
   return args;
@@ -89,7 +89,7 @@ function classifyErrors(output, patterns) {
   const errors = [];
   const lines = output.split('\n');
   for (const line of lines) {
-    const clean = line.replace(ANSI_RE, '');
+    const clean = line.replaceAll(ANSI_RE, '');
     for (const pattern of patterns) {
       const m = pattern.compiled.exec(clean);
       if (m) {
@@ -323,6 +323,37 @@ async function updateRootIndex(branch, repoRoot) {
 
 // ── Summary output ───────────────────────────────────────────────────────────
 
+function printFailedTitle(r) {
+  console.log(`\nFAILED: ${r.title}`);
+  if (r.errors.length > 0) {
+    for (const e of r.errors) {
+      console.log(`  Error: ${e.line}`);
+      console.log(`  Cause: ${e.cause}`);
+      console.log(`  Fix:   ${e.fix}`);
+    }
+    return;
+  }
+  const lastLines = r.output.trim().split('\n').slice(-5);
+  console.log(`  Output (last 5 lines):\n${lastLines.map(l => '    ' + l).join('\n')}`);
+}
+
+function printHtmltestSummary(htmltestResult) {
+  console.log('\n=== Link Validation (htmltest) ===');
+  if (htmltestResult.status === 'passed') {
+    console.log('All links valid');
+    return;
+  }
+  console.log('Link validation failed');
+  if (htmltestResult.errors && htmltestResult.errors.length > 0) {
+    for (const e of htmltestResult.errors) {
+      console.log(`  ${e.line}`);
+    }
+    return;
+  }
+  const lastLines = htmltestResult.output.trim().split('\n').slice(-10);
+  console.log(lastLines.map(l => '  ' + l).join('\n'));
+}
+
 function printSummary(results, htmltestResult, patterns, totalDuration) {
   const passed = results.filter(r => r.status === 'passed').length;
   const failed = results.filter(r => r.status === 'failed').length;
@@ -330,37 +361,12 @@ function printSummary(results, htmltestResult, patterns, totalDuration) {
   console.log('\n=== Build Summary ===');
   console.log(`${passed} passed | ${failed} failed | ${totalDuration}s total`);
 
-  const failedResults = results.filter(r => r.status === 'failed');
-  for (const r of failedResults) {
-    console.log(`\nFAILED: ${r.title}`);
-    if (r.errors.length > 0) {
-      for (const e of r.errors) {
-        console.log(`  Error: ${e.line}`);
-        console.log(`  Cause: ${e.cause}`);
-        console.log(`  Fix:   ${e.fix}`);
-      }
-    } else {
-      // Show last few lines of output as fallback
-      const lastLines = r.output.trim().split('\n').slice(-5).join('\n');
-      console.log(`  Output (last 5 lines):\n${lastLines.split('\n').map(l => '    ' + l).join('\n')}`);
-    }
+  for (const r of results.filter(r => r.status === 'failed')) {
+    printFailedTitle(r);
   }
 
   if (htmltestResult) {
-    console.log('\n=== Link Validation (htmltest) ===');
-    if (htmltestResult.status === 'passed') {
-      console.log('All links valid');
-    } else {
-      console.log('Link validation failed');
-      if (htmltestResult.errors && htmltestResult.errors.length > 0) {
-        for (const e of htmltestResult.errors) {
-          console.log(`  ${e.line}`);
-        }
-      } else {
-        const lastLines = htmltestResult.output.trim().split('\n').slice(-10).join('\n');
-        console.log(lastLines.split('\n').map(l => '  ' + l).join('\n'));
-      }
-    }
+    printHtmltestSummary(htmltestResult);
   }
 }
 
@@ -477,7 +483,9 @@ async function main() {
   process.exit(hasFailed ? 1 : 0);
 }
 
-main().catch(err => {
+try {
+  await main();
+} catch (err) {
   console.error('Build orchestrator failed:', err);
   process.exit(1);
-});
+}
