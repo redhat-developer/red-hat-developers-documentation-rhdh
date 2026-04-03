@@ -251,7 +251,7 @@ function printFinalSummary({ checksPass, checksFail, totalAutofixable, totalManu
       console.log(`Fixed: ${totalFixed}`);
     }
   } else if (totalAutofixable > 0) {
-    console.log(`Run with --fix to auto-resolve ${totalAutofixable} issue${totalAutofixable === 1 ? '' : 's'}.`);
+    console.log(`Run \`node build/scripts/cqa/index.js --fix --all\` to auto-resolve ${totalAutofixable} issue${totalAutofixable === 1 ? '' : 's'}.`);
   }
 }
 
@@ -332,6 +332,11 @@ function initRepoRoot(positional) {
     const absTitle = resolve(firstTitle);
     const gitRoot = execFileSync(GIT, ['-C', dirname(absTitle), 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     setRepoRoot(gitRoot);
+  } else {
+    // When using --all without positional args, detect repo root from cwd
+    // so the CLI works correctly when run from a worktree
+    const cwdRoot = execFileSync(GIT, ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+    setRepoRoot(cwdRoot);
   }
 }
 
