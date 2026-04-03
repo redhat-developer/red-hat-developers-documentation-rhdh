@@ -15,15 +15,10 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync
 import { resolve, dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { cpus } from 'node:os';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { get as httpsGet } from 'node:https';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Load js-yaml from CQA's node_modules (no new dependencies)
-const cqaRequire = createRequire(join(__dirname, 'cqa', 'package.json'));
-const yaml = cqaRequire('js-yaml');
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
@@ -74,8 +69,7 @@ function loadErrorPatterns(patternsPath) {
     console.warn(`Warning: error patterns file not found: ${patternsPath}`);
     return [];
   }
-  const raw = readFileSync(patternsPath, 'utf8');
-  const doc = yaml.load(raw);
+  const doc = JSON.parse(readFileSync(patternsPath, 'utf8'));
   return (doc.patterns || []).map(p => ({
     ...p,
     compiled: new RegExp(p.regex, 'i'),
@@ -419,7 +413,7 @@ async function main() {
   }
 
   // Load error patterns
-  const patternsPath = join(__dirname, 'error-patterns.yml');
+  const patternsPath = join(__dirname, 'error-patterns.json');
   const patterns = loadErrorPatterns(patternsPath);
 
   // Prepare output directory
