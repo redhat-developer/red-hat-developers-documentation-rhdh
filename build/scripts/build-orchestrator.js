@@ -270,15 +270,18 @@ async function ensureLychee(repoRoot) {
 async function runLychee(repoRoot, verbose) {
   const lycheeBin = await ensureLychee(repoRoot);
   const { code, duration, output } = await spawnCapture(lycheeBin, [
-    '--config', join(repoRoot, '.lychee.toml'),
+    '--config', join(repoRoot, 'lychee.toml'),
     '--format', 'json',
-    join(repoRoot, 'titles-generated', '*', '*', 'index.html'),
+    join(repoRoot, 'titles-generated'),
   ], { cwd: repoRoot, verbose, groupName: 'lychee' });
 
   let errors = [];
   let stats = { total: 0, successful: 0, errors: 0, excludes: 0, timeouts: 0 };
   try {
-    const report = JSON.parse(output);
+    // Extract JSON from output (stderr warnings may precede the JSON)
+    const jsonStart = output.indexOf('{');
+    const jsonStr = jsonStart >= 0 ? output.slice(jsonStart) : output;
+    const report = JSON.parse(jsonStr);
     stats = {
       total: report.total || 0,
       successful: report.successful || 0,
@@ -287,24 +290,51 @@ async function runLychee(repoRoot, verbose) {
       timeouts: report.timeouts || 0,
     };
     if (code !== 0 && report.error_map) {
-      errors = Object.entries(report.error_map)
-        .flatMap(([source, details]) =>
-          details.map(d => {
-            const status = typeof d.status === 'object' ? d.status.text : String(d.status);
-            return {
-              line: `${d.url}: ${status}`,
-              patternId: 'lychee-broken-link',
-              cause: `Link check failed: ${status}`,
-              fix: 'Fix the broken link or add to exclude list in .lychee.toml',
-            };
-          })
-        );
+      // Collect each broken URL per source file (no deduplication)
+      const brokenEntries = [];
+      for (const [htmlFile, details] of Object.entries(report.error_map)) {
+        for (const d of details) {
+          brokenEntries.push({ htmlFile, ...d });
+        }
+      }
+      // Trace each broken URL back to .adoc source files
+      errors = await Promise.all(brokenEntries.map(async (d) => {
+        const status = typeof d.status === 'object' ? d.status.text : String(d.status);
+        const statusCode = typeof d.status === 'object' && d.status.code ? `[${d.status.code}] ` : '';
+        const sources = await traceUrlToSource(d.url, repoRoot);
+        // Fall back to the HTML file path when .adoc tracing finds nothing
+        if (sources.length === 0 && d.htmlFile) {
+          sources.push(d.htmlFile.replace(repoRoot + '/', ''));
+        }
+        return {
+          line: `${statusCode}${d.url}`,
+          sources,
+          patternId: 'lychee-broken-link',
+          cause: `Link check failed: ${status}`,
+          fix: 'Fix the broken link or add to .lycheeignore',
+        };
+      }));
     }
   } catch {
     // JSON parse failed — fall back to raw output
   }
 
   return { status: code === 0 ? 'passed' : 'failed', duration, output, errors, stats };
+}
+
+// ── Source tracing — find .adoc origin of broken URLs ───────────────────────
+
+async function traceUrlToSource(url, repoRoot) {
+  // Strip anchors and trailing slashes for grep
+  const searchUrl = url.replace(/#.*$/, '').replace(/\/$/, '');
+  const { code, output } = await spawnCapture('grep', [
+    '-rn', '--include=*.adoc', '-l', searchUrl,
+    join(repoRoot, 'modules'),
+    join(repoRoot, 'assemblies'),
+    join(repoRoot, 'artifacts'),
+  ], { cwd: repoRoot, verbose: false });
+  if (code !== 0 || !output.trim()) return [];
+  return output.trim().split('\n').map(f => f.replace(repoRoot + '/', ''));
 }
 
 // ── Index HTML generation ────────────────────────────────────────────────────
@@ -386,14 +416,20 @@ function printFailedTitle(r) {
 function printLycheeSummary(lycheeResult) {
   console.log('\n=== Link Validation (lychee) ===');
   const s = lycheeResult.stats || {};
-  console.log(`${s.total} links checked: ${s.successful} valid, ${s.excludes} excluded, ${s.errors} errors, ${s.timeouts} timeouts`);
+  console.log(`Total: ${s.total} | OK: ${s.successful} | Errors: ${s.errors} | Excluded: ${s.excludes} | Timeouts: ${s.timeouts}`);
   if (lycheeResult.status === 'passed') {
     return;
   }
   console.log('Link validation failed');
   if (lycheeResult.errors && lycheeResult.errors.length > 0) {
     for (const e of lycheeResult.errors) {
-      console.log(`  ${e.line}`);
+      if (e.sources && e.sources.length > 0) {
+        for (const s of e.sources) {
+          console.log(`  - [ ] ${s} -> ${e.line}`);
+        }
+      } else {
+        console.log(`  - [ ] ${e.line}`);
+      }
     }
     return;
   }
