@@ -82,16 +82,20 @@ function loadErrorPatterns(patternsPath) {
   }));
 }
 
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-9;]*m/g;
+
 function classifyErrors(output, patterns) {
   const errors = [];
   const lines = output.split('\n');
   for (const line of lines) {
+    const clean = line.replace(ANSI_RE, '');
     for (const pattern of patterns) {
-      const m = pattern.compiled.exec(line);
+      const m = pattern.compiled.exec(clean);
       if (m) {
-        const matchVal = m[m.length > 1 ? 1 : 0];
+        const matchVal = m[m.length - 1];
         errors.push({
-          line: line.trim(),
+          line: clean.trim(),
           patternId: pattern.id,
           cause: pattern.cause.replace('{match}', matchVal),
           fix: pattern.fix.replace('{match}', matchVal),
