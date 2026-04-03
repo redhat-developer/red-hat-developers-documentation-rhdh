@@ -45,9 +45,29 @@ jobs:
         sudo apt-get -y -q install podman && podman --version
         echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
 
+    - name: Install lychee
+      run: |
+        LYCHEE_VERSION="v0.23.0"
+        curl -sSfL "https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" \
+          | sudo tar xz -C /usr/local/bin lychee
+        lychee --version
+
+    - name: Restore lychee cache
+      uses: actions/cache@v4
+      with:
+        path: .lycheecache
+        key: lychee-${{ github.ref_name }}-${{ github.sha }}
+        restore-keys: |
+          lychee-${{ github.ref_name }}-
+          lychee-
+
     - name: Build guides and indexes
+      id: build
+      env:
+        GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
       run: |
         echo "Building branch ${{ env.GIT_BRANCH }}"
+        touch .lycheecache
         build/scripts/build-ccutil.sh -b ${{ env.GIT_BRANCH }}
 
     # repo must be public for this to work
