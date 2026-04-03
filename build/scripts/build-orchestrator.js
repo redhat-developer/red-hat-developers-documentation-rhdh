@@ -272,7 +272,7 @@ async function runLychee(repoRoot, verbose) {
   const { code, duration, output } = await spawnCapture(lycheeBin, [
     '--config', join(repoRoot, '.lychee.toml'),
     '--format', 'json',
-    join(repoRoot, 'titles-generated', '**', '*.html'),
+    join(repoRoot, 'titles-generated', '*', '*', 'index.html'),
   ], { cwd: repoRoot, verbose, groupName: 'lychee' });
 
   let errors = [];
