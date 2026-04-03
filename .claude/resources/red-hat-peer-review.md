@@ -490,7 +490,7 @@ This section lists additional tools and resources available for peer reviewing d
 | [newdoc](https://github.com/redhat-documentation/newdoc) | A script for creating new files for a modular documentation repository. You can also use the script to [validate](https://github.com/redhat-documentation/newdoc#validating-a-file-for-red-hat-requirements) whether a piece of content adheres to Red Hat documentation markup and structure standards. |
 | [Vale for Red Hat documentation writers](https://redhat-documentation.github.io/vale-at-red-hat/docs/main/user-guide/introduction/) | A linting system that validates whether your text is compatible with Red Hat writing style. |
 | [IBM Equal Access Accessibility Checker](https://www.ibm.com/able/toolkit/verify/) | A toolkit of instructions and [browser extensions](https://www.ibm.com/able/toolkit/verify/automated) to generate automated accessibility reports. |
-| [htmltest](https://github.com/wjdp/htmltest) | A test that validates whether the links in your HTML work. |
+| [lychee](https://github.com/lycheeverse/lychee) | A fast link checker that validates whether the links in your HTML work. |
 | [Grammarly](https://www.grammarly.com/) | A browser plug-in that checks your English spelling and grammar, but also helps improve your writing style. |
 
 **Table 8. Style resources**

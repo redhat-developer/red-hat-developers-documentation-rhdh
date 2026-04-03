@@ -259,8 +259,11 @@ async function ensureLychee(repoRoot) {
   console.log('Downloading lychee...');
   mkdirSync(cacheDir, { recursive: true });
   const url = `https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz`;
-  await spawnCapture('sh', ['-c', `curl -sSfL "${url}" | tar xz -C "${cacheDir}" lychee`],
+  const dl = await spawnCapture('sh', ['-c', `curl -sSfL "${url}" | tar xz -C "${cacheDir}" lychee`],
     { cwd: repoRoot, verbose: false });
+  if (dl.code !== 0 || !existsSync(lychee)) {
+    throw new Error(`Failed to download lychee: ${dl.output}`);
+  }
   return lychee;
 }
 
@@ -273,10 +276,18 @@ async function runLychee(repoRoot, verbose) {
   ], { cwd: repoRoot, verbose, groupName: 'lychee' });
 
   let errors = [];
-  if (code !== 0) {
-    try {
-      const report = JSON.parse(output);
-      errors = (report.fail_map ? Object.entries(report.fail_map) : [])
+  let stats = { total: 0, successful: 0, errors: 0, excludes: 0, timeouts: 0 };
+  try {
+    const report = JSON.parse(output);
+    stats = {
+      total: report.total || 0,
+      successful: report.successful || 0,
+      errors: report.errors || 0,
+      excludes: report.excludes || 0,
+      timeouts: report.timeouts || 0,
+    };
+    if (code !== 0 && report.error_map) {
+      errors = Object.entries(report.error_map)
         .flatMap(([url, details]) =>
           details.map(d => ({
             line: `${url}: ${d.status || d.error}`,
@@ -285,12 +296,12 @@ async function runLychee(repoRoot, verbose) {
             fix: 'Fix the broken link or add to exclude list in .lychee.toml',
           }))
         );
-    } catch {
-      // JSON parse failed — fall back to raw output
     }
+  } catch {
+    // JSON parse failed — fall back to raw output
   }
 
-  return { status: code === 0 ? 'passed' : 'failed', duration, output, errors };
+  return { status: code === 0 ? 'passed' : 'failed', duration, output, errors, stats };
 }
 
 // ── Index HTML generation ────────────────────────────────────────────────────
@@ -371,8 +382,9 @@ function printFailedTitle(r) {
 
 function printLycheeSummary(lycheeResult) {
   console.log('\n=== Link Validation (lychee) ===');
+  const s = lycheeResult.stats || {};
+  console.log(`${s.total} links checked: ${s.successful} valid, ${s.excludes} excluded, ${s.errors} errors, ${s.timeouts} timeouts`);
   if (lycheeResult.status === 'passed') {
-    console.log('All links valid');
     return;
   }
   console.log('Link validation failed');
@@ -427,6 +439,7 @@ function writeReport(branch, results, lycheeResult, concurrency, totalDuration, 
     })),
     lychee: lycheeResult ? {
       status: lycheeResult.status,
+      stats: lycheeResult.stats || {},
       errors: lycheeResult.errors || [],
     } : null,
   };
