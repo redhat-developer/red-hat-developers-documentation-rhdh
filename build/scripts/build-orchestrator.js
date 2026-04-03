@@ -288,13 +288,16 @@ async function runLychee(repoRoot, verbose) {
     };
     if (code !== 0 && report.error_map) {
       errors = Object.entries(report.error_map)
-        .flatMap(([url, details]) =>
-          details.map(d => ({
-            line: `${url}: ${d.status || d.error}`,
-            patternId: 'lychee-broken-link',
-            cause: `Link check failed: ${d.status || d.error}`,
-            fix: 'Fix the broken link or add to exclude list in .lychee.toml',
-          }))
+        .flatMap(([source, details]) =>
+          details.map(d => {
+            const status = typeof d.status === 'object' ? d.status.text : String(d.status);
+            return {
+              line: `${d.url}: ${status}`,
+              patternId: 'lychee-broken-link',
+              cause: `Link check failed: ${status}`,
+              fix: 'Fix the broken link or add to exclude list in .lychee.toml',
+            };
+          })
         );
     }
   } catch {
