@@ -7,69 +7,9 @@
 #
 # SPDX-License-Identifier: EPL-2.0
 #
-# Utility script build html previews with referenced images
-# Requires: Podman - see https://podman.io
-# input: titles/
-# output: titles-generated/ and titles-generated/$BRANCH/
+# Wrapper for backward compatibility — delegates to Node.js build orchestrator.
+# Requires: Node.js, Podman
+# See build-orchestrator.js for the implementation.
 
-# grep regex for title folders to exclude from processing below
-EXCLUDED_TITLES="rhdh-plugins-reference"
-BRANCH="main"
-
-while [[ "$#" -gt 0 ]]; do
-  case $1 in
-    '-b') BRANCH="$2"; shift 1;;
-  esac
-  shift 1
-done
-
-rm -fr titles-generated/;
-mkdir -p titles-generated/"${BRANCH}";
-echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}</title></head><body><ul>" > titles-generated/"${BRANCH}"/index.html;
-# exclude the rhdh-plugins-reference as it's embedded in the admin guide
-# shellcheck disable=SC2044,SC2013
-set -e
-for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
-    d=${t%/*};
-    dest=${d/titles/titles-generated\/${BRANCH}};
-    rm -rf "$d/build" || true
-    CMD="podman run --interactive --rm --tty \
-          --volume $(pwd):/docs:Z \
-          --workdir /docs/$d \
-          quay.io/ivanhorvath/ccutil:amazing ccutil compile --format html-single --lang en-US --doctype article";
-    echo -e -n "\nBuilding $t into $dest ...\n  ";
-    echo "${CMD}" | sed -r -e "s/\  +/ \\\\\n    /g"
-    $CMD
-    rm -rfv "$dest" || true
-    mv -f "$d/build/tmp/en-US/html-single/" "$dest"
-    # shellcheck disable=SC2013
-    for im in $(grep images/ "$dest/index.html" | grep -E -v 'mask-image|background|fa-icons|jupumbra' | sed -r -e "s#.+(images/[^\"]+)\".+#\1#"); do
-        # echo "  Copy $im ...";
-        IMDIR="$dest/${im%/*}/"
-        mkdir -p "${IMDIR}"; rsync -q "$im" "${IMDIR}";
-    done
-    # shellcheck disable=SC2044
-    # for f in $(find "$dest/" -type f); do echo "    $f"; done
-    echo "<li><a href=${dest/titles-generated\/${BRANCH}/.}>${dest/titles-generated\/${BRANCH}\//}</a></li>" >> titles-generated/"${BRANCH}"/index.html;
-done
-echo "</ul></body></html>" >> titles-generated/"${BRANCH}"/index.html
-
-# shellcheck disable=SC2143
-if [[ $BRANCH == "pr-"* ]]; then
-  # fetch the existing https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html to add prs and branches
-  curl -sSL https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pulls.html -o titles-generated/pulls.html
-  if [[ -z $(grep "./${BRANCH}/index.html" titles-generated/pulls.html) ]]; then
-      echo "Building root index for $BRANCH in titles-generated/pulls.html ...";
-      echo "<li><a href=./${BRANCH}/index.html>${BRANCH}</a></li>" >> titles-generated/pulls.html
-  fi
-else
-  # fetch the existing https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html to add prs and branches
-  curl -sSL https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html -o titles-generated/index.html
-  if [[ -z $(grep "./${BRANCH}/index.html" titles-generated/index.html) ]]; then
-      echo "Building root index for $BRANCH in titles-generated/index.html ...";
-      echo "<li><a href=./${BRANCH}/index.html>${BRANCH}</a></li>" >> titles-generated/index.html
-  fi
-fi
-
-# Test the links with htmltest
-podman run --rm --tty --volume "$(pwd)":/test:Z docker.io/wjdp/htmltest:latest -c .htmltest.yml
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec node "${SCRIPT_DIR}/build-orchestrator.js" "$@"
