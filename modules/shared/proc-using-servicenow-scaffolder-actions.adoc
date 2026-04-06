@@ -1,0 +1,50 @@
+:_mod-docs-content-type: PROCEDURE
+[id="using-servicenow-scaffolder-actions_{context}"]
+= Using ServiceNow scaffolder actions in Software Templates
+
+[role="_abstract"]
+
+ServiceNow scaffolder actions enable the automation of ServiceNow operations, such as creating incidents or updating records, directly from Software Templates.
+
+In {product} {product-very-short} 1.9 and later, these actions have been moved to a dedicated `servicenow` workspace to improve integration with the ServiceNow plugin.
+
+.Prerequisites
+
+* You have configured the ServiceNow plugin in your `app-config.yaml` file.
+* Your Software template is defined as an allowed entity type, for example `Template`, in the `catalog.rules` section of your `app-config.yaml` file.
+* You have the required permissions to create or edit Software Templates in {product-very-short}.
+
+.Procedure
+
+. Open your Software Template YAML file (usually `template.yaml`).
+
+. In the `spec.steps` section, define a ServiceNow action using the `servicenow:` prefix.
++
+[source,yaml]
+----
+spec:
+  steps:
+    - id: create-incident
+      name: Create ServiceNow Incident
+      action: servicenow:create-incident
+      input:
+        instanceName: 'production'
+        short_description: 'Incident created from RHDH Software Template'
+        severity: '3'
+----
+
+* `spec.steps.action` specifies the automated function within the ServiceNow workspace that {product-very-short} uses to generate a new incident record in your connected ServiceNow instance. If you are migrating a template from an older version, update the action ID to match the new workspace location.
+
+* `spec.steps.input.instanceName` specifies the ServiceNow instance, as defined in your `app-config.yaml` file, that {product-very-short} targets when executing the scaffolder action. 
+
+. Save the template file and register it in the {product-very-short} Catalog. If you are registering the template via a Pull Request, ensure you use the {backstage-integration} branch as configured in your `app-config.yaml` file.
+
+. Run the template from the **Create** menu to verify the integration.
+
+.Verification
+
+. After the Scaffolder task completes, navigate to your ServiceNow instance.
+
+. Confirm that the new incident appears with the description provided in the template.
+
+. If you are using flexible mapping, verify that the incident is correctly linked to the new component in the **ServiceNow** tab of the {product-very-short} UI.
