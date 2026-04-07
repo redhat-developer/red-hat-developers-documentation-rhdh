@@ -162,12 +162,13 @@ function resolveAttrs(text, attrs) {
 
 /**
  * Derive a Pantheon-compatible slug from resolved title text.
- * Algorithm: lowercase → non-alphanumeric characters → underscore → trim.
+ * Algorithm: lowercase → non-alphanumeric (except hyphen) → underscore → trim.
+ * Pantheon preserves hyphens in compound words (e.g. "air-gapped").
  */
 function deriveSlug(resolvedTitle) {
   return resolvedTitle
     .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '_')
+    .replaceAll(/[^a-z0-9-]+/g, '_')
     .replaceAll(/^_|_$/g, '');
 }
 
