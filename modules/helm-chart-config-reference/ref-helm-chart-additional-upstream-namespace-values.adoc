@@ -30,12 +30,12 @@ e|see below
 |upstream.backstage.appConfig
 |Generates a `ConfigMap` and configures it in the Backstage pods.
 |object
-|{}
+|{“auth”: {“providers”: {}}, “app”: {“baseUrl”: 'https://{{- include "rhdh.hostname" . }}'}, “backend”: {“baseUrl”: 'https://{{- include "rhdh.hostname" . }}', “cors”: {“origin”: 'https://{{- include "rhdh.hostname" . }}'}, “database”: {“connection”: {“password”: “${POSTGRESQL_ADMIN_PASSWORD}”, “user”: “postgres”}}, “auth”: {“externalAccess”: [{“type”: “legacy”, “options”: {“subject”: “legacy-default-config”, “secret”: “${BACKEND_SECRET}”}}]}}}
 
 |upstream.backstage.args
 |Backstage container command arguments.
 |list
-|[]
+|[“--config”, “dynamic-plugins-root/app-config.dynamic-plugins.yaml”]
 
 |upstream.backstage.autoscaling
 |Autoscaling configuration.
@@ -55,7 +55,7 @@ e|see below
 |upstream.backstage.containerSecurityContext
 |Container security settings.
 |object
-|{}
+|{“readOnlyRootFilesystem”: true, “allowPrivilegeEscalation”: false, “capabilities”: {“drop”: [“ALL”]}, “runAsNonRoot”: true, “seccompProfile”: {“type”: “RuntimeDefault”}}}
 
 |upstream.backstage.extraAppConfig
 |Extra app configuration files to inline into command arguments.
@@ -70,7 +70,7 @@ e|see below
 |upstream.backstage.extraEnvVars
 |Backstage container environment variables.
 |list
-|[]
+|[{“name”: “BACKEND_SECRET”, “valueFrom”: {“secretKeyRef”: {“key”: “backend-secret”, “name”: '{{ include "rhdh.backend-secret-name" $ }}'}}}, {“name”: “POSTGRESQL_ADMIN_PASSWORD”, “valueFrom”: {“secretKeyRef”: {“key”: “postgres-password”, “name”: '{{- include "rhdh.postgresql.secretName" . }}'}}]}]
 
 |upstream.backstage.extraEnvVarsCM
 |Backstage container environment variables from existing `ConfigMaps`.
@@ -85,17 +85,17 @@ e|see below
 |upstream.backstage.extraPorts
 |Backstage container additional ports.
 |list
-|[]
+|[{“name”: “http-metrics”, “port”: 9464, “targetPort”: 9464}]
 
 |upstream.backstage.extraVolumeMounts
 |Backstage container additional volume mounts.
 |list
-|[]
+|[{“name”: “dynamic-plugins-root”, “mountPath”: “/opt/app-root/src/dynamic-plugins-root”}, {“name”: “extensions-catalog”, “mountPath”: “/extensions”}, {“name”: “temp”, “mountPath”: “/tmp”}]
 
 |upstream.backstage.extraVolumes
 |Backstage container additional volumes.
 |list
-|[]
+|[{“name”: “dynamic-plugins-root”, “ephemeral”: {“volumeClaimTemplate”: {“spec”: {“accessModes”: [“ReadWriteOnce”], “resources”: {“requests”: {“storage”: “5Gi”}}}}}}]
 
 |upstream.backstage.hostAliases
 |Host Aliases for the pod.
@@ -166,7 +166,7 @@ Before using this value, check that there are no restrictions placed on customiz
 |upstream.backstage.livenessProbe
 |Liveness probe.
 |object
-|{"httpGet":{"path":"/.backstage/health/v1/liveness","port":backend,"scheme":"HTTP"}}
+|{“failureThreshold”: 3, “httpGet”: {“path”: “/.backstage/health/v1/liveness”, “port”: “backend”, “scheme”: “HTTP”}, “periodSeconds”: 10, “successThreshold”: 1, “timeoutSeconds”: 4}
 
 |upstream.backstage.nodeSelector
 |Node labels for pod assignment.
@@ -181,7 +181,7 @@ Before using this value, check that there are no restrictions placed on customiz
 |upstream.backstage.podAnnotations
 |Annotations added to the backend deployment pods.
 |object
-|{}
+|{“checksum/dynamic-plugins”: “{{- include "common.tplvalues.render" ( dict "value" .Values.global.dynamic "context" $) | sha256sum }}”}
 
 |upstream.backstage.podLabels
 |Labels added to the backend deployment pods.
@@ -202,7 +202,7 @@ Before using this value, check the Openshift security policy.
 |upstream.backstage.readinessProbe
 |Readiness probe.
 |object
-|{"httpGet":{"path":"/.backstage/health/v1/readiness","port":backend,"scheme":"HTTP"}}
+|{“failureThreshold”: 3, “httpGet”: {“path”: “/.backstage/health/v1/readiness”, “port”: “backend”, “scheme”: “HTTP”}, “periodSeconds”: 10, “successThreshold”: 2, “timeoutSeconds”: 4}
 
 |upstream.backstage.replicas
 |Number of deployment replicas.
@@ -212,7 +212,7 @@ Before using this value, check the Openshift security policy.
 |upstream.backstage.resources
 |Resource requests and limits.
 |object
-|{}
+|{“resources”: {“requests”: {“cpu”: “250m”, “memory”: “1Gi”}, “limits”: {“cpu”: “1000m”, “memory”: “2.5Gi”, “ephemeral-storage”: “5Gi”}}}
 
 |upstream.backstage.revisionHistoryLimit
 a|Defines the count of deployment revisions to be kept.
@@ -227,7 +227,7 @@ For GitOps deployment, the count might be set to `0`.
 |upstream.backstage.startupProbe
 |Startup probe.
 |object
-|{"httpGet":{"path":"/.backstage/health/v1/liveness","port":backend,"scheme":"HTTP"}}
+|{“httpGet”: {“path”: “/.backstage/health/v1/liveness”, “port”: “backend”, “scheme”: “HTTP”}, “initialDelaySeconds”: 30, “timeoutSeconds”: 4, “periodSeconds”: 20, “successThreshold”: 1, “failureThreshold”: 3}
 
 |upstream.backstage.tolerations
 |Node tolerations for server scheduling to nodes with taints.
@@ -292,7 +292,7 @@ Use this value only if the underlying Backstage chart exposes and uses it.
 |upstream.ingress
 |Ingress parameters.
 |object
-|{"annotations":{},"className":"","enabled":false,"extraHosts":[],"extraTls":[],"host":"","path":"/","tls":{"enabled":false,"secretName":""}}
+|{“host”: “{{ .Values.global.host }}”}
 
 |upstream.ingress.annotations
 |Additional annotations for the Ingress resource.
@@ -332,7 +332,7 @@ Use this value only if the underlying Backstage chart exposes and uses it.
 |upstream.ingress.tls
 |Ingress TLS parameters.
 |object
-|{"enabled":false,"secretName":""}
+|{“serviceMonitor”: {“enabled”: false, “path”: “/metrics”, “port”: “http-metrics”}}
 
 |upstream.ingress.tls.enabled
 |Enables TLS configuration for the host defined at `ingress.host` parameter.
@@ -357,7 +357,7 @@ Use this value only if the underlying Backstage chart exposes and uses it.
 |upstream.metrics.serviceMonitor
 |Prometheus Operator `ServiceMonitor` configuration.
 |object
-|{"annotations":{},"enabled":false,"interval":null,"labels":{},"path":"/metrics","port":"http-metrics"}
+|{“enabled”: false, “path”: “/metrics”, “port”: “http-metrics”}
 
 |upstream.metrics.serviceMonitor.annotations
 |`ServiceMonitor` annotations.
@@ -458,7 +458,7 @@ e|see below
 |upstream.postgresql.auth
 |Authentication details of the PostgreSQL database.
 |object
-|{"existingSecret":"","password":"","secretKeys":{"adminPasswordKey":"postgres-password","replicationPasswordKey":"replication-password","userPasswordKey":"password"},"username":"bn_backstage"}
+|{“secretKeys”: {“adminPasswordKey”: “postgres-password”, “userPasswordKey”: “password”}}
 
 |upstream.postgresql.auth.existingSecret
 |Name of existing secret used for PostgreSQL credentials.
