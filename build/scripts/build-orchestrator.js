@@ -267,11 +267,53 @@ async function ensureLychee(repoRoot) {
   return lychee;
 }
 
-async function runLychee(repoRoot, verbose) {
+// ── Cross-title link remapping ───────────────────────────────────────────────
+
+function buildRemapArgs(repoRoot, branch) {
+  const attrsPath = join(repoRoot, 'artifacts', 'attributes.adoc');
+  if (!existsSync(attrsPath)) return [];
+
+  const attrs = readFileSync(attrsPath, 'utf8');
+  const generatedDir = join(repoRoot, 'titles-generated', branch);
+  if (!existsSync(generatedDir)) return [];
+
+  // Extract key-prefix -> slug from book-link attributes
+  const bookLinks = {};
+  const bookLinkRe = /^:([\w-]+)-book-link:\s+\{product-docs-link\}\/html-single\/([^/\s]+)\/index/gm;
+  let m;
+  while ((m = bookLinkRe.exec(attrs)) !== null) {
+    bookLinks[m[1]] = m[2];
+  }
+
+  // For each title dir, read :title: to extract the book-title key prefix
+  // Expects normalized titles: :title: {<name>-book-title}
+  const titleDirs = readdirSync(generatedDir).filter(d =>
+    existsSync(join(generatedDir, d, 'index.html'))
+  );
+  const remaps = [];
+  for (const dir of titleDirs) {
+    const masterPath = join(repoRoot, 'titles', dir, 'master.adoc');
+    if (!existsSync(masterPath)) continue;
+    const masterHead = readFileSync(masterPath, 'utf8').slice(0, 500);
+    const titleMatch = masterHead.match(/^:title:\s+\{([\w-]+)-book-title\}$/m);
+    if (!titleMatch) continue;
+    const keyPrefix = titleMatch[1];
+    const slug = bookLinks[keyPrefix];
+    if (!slug) continue;
+    const localUrl = `file://${join(generatedDir, dir, 'index.html')}`;
+    remaps.push(String.raw`https://docs\.redhat\.com/en/documentation/red_hat_developer_hub/[^/]+/html-single/${slug}/index ${localUrl}`);
+  }
+
+  return remaps.flatMap(r => ['--remap', r]);
+}
+
+async function runLychee(repoRoot, branch, verbose) {
   const lycheeBin = await ensureLychee(repoRoot);
+  const remapArgs = buildRemapArgs(repoRoot, branch);
   const { code, duration, output } = await spawnCapture(lycheeBin, [
     '--config', join(repoRoot, 'lychee.toml'),
     '--format', 'json',
+    ...remapArgs,
     join(repoRoot, 'titles-generated'),
   ], { cwd: repoRoot, verbose, groupName: 'lychee' });
 
@@ -554,7 +596,7 @@ async function main() {
 
   // Run lychee link validation
   console.log('\nRunning link validation (lychee)...');
-  const lycheeResult = await runLychee(repoRoot, args.verbose);
+  const lycheeResult = await runLychee(repoRoot, args.branch, args.verbose);
   if (lycheeResult.errors.length === 0) {
     lycheeResult.errors = classifyErrors(lycheeResult.output, patterns);
   }
