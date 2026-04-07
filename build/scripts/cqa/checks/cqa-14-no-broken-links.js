@@ -106,7 +106,7 @@ function getLycheeIssues(root) {
 
   try {
     const report = JSON.parse(readFileSync(reportPath, 'utf8'));
-    if (!report.lychee || !report.lychee.errors) return _lycheeIssuesCache;
+    if (!report.lychee?.errors) return _lycheeIssuesCache;
 
     for (const err of report.lychee.errors) {
       const sources = err.sources || [];
@@ -156,7 +156,7 @@ function resolveAttrs(text, attrs) {
   let prev;
   for (let i = 0; i < 5 && text !== prev; i++) {
     prev = text;
-    text = text.replace(/\{([\w-]+)\}/g, (_, name) => attrs[name] || `{${name}}`);
+    text = text.replaceAll(/\{([\w-]+)\}/g, (_, name) => attrs[name] || `{${name}}`);
   }
   return text;
 }
@@ -168,8 +168,8 @@ function resolveAttrs(text, attrs) {
 function deriveSlug(resolvedTitle) {
   return resolvedTitle
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '_')
+    .replaceAll(/^_|_$/g, '');
 }
 
 /**
@@ -181,7 +181,7 @@ function expandLocalAttrs(text, localAttrs, globalAttrs) {
   let prev;
   for (let i = 0; i < 10 && text !== prev; i++) {
     prev = text;
-    text = text.replace(/\{([\w-]+)\}/g, (match, name) => {
+    text = text.replaceAll(/\{([\w-]+)\}/g, (match, name) => {
       // Keep global attribute references as-is
       if (name in globalAttrs) return match;
       // Expand local-only attributes
@@ -201,13 +201,20 @@ function expandLocalAttrs(text, localAttrs, globalAttrs) {
  * 3. Directory-name heuristic (strip 'rhdh' from dir, check key containment)
  * 4. Fall back: derive new key from resolved title slug
  */
+/**
+ * Strip 'rhdh' segments and collapse dashes for fuzzy key comparison.
+ */
+function normalizeKey(str) {
+  return str.replaceAll(/-?rhdh-?/g, '-').replaceAll(/--+/g, '-').replaceAll(/^-|-$/g, '');
+}
+
 function findMatchingBookTitleKey(resolvedTitle, entries, globalAttrs, titleDir) {
   const candidates = Object.entries(entries).filter(([, e]) => e.titleValue);
 
   // Normalize directory name for matching
   const dirBaseName = basename(titleDir);
   const dirSuffix = dirBaseName.includes('_') ? dirBaseName.slice(dirBaseName.indexOf('_') + 1) : dirBaseName;
-  const normDirSuffix = dirSuffix.replace(/-?rhdh-?/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '');
+  const normDirSuffix = normalizeKey(dirSuffix);
 
   // 1. Exact resolved value match (prefer key that matches directory name)
   const exactMatches = candidates.filter(([, entry]) =>
@@ -216,11 +223,10 @@ function findMatchingBookTitleKey(resolvedTitle, entries, globalAttrs, titleDir)
   if (exactMatches.length === 1) return exactMatches[0][0];
   if (exactMatches.length > 1) {
     const dirMatch = exactMatches.find(([key]) => {
-      const normKey = key.replace(/-?rhdh-?/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '');
+      const normKey = normalizeKey(key);
       return normDirSuffix.includes(normKey) || normKey.includes(normDirSuffix);
     });
-    if (dirMatch) return dirMatch[0];
-    return exactMatches[0][0];
+    return dirMatch ? dirMatch[0] : exactMatches[0][0];
   }
 
   // 2. Word-overlap scoring
@@ -240,7 +246,7 @@ function findMatchingBookTitleKey(resolvedTitle, entries, globalAttrs, titleDir)
 
   // 3. Directory-name heuristic
   for (const [key] of candidates) {
-    const normKey = key.replace(/-?rhdh-?/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '');
+    const normKey = normalizeKey(key);
     if (normDirSuffix.includes(normKey) || normKey.includes(normDirSuffix)) return key;
   }
 
@@ -260,23 +266,33 @@ function toWordSet(text) {
 }
 
 /**
+ * Check if two words match via prefix (both must be >= 4 chars).
+ */
+function isPrefixMatch(wordA, wordB) {
+  if (wordA.length < 4 || wordB.length < 4) return false;
+  const shorter = wordA.length <= wordB.length ? wordA : wordB;
+  const longer = wordA.length <= wordB.length ? wordB : wordA;
+  return longer.startsWith(shorter) || shorter.startsWith(longer.slice(0, Math.max(4, shorter.length)));
+}
+
+/**
+ * Score a single word against a set, returning 1 for exact match, 0.8 for prefix match.
+ */
+function scoreWord(word, targetSet) {
+  for (const target of targetSet) {
+    if (word === target) return 1;
+    if (isPrefixMatch(word, target)) return 0.8;
+  }
+  return 0;
+}
+
+/**
  * Count overlapping words between two sets, with prefix matching for words >= 4 chars.
  */
 function wordOverlapScore(setA, setB) {
   let score = 0;
-  for (const wordA of setA) {
-    for (const wordB of setB) {
-      if (wordA === wordB) { score++; break; }
-      // Prefix match: "scorecard" matches "scorecards", "install" matches "installing"
-      if (wordA.length >= 4 && wordB.length >= 4) {
-        const shorter = wordA.length <= wordB.length ? wordA : wordB;
-        const longer = wordA.length <= wordB.length ? wordB : wordA;
-        if (longer.startsWith(shorter) || shorter.startsWith(longer.slice(0, Math.max(4, shorter.length)))) {
-          score += 0.8;
-          break;
-        }
-      }
-    }
+  for (const word of setA) {
+    score += scoreWord(word, setB);
   }
   return score;
 }
@@ -346,31 +362,37 @@ function checkTitleChain(root, masterAdocPath) {
   }
 
   // Detection C: Book-link slug must match Pantheon-derived slug
-  // Only check if :title: already uses a book-title reference
   if (bookTitleRefRe.test(titleValue)) {
-    const keyPrefix = titleValue.match(/^\{([\w-]+)-book-title\}$/)[1];
-    const attrsPath = join('artifacts', 'attributes.adoc');
-    const attrsAbs = resolve(root, attrsPath);
-    if (existsSync(attrsAbs)) {
-      const attrsText = readFileSync(attrsAbs, 'utf8');
-      const globalAttrs = parseAttributes(attrsText);
-      const entries = parseBookEntries(attrsText);
-      const entry = entries[keyPrefix];
-      if (entry && entry.titleValue && entry.slug) {
-        const resolvedTitle = resolveAttrs(entry.titleValue, globalAttrs);
-        const expectedSlug = deriveSlug(resolvedTitle);
-        if (entry.slug !== expectedSlug) {
-          issues.push(manual(
-            attrsPath,
-            `[title-chain] Book-link slug "${entry.slug}" doesn't match derived slug "${expectedSlug}" for title "${resolvedTitle}". Verify against Pantheon before changing.`,
-            null
-          ));
-        }
-      }
-    }
+    const slugIssue = checkSlugMatch(root, titleValue);
+    if (slugIssue) issues.push(slugIssue);
   }
 
   return issues;
+}
+
+/**
+ * Detection C: verify book-link slug matches Pantheon-derived slug.
+ */
+function checkSlugMatch(root, titleValue) {
+  const keyPrefix = titleValue.match(/^\{([\w-]+)-book-title\}$/)[1];
+  const attrsPath = join('artifacts', 'attributes.adoc');
+  const attrsAbs = resolve(root, attrsPath);
+  if (!existsSync(attrsAbs)) return null;
+
+  const attrsText = readFileSync(attrsAbs, 'utf8');
+  const globalAttrs = parseAttributes(attrsText);
+  const entry = parseBookEntries(attrsText)[keyPrefix];
+  if (!entry?.titleValue || !entry?.slug) return null;
+
+  const resolvedTitle = resolveAttrs(entry.titleValue, globalAttrs);
+  const expectedSlug = deriveSlug(resolvedTitle);
+  if (entry.slug === expectedSlug) return null;
+
+  return manual(
+    attrsPath,
+    `[title-chain] Book-link slug "${entry.slug}" doesn't match derived slug "${expectedSlug}" for title "${resolvedTitle}". Verify against Pantheon before changing.`,
+    null
+  );
 }
 
 /**
@@ -443,7 +465,7 @@ function fixDetectionA(root, masterAbs, masterAdocPath, attrsAbs, attrsPath) {
 
   // Update or create book-title entry in attributes.adoc
   let updatedAttrs = attrsText;
-  const bookTitleLineRe = new RegExp(`^:${matchedKey}-book-title:\\s+.+$`, 'm');
+  const bookTitleLineRe = new RegExp(String.raw`^:${matchedKey}-book-title:\s+.+$`, 'm');
   if (bookTitleLineRe.test(updatedAttrs)) {
     // Update existing book-title value with canonical form
     updatedAttrs = updatedAttrs.replace(bookTitleLineRe, `:${matchedKey}-book-title: ${canonicalTitle}`);

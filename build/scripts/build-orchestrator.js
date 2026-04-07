@@ -301,7 +301,7 @@ function buildRemapArgs(repoRoot, branch) {
     const slug = bookLinks[keyPrefix];
     if (!slug) continue;
     const localUrl = `file://${join(generatedDir, dir, 'index.html')}`;
-    remaps.push(`https://docs\\.redhat\\.com/en/documentation/red_hat_developer_hub/[^/]+/html-single/${slug}/index ${localUrl}`);
+    remaps.push(String.raw`https://docs\.redhat\.com/en/documentation/red_hat_developer_hub/[^/]+/html-single/${slug}/index ${localUrl}`);
   }
 
   return remaps.flatMap(r => ['--remap', r]);
