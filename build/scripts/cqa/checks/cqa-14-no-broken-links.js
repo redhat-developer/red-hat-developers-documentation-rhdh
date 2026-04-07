@@ -18,7 +18,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename, join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { Checker, autofix, manual } from '../lib/checker.js';
 import { repoRoot, collectTitle, getLines, invalidateCache } from '../lib/asciidoc.js';
 
@@ -90,7 +90,7 @@ function getLycheeIssues(root) {
 
   try {
     // Run build orchestrator (builds fresh HTML + runs lychee with remapping)
-    execSync('node build/scripts/build-orchestrator.js -b main', {
+    execFileSync('node', ['build/scripts/build-orchestrator.js', '-b', 'main'], {
       cwd: root,
       stdio: 'pipe',
       timeout: 600000, // 10 minutes
@@ -139,7 +139,7 @@ function getLycheeIssues(root) {
  */
 function parseAttributes(text) {
   const attrs = {};
-  const re = /^:([\w-]+):\s+([^\n]+)$/gm;
+  const re = /^:([a-zA-Z0-9_-]+): +([^\n]+)$/gm;
   let m;
   while ((m = re.exec(text)) !== null) {
     attrs[m[1]] = m[2];
@@ -302,8 +302,8 @@ function wordOverlapScore(setA, setB) {
  */
 function parseBookEntries(attrsText) {
   const entries = {};
-  const linkRe = /^:([\w-]+)-book-link:\s+\{product-docs-link\}\/html-single\/([^/\s]+)\/index/gm;
-  const titleRe = /^:([\w-]+)-book-title:\s+([^\n]+)$/gm;
+  const linkRe = /^:([a-zA-Z0-9_-]+)-book-link: +\{product-docs-link\}\/html-single\/([^/\s]+)\/index/gm;
+  const titleRe = /^:([a-zA-Z0-9_-]+)-book-title: +([^\n]+)$/gm;
   let m;
 
   while ((m = linkRe.exec(attrsText)) !== null) {
@@ -331,7 +331,7 @@ function checkTitleChain(root, masterAdocPath) {
   const titleDir = dirname(masterAdocPath);
 
   // Parse :title: from master.adoc
-  const titleMatch = masterContent.match(/^:title:\s+([^\n]+)$/m);
+  const titleMatch = masterContent.match(/^:title: +([^\n]+)$/m);
   if (!titleMatch) return issues;
   const titleValue = titleMatch[1].trim();
 
@@ -434,7 +434,7 @@ function fixTitleChain(root, masterAdocPath, issues) {
  */
 function fixDetectionA(root, masterAbs, masterAdocPath, attrsAbs, attrsPath) {
   const masterContent = readFileSync(masterAbs, 'utf8');
-  const titleMatch = masterContent.match(/^:title:\s+([^\n]+)$/m);
+  const titleMatch = masterContent.match(/^:title: +([^\n]+)$/m);
   if (!titleMatch) return;
   const rawTitleValue = titleMatch[1].trim();
 
@@ -464,7 +464,7 @@ function fixDetectionA(root, masterAbs, masterAdocPath, attrsAbs, attrsPath) {
 
   // Update or create book-title entry in attributes.adoc
   let updatedAttrs = attrsText;
-  const bookTitleLineRe = new RegExp(String.raw`^:${matchedKey}-book-title:\s+[^\n]+$`, 'm');
+  const bookTitleLineRe = new RegExp(String.raw`^:${matchedKey}-book-title: +[^\n]+$`, 'm');
   if (bookTitleLineRe.test(updatedAttrs)) {
     // Update existing book-title value with canonical form
     updatedAttrs = updatedAttrs.replace(bookTitleLineRe, `:${matchedKey}-book-title: ${canonicalTitle}`);
@@ -473,7 +473,7 @@ function fixDetectionA(root, masterAbs, masterAdocPath, attrsAbs, attrsPath) {
     const slug = deriveSlug(resolvedTitle);
     const newEntries = `:${matchedKey}-book-title: ${canonicalTitle}\n:${matchedKey}-book-link: {product-docs-link}/html-single/${slug}/index`;
     // Insert after the last book-link/book-title entry
-    const lastEntryMatch = updatedAttrs.match(/^:[\w-]+-book-(link|title):\s+[^\n]+$/gm);
+    const lastEntryMatch = updatedAttrs.match(/^:[a-zA-Z0-9_-]+-book-(link|title): +[^\n]+$/gm);
     if (lastEntryMatch) {
       const lastEntry = lastEntryMatch[lastEntryMatch.length - 1];
       const insertPos = updatedAttrs.lastIndexOf(lastEntry) + lastEntry.length;
@@ -488,7 +488,7 @@ function fixDetectionA(root, masterAbs, masterAdocPath, attrsAbs, attrsPath) {
 
   // Replace :title: in master.adoc with reference
   const updatedMaster = masterContent.replace(
-    /^:title:\s+[^\n]+$/m,
+    /^:title: +[^\n]+$/m,
     `:title: {${matchedKey}-book-title}`
   );
   if (updatedMaster !== masterContent) {
