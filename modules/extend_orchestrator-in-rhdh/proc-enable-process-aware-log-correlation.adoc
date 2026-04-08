@@ -1,0 +1,41 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-process-aware-log-correlation_{context}"]
+= Enable process-aware log correlation
+
+[role="_abstract"]
+Enable process instance-aware logging to inject the unique workflow ID into every log message. This simplifies log aggregation and troubleshooting by allowing you to filter logs by a specific workflow execution.
+
+.Prerequisites
+
+* A SonataFlow project with the `quarkus-logging-json` or standard console logging extension.
+
+.Procedure
+
+. Access your application configuration.
+
+. Update the log console format to include the `processInstanceId` from the Mapped Diagnostic Context (MDC):
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+quarkus.log.console.format=%d{HH:mm:ss} %-5p [%c{2.}] (%t) [%X{processInstanceId}] %s%e%n
+----
+
+. (Optional) If using JSON logging for aggregation (for example, with ELK or Splunk), ensure MDC is included in the JSON output:
++
+[source,yaml]
+----
+quarkus.log.console.json.mdc=true
+----
+
+.Verification
+
+. Run a workflow instance.
+
+. Observe the logs. Every entry generated during the workflow execution should now contain the instance UUID:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+10:15:30 INFO [org.ki.ko.] (executor-1) [a1b2c3d4...] Workflow step completed.
+----
+
