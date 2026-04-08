@@ -86,10 +86,10 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout base branch to get trusted build script
+      - name: Checkout main branch to get trusted build scripts
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.ref }}
+          ref: main
           path: trusted-scripts
 
       - name: Checkout PR branch for content to build
@@ -104,14 +104,39 @@ jobs:
         run: |
           # update
           sudo apt-get update -y || true
-          # install 
+          # install
           sudo apt-get -y -q install podman && podman --version
           echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
 
+      - name: Install lychee
+        run: |
+          LYCHEE_VERSION="v0.23.0"
+          curl -sSfL "https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" \
+            | sudo tar xz -C /usr/local/bin lychee
+          lychee --version
+
+      - name: Restore lychee cache
+        uses: actions/cache@v4
+        with:
+          path: pr-content/.lycheecache
+          key: lychee-${{ github.event.number }}-${{ github.sha }}
+          restore-keys: |
+            lychee-${{ github.event.number }}-
+            lychee-
+
       - name: Build guides and indexes
+        id: build
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
         run: |
           echo "Building PR ${{ github.event.pull_request.number }}"
           cp trusted-scripts/build/scripts/build-ccutil.sh pr-content/build/scripts/build-ccutil.sh
+          cp trusted-scripts/build/scripts/build-orchestrator.js pr-content/build/scripts/build-orchestrator.js
+          cp trusted-scripts/build/scripts/error-patterns.json pr-content/build/scripts/error-patterns.json
+          cp trusted-scripts/lychee.toml pr-content/lychee.toml
+          cp trusted-scripts/.lycheeignore pr-content/.lycheeignore
+          touch pr-content/.lycheecache
           cd pr-content
           build/scripts/build-ccutil.sh -b "pr-${{ github.event.number }}"
 
