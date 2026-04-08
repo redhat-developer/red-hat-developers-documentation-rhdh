@@ -1,0 +1,67 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="upgrade-rhdh-from-1-8-to-using-the-helm-chart_{context}"]
+= Upgrade {product-very-short} from 1.8 to {product-version} using the Helm chart
+
+[role="_abstract"]
+If you use custom `values.yaml` files that override default configuration lists, you must manually update the files to include new mandatory defaults before upgrading to {product-version}.
+
+.Prerequisites
+
+* You have a running instance of {product} 1.8 deployed using the Helm chart.
+
+* Your custom `values.yaml` file overrides any of the following affected fields:
+
+  ** `upstream.backstage.extraVolumeMounts`
+  ** `upstream.backstage.extraVolumes`
+  ** `upstream.backstage.initContainers`
+
+.Procedure
+
+* Manually merge the new default items into your `values.yaml` file to include the following highlighted items within their lists and avoid configuration loss:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+upstream:
+  backstage:
+    extraVolumeMounts:
+      # TODO: In addition to your custom mounts and the {product-very-short} defaults, ensure this item is present (defined in the default {product-very-short} chart):
+      - name: extensions-catalog
+        mountPath: /extensions
+
+    extraVolumes:
+      # TODO: In addition to your custom volumes and the {product-very-short} defaults, ensure this item is present (defined in the default {product-very-short} chart):
+      - name: extensions-catalog
+        emptyDir: {}
+
+    initContainers:
+      # TODO: Ensure the 'install-dynamic-plugins' container includes these environment variables and volume mounts:
+      - name: install-dynamic-plugins
+        env:
+          # TODO: In addition to your custom env vars and the {product-very-short} defaults for the install-dynamic-plugins init container,
+          # ensure the following items are present (defined in the default {product-very-short} chart):
+          - name: CATALOG_INDEX_IMAGE
+            value: '{{ .Values.global.catalogIndex.image.registry }}/{{ .Values.global.catalogIndex.image.repository }}:{{ .Values.global.catalogIndex.image.tag }}'
+          - name: CATALOG_ENTITIES_EXTRACT_DIR
+            value: '/extensions'
+        volumeMounts:
+          # TODO: In addition to your custom volume mounts and the {product-very-short} defaults for the install-dynamic-plugins init container,
+          # ensure the following item is present (defined in the default {product-very-short} chart):
+          - name: extensions-catalog
+            mountPath: /extensions
+        ### ... other fields omitted for brevity
+----
++
+[TIP]
+====
+To view the full list of default values for {product-version}, run the following command:
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+helm show values redhat-developer-hub --repo https://charts.openshift.io --version {product-chart-version}
+----
+====
+
+.Verification
+
+* Verify that the {product} application successfully initializes.

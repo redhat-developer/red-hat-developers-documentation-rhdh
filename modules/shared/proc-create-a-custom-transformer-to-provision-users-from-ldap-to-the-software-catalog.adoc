@@ -1,0 +1,66 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="create-a-custom-transformer-to-provision-users-from-ldap-to-the-software-catalog_{context}"]
+= Create a custom transformer to provision users from LDAP to the software catalog
+
+[role="_abstract"]
+Customize how {product} provisions users and groups to {product-short} software catalog entities,
+by creating a backend module plugin that uses the `ldapOrgEntityProviderTransformsExtensionPoint` to offer custom user and group transformers for the LDAP backend.
+
+.Prerequisites
+* You have xref:enable-user-provisioning-with-ldap_{context}[enabled provisioning users from LDAP to the software catalog].
+
+.Procedure
+. Create a new backend module:
++
+[source,shell]
+----
+$ yarn new
+? What type of module would you like to create? backend-plugin-module
+? Enter the ID if the plugin [required]? catalog
+? Enter the ID of the module [required]? ldap-transformer
+----
++
+The command creates a plugin named `catalog-backend-module-ldap-transformer`.
+
+. Install required packages:
++
+[source,shell]
+----
+$ yarn --cwd plugins/catalog-backend-module-ldap-transformer add @backstage/plugin-catalog-backend-module-ldap
+----
+
+. Refer to the link:https://github.com/redhat-developer/rhdh-examples/tree/main/plugins/backstage-plugin-catalog-backend-module-ldap-transformer[sample plugin] and implement `plugins/catalog-backend-module-ldap-transformer/src/module.ts`.
+
+. Package and export the plugin as a Dynamic Plugin, and embed the required package for the custom transformer.
++
+[source,shell]
+----
+$ npx @red-hat-developer-hub/cli@latest plugin export \
+  --embed-package @backstage/plugin-catalog-backend-module-ldap
+----
++
+[IMPORTANT]
+====
+Verify that the installed plugin version is compatible with the {backstage} version.
+
+See the {dynamic-plugins-reference-book-link}[{dynamic-plugins-reference-book-title}] for the version to import.
+====
+
+. Publish and enable the plugin in {product-short}.
+For more information, see {installing-and-viewing-plugins-book-link}#add-a-custom-dynamic-plugin-to-rhdh_installing-and-viewing-plugins-in-rhdh[{installing-and-viewing-plugins-book-title}].
+
+.Verification
+
+. Every time that {product-short} starts, it imports the users and groups.
+Check the console logs to verify the synchronization result.
+
+. After the first import is complete, go to the *Catalog* page and select **User** to view the list of users.
+
+. When you select a user, you see the information imported from LDAP.
+Verify that the user entities reflect the custom transformations you defined in the plugin.
+
+. You can select a group, view the list, and access or review the information imported from LDAP.
+Verify that the group entities reflect the custom transformations you defined in the plugin.
+
+. You can log in with an LDAP account.

@@ -40,7 +40,7 @@ This reinstallation is required due to the following fundamental architectural c
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
 .. Click *Create ConfigMaps*, select *YAML view*, and edit the file using the following structure. This example demonstrates the configuration for the {lcs-short} ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 kind: ConfigMap
 apiVersion: v1
@@ -48,7 +48,7 @@ metadata:
   name: lightspeed-stack
 data:
   lightspeed-stack.yaml: |
-    name: Lightspeed Core Service (LCS)
+    name: {lcs-name} ({lcs-short})
     service:
       host: 0.0.0.0
     # If the service does not run on port 8080, you must use ${env.LIGHTSPEED_SERVICE_PORT}. This value must match the port defined in lightspeed-app-config.yaml
@@ -75,7 +75,7 @@ data:
 +
 [IMPORTANT]
 ====
-LCS requires Llama Stack expansion syntax for environment variables in the `lightspeed-stack.yaml` file. You must use the `${env.VAR}` format with uppercase variable names. The service does not support lowercase names or omitting the `env.` prefix, such as `${env.var}`.
+{lcs-short} requires Llama Stack expansion syntax for environment variables in the `lightspeed-stack.yaml` file. You must use the `${env.VAR}` format with uppercase variable names. The service does not support lowercase names or omitting the `env.` prefix, such as `${env.var}`.
 ====
 .. Click *Create*.
 
@@ -89,7 +89,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: lightspeed-app-config
-  namespace: <__namespace__> # Enter your RHDH instance namespace
+  namespace: <__namespace__> # Enter your {product-very-short} instance namespace
 data:
   app-config.yaml: |-
     backend:
@@ -112,14 +112,14 @@ data:
       # OPTIONAL: Custom users prompts displayed to users
       # If not provided, the plugin uses built-in default prompts
       prompts:
-        - title: Getting Started with Red Hat Developer Hub
+        - title: Getting Started with {product}
           message: Can you guide me through the first steps to start using {product-very-short} as a developer, like exploring the Software Catalog and adding my service?
 
       # OPTIONAL: Port for lightspeed service (default: 8080)
       # servicePort: ${LIGHTSPEED_SERVICE_PORT}
 
       # OPTIONAL: Override default {product-very-short} system prompt
-      # systemPrompt: "You are a helpful assistant focused on Red Hat Developer Hub development."
+      # systemPrompt: "You are a helpful assistant focused on {product} development."
 ----
 +
 [NOTE]
@@ -308,10 +308,10 @@ initContainers:
 ----
 ... Add the Llama Stack (`llama-stack`) and the {lcs-short} (`lightspeed-core`) containers to the `spec.deployment.patch.spec.template.spec.containers` section:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 containers:
-  # ... Your existing RHDH container definition ...
+  # ... Your existing {product-very-short} container definition ...
   - envFrom:
       - secretRef:
           name: llama-stack-secrets
@@ -322,7 +322,7 @@ containers:
         name: shared-storage
       - mountPath: /rag-content
         name: rag-data-volume
-  - image: 'quay.io/lightspeed-core/lightspeed-stack:0.4.0' # Lightspeed Core Service image
+  - image: 'quay.io/lightspeed-core/lightspeed-stack:0.4.0' # {lcs-name} image
     name: lightspeed-core
     volumeMounts:
       - mountPath: /app-root/lightspeed-stack.yaml
@@ -424,7 +424,7 @@ global:
 If you have Road-Core Service installed from the previous {ls-brand-name} configuration, you must replace the older single container configuration found in source with the two sidecars.
 ====
 +
-[source, yaml]
+[source, yaml,subs="+attributes,+quotes"]
 ----
     extraContainers:
       # Llama Stack Container
@@ -442,7 +442,7 @@ If you have Road-Core Service installed from the previous {ls-brand-name} config
           - mountPath: /rag-content/vector_db/rhdh_product_docs
             name: rag-data-volume
             subPath: rhdh_product_docs
-      # Lightspeed Core Service Container
+      # {lcs-name} Container
       - image: 'quay.io/lightspeed-core/lightspeed-stack:0.4.0'
         name: lightspeed-core
         volumeMounts:
@@ -473,10 +473,10 @@ g, user:default/_<your_user>_, role:default/_<your_team>_
 ----
 ... Upload your `rbac-policies.csv` file to an `rbac-policies` ConfigMap in your {ocp-short} project containing {product-very-short} and update your {backstage} CR:
 +
-[source,yaml]
+[source,yaml,subs="+attributes,+quotes"]
 ----
 apiVersion: rhdh.redhat.com/v1alpha5
-kind: Backstage
+kind: {product-custom-resource-type}
 spec:
   application:
     extraFiles:
