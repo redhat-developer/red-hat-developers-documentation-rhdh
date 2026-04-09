@@ -1,0 +1,57 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="aggregate-logs-using-the-plg-stack.adoc_{context}"]
+= Aggregate logs using the PLG stack
+
+[role="_abstract"]
+Deploy and configure a Promtail sidecar to scrape workflow logs and push them to a Loki instance for long-term storage and centralized visualization in Grafana.
+
+.Prerequisites
+
+* You have a running Loki and Grafana instance.
+
+* You have configured workflow for file-based JSON logging.
+
+.Procedure
+
+. Create a ConfigMap for the Promtail sidecar to parse the JSON logs:
++
+[source,yaml]
+----
+# Snippet of pipeline_stages in promtail-config.yml
+pipeline_stages:
+- json:
+    expressions:
+      level: level
+      processInstanceId: mdc.processInstanceId
+      traceId: mdc.traceId
+- labels:
+    level:
+    processInstanceId:
+    traceId:
+----
+
+. Add the Promtail sidecar container to your `SonataFlow` custom resource:
++
+[source,yaml]
+----
+spec:
+  podTemplate:
+    containers:
+    - name: promtail-sidecar
+      image: grafana/promtail:2.9.0
+      args: ["-config.file=/etc/promtail/config.yml"]
+      volumeMounts:
+      - name: logs
+        mountPath: /var/log/sonataflow
+        readOnly: true
+----
+
+.Verification
+
+* In the Grafana *Explore* view, run the following LogQL query to find logs for a specific workflow instance:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | processInstanceId="YOUR_INSTANCE_ID"
+----

@@ -1,0 +1,73 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-structured-json-logging-for-sonataflow-workflows_{context}"]
+= Enable structured JSON logging for SonataFlow workflows
+
+[role="_abstract"]
+Configure your SonataFlow workflows to emit logs in structured JSON format. This enables machine processing and allows you to correlate log entries with specific process instances across your log aggregation stack.
+
+SonataFlow workflows support structured JSON logging with automatic process instance correlation through:
+
+* Process instance context: Automatic `processInstanceId` correlation in all log entries
+* Structured format: JSON logs optimized for machine processing and aggregation
+* Multi-tenancy support: Log isolation by workflow and process instance
+
+.Prerequisites
+
+* You have deployed SonataFlow workflow using the SonataFlow Operator on {platform-generic} or Kubernetes.
+
+* The `io.quarkus:quarkus-logging-json` extension is included in your workflow `QUARKUS_EXTENSIONS` environment variable during the image build.
+
+* You have cluster admin permissions for deploying log aggregation stack.
+
+* You have knowledge of JSON logging and log aggregation tools.
+
+.Procedure
+
+. Update your workflow build configuration to include the required JSON logging extension:
++
+[source,bash,subs=+attributes]
+----
+export QUARKUS_EXTENSIONS="${QUARKUS_EXTENSIONS},io.quarkus:quarkus-logging-json"
+----
+
+. Open the `{workflow-name}-props` ConfigMap for your workflow.
+
+. Add the following properties to the `application.properties` section:
++
+[source,bash]
+----
+# Enable JSON logging with Quarkus JSON logging extension
+quarkus.log.console.json=true
+quarkus.log.console.json.pretty-print=false
+
+# Include all MDC context fields in JSON output
+# - processInstanceId: Set automatically by SonataFlow/Kogito
+# - traceId, spanId: Set by Quarkus OpenTelemetry (requires quarkus.otel.enabled=true)
+quarkus.log.console.json.print-details=true
+
+# Set log levels for workflow components
+quarkus.log.category."org.kie.kogito".level=DEBUG
+quarkus.log.category."io.serverlessworkflow".level=INFO
+
+# Optional: Enable additional context logging
+quarkus.log.category."org.kie.kogito.services.context".level=DEBUG
+----
+
+. Save the ConfigMap and restart the workflow pod.
+
+.Verification
+
+* Check the pod logs to ensure they are in JSON format and contain the `processInstanceId`:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+oc logs <workflow_pod_name> | grep processInstanceId
+----
++
+Example of expected output:
++
+[source,bash]
+----
+{"timestamp":"...","level":"INFO","message":"...","mdc":{"processInstanceId":"abc-123-..."}}
+----

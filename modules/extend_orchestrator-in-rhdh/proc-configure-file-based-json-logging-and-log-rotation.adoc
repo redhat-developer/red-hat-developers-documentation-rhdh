@@ -1,0 +1,58 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-file-based-json-logging-and-log-rotation.adoc_{context}"]
+= Configure file-based JSON logging and log rotation
+
+[role="_abstract"]
+Configure your workflow to emit JSON logs to a file with automatic rotation to support sidecar log collection and prevent disk space issues.
+
+.Prerequisites
+
+* You have configured a shared Kubernetes volume in your `SonataFlow` custom resource.
+
+* Your workflow image includes the JSON logging extension.
+
+.Procedure
+
+. Add the following properties to your workflow ConfigMap to enable file-based JSON output:
++
+[source,bash]
+----
+quarkus.log.file.enable=true
+quarkus.log.file.path=/var/log/sonataflow/workflow.log
+quarkus.log.file.json=true
+----
+
+. Configure log rotation settings to manage disk usage:
++
+[source,bash]
+----
+quarkus.log.file.rotation.max-file-size=10M
+quarkus.log.file.rotation.max-backup-index=5
+quarkus.log.file.rotation.rotate-on-boot=true
+----
+
+. Update your `SonataFlow` custom resource to mount a volume at the log path:
++
+[source,bash]
+----
+spec:
+  podTemplate:
+    container:
+      volumeMounts:
+      - name: shared-logs
+        mountPath: /var/log/sonataflow
+  volumes:
+  - name: shared-logs
+    emptyDir:
+      sizeLimit: 500Mi
+----
+
+.Verification
+
+* Access the workflow container and verify the log file exists and is receiving JSON data:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+oc exec <pod_name> -- ls -l /var/log/sonataflow/workflow.log
+----
