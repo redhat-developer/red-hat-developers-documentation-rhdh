@@ -157,7 +157,7 @@ generate_dynamic_plugins_table() {
   fi
   jq -r '.dependencies' "${rhdhtmpdir}"/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> "$pluginVersFile"
   # Use LC_ALL=C for consistent sorting across different locales
-  cat "$pluginVersFile" | sort -u > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
+  sort -u "$pluginVersFile" > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
 
   rm -fr /tmp/warnings_"${BRANCH}".txt
 
@@ -242,20 +242,6 @@ generate_dynamic_plugins_table() {
       # .spec.dynamicArtifact = oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend-module-loki@sha256:779f888d47a9b87ad81a13897e171fe4a6a67498a937d7560026dd081361a3b2
       [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") == "@redhat"* ]] && \
         { debug "Skip[3] Plugin = $Plugin\n"; continue; }
-
-      # DEPRECATED :: once wrappers are removed, we don't need this anymore
-      if [[ $Path ]] && [[ $Path == "./dynamic-plugins/dist/"* ]]; then
-        # shellcheck disable=SC2016
-        found_in_default_config1=$(yq -r --arg Path "${Path%-dynamic}" '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-        # shellcheck disable=SC2016
-        found_in_default_config2=$(yq -r --arg Path "${Path}"           '.plugins[] | select(.package == $Path)' "${rhdhtmpdir}"/dynamic-plugins.default.yaml)
-        Path2=$(echo "$found_in_default_config2" | jq -r '.package') # with -dynamic suffix
-        if [[ $Path2 ]]; then
-            Path=$Path2
-        else
-            Path=$(echo "$found_in_default_config1" | jq -r '.package') # without -dynamic suffix
-        fi
-      fi
 
       # For extensions YAML files, skip the default config check for inclusion
       if [[ "$y" == *"/metadata/"* ]]; then
@@ -439,9 +425,6 @@ generate_dynamic_plugins_table() {
           fi
           csv_key="$SupportSort-$PrettyName-$RoleSort-$Role-$Plugin"
           echo "$csv_key|$csv_content" >> "$TEMP_DIR/csv.tmp"
-      else
-          (( tot-- )) || true
-          echo -e "${blue}        Skip: not in rhdh/dynamic-plugins.default.yaml !${norm}"
       fi
       echo
   done
@@ -641,9 +624,9 @@ generate_migration_table() {
             old_path="./dynamic-plugins/dist/${plugin_name}"
 
             # Extract new path - get the base URL without the version/integrity part
-            # Format: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0!backstage-community-plugin-jenkins
+            # Format: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
             # We want: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:<tag>
-            # First remove everything after the ! (integrity hash), then remove the tag to get base
+            # Remove the tag to get the base path
             artifact_without_hash="${dynamic_artifact%%!*}"
             new_path_base="${artifact_without_hash%:*}"
             new_path="${new_path_base}:<tag>"
@@ -724,6 +707,19 @@ popd >/dev/null || exit
 
 # see https://issues.redhat.com/browse/RHIDP-3187 - only GA plugins should be enabled by default
 if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;sort -u "${ENABLED_PLUGINS}.errors"; fi
+
+# clean up CQA warnings
+pushd "${SCRIPT_DIR}"/../.. >/dev/null || exit
+  for d in \
+    ref-community-plugins-migration-to-the-github-container-registry.adoc \
+    ref-deprecated-plugins.adoc \
+    ref-other-installable-plugins.adoc \
+    ref-supported-plugins.adoc \
+    ref-technology-preview-plugins.adoc \
+    ; do
+    ./build/scripts/cqa-16-official-product-names.sh --fix modules/extend_dynamic-plugins-reference/$d >/dev/null 2>&1
+  done
+popd >/dev/null || exit
 
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
