@@ -55,6 +55,27 @@ quarkus.log.category."org.kie.kogito.services.context".level=DEBUG
 ----
 
 . Save the ConfigMap and restart the workflow pod.
++
+The following is an example of a workflow ConfigMap with JSON logging enabled:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: greetings-props
+  namespace: sonataflow-infra
+data:
+  application.properties: |
+    # JSON logging configuration
+    quarkus.log.console.json=true
+    quarkus.log.console.json.pretty-print=false
+    quarkus.log.console.json.print-details=true
+
+    # Log levels
+    quarkus.log.category."org.kie.kogito".level=DEBUG
+    quarkus.log.category."io.serverlessworkflow".level=INFO
+----
 
 .Verification
 
@@ -71,3 +92,12 @@ Example of expected output:
 ----
 {"timestamp":"...","level":"INFO","message":"...","mdc":{"processInstanceId":"abc-123-..."}}
 ----
+
+[NOTE]
+====
+If the MDC fields are empty or missing, ensure that the JSON logging is active and verify the process context. Missing fields might indicate one of the following conditions:
+
+* The workflow has not processed any instances.
+
+* The SonataFlow version requires custom MDC configuration.
+====

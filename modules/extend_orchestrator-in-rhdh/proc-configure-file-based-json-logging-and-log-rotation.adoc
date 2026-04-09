@@ -31,6 +31,20 @@ quarkus.log.file.rotation.max-file-size=10M
 quarkus.log.file.rotation.max-backup-index=5
 quarkus.log.file.rotation.rotate-on-boot=true
 ----
++
+This configuration does the following:
+
+* Rotates logs when they reach 10MB
+* Keeps up to 5 backup files
+* Adds date suffix to rotated files
+* Rotates on application startup
+
+. Set log level for file output:
++
+[source,bash]
+----
+quarkus.log.file.level=INFO
+----
 
 . Update your `SonataFlow` custom resource to mount a volume at the log path:
 +
@@ -46,6 +60,22 @@ spec:
   - name: shared-logs
     emptyDir:
       sizeLimit: 500Mi
+----
+
+[IMPORTANT]
+====
+If you use file-based logging in Kubernetes, make sure that you mount the log directory.
+====
+
+. After applying the configuration, restart your workflow pod and check the log output:
++
+[source,bash]
+----
+# Get workflow pod name
+oc get pods -n sonataflow-infra -l sonataflow.org/workflow-app=your-workflow
+
+# Check logs for JSON format
+oc logs -n sonataflow-infra your-workflow-pod-name | head -5
 ----
 
 .Verification

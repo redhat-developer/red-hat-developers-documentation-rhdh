@@ -1,10 +1,10 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="aggregate-logs-using-the-plg-stack.adoc_{context}"]
-= Aggregate logs using the PLG stack
+= Aggregate logs using the Promtail, Loki and Grafana (PLG) stack
 
 [role="_abstract"]
-Deploy and configure a Promtail sidecar to scrape workflow logs and push them to a Loki instance for long-term storage and centralized visualization in Grafana.
+Deploy and configure a Promtail sidecar to scrape workflow logs and push them to a Loki instance for long-term storage and visualization in Grafana.
 
 .Prerequisites
 
@@ -14,37 +14,215 @@ Deploy and configure a Promtail sidecar to scrape workflow logs and push them to
 
 .Procedure
 
-. Create a ConfigMap for the Promtail sidecar to parse the JSON logs:
+. For a quick start, deploy the PLG stack using Helm:
++
+[source,bash]
+----
+# Add Grafana Helm repository
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+# Create namespace
+oc new-project sonataflow-observability
+
+# Deploy Loki stack
+helm install loki-stack grafana/loki-stack \
+  --namespace sonataflow-observability \
+  --set loki.persistence.enabled=true \
+  --set loki.persistence.size=20Gi \
+  --set promtail.config.logLevel=info \
+  --set grafana.enabled=true
+----
+
+. For production deployment, use the complete Helm values configuration, `../observability/helm-values/` with proper resource limits, security contexts, and OpenShift-specific settings.
+
+. Create a ConfigMap for the Promtail sidecar to parse the JSON logs. You can choose between the following options:
+
+* Scrape container stdout (default)
+* Custom JSON log files
+
+Scrape Container Stdout (Default)::
+
+This configuration uses Kubernetes service discovery to collect logs from container stdout:
 +
 [source,yaml]
 ----
-# Snippet of pipeline_stages in promtail-config.yml
-pipeline_stages:
-- json:
-    expressions:
-      level: level
-      processInstanceId: mdc.processInstanceId
-      traceId: mdc.traceId
-- labels:
-    level:
-    processInstanceId:
-    traceId:
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: sonataflow-observability
+data:
+  config.yml: |
+    server:
+      http_listen_port: 3101
+
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+
+    scrape_configs:
+    - job_name: sonataflow-workflows
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ["sonataflow-infra"]
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_sonataflow_org_workflow_app]
+        action: keep
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+
+      - source_labels: [__meta_kubernetes_pod_label_sonataflow_org_workflow_app]
+        target_label: workflow
+
+      pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            logger: logger
+            message: message
+            processInstanceId: mdc.processInstanceId
+            traceId: mdc.traceId
+            spanId: mdc.spanId
+
+      - labels:
+          level:
+          logger:
+          processInstanceId:
+          traceId:
+----
+
+Scrape JSON log files::
+
+When using `[file-based JSON logging](#file-based-json-logging)`, configure Promtail as a sidecar to read from the shared log volume:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-sidecar-config
+  namespace: sonataflow-infra
+data:
+  config.yml: |
+    server:
+      http_listen_port: 3101
+
+    clients:
+      - url: http://loki.sonataflow-observability.svc.cluster.local:3100/loki/api/v1/push
+
+    positions:
+      filename: /var/log/positions.yaml
+
+    scrape_configs:
+    - job_name: sonataflow-json-files
+      static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: sonataflow-workflows
+          __path__: /var/log/sonataflow/*.log
+
+      pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            logger: loggerName
+            message: message
+            processInstanceId: mdc.processInstanceId
+            traceId: mdc.traceId
+            spanId: mdc.spanId
+
+      - labels:
+          level:
+          logger:
+          processInstanceId:
+          traceId:
+
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
 ----
 
 . Add the Promtail sidecar container to your `SonataFlow` custom resource:
 +
 [source,yaml]
 ----
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+metadata:
+  name: my-workflow
+  namespace: sonataflow-infra
 spec:
   podTemplate:
+    container:
+      volumeMounts:
+      - name: shared-logs
+        mountPath: /var/log/sonataflow
     containers:
     - name: promtail-sidecar
       image: grafana/promtail:2.9.0
-      args: ["-config.file=/etc/promtail/config.yml"]
+      args:
+        - -config.file=/etc/promtail/config.yml
       volumeMounts:
-      - name: logs
+      - name: shared-logs
         mountPath: /var/log/sonataflow
         readOnly: true
+      - name: promtail-config
+        mountPath: /etc/promtail
+      - name: positions
+        mountPath: /var/log
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+    volumes:
+    - name: shared-logs
+      emptyDir:
+        sizeLimit: 500Mi
+    - name: promtail-config
+      configMap:
+        name: promtail-sidecar-config
+    - name: positions
+      emptyDir: {}
+----
+
+The following are query examples:
+
+.. Filter logs by process instance
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | processInstanceId="abc-123-def-456"
+----
+
+.. Find workflow errors
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows", workflow="onboarding"} | json | level="ERROR"
+----
+
+.. Trace correlation
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | traceId="4bf92f3577b34da6a3ce929d0e0e4736"
+----
+
+.. Process instance timeline:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | processInstanceId="abc-123-def-456" | line_format "{{.timestamp}} [{{.level}}] {{.message}}"
 ----
 
 .Verification
