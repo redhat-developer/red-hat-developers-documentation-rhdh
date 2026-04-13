@@ -1,0 +1,62 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-alerts-for-workflow-conditions_{context}"]
+= Configure alerts for critical workflow conditions
+
+[role="_abstract"]
+Configure alerts to monitor your SonataFlow workflows. These alerts notify you when workflows fail at high rates or when specific process instances are stuck or exceed expected runtimes.
+
+.Prerequisites
+
+* You have enabled a structured JSON logging to provide the necessary metadata for LogQL/PromQL queries.
+
+.Procedure
+
+. Update your configuration with the following rule groups:
+
+* To monitor failure rates:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+- alert: WorkflowHighErrorRate
+  expr: rate({job="sonataflow-workflows", level="ERROR"}[5m]) > 0.1
+  for: 2m
+  labels:
+    severity: warning
+  annotations:
+    summary: "High error rate in SonataFlow workflows"
+----
+
+* To identify stuck process instances:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+- alert: WorkflowInstanceStuck
+  expr: |
+    time() - max by (process_instance_id) (
+      {job="sonataflow-workflows"} | json | unwrap timestamp[1h]
+    ) > 3600
+  labels:
+    severity: critical
+----
+
+* For long-running processes:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+  - alert: LongRunningWorkflow
+    expr: |
+      time() - min by (process_instance_id) (
+        {job="sonataflow-workflows"} | json | message="Workflow started" | unwrap timestamp[24h]
+      ) > 7200
+    labels:
+      severity: warning
+    annotations:
+      summary: "Workflow {{ $labels.process_instance_id }} running longer than 2 hours"
+----
+
+. Apply the configuration to your cluster.
+
+.Verification
+
+* Verify that the alerts appear under the *Alerts* tab.
