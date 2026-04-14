@@ -602,7 +602,53 @@ Add the PR URL to RHDHBUGS-831 and transition to Review.
 
 ### modules/shared/ (proc-a* through proc-d*)
 
-_To be populated by Task 1_
+| Module | Current prerequisite text | Category | Change needed? | Proposed new text |
+|---|---|---|---|---|
+| `proc-add-new-components-to-your-rhdh-instance.adoc` | "You have the required permissions. See {authorization-book-link}[{authorization-book-title}]." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`catalog.entity.create\`, \`catalog.location.create\`, \`bulk.import\`.` |
+| `proc-add-video-content-to-enhance-techdocs.adoc` | "An administrator has configured your {aws-short} S3 bucket to store TechDocs sites." | OK | No | — |
+| `proc-configure-a-floating-action-button-as-a-dynamic-plugin.adoc` | "You must have sufficient permissions as a platform engineer." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-configure-amazon-s3-for-file-storage.adoc` | "You are logged in to your {aws-short} account as an administrator." | D | No (OK) | — |
+| `proc-configure-entity-detail-tab-layout.adoc` | "The plugin that contributes the tab content can be configured to extend the default inherited configuration." | OK | No | — |
+| `proc-configure-provenance-and-software-template-versioning-rhdh.adoc` | "You have administrator rights to {product}." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-configure-rbac-to-manage-extensions.adoc` | "You have enabled RBAC, have a policy administrator role in {product-short}, and have added plugins with permission." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`policy.entity.create\`, \`policy.entity.update\`.` |
+| `proc-configure-rhdh-local-to-install-plugins-by-using-extensions.adoc` | "You have installed {product-local-very-short}." | OK | No | — |
+| `proc-configure-rhdh-to-install-plugins-by-using-extensions.adoc` | "You have created a persistent volume claim (PVC) for the dynamic plugins cache with the name *dynamic-plugins-root*." | A | No (OK) | — |
+| `proc-configure-role-based-access-control-for-quick-starts.adoc` | "You have configured RBAC in {product-very-short}." | B | No (OK) | — |
+| `proc-configure-the-github-events-module-plugin.adoc` | "You have added your GitHub integration credentials in the \`{my-app-config-file}\` file." | B | No (OK) | — |
+| `proc-configure-the-rbac-backend-plugin.adoc` | "You have installed the \`@backstage-community/plugin-rbac\` plugin in {product-short}." | OK | No | — |
+| `proc-create-a-basic-software-template.adoc` | "You have administrator access to a {product-very-short} instance." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-create-a-custom-transformer-to-provision-users-from-github-to-the-software-catalog.adoc` | "You have xref:enable-user-authentication-with-github-with-optional-steps_{context}[enabled provisioning users from GitHub to the software catalog]." | OK | No | — |
+| `proc-create-a-custom-transformer-to-provision-users-from-gitlab-to-the-software-catalog.adoc` | "You have xref:enable-user-authentication-with-gitlab_{context}[enabled provisioning users from GitLab to the software catalog]." | OK | No | — |
+| `proc-create-a-custom-transformer-to-provision-users-from-ldap-to-the-software-catalog.adoc` | "You have xref:enable-user-provisioning-with-ldap_{context}[enabled provisioning users from LDAP to the software catalog]." | OK | No | — |
+| `proc-create-a-custom-transformer-to-provision-users-from-rhbk-to-the-software-catalog.adoc` | "You have xref:enable-user-authentication-with-rhbk-with-optional-steps_{context}[enabled provisioning users from {rhbk-brand-name} ({rhbk}) to the software catalog]." | OK | No | — |
+| `proc-create-a-custom-transformer-to-provision-users-from-to-the-software-catalog.adoc` | "You have xref:enable-user-authentication-with-microsoft-azure-with-optional-steps_{context}[enabled provisioning users from {azure-short} to the software catalog]." | OK | No | — |
+| `proc-create-a-javascript-package-with-dynamic-packages.adoc` | (context-dependent, no global prerequisite visible in first 30 lines) | OK | No | — |
+| `proc-create-a-new-application.adoc` | "Determine the \`create-app\` version based on the {product-very-short} compatibility matrix." | OK | No | — |
+| `proc-create-a-new-plugin.adoc` | "You have created a {backstage} application." | OK | No | — |
+| `proc-create-an-oci-image-with-dynamic-packages.adoc` | "You have installed \`podman\` or \`docker\`." | OK | No | — |
+| `proc-create-a-role-in-the-rhdh-web-ui.adoc` | "You {authorization-book-link}#enabling-and-giving-access-to-rbac_title-authorization[have enabled RBAC, have a policy administrator role in {product-short}, and have added plugins with permission]." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`policy.entity.create\`, \`policy.entity.update\`.` |
+| `proc-create-a-software-component-using-software-templates.adoc` | "You log in to the {product} instance." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`scaffolder.template.parameter.read\`, \`scaffolder.template.step.read\`, \`scaffolder.task.create\`.` |
+| `proc-create-a-techdocs-add-on.adoc` | (no Prerequisites section visible in first 30 lines) | OK | No | — |
+| `proc-create-a-tgz-file-with-dynamic-packages.adoc` | (context-dependent, no global prerequisite visible in first 30 lines) | OK | No | — |
+| `proc-create-new-components-in-your-rhdh-instance.adoc` | "You have the required permissions. See {authorization-book-link}[{authorization-book-title}]." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`catalog.entity.create\`, \`scaffolder.template.parameter.read\`, \`scaffolder.template.step.read\`, \`scaffolder.task.create\`.` |
+| `proc-customize-rhdh-backend-secret.adoc` | "You {configuring-book-link}[added a custom {product-short} application configuration], and have sufficient permissions to modify it." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-customize-the-home-page-cards.adoc` | (no Prerequisites section visible in first 30 lines) | OK | No | — |
+| `proc-customize-the-tech-radar-page-by-using-a-customization-service.adoc` | "You have specified the data sources for the Tech Radar plugin in the \`integrations\` section of the \`{my-app-config-file}\` file." | B | No (OK) | — |
+| `proc-customize-the-tech-radar-page-by-using-a-json-file.adoc` | "You have specified the data sources for the Tech Radar plugin in the \`integrations\` section of the \`{my-app-config-file}\` file." | B | No (OK) | — |
+| `proc-customize-your-rhdh-base-url.adoc` | "You know your required {product-short} external URL: pass:c,a,q[{my-product-url}], and have configured DNS to point to your {ocp-brand-name} cluster." | B | No (OK) | — |
+| `proc-customize-your-rhdh-global-header.adoc` | (no Prerequisites section visible in first 30 lines) | OK | No | — |
+| `proc-customize-your-rhdh-quick-start.adoc` | "You must have administrator permissions." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-customize-your-rhdh-title.adoc` | "{configuring-book-link}[Custom {product-short} configuration]." | B | No (OK) | — |
+| `proc-define-authorizations-in-external-files-by-using-helm.adoc` | "xref:enable-and-give-access-to-the-role-based-access-control-rbac-feature_authorization-in-rhdh[You enabled the RBAC feature]." | B | No (OK) | — |
+| `proc-define-authorizations-in-external-files-by-using-the-operator.adoc` | "xref:enable-and-give-access-to-the-role-based-access-control-rbac-feature_authorization-in-rhdh[You enabled the RBAC feature]." | B | No (OK) | — |
+| `proc-define-the-layout-of-the-rhdh-home-page.adoc` | "Include the following optimal parameters in each of your breakpoints: width (w), height (h), position (x and y)" | OK | No | — |
+| `proc-delegate-rbac-access-in-rhdh-by-using-api.adoc` | "Your {product-very-short} instance is running with the RBAC plugin installed and configured." | OK | No | — |
+| `proc-delegate-rbac-access-in-rhdh-by-using-the-web-ui.adoc` | "Your {product-very-short} instance is running with the RBAC plugin installed and configured." | OK | No | — |
+| `proc-delete-a-role-in-the-rhdh-web-ui.adoc` | "You {authorization-book-link}#enabling-and-giving-access-to-rbac_title-authorization[have enabled RBAC and have a policy administrator role in {product-short}]." | C | Yes | `* If RBAC is enabled, you have a role with the following permission: \`policy.entity.delete\`.` |
+| `proc-deploy-on-eks-with-the-helm-chart.adoc` | "You have an {eks-short} cluster with AWS Application Load Balancer (ALB) add-on installed." | A | No (OK) | — |
+| `proc-deploy-on-gke-with-the-helm-chart.adoc` | "You have subscribed to the {rhcr-long}." | A | No (OK) | — |
+| `proc-deploy-rhdh-on-with-the-helm-chart.adoc` | (Permissions prerequisite about fsGroup adjustments) | A | No (OK) | — |
+| `proc-download-active-users-list-in-rhdh.adoc` | "An administrator role must be assigned." | C | Yes | `* If RBAC is enabled, you have a role with the following permission: \`policy.entity.read\`.` |
 
 ### modules/shared/ (proc-e* through proc-i*)
 
