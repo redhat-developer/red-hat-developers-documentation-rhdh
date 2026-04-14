@@ -1,0 +1,58 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-authentication-with-gitlab_{context}"]
+= Enable authentication with GitLab
+
+[role="_abstract"]
+Configure GitLab as your {product} sign-in provider.
+
+.Prerequisites
+* You have xref:share-a-secret-with-gitlab_share-a-secret-with-your-identity-provider[shared a secret with GitLab].
+
+.Procedure
+
+. Enable the GitLab authentication provider by adding the GitLab authentication provider section to your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+includeTransitiveGroupOwnership: true
+signInPage: gitlab
+auth:
+  environment: production
+  session:
+    secret: _<name_of_secret>_
+  providers:
+    gitlab:
+      production:
+        audience: https://${GITLAB_HOST}
+        clientId: $\{GITLAB_CLIENT_ID}
+        clientSecret: $\{GITLAB_CLIENT_SECRET}
+        callbackUrl: {my-product-url}/api/auth/gitlab/handler/frame
+----
++
+
+`audience`::
+Enter your GitLab instance address: `pass:c,a,q[https://${GITLAB_HOST}]`
+
+`clientId`::
+Enter the configured client ID: `${GITLAB_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name: `${GITLAB_CLIENT_SECRET}`.
+
+`callbackUrl`::
+Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/gitlab/handler/frame]`
+
+. To disable the guest login option, in the `{my-app-config-file}` file, set the authentication environment to `production`:
++
+[source,yaml]
+----
+auth:
+  environment: production
+----
+
+.Verification
+. To verify GitLab authentication:
+.. Go to the {product-short} login page.
+.. Your {product-short} sign-in page displays *Sign in using GitLab* and the Guest user sign-in is disabled.
+.. Log in with a GitLab account.

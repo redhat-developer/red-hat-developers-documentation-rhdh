@@ -1,0 +1,75 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="import-users-and-groups-from-gitlab_{context}"]
+= Import users and groups from GitLab
+
+[role="_abstract"]
+Import GitLab users and groups to the {product} software catalog.
+
+.Prerequisites
+* You have xref:share-a-secret-with-gitlab_share-a-secret-with-your-identity-provider[shared a secret with GitLab].
+
+.Procedure
+
+. Enable provisioning for GitLab users and groups to the {product-short} software catalog by adding the provider section to your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+catalog:
+  providers:
+    gitlab:
+      default:
+        host: $\{GITLAB_HOST}
+        orgEnabled: true
+        group: $\{GITLAB_PARENT_ORG}
+        relations:
+          - INHERITED
+          - DESCENDANTS
+          - SHARED_FROM_GROUPS
+        groupPattern: `[\s\S]*`
+        restrictUsersToGroup: true
+        includeUsersWithoutSeat: true
+        schedule:
+          initialDelay:
+            seconds: 0
+          frequency:
+            minutes: 50
+          timeout:
+            minutes: 50
+----
+
+`host`::
+Enter your GitLab instance address: pass:c,a,q[`${GITLAB_HOST}`].
+
+`orgEnabled`::
+Set to `true` to enable the ingestion of GitLab organizational data, such as users and groups. For the GitLab site, you must also provide a value for the `group` parameter.
+
+`group`::
+Enter your configured link:https://docs.gitlab.com/user/group/[GitLab parent group]: `${GITLAB_PARENT_ORG}`.
+
+`relations`::
+Optional. Specify the types of group memberships to include during ingestion. You can use the following values:
+. `INHERITED`: Optional. Includes members of any ancestor groups as members of the current group.
+. `DESCENDANTS`: Optional. Includes members of any descendant groups as members of the current group.
+. `SHARED_FROM_GROUPS`: Optional. Includes members of any invited groups as members of the current group.
+
+`groupPattern`::
+Optional. Filters found groups based on provided pattern. Defaults to `[\s\S]*`, which means to not filter anything.
+
+`restrictUsersToGroup`::
+Set to `true` to import only users who are direct members of the configured group.
+
+`includeUsersWithoutSeat`::
+Set to `true` to include users who do not occupy a paid seat. This setting applies only to GitLab SaaS.
+
+`schedule.initialDelay`::
+Enter your schedule initial delay, in the ISO duration or "human duration" format.
+
+`schedule.frequency`::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`schedule.timeout`::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+.Verification
+* Open {product-very-short} and wait for first ingestion.
