@@ -732,7 +732,24 @@ Add the PR URL to RHDHBUGS-831 and transition to Review.
 
 ### modules/shared/ (proc-t* through proc-z*)
 
-_To be populated by Task 4_
+| Module | Current prerequisite text | Category | Change needed? | Proposed new text |
+|---|---|---|---|---|
+| `proc-update-existing-components-in-your-rhdh-catalog.adoc` | "You have the required permissions. See {authorization-book-link}[{authorization-book-title}]." | C | Yes | `* If RBAC is enabled, you have a role with the following permission: \`catalog.entity.update\`.` |
+| `proc-use-a-dedicated-service-to-provide-data-to-the-quick-access-card.adoc` | (Specific Helm chart installation prerequisite) | OK | No | — |
+| `proc-use-hosted-json-files-to-provide-data-to-the-quick-access-card.adoc` | (Specific Operator/Helm installation prerequisite) | OK | No | — |
+| `proc-use-quick-start-onboarding-steps.adoc` | (Already uses conditional RBAC pattern: "(Optional) If RBAC is enabled, you must have administrator permissions...") | OK | No | — |
+| `proc-use-the-argo-cd-plugin.adoc` | (Prerequisite about enabling Argo CD plugin) | OK | No | — |
+| `proc-use-the-jfrog-artifactory-plugin.adoc` | (Specific plugin installation prerequisites) | OK | No | — |
+| `proc-use-the-lightbox-techdocs-add-on.adoc` | (Prerequisite about add-on installation) | OK | No | — |
+| `proc-use-the-nexus-repository-manager-plugin.adoc` | (Specific plugin installation prerequisites) | OK | No | — |
+| `proc-use-the-reportissue-techdocs-add-on.adoc` | (Prerequisite about permissions to create issues in repository — external service access) | D/OK | No | — |
+| `proc-use-the-rhdh-operator-to-run-rhdh-with-your-custom-configuration.adoc` | (Specific developer permissions prerequisite) | OK | No | — |
+| `proc-use-the-tekton-plugin.adoc` | (Specific plugin installation prerequisites) | OK | No | — |
+| `proc-use-the-textsize-techdocs-add-on.adoc` | (Prerequisite about add-on installation) | OK | No | — |
+| `proc-use-the-topology-plugin.adoc` | (Specific installation and enablement prerequisites) | OK | No | — |
+| `proc-verify-plugins-locally.adoc` | (Specific plugin export prerequisite) | OK | No | — |
+| `proc-version-a-software-template-in-rhdh.adoc` | "You have administrator rights to {product}." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-view-virtual-machines.adoc` | (Specific OpenShift Virtualization operator prerequisite) | OK | No | — |
 
 ### Non-shared modules
 
