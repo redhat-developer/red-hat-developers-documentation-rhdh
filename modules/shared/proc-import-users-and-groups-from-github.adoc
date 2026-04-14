@@ -1,0 +1,76 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="import-users-and-groups-from-github_{context}"]
+= Import users and groups from GitHub
+
+[role="_abstract"]
+Import GitHub users and groups to the {product} software catalog.
+
+.Prerequisites
+* You have xref:share-a-secret-with-github_share-a-secret-with-your-identity-provider[shared a secret with GitHub].
+
+.Procedure
+
+. Enable the GitHub catalog provider plugin in your `dynamic-plugins.yaml` file to import GitHub users and groups to the {product-short} software catalog.
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-github-org-dynamic'
+    disabled: false
+----
+
+. Enable provisioning GitHub users and groups to the {product-short} software catalog by adding the GitHub catalog provider section to your `{my-app-config-file}` file:
++
+[id=githubProviderId]
+[source,yaml]
+----
+catalog:
+  providers:
+    githubOrg:
+      id: githuborg
+      githubUrl: "${GITHUB_URL}"
+      orgs: [ "${GITHUB_ORG}" ]
+      schedule:
+        frequency:
+          minutes: 30
+        initialDelay:
+          seconds: 15
+        timeout:
+          minutes: 15
+----
+
+`id`::
+Enter a stable identifier for this provider, such as `githuborg`.
++
+[WARNING]
+====
+Entities from this provider are associated with this identifier.
+Therefore, do not to change the identifier over time since that might lead to orphaned entities or conflicts.
+====
+
+`githubUrl`::
+Enter the configured secret variable name: `$\{GITHUB_URL}`.
+
+`orgs`::
+Enter the configured secret variable name: `$\{GITHUB_ORG}`.
+
+`schedule.frequency`::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`schedule.timeout`::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+`schedule.initialDelay`::
+Enter your schedule initial delay, in the ISO duration or "human duration" format.
+
+.Verification
+* To verify user and group provisioning, check the console logs.
++
+Successful synchronization example:
++
+[source,json]
+----
+{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Reading GitHub users and teams for org: rhdh-dast","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:githuborg:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:58"}
+{"class":"GithubMultiOrgEntityProvider","level":"info","message":"Read 7 GitHub users and 2 GitHub groups in 0.4 seconds. Committing...","plugin":"catalog","service":"backstage","target":"https://github.com","taskId":"GithubMultiOrgEntityProvider:githuborg:refresh","taskInstanceId":"801b3c6c-167f-473b-b43e-e0b4b780c384","timestamp":"2024-09-09 23:55:59"}
+----
