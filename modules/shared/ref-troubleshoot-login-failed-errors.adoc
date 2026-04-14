@@ -1,0 +1,56 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="troubleshoot-login-failed-errors_{context}"]
+= Troubleshoot login failed errors
+
+[role="_abstract"]
+When a user cannot sign in to {product-short}, the sign-in page displays a "Login failed" error message.
+The following sections describe common login errors and their solutions.
+
+== Login failed: unable to resolve user identity
+
+----
+Login failed; caused by Error: Failed to sign-in, unable to resolve user identity. Please verify that your catalog contains the expected User entities that would match your configured sign-in resolver.
+----
+
+This error indicates that the user signing in does not match a user entity in the {product-short} software catalog.
+
+To resolve this issue:
+
+. Check that the corresponding catalog provider plugin is set up correctly and is successfully syncing users and groups into the catalog.
++
+In the backend logs, look for a successful synchronization message such as:
++
+[source]
+----
+catalog info Read 114 GitHub users and 22 GitHub groups in 3.4 seconds. Committing...
+catalog info Committed 114 GitHub users and 22 GitHub groups in 0.0 seconds.
+----
+
+. If users and groups have been ingested into the catalog, verify that the sign-in resolver used (default or configured) matches the correct user attributes.
+. Optionally, use guest login to look into the user entity in the catalog and verify the attributes.
+
+== Login failed: provider not configured to support sign-in
+
+----
+Login failed; caused by Error: The <providerId> provider is not configured to support sign-in.
+----
+
+This error indicates that the authentication provider has `disableIdentityResolution` set to `true`, meaning it is configured as an auxiliary provider, not for primary sign-in.
+
+To resolve this issue:
+
+* In your `{my-app-config-file}` file, ensure that `disableIdentityResolution` is not set to `true` for your primary sign-in authentication provider.
+
+== Login failed: user profile does not contain an email
+
+----
+Login failed, user profile does not contain an email
+----
+
+This error indicates that the authentication client does not have permission to read the user's email from the identity provider.
+
+To resolve this issue:
+
+* Grant the necessary email-reading permissions to the authentication client in the identity provider.
+* Or, use a sign-in resolver that does not rely on email, such as `preferredUsernameMatchingUserEntityName` instead of `emailMatchingUserEntityProfileEmail`.
