@@ -1,0 +1,56 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-the-ldap-uuid-sign-in-resolver-for-rhbk_{context}"]
+= Configure the LDAP UUID sign-in resolver for {rhbk-brand-name}
+
+[role="_abstract"]
+When you use {rhbk-brand-name} with LDAP user federation, you can configure the `oidcLdapUuidMatchingAnnotation` sign-in resolver to match users by their immutable LDAP UUID.
+This requires a custom client scope in {rhbk-brand-name} that exposes the LDAP UUID as a token claim.
+
+.Prerequisites
+
+* LDAP user federation is configured in {rhbk-brand-name}.
+* LDAP provisioning is enabled in {product}.
+For more information, see xref:enable-user-provisioning-with-ldap_{context}[Enable user provisioning with LDAP].
+* A {product} client is created in {rhbk-brand-name}.
+
+.Procedure
+
+. In the {rhbk-brand-name} admin console, go to *Client scopes* and click *Create client scope*.
+Name the scope `ldap_uuid`.
+
+. In the `ldap_uuid` scope, click the *Mappers* tab, then click *Add mapper* > *Configure a new mapper* > *User Attribute*.
+Configure the mapper with the following values:
++
+--
+* *Name*: `LDAP_ID`
+* *User Attribute*: `LDAP_ID`
+* *Token Claim Name*: `ldap_uuid`
+* *Claim JSON Type*: `String`
+* *Add to ID token*: *ON*
+* *Add to userinfo*: *ON*
+--
+
+. Go to *Clients* > your {product} client > *Client scopes*.
+Click *Add client scope* and add `ldap_uuid` as a *Default* scope.
+
+. Add the `oidcLdapUuidMatchingAnnotation` resolver to your `{my-app-config-file}` file:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+auth:
+  providers:
+    oidc:
+      production:
+        signIn:
+          resolvers:
+            - resolver: oidcLdapUuidMatchingAnnotation
+              ldapUuidKey: ldap_uuid
+----
++
+`ldapUuidKey`::
+Enter the token claim name containing the LDAP UUID value.
+The default value is `ldap_uuid`.
+This value must match the *Token Claim Name* configured in step 2.
+
+. Restart the {product} application to apply the changes.
