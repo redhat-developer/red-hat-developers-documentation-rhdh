@@ -708,7 +708,27 @@ Add the PR URL to RHDHBUGS-831 and transition to Review.
 
 ### modules/shared/ (proc-j* through proc-s*)
 
-_To be populated by Task 3_
+| Module | Current prerequisite text | Category | Change needed? | Proposed new text |
+|---|---|---|---|---|
+| `proc-load-a-plugin-packaged-as-a-javascript-package.adoc` | (Prerequisite about packaging plugin as dynamic plugin) | OK | No | — |
+| `proc-load-a-plugin-packaged-as-an-oci-image.adoc` | (Prerequisite about packaging plugin in OCI image) | OK | No | — |
+| `proc-load-a-plugin-packaged-as-a-tgz-file.adoc` | (Prerequisite about packaging plugin in TGZ file) | OK | No | — |
+| `proc-manage-chats.adoc` | (Prerequisites about Lightspeed plugin configuration and login) | OK | No | — |
+| `proc-override-translations.adoc` | (Prerequisites about localization and OpenShift CLI) | OK | No | — |
+| `proc-provision-your-custom-rhdh-configuration.adoc` | (Uses include snippet with developer permissions) | OK | No | — |
+| `proc-provision-your-pull-secret-to-your-rhdh-instance-namespace.adoc` | (Prerequisites about Red Hat Container Registry credentials and namespace) | OK | No | — |
+| `proc-register-components-manually-in-your-rhdh-instance.adoc` | "You have the required permissions. See {authorization-book-link}[{authorization-book-title}]." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`catalog.entity.create\`, \`catalog.location.create\`.` |
+| `proc-run-orchestrator-workflows-for-bulk-imports.adoc` | "You have role-based access control (RBAC) permissions to configure the Bulk Import plugin." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-select-the-language-for-your-rhdh-instance.adoc` | (Prerequisites about logged in and localization enabled) | OK | No | — |
+| `proc-send-requests-to-the-rbac-rest-api-by-using-an-external-service.adoc` | (Prerequisites about RBAC access and service-to-service token authentication) | OK | No | — |
+| `proc-send-requests-to-the-rbac-rest-api-by-using-a-rest-client.adoc` | (Prerequisite about RBAC access) | OK | No | — |
+| `proc-send-requests-to-the-rbac-rest-api-by-using-the-curl-utility.adoc` | (Prerequisite about RBAC access) | OK | No | — |
+| `proc-set-up-a-custom-scaffolder-workflow-for-bulk-import.adoc` | (Prerequisites about custom template creation and NODE_OPTIONS environment variable) | OK | No | — |
+| `proc-set-up-the-guest-authentication-provider.adoc` | (Prerequisite about RBAC plugin installation) | OK | No | — |
+| `proc-share-software-templates-with-your-organization.adoc` | "You have administrator access to a {product-very-short} instance." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`catalog.entity.create\`, \`catalog.location.create\`.` |
+| `proc-start-and-complete-lessons-in-learning-paths.adoc` | "Your platform engineer has granted you access to the Learning Paths plugin." | C | Yes | `* If RBAC is enabled, you have a role with the following permission: \`catalog.entity.read\`.` |
+| `proc-streamline-documentation-builds-using-github-actions.adoc` | (Prerequisites include specific catalog permissions: `catalog.entity.create` and `catalog.location.create`) | OK | No | — |
+| `proc-switch-the-theme-mode-for-your-rhdh-instance.adoc` | (Prerequisite about logged in to web console) | OK | No | — |
 
 ### modules/shared/ (proc-t* through proc-z*)
 
