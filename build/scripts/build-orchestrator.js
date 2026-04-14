@@ -26,6 +26,7 @@ const EXCLUDED_TITLES = /rhdh-plugins-reference/;
 const CCUTIL_IMAGE = 'quay.io/ivanhorvath/ccutil:amazing';
 const LYCHEE_VERSION = 'v0.23.0';
 const PAGES_BASE = 'https://redhat-developer.github.io/red-hat-developers-documentation-rhdh';
+const RELEASE_NOTES_BASE = 'https://red-hat-developers-documentation.pages.redhat.com/red-hat-developer-hub-release-notes';
 const SAFE_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
 
 // ── Argument parsing ─────────────────────────────────────────────────────────
@@ -342,6 +343,15 @@ async function traceUrlToSource(url, repoRoot) {
 
 // ── Index HTML generation ────────────────────────────────────────────────────
 
+function getReleaseNotesLink(branch) {
+  if (branch === 'main') return `${RELEASE_NOTES_BASE}/main/index.html`;
+  const match = branch.match(/^release-(\d+)\.(\d+)$/);
+  if (match && (Number(match[1]) > 1 || Number(match[2]) >= 9)) {
+    return `${RELEASE_NOTES_BASE}/release-${match[1]}-${match[2]}/index.html`;
+  }
+  return null;
+}
+
 function generateBranchIndex(branch, results, repoRoot) {
   const indexDir = join(repoRoot, 'titles-generated', branch);
   mkdirSync(indexDir, { recursive: true });
@@ -351,7 +361,12 @@ function generateBranchIndex(branch, results, repoRoot) {
     `<li><a href="./${r.title}">${r.title}</a></li>`
   ).join('\n');
 
-  const html = `<html><head><title>Red Hat Developer Hub Documentation Preview - ${branch}</title></head><body><ul>\n${links}\n</ul></body></html>`;
+  const rnUrl = getReleaseNotesLink(branch);
+  const rnSection = rnUrl
+    ? `\n<hr>\n<ul>\n<li><a href="${rnUrl}">Release Notes (external)</a></li>\n</ul>`
+    : '';
+
+  const html = `<html><head><title>Red Hat Developer Hub Documentation Preview - ${branch}</title></head><body><ul>\n${links}\n</ul>${rnSection}</body></html>`;
   writeFileSync(join(indexDir, 'index.html'), html);
 }
 
