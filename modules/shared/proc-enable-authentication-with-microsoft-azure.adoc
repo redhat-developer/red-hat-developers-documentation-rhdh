@@ -1,0 +1,135 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-authentication-with-microsoft-azure_{context}"]
+= Enable authentication with {azure-brand-name}
+
+[role="_abstract"]
+Configure {azure-brand-name} as your {product} sign-in provider.
+
+.Prerequisites
+* You have xref:share-a-secret-with-microsoft-azure_share-a-secret-with-your-identity-provider[shared a secret with {azure-brand-name}].
+
+.Procedure
+
+. Enable {azure-short} authentication, by adding the Microsoft authentication provider to your `{my-app-config-file}` file content:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${MICROSOFT_CLIENT_ID}
+        clientSecret: ${MICROSOFT_CLIENT_SECRET}
+        tenantId: ${MICROSOFT_TENANT_ID}
+signInPage: microsoft
+----
+
+`environment`::
+Enter `production` to disable the **Guest** login option in the {product-short} login page.
+
+`clientId`::
+Enter the configured secret variable name:  `$\{MICROSOFT_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name:
+`$\{MICROSOFT_CLIENT_SECRET}`.
+
+`tenantId`::
+Enter the configured secret variable name: `$\{MICROSOFT_TENANT_ID}`.
+
+`signInPage`::
+Enter `microsoft` to set the {azure-short} provider as your {product-short} sign-in provider.
+
+. Optional: Add optional fields to the Microsoft authentication provider section in your `{my-app-config-file}` file:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${MICROSOFT_CLIENT_ID}
+        clientSecret: ${MICROSOFT_CLIENT_SECRET}
+        tenantId: ${MICROSOFT_TENANT_ID}
+        domainHint: ${MICROSOFT_TENANT_ID}
+        additionalScopes:
+           - Mail.Send
+        sessionDuration:
+          hours: 24
+        signIn:
+          resolvers:
+            - resolver: usernameMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+signInPage: microsoft
+----
+
+`domainHint`::
+* Leave this parameter empty, or enter the tenant ID when your application registration is single-tenant.
+* Leave this parameter empty when your application registration is multitenant.
+* Enter the tenant ID to reduce login friction for users with accounts in multiple tenants, by automatically filtering out accounts from other tenants.
++
+For more information, see link:https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/home-realm-discovery-policy[Home Realm Discovery].
+
+`additionalScopes`::
+Enter the list of additional scopes to add scopes for the application registration.
+The default and mandatory value lists following scopes:
+* `openid`
+* `offline_access`
+* `profile`
+* `email`
+* `User.Read`
+
+`sessionDuration`::
+Lifespan of the user session.
+Enter a duration in `ms` library (such as '24h', '2 days'), ISO duration, or "human duration" format.
+
+`signIn.resolvers`::
+After successful authentication, {product-short} resolves the user signing in to an existing user in the {product-short} catalog.
+To best match users securely for your use case, consider configuring a specific resolver.
++
+Enter the resolver list to override the default resolver: `userIdMatchingUserEntityAnnotation`.
++
+The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
++
+[WARNING]
+====
+In production mode, configure only one resolver to make sure users are securely matched.
+====
+
+`resolver`::
+Enter the sign-in resolver name.
+Available resolvers:
+
+`emailMatchingUserEntityAnnotation`:::
+Use this resolver to look up the user by matching their Microsoft email to the email entity annotation.
+
+`emailLocalPartMatchingUserEntityName`:::
+Use this resolver to look up the user by matching their Microsoft email user name to the user entity name.
+
+`emailMatchingUserEntityProfileEmail`:::
+Use this resolver to look up the user by matching their Microsoft email to the user entity profile email.
+
+`dangerouslyAllowSignInWithoutUserInCatalog`::
+Enter `true` to configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
++
+[WARNING]
+====
+In production mode, do not enable `dangerouslyAllowSignInWithoutUserInCatalog`.
+====
+
+. To disable the guest login option, in the `{my-app-config-file}` file, set the authentication environment to `production`:
++
+[source,yaml]
+----
+auth:
+  environment: production
+----
+
+.Verification
+. To verify {azure-short} user authentication:
+.. Go to the {product-short} login page.
+.. Your {product-short} sign-in page displays *Sign in using Microsoft* and the Guest user sign-in is disabled.
+.. Log in with an {azure-short} account.
