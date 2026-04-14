@@ -250,3 +250,37 @@ spec:
 
 
 
+[id="known-issue-rhdhbugs-2861"]
+== For Orchestrator users with Operator deployments, the {product-bundle-version} upgrade requires updating the `dynamic-plugins` ConfigMap
+
+If you have an existing Operator-backed instance of {product-short} with the Orchestrator, you must update your `dynamic-plugins` ConfigMap to set the version of the Orchestrator plugins to {orchestrator-plugin-version} once the {product-short} Operator is upgraded to {product-bundle-version}.
+Otherwise, the {product-short} instance does not upgrade at all.
+
+.Example of a `dynamic-plugins` ConfigMap enabling the Orchestrator plugins in {orchestrator-plugin-version} for Operator-backed instances
+
+[source,yaml,subs="+quotes,+attributes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@{orchestrator-plugin-version}"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@{orchestrator-plugin-version}"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@{orchestrator-plugin-version}"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@{orchestrator-plugin-version}"
+        disabled: false
+----
+
+
+.Additional resources
+* link:https://redhat.atlassian.net/browse/RHDHBUGS-2861[RHDHBUGS-2861]
