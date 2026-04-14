@@ -652,7 +652,59 @@ Add the PR URL to RHDHBUGS-831 and transition to Review.
 
 ### modules/shared/ (proc-e* through proc-i*)
 
-_To be populated by Task 2_
+| Module | Current prerequisite text | Category | Change needed? | Proposed new text |
+|---|---|---|---|---|
+| `proc-edit-a-role-in-the-rhdh-web-ui.adoc` | "You {authorization-book-link}#enabling-and-giving-access-to-rbac_title-authorization[have enabled RBAC, have a policy administrator role in {product-short}, and have added plugins with permission]." | C | Yes | `* If RBAC is enabled, you have a role with the following permissions: \`policy.entity.update\`, \`policy.entity.read\`.` |
+| `proc-enable-and-authorize-bulk-import-capabilities-in-rhdh.adoc` | (No vague prerequisites — specific GitHub discovery prerequisite) | OK | No | — |
+| `proc-enable-and-disable-plugins-by-using-extensions.adoc` | "You have configured RBAC to allow the current user to access to manage plugin configuration." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-enable-and-give-access-to-the-role-based-access-control-rbac-feature.adoc` | "You have {configuring-book-link}[added a custom {product-short} application configuration], and have necessary permissions to change it." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-enable-argo-cd-rollouts.adoc` | "You have access to the Kubernetes cluster with the necessary permissions to create and manage custom resources and \`ClusterRoles\`." | A | No (OK) | — |
+| `proc-enable-auto-logout-for-inactive-users.adoc` | "You have administrative access to the {product} configuration files." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-enable-automated-template-updates.adoc` | "You have administrator access to the {product} configuration." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-enable-github-repository-discovery.adoc` | "You {configuring-book-link}[added a custom {product-short} application configuration], and have sufficient permissions to modify it." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-enable-kubernetes-custom-actions-plugin-in-rhdh.adoc` | (No vague prerequisites — specific Helm chart requirement) | OK | No | — |
+| `proc-enable-plugins-added-in-the-rhdh-container-image.adoc` | (No Prerequisites section visible in first 30 lines) | OK | No | — |
+| `proc-enable-quicklinks-and-starred-items-after-an-upgrade.adoc` | "You have administrative permissions to modify ConfigMaps (if using the Operator)." | A | No (OK) | — |
+| `proc-enable-quick-start-localization-in-rhdh.adoc` | "You have enabled localization in your {product-very-short} application." | B | No (OK) | — |
+| `proc-enable-servicenow-custom-actions-plugin-in-rhdh.adoc` | "{product} is installed and running." | OK | No | — |
+| `proc-enable-service-to-service-authentication-by-using-a-static-token.adoc` | (No Prerequisites section visible in first 30 lines — content starts with abstract) | OK | No | — |
+| `proc-enable-service-to-service-authentication-by-using-json-web-key-sets-jwks-tokens.adoc` | (No Prerequisites section visible in first 30 lines — content starts with abstract) | OK | No | — |
+| `proc-enable-sidebar-menu-items-localization-in-rhdh.adoc` | "You have enabled localization in your {product-very-short} application." | B | No (OK) | — |
+| `proc-enable-software-template-version-update-notifications-in-rhdh.adoc` | (No vague prerequisites — specific plugin installation requirement) | OK | No | — |
+| `proc-enable-the-argo-cd-plugin.adoc` | (No Prerequisites section visible in first 30 lines — only NOTE about Argo CD instance) | OK | No | — |
+| `proc-enable-the-keycloak-plugin.adoc` | (No vague prerequisites — specific environment variables required) | OK | No | — |
+| `proc-enable-the-localization-framework-in-rhdh.adoc` | (No Prerequisites section visible in first 30 lines — empty prerequisites) | OK | No | — |
+| `proc-enable-the-tekton-plugin.adoc` | (No vague prerequisites — specific Kubernetes plugin and ClusterRole requirements) | OK | No | — |
+| `proc-enable-user-authentication-with-github.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-authentication-with-github-as-an-auxiliary-authentication-provider.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-authentication-with-github-with-optional-steps.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-authentication-with-gitlab.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-authentication-with-microsoft-azure.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-authentication-with-microsoft-azure-with-optional-steps.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-authentication-with-rhbk.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-authentication-with-rhbk-with-optional-steps.adoc` | (Uses include snippet, need to check common prerequisites) | OK | No | — |
+| `proc-enable-user-provisioning-with-ldap.adoc` | (No vague prerequisites — specific LDAP credentials and xref to RHBK auth) | OK | No | — |
+| `proc-enable-users-to-use-the-topology-plugin.adoc` | "You are {authorization-book-link}#managing-authorizations-by-using-external-files[managing {authorization-book-title} by using external files]." | OK | No | — |
+| `proc-example-of-installing-a-custom-plugin-in-rhdh.adoc` | (No vague prerequisites — specific Node.js, tools, registry access) | OK | No | — |
+| `proc-export-plugins-in-rhdh.adoc` | (No vague prerequisites — specific CLI package and Node.js requirements) | OK | No | — |
+| `proc-expose-your-operator-based-instance-on-aks.adoc` | (Uses include snippet for common prerequisites) | OK | No | — |
+| `proc-expose-your-operator-based-instance-on-eks.adoc` | (Uses include snippet + specific EKS requirements) | OK | No | — |
+| `proc-expose-your-operator-based-instance-on-gke.adoc` | (Uses include snippet + specific GKE requirements) | OK | No | — |
+| `proc-find-components-by-kind-in-the-rhdh-catalog.adoc` | "You are logged in to the {product-very-short} instance." | OK | No | — |
+| `proc-import-an-existing-software-template.adoc` | (No vague prerequisites — specific directory/repo and GitHub integration) | OK | No | — |
+| `proc-import-documentation-into-techdocs-from-a-remote-repository.adoc` | "You have the \`catalog.entity.create\` and \`catalog.location.create\` permissions to import documentation into TechDocs from a remote repository." | C | No (OK) | — |
+| `proc-import-multiple-github-repositories.adoc` | "You have xref:enable-and-authorize-bulk-import-capabilities-in-rhdh_{context}[enabled the Bulk Import feature and given access to it]." | OK | No | — |
+| `proc-import-multiple-gitlab-repositories.adoc` | (No vague prerequisites — specific configuration requirements) | OK | No | — |
+| `proc-install-and-configure.adoc` | (No Prerequisites section visible in first 30 lines) | OK | No | — |
+| `proc-install-and-configure-an-external-techdocs-add-on-using-the-helm-chart.adoc` | "The TechDocs plugin is installed and enabled." | OK | No | — |
+| `proc-install-and-configure-a-third-party-techdocs-add-on.adoc` | (No vague prerequisites — specific technical requirements) | OK | No | — |
+| `proc-install-plugins-by-using-extensions.adoc` | "You have configured RBAC to allow the current user to manage plugin configuration." | B | Yes | `* You have {configuring-book-link}[added a custom {product-short} application configuration].` |
+| `proc-install-plugins-from-oci-plugins-in-openshift.adoc` | "Your cluster administrator must add the trusted corporate CA bundle to the cluster-wide configuration." | A | No (OK) | — |
+| `proc-install-the-operator-on-aks-by-using-olm.adoc` | (Uses include snippet for common prerequisites) | OK | No | — |
+| `proc-install-the-operator-on-eks-by-using-olm.adoc` | (Uses include snippet for common prerequisites + EKS context) | OK | No | — |
+| `proc-install-the-operator-on-gke-by-using-olm.adoc` | (Uses include snippet for common prerequisites + GKE login) | OK | No | — |
+| `proc-install-the-rhdh-operator.adoc` | "You have logged in as an administrator on the {ocp-short} web console." | A | No (OK) | — |
+| `proc-install-the-topology-plugin.adoc` | (No vague prerequisites — specific Kubernetes plugin and ClusterRole requirements) | OK | No | — |
 
 ### modules/shared/ (proc-j* through proc-s*)
 
