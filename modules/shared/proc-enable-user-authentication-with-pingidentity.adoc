@@ -1,0 +1,176 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-user-authentication-with-pingidentity_{context}"]
+= Enable user authentication with PingIdentity
+
+[role="_abstract"]
+You can enable authentication with PingIdentity to allow users to sign in to {product-short} using their PingFederate or PingOne credentials.
+
+.Prerequisites
+* You have {configuring-book-link}[added a custom {product-short} application configuration], and have enough permissions to change it.
+* You have a PingFederate or PingOne instance with OIDC capability.
++
+[TIP]
+====
+Alternatively, ask your PingIdentity administrator to prepare the required OIDC application.
+====
+
+.Procedure
+. Register your {product-short} application in PingIdentity:
+
+.. Create an OIDC application or client connection with:
+... A distinctive **Client ID**.
+... **Client authentication**: Enabled (confidential client).
+... **Redirect URI**: Set to the OIDC handler URL: `pass:c,a,q[{my-product-url}/api/auth/oidc/handler/frame]`.
+.. Save the following values for the next step:
+* **Client ID**
+* **Client Secret**
+* **OIDC metadata URL**: The `.well-known/openid-configuration` endpoint URL for your PingIdentity instance.
+
+. Create a long, complex, and unique string to use as the {product-short} session secret key.
+
+. Add your PingIdentity credentials and the session secret key to {product-short}, by adding the following key-value pairs to {configuring-dynamic-plugins-book-link}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their environment variable name.
++
+`PING_CLIENT_ID`::
+Enter the saved **Client ID**.
+
+`PING_CLIENT_SECRET`::
+Enter the saved **Client Secret**.
+
+`PING_METADATA_URL`::
+Enter the saved **OIDC metadata URL**.
+
+`SESSION_SECRET`::
+Enter the created session secret key.
+
+. The OIDC provider authentication backend plugin requires {product-short} to support sessions.
+Enable session support by adding the session secret to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+auth:
+  session:
+    secret: ${SESSION_SECRET}
+----
+
+. Enable the PingIdentity authentication provider, by adding the OIDC provider section in your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${PING_METADATA_URL}
+        clientId: ${PING_CLIENT_ID}
+        clientSecret: ${PING_CLIENT_SECRET}
+        prompt: auto
+signInPage: oidc
+----
+
+`environment: production`::
+Mark the environment as `production` to hide the Guest login in the {product-short} home page.
+
+`metadataUrl`::
+Enter your PingIdentity OIDC metadata URL, defined earlier.
+
+`clientId`::
+Enter your {product-short} application client ID in PingIdentity, defined earlier.
+
+`clientSecret`::
+Enter your {product-short} application client secret in PingIdentity, defined earlier.
+
+`prompt`::
+Enter `auto` to allow the identity provider to automatically determine whether to prompt for credentials or bypass the login redirect if an active PingIdentity session exists.
++
+The identity provider defaults to `none`, which assumes that you are already logged in. Sign-in requests without an active session are rejected.
+
+`signInPage`::
+Enter `oidc` to enable the OIDC provider as default sign-in provider.
+
+. Optional: Add optional fields to the OIDC authentication provider section in your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+auth:
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${PING_METADATA_URL}
+        clientId: ${PING_CLIENT_ID}
+        clientSecret: ${PING_CLIENT_SECRET}
+        callbackUrl: ${PING_CALLBACK_URL}
+        tokenEndpointAuthMethod: ${PING_TOKEN_ENDPOINT_METHOD}
+        tokenSignedResponseAlg: ${PING_SIGNED_RESPONSE_ALG}
+        additionalScopes: ${PING_SCOPE}
+        signIn:
+          resolvers:
+            - resolver: preferredUsernameMatchingUserEntityName
+            - resolver: emailMatchingUserEntityProfileEmail
+            - resolver: emailLocalPartMatchingUserEntityName
+              dangerouslyAllowSignInWithoutUserInCatalog: true
+        sessionDuration: { hours: 24 }
+  backstageTokenExpiration: { minutes: _<user_defined_value>_ }
+signInPage: oidc
+----
+
+`callbackUrl`::
+PingIdentity callback URL.
+
+`tokenEndpointAuthMethod`::
+Enter your token endpoint authentication method.
+
+`tokenSignedResponseAlg`::
+Token signed response algorithm.
+
+`additionalScopes`::
+Enter additional PingIdentity scopes to request during the authentication flow.
+
+`signIn`::
+`resolvers`:::
+After successful authentication, the user signing in must be resolved to an existing user in the {product-short} catalog.
+To best match users securely for your use case, consider configuring a specific resolver.
++
+Enter the resolver list to override the default resolver.
++
+Available values:
+
+`preferredUsernameMatchingUserEntityName`::::
+Matches the preferred username with the user entity name.
+
+`emailMatchingUserEntityProfileEmail`::::
+Matches the email with the user entity profile email.
+
+`emailLocalPartMatchingUserEntityName`::::
+Matches the email local part with the user entity name.
++
+The authentication provider tries each sign-in resolver in order until it succeeds, and fails if none succeed.
++
+[WARNING]
+====
+In production mode, configure only one resolver to make sure users are securely matched.
+====
+
+`dangerouslyAllowSignInWithoutUserInCatalog: true`::::
+Configure the sign-in resolver to bypass the user provisioning requirement in the {product-short} software catalog.
++
+[WARNING]
+====
+In production mode, do not enable the `dangerouslyAllowSignInWithoutUserInCatalog` option.
+====
+
+`sessionDuration`::
+Lifespan of the user session.
+Enter a duration in `ms` library format (such as '24h', '2 days'), ISO duration, or "human duration" as used in code.
+
+`backstageTokenExpiration`::
+Enter a value to modify the {product-short} token expiration from its default value of one hour.
+It refers to the validity of short-term cryptographic tokens, not to the session duration.
+The expiration value must be set between 10 minutes and 24 hours.
+
+.Verification
+. Go to the {product-short} login page.
+. Your {product-short} sign-in page displays *Sign in using OIDC* and the Guest user sign-in is disabled.
+. Log in with OIDC by using your PingIdentity user credentials.
