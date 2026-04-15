@@ -3,24 +3,20 @@
 = Using ServiceNow scaffolder actions in software templates
 
 [role="_abstract"]
-With ServiceNow scaffolder actions, you can automate ServiceNow operations, such as creating incidents or updating records, directly from software templates.
-
-In {product} {product-very-short} 1.9 and later, these actions have been moved to a dedicated `servicenow` workspace to improve integration with the ServiceNow plugin.
+Add ServiceNow actions to your Software Templates to automate ticket creation and record updates during the software scaffolding process. Use these actions to ensure consistent tracking and compliance throughout your development lifecycle.
 
 .Prerequisites
-
-* You have configured the ServiceNow plugin in your `app-config.yaml` file.
-
-* Your Software template is defined as an allowed entity type, for example `Template`, in the `catalog.rules` section of your `app-config.yaml` file.
-
-* You have the required permissions to create or edit Software Templates in {product-very-short}.
+* You have configured the ServiceNow instance parameters in the `scaffolder.notifications.servicenow` section of your `app-config.yaml` file.
+* You have the required permissions to edit Software Templates in the source repository.
+* You have registered the Software Template in the {product} catalog.
 
 .Procedure
 
-. Open your Software Template YAML file (usually `template.yaml`).
+. Open your Software Template YAML file. For example, `template.yaml`.
 
-. In the `spec.steps` section, define a ServiceNow action by using the `servicenow:` prefix.
+. Add the `servicenow:create-incident` action to the `spec.steps` block.
 +
+...
 [source,yaml]
 ----
 spec:
@@ -29,23 +25,22 @@ spec:
       name: Create ServiceNow Incident
       action: servicenow:create-incident
       input:
-        instanceName: 'production'
+        instanceName: 'production' # <1>
         short_description: 'Incident created from RHDH Software Template'
-        severity: '3'
 ----
++
+spec.steps.action:: Specifies the `servicenow:create-incident` identifier to trigger the ServiceNow integration.
+spec.steps.input.instanceName:: Specifies the name of the ServiceNow instance defined in your `app-config.yaml` file.
 
-`spec.steps.action`:: Specifies the automated function in the ServiceNow workspace for generating a new incident record in the connected ServiceNow instance. If you migrate a template from an older version, update the action ID to match the new workspace location.
+. Save the changes and push them to your Git repository.
 
-`spec.steps.input.instanceName`:: Specifies the ServiceNow instance, as defined in your `app-config.yaml` file, that {product-very-short} targets when it executes the scaffolder action.
-
-. Save the template file and register it in the {product-very-short} catalog. If you register the template through a pull request, ensure that you use the {backstage-integration} branch as configured in your `app-config.yaml` file.
-
-. Run the template from the **Create** menu to verify the integration.
 
 .Verification
 
-. After the scaffolder task completes, go to your ServiceNow instance.
+. In {product}, navigate to the *Create* menu and select your template.
+
+. Fill out the required fields and click *Next Step* until the dry-run or execution begins.
+
+. After the task completes, log in to your ServiceNow instance.
 
 . Confirm that the new incident appears with the description provided in the template.
-
-. If you use flexible mapping, verify that the incident is correctly linked to the new component in the *ServiceNow* tab of the {product-very-short} user interface.
