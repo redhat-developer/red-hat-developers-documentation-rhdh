@@ -585,6 +585,7 @@ function writeReport(branch, results, lycheeResult, cqaResult, concurrency, tota
     cqa: cqaResult ? {
       status: cqaResult.status,
       stats: cqaResult.stats || {},
+      output: cqaResult.output || '',
     } : null,
   };
 
