@@ -383,6 +383,31 @@ async function traceUrlToSource(url, repoRoot) {
   return output.trim().split('\n').map(f => f.replace(repoRoot + '/', ''));
 }
 
+// ── CQA content quality assessment ─────────────────────────────────────────
+
+async function runCqa(repoRoot, verbose) {
+  const cqaScript = join(__dirname, 'cqa', 'index.js');
+  const { code, duration, output } = await spawnCapture('node', [cqaScript, '--all'], {
+    cwd: repoRoot, verbose, groupName: 'CQA',
+  });
+
+  // Parse summary line from output: "Checks: 19 total, 19 pass, 0 fail"
+  let checksTotal = 0, checksPass = 0, checksFail = 0;
+  const summaryMatch = output.match(/Checks:\s+(\d+)\s+total,\s+(\d+)\s+pass,\s+(\d+)\s+fail/);
+  if (summaryMatch) {
+    checksTotal = Number.parseInt(summaryMatch[1], 10);
+    checksPass = Number.parseInt(summaryMatch[2], 10);
+    checksFail = Number.parseInt(summaryMatch[3], 10);
+  }
+
+  return {
+    status: code === 0 ? 'passed' : 'failed',
+    duration,
+    output,
+    stats: { total: checksTotal, pass: checksPass, fail: checksFail },
+  };
+}
+
 // ── Index HTML generation ────────────────────────────────────────────────────
 
 function getReleaseNotesLink(branch) {
@@ -497,7 +522,16 @@ function printLycheeSummary(lycheeResult) {
   console.log(lastLines.map(l => '  ' + l).join('\n'));
 }
 
-function printSummary(results, lycheeResult, patterns, totalDuration) {
+function printCqaSummary(cqaResult) {
+  console.log('\n=== CQA (Content Quality Assessment) ===');
+  const s = cqaResult.stats || {};
+  console.log(`Checks: ${s.total} total, ${s.pass} pass, ${s.fail} fail`);
+  if (cqaResult.status === 'failed') {
+    console.log('CQA validation failed — run `node build/scripts/cqa/index.js --all` for details');
+  }
+}
+
+function printSummary(results, lycheeResult, cqaResult, patterns, totalDuration) {
   const passed = results.filter(r => r.status === 'passed').length;
   const failed = results.filter(r => r.status === 'failed').length;
 
@@ -511,11 +545,15 @@ function printSummary(results, lycheeResult, patterns, totalDuration) {
   if (lycheeResult) {
     printLycheeSummary(lycheeResult);
   }
+
+  if (cqaResult) {
+    printCqaSummary(cqaResult);
+  }
 }
 
 // ── JSON report ──────────────────────────────────────────────────────────────
 
-function writeReport(branch, results, lycheeResult, concurrency, totalDuration, repoRoot) {
+function writeReport(branch, results, lycheeResult, cqaResult, concurrency, totalDuration, repoRoot) {
   const passed = results.filter(r => r.status === 'passed').length;
   const failed = results.filter(r => r.status === 'failed').length;
 
@@ -540,6 +578,10 @@ function writeReport(branch, results, lycheeResult, concurrency, totalDuration, 
       status: lycheeResult.status,
       stats: lycheeResult.stats || {},
       errors: lycheeResult.errors || [],
+    } : null,
+    cqa: cqaResult ? {
+      status: cqaResult.status,
+      stats: cqaResult.stats || {},
     } : null,
   };
 
@@ -616,16 +658,22 @@ async function main() {
     lycheeResult.errors = classifyErrors(lycheeResult.output, patterns);
   }
 
+  // Run CQA content quality assessment
+  console.log('\nRunning CQA content quality assessment...');
+  const cqaResult = await runCqa(repoRoot, args.verbose);
+
   const totalDuration = Math.round((Date.now() - totalStart) / 1000);
 
   // Print summary
-  printSummary(buildResults, lycheeResult, patterns, totalDuration);
+  printSummary(buildResults, lycheeResult, cqaResult, patterns, totalDuration);
 
   // Write JSON report
-  writeReport(args.branch, buildResults, lycheeResult, args.jobs, totalDuration, repoRoot);
+  writeReport(args.branch, buildResults, lycheeResult, cqaResult, args.jobs, totalDuration, repoRoot);
 
-  // Exit with error if any builds or lychee failed
-  const hasFailed = buildResults.some(r => r.status === 'failed') || lycheeResult.status === 'failed';
+  // Exit with error if any builds, lychee, or CQA failed
+  const hasFailed = buildResults.some(r => r.status === 'failed')
+    || lycheeResult.status === 'failed'
+    || cqaResult.status === 'failed';
   process.exit(hasFailed ? 1 : 0);
 }
 
