@@ -1,0 +1,553 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Explore preview of emerging and supplemental capabilities</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="This document brings together information on emerging, evolving, and supplemental capabilities in Red Hat Developer Hub. It includes new features, technologies, and developer previews, as well as supported functionality not yet fully covered in the core documentation. Use this content to explore additional ways to extend, customize, and get more value from your Developer Hub environment. As these capabilities evolve, the content may be updated to reflect ongoing improvements and feedback."/><link rel="next" href="#integrate-argo-cd-notifications-with-red-hat-developer-hub" title="1. Integrate Argo CD notifications with Red Hat Developer Hub"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm46504468716176"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.9</span></div><div><h1 class="title">Explore preview of emerging and supplemental capabilities</h1></div><div><h3 class="subtitle"><em>Explore features that are new, evolving, or not yet fully covered in the core product documentation</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm46504446580816">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+				This document brings together information on emerging, evolving, and supplemental capabilities in Red Hat Developer Hub. It includes new features, technologies, and developer previews, as well as supported functionality not yet fully covered in the core documentation. Use this content to explore additional ways to extend, customize, and get more value from your Developer Hub environment. As these capabilities evolve, the content may be updated to reflect ongoing improvements and feedback.
+			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#integrate-argo-cd-notifications-with-red-hat-developer-hub">1. Integrate Argo CD notifications with Red Hat Developer Hub</a></span><ul><li><span class="section"><a href="#troubleshooting">1.1. Troubleshooting</a></span></li><li><span class="section"><a href="#security-considerations">1.2. Security Considerations</a></span></li><li><span class="section"><a href="#additional-resources">1.3. Additional Resources</a></span></li></ul></li></ul></div><p id="additional-rhdh-capabilities_title-additional-rhdh-capabilities">
+		<span class="strong strong"><strong>DISCLAIMER:</strong></span> This document includes early, evolving, or supplemental content related to RHDH capabilities. It may cover newly introduced features, features that are still maturing, or supported functionality that is not yet fully documented in the official product documentation. This content is authored by Red Hat experts, but has not yet been tested on every supported configuration.
+	</p><p>
+		The content in this document describes preview or early-stage capabilities that are provided to offer early guidance and improve discoverability while the documentation continues to evolve. As a result, the structure, depth, and level of detail might vary. Information may be updated, reorganized, or removed based on product changes and user feedback.
+	</p><p>
+		Where applicable, individual features retain their respective support status (for example, Supported, Technology Preview, or Developer Preview). Refer to the feature-specific documentation for details about the <a class="link" href="https://access.redhat.com/support">support</a> scope.
+	</p><section class="section" id="integrate-argo-cd-notifications-with-red-hat-developer-hub"><div class="titlepage"><div><div><h2 class="title">1. Integrate Argo CD notifications with Red Hat Developer Hub</h2></div></div></div><p>
+			This guide explains how to configure Argo CD to send notifications directly to the Red Hat Developer Hub (RHDH) Notifications plugin when application sync events occur.
+		</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+				<span class="strong strong"><strong>Administrative requirements</strong></span>: This integration requires infrastructure-level access. To proceed, you must have:
+			</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						<code class="literal">cluster-admin</code> permissions on Red Hat OpenShift Container Platform.
+					</li><li class="listitem">
+						Write access to the RHDH source code or configuration.
+					</li></ul></div><p>
+				<span class="emphasis"><em>This task is intended for Platform Engineers; it involves cluster-wide runtime changes</em></span>.
+			</p></div></div><div class="formalpara"><p class="title"><strong>Overview</strong></p><p>
+				The following diagram illustrates the flow from an Argo CD event in the cluster to the RHDH user interface.
+			</p></div><pre class="screen">┌────────────────────────────────────────────────────────────────────┐
+│                    Kubernetes / OpenShift Cluster                  │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                         Argo CD                              │   │
+│  │  ┌─────────────────┐     ┌────────────────────────────────┐ │   │
+│  │  │ Your App        │────▶│ Notifications Controller       │ │   │
+│  │  │ (with annotations)    │                                │ │   │
+│  │  └─────────────────┘     └───────────────┬────────────────┘ │   │
+│  └──────────────────────────────────────────┼──────────────────┘   │
+└─────────────────────────────────────────────┼──────────────────────┘
+                                              │ Webhook POST
+                                              │ (with auth token)
+                                              ▼
+                    ┌────────────────────────────────────────────┐
+                    │              Backstage                     │
+                    │  Endpoint: /api/notifications/notifications│
+                    │  ──────────────────────────────────────────│
+                    │  Shows notifications to users in the UI    │
+                    └────────────────────────────────────────────┘</pre><div class="formalpara"><p class="title"><strong>Prerequisites</strong></p><p>
+				Before you begin, make sure you have the following:
+			</p></div><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+					Administrative access to the OpenShift cluster where Argo CD and RHDH are running.
+				</li><li class="listitem">
+					Argo CD installed with the notifications controller enabled.
+				</li><li class="listitem">
+					Network connectivity from the Argo CD namespace to the RHDH endpoint.
+				</li></ul></div><p>
+			
+		</p><div class="formalpara"><p class="title"><strong>Part 1: Enable the notifications plugin in RHDH</strong></p><p>
+				<span class="strong strong"><strong>Environment</strong></span>: RHDH Configuration.
+			</p></div><p>
+			<span class="strong strong"><strong>Step 1: Enable the dynamic plugins</strong></span>
+		</p><p>
+			Add the following to your <code class="literal">app-config.yaml</code> or your custom RHDH ConfigMap:
+		</p><pre class="programlisting language-yaml">dynamicPlugins:
+  frontend:
+    backstage-plugin-notifications:
+      enabled: true
+  backend:
+    backstage-plugin-notifications-backend:
+      enabled: true</pre><p>
+			<span class="strong strong"><strong>Step 2: Generate and configure a static external access token</strong></span>
+		</p><p>
+			To allow Argo CD to authenticate with the RHDH backend, you must provide a secure token.
+		</p><p>
+			You can generate a random, unique string to use as a token. In your <code class="literal">app-config.yaml</code>, configure the token under the <code class="literal">externalAccess</code> section:
+		</p><pre class="programlisting language-yaml">backend:
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${ARGOCD_NOTIFICATION_TOKEN} # Set this environment variable
+          subject: argocd-notifications</pre><div class="blockquote"><blockquote class="blockquote"><p>
+				<span class="strong strong"><strong>Security Note:</strong></span> In production, use a strong, randomly generated token and store it securely.
+			</p></blockquote></div><p>
+			
+		</p><div class="formalpara"><p class="title"><strong>Part 2: Argo CD configuration</strong></p><p>
+				<span class="strong strong"><strong>Environment</strong></span>: OpenShift Cluster (executing <code class="literal">oc</code> commands).
+			</p></div><p>
+			Once RHDH is configured to receive notifications, configure the Argo CD notifications controller to send them.
+		</p><p>
+			<span class="strong strong"><strong>Step 1: Enable the notifications controller</strong></span>
+		</p><p>
+			For OpenShift GitOps:
+		</p><pre class="programlisting language-bash">oc patch argocd openshift-gitops -n openshift-gitops --type merge -p '
+{
+  "spec": {
+    "notifications": {
+      "enabled": true
+    }
+  }
+}'</pre><p>
+			For standard Argo CD, ensure the notifications controller is deployed.
+		</p><p>
+			<span class="strong strong"><strong>Step 2: Create the notifications Secret</strong></span>
+		</p><p>
+			Store the RHDH authentication token in a cluster secret:
+		</p><pre class="programlisting language-yaml">apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-notifications-secret
+  namespace: openshift-gitops # or argocd
+type: Opaque
+stringData:
+  backstage-token: 'your-secret-token-here' # Must match ARGOCD_NOTIFICATION_TOKEN</pre><p>
+			Apply it:
+		</p><pre class="programlisting language-bash">kubectl apply -f argocd-notifications-secret.yaml</pre><p>
+			<span class="strong strong"><strong>Step 3: Configure notifications</strong></span>
+		</p><div class="blockquote"><blockquote class="blockquote"><p>
+				<span class="strong strong"><strong>Important for OpenShift GitOps Users:</strong></span> The OpenShift GitOps operator manages the <code class="literal">argocd-notifications-cm</code> ConfigMap. If you edit the ConfigMap directly, your changes may be overwritten. Instead, always use the <code class="literal">NotificationsConfiguration</code> Custom Resource (CR) as shown below.
+			</p></blockquote></div><p>
+			<span class="strong strong"><strong>Option A: For OpenShift GitOps</strong></span>
+		</p><p>
+			Use the <code class="literal">NotificationsConfiguration</code> Custom Resource:
+		</p><div class="admonition note"><div class="admonition_header">Note</div><div><p>
+				<span class="strong strong"><strong>This is a customizable template</strong></span>
+			</p><div class="blockquote"><blockquote class="blockquote"><p>
+					The configuration below is a starting template that you can customize to fit your needs:
+				</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+							<span class="strong strong"><strong>Add triggers</strong></span>: You can add more triggers for other events (for example, <code class="literal">app.status.sync.status == 'Unknown'</code>, <code class="literal">app.status.health.status == 'Healthy'</code>, <code class="literal">app.status.health.status == 'Missing'</code>, sync running)
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Remove triggers</strong></span>: Feel free to remove any triggers you don’t need.
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Customize templates</strong></span>: Modify the notification titles, descriptions, severity levels, and topics to match your organization’s preferences.
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Adjust conditions</strong></span>: Modify the <code class="literal">when</code> expressions to fine-tune when notifications are sent.
+						</li></ul></div><p>
+					For a complete list of available trigger conditions and variables, see the <a class="link" href="https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/triggers/">Argo CD Notifications Triggers documentation</a>.
+				</p></blockquote></div></div></div><pre class="programlisting language-bash"># Get your Argo CD URL first
+ARGOCD_URL=$(oc get routes -n openshift-gitops openshift-gitops-server -o jsonpath='https://{.spec.host}')
+BACKSTAGE_URL="https://your-backstage-url.com"
+
+oc apply -n openshift-gitops -f - &lt;&lt;EOF
+apiVersion: argoproj.io/v1alpha1
+kind: NotificationsConfiguration
+metadata:
+  name: default-notifications-configuration
+  namespace: openshift-gitops
+spec:
+  # Context provides variables available in templates
+  context:
+    argocdUrl: ${ARGOCD_URL}
+
+  # Webhook service configuration
+  services:
+    service.webhook.backstage: |
+      url: ${BACKSTAGE_URL}/api/notifications/notifications
+      headers:
+      - name: Content-Type
+        value: application/json
+      - name: Authorization
+        value: Bearer \$backstage-token
+
+  # Notification templates
+  # Note: We use custom names with '-backstage' suffix to avoid conflicts with default templates
+  templates:
+    template.app-sync-succeeded-backstage: |
+      webhook:
+        backstage:
+          method: POST
+          body: |
+            {
+              "recipients": {
+                "type": "entity",
+                "entityRef": "{{index .app.metadata.annotations "backstage.io/entity-ref"}}"
+              },
+              "payload": {
+                "title": "{{.app.metadata.name}} - Sync Succeeded",
+                "description": "Application <span class="strong strong"><strong>{{.app.metadata.name}}</strong></span> has been synced successfully.\n\n<span class="strong strong"><strong>Health:</strong></span> {{.app.status.health.status}}\n<span class="strong strong"><strong>Revision:</strong></span> {{.app.status.sync.revision}}",
+                "link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                "severity": "low",
+                "topic": "argocd.sync.succeeded"
+              }
+            }
+
+    template.app-sync-failed-backstage: |
+      webhook:
+        backstage:
+          method: POST
+          body: |
+            {
+              "recipients": {
+                "type": "entity",
+                "entityRef": "{{index .app.metadata.annotations "backstage.io/entity-ref"}}"
+              },
+              "payload": {
+                "title": "{{.app.metadata.name}} - Sync Failed",
+                "description": "Application <span class="strong strong"><strong>{{.app.metadata.name}}</strong></span> sync has failed.\n\n<span class="strong strong"><strong>Phase:</strong></span> {{.app.status.operationState.phase}}\n<span class="strong strong"><strong>Message:</strong></span> {{.app.status.operationState.message}}",
+                "link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                "severity": "high",
+                "topic": "argocd.sync.failed"
+              }
+            }
+
+    template.app-health-degraded-backstage: |
+      webhook:
+        backstage:
+          method: POST
+          body: |
+            {
+              "recipients": {
+                "type": "entity",
+                "entityRef": "{{index .app.metadata.annotations "backstage.io/entity-ref"}}"
+              },
+              "payload": {
+                "title": "{{.app.metadata.name}} - Health Degraded",
+                "description": "Application <span class="strong strong"><strong>{{.app.metadata.name}}</strong></span> health has degraded.\n\n<span class="strong strong"><strong>Status:</strong></span> {{.app.status.health.status}}",
+                "link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                "severity": "high",
+                "topic": "argocd.health.degraded"
+              }
+            }
+
+    template.app-deployed-backstage: |
+      webhook:
+        backstage:
+          method: POST
+          body: |
+            {
+              "recipients": {
+                "type": "entity",
+                "entityRef": "{{index .app.metadata.annotations "backstage.io/entity-ref"}}"
+              },
+              "payload": {
+                "title": "{{.app.metadata.name}} - Deployed",
+                "description": "Application <span class="strong strong"><strong>{{.app.metadata.name}}</strong></span> has been successfully deployed and is healthy.",
+                "link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                "severity": "low",
+                "topic": "argocd.deployed"
+              }
+            }
+
+  triggers:
+    trigger.on-sync-succeeded-backstage: |
+      - when: app.status.operationState.phase in ['Succeeded']
+        send: [app-sync-succeeded-backstage]
+
+    trigger.on-sync-failed-backstage: |
+      - when: app.status.operationState.phase in ['Error', 'Failed']
+        send: [app-sync-failed-backstage]
+
+    trigger.on-health-degraded-backstage: |
+      - when: app.status.health.status == 'Degraded'
+        send: [app-health-degraded-backstage]
+
+    trigger.on-deployed-backstage: |
+      - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+        send: [app-deployed-backstage]
+EOF</pre><p>
+			<span class="strong strong"><strong>Option B: For Standard Argo CD</strong></span>
+		</p><p>
+			For non-OpenShift installations, you can edit the ConfigMap directly:
+		</p><pre class="programlisting language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # Context for template variables
+  context: |
+    argocdUrl: https://your-argocd-url.com
+
+  # Webhook service configuration
+  service.webhook.backstage: |
+    url: https://your-backstage-url.com/api/notifications/notifications
+    headers:
+      - name: Content-Type
+        value: application/json
+      - name: Authorization
+        value: Bearer $backstage-token
+
+  template.app-deployed-backstage: |
+    webhook:
+      backstage:
+        method: POST
+        body: |
+          {
+            "recipients": {
+              "type": "entity",
+              "entityRef": "{{ index .app.metadata.annotations <code class="literal">backstage.io/entity-ref</code> }}"
+            },
+            "payload": {
+              "title": "{{ .app.metadata.name }} - Deployed",
+              "description": "Application deployed successfully.",
+              "link": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}",
+              "severity": "low",
+              "topic": "argocd.deployed"
+            }
+          }
+  template.app-health-degraded-backstage: |
+    webhook:
+      backstage:
+        method: POST
+        body: |
+          {
+            "recipients": {
+              "type": "entity",
+              "entityRef": "{{ index .app.metadata.annotations <code class="literal">backstage.io/entity-ref</code> }}"
+            },
+            "payload": {
+              "title": "{{ .app.metadata.name }} - Health Degraded",
+              "description": "Application health degraded.",
+              "link": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}",
+              "severity": "high",
+              "topic": "argocd.health.degraded"
+            }
+          }
+  template.app-sync-failed-backstage: |
+    webhook:
+      backstage:
+        method: POST
+        body: |
+          {
+            "recipients": {
+              "type": "entity",
+              "entityRef": "{{ index .app.metadata.annotations <code class="literal">backstage.io/entity-ref</code> }}"
+            },
+            "payload": {
+              "title": "{{ .app.metadata.name }} - Sync Failed",
+              "description": "Application sync has failed.",
+              "link": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}",
+              "severity": "high",
+              "topic": "argocd.sync.failed"
+            }
+          }
+  template.app-sync-succeeded-backstage: |
+    webhook:
+      backstage:
+        method: POST
+        body: |
+          {
+            "recipients": {
+              "type": "entity",
+              "entityRef": "{{ index .app.metadata.annotations <code class="literal">backstage.io/entity-ref</code> }}"
+            },
+            "payload": {
+              "title": "{{ .app.metadata.name }} - Sync Succeeded",
+              "description": "Application has been synced successfully.",
+              "link": "{{ .context.argocdUrl }}/applications/{{ .app.metadata.name }}",
+              "severity": "low",
+              "topic": "argocd.sync.succeeded"
+            }
+          }
+  trigger.on-deployed-backstage: &gt;
+    - when: app.status.operationState.phase == 'Succeeded' and
+    app.status.health.status == 'Healthy'
+      send: [app-deployed-backstage]
+  trigger.on-health-degraded-backstage: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded-backstage]
+  trigger.on-sync-failed-backstage: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-sync-failed-backstage]
+  trigger.on-sync-succeeded-backstage: |
+    - when: app.status.operationState.phase == 'Succeeded'
+      send: [app-sync-succeeded-backstage]</pre><p>
+			Apply it:
+		</p><pre class="programlisting language-bash">kubectl apply -f argocd-notifications-cm.yaml</pre><p>
+			
+		</p><div class="formalpara"><p class="title"><strong>Part 3: Enable notifications for your application</strong></p><p>
+				<span class="strong strong"><strong>Environment</strong></span>: OpenShift Cluster (Argo CD Application manifests).
+			</p></div><p>
+			Update individual Argo CD <code class="literal">Application</code> manifests to enable the notifications for specific components.
+		</p><p>
+			<span class="strong strong"><strong>Add required annotations to your Argo CD application</strong></span>
+		</p><p>
+			Each Argo CD Application that should send notifications needs two things:
+		</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+					<span class="strong strong"><strong>The Backstage entity reference</strong></span> - tells Argo CD which Backstage entity should receive notifications.
+				</li><li class="listitem">
+					<span class="strong strong"><strong>Trigger subscriptions</strong></span> - tells Argo CD which events to notify about.
+				</li></ol></div><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+				The subscription annotation format is <code class="literal">notifications.argoproj.io/subscribe.&lt;trigger-name&gt;.&lt;service&gt;</code>. The trigger name must match exactly what you configured (with the <code class="literal">-backstage</code> suffix).
+			</p></div></div><pre class="programlisting language-yaml">apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-application
+  namespace: openshift-gitops
+  annotations:
+    # 1. Map to Backstage entity (REQUIRED)
+    backstage.io/entity-ref: 'component:default/my-application'
+
+    # 2. Subscribe to notification triggers (add the ones you want)
+    notifications.argoproj.io/subscribe.on-sync-succeeded-backstage.backstage: ''
+    notifications.argoproj.io/subscribe.on-sync-failed-backstage.backstage: ''
+    notifications.argoproj.io/subscribe.on-health-degraded-backstage.backstage: ''
+    notifications.argoproj.io/subscribe.on-deployed-backstage.backstage: ''
+spec:
+  # ... your application spec</pre><p>
+			
+		</p><div class="formalpara"><p class="title"><strong>Example: Complete Setup Flow</strong></p><p>
+				<span class="strong strong"><strong>Scenario</strong></span>
+			</p></div><p>
+			You have a service called <code class="literal">order-service</code> managed by Argo CD, and you want the team to receive Backstage notifications on sync events.
+		</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+					<span class="strong strong"><strong>Backstage Catalog Entity</strong></span>
+				</p><pre class="programlisting language-yaml"># order-service/catalog-info.yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: order-service
+  description: Order processing service
+  annotations:
+    argocd/app-selector: 'app.kubernetes.io/instance=order-service'
+spec:
+  type: service
+  owner: team-orders
+  lifecycle: production</pre></li><li class="listitem"><p class="simpara">
+					<span class="strong strong"><strong>Argo CD Application</strong></span>
+				</p><pre class="programlisting language-yaml"># argocd/order-service-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: order-service
+  namespace: openshift-gitops
+  annotations:
+    # Link to Backstage entity
+    backstage.io/entity-ref: 'component:default/order-service'
+    # Subscribe to notifications (note the -backstage suffix in trigger names)
+    notifications.argoproj.io/subscribe.on-deployed-backstage.backstage: ''
+    notifications.argoproj.io/subscribe.on-sync-failed-backstage.backstage: ''
+    notifications.argoproj.io/subscribe.on-health-degraded-backstage.backstage: ''
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/myorg/order-service
+    targetRevision: main
+    path: k8s/overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: order-service
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true</pre></li><li class="listitem"><p class="simpara">
+					<span class="strong strong"><strong>What Happens</strong></span>
+				</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+							<span class="strong strong"><strong>Developer pushes code</strong></span> → Argo CD detects change and syncs.
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Sync succeeds</strong></span> → Argo CD notifications controller fires <code class="literal">on-deployed-backstage</code> trigger.
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Webhook sent</strong></span> → POST to Backstage <code class="literal">/api/notifications/notifications</code>.
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Notification appears</strong></span> → Team sees "🚀 order-service - Deployed" in Backstage with a link to Argo CD.
+						</li></ol></div></li></ol></div><p>
+			
+		</p><section class="section" id="troubleshooting"><div class="titlepage"><div><div><h3 class="title">1.1. Troubleshooting</h3></div></div></div><section class="section" id="notifications-not-appearing-in-rhdh"><div class="titlepage"><div><div><h4 class="title">1.1.1. Notifications not appearing in RHDH</h4></div></div></div><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+							<span class="strong strong"><strong>Check notifications controller is running:</strong></span>
+						</p><pre class="programlisting language-bash">kubectl get pods -n openshift-gitops | grep notification</pre></li><li class="listitem"><p class="simpara">
+							<span class="strong strong"><strong>Check controller logs for errors:</strong></span>
+						</p><pre class="programlisting language-bash">kubectl logs -n openshift-gitops -l app.kubernetes.io/name=argocd-notifications-controller --tail=50</pre></li><li class="listitem"><p class="simpara">
+							<span class="strong strong"><strong>Check logs for backstage-related messages:</strong></span>
+						</p><pre class="programlisting language-bash">kubectl logs -n openshift-gitops deployment/openshift-gitops-notifications-controller --tail=50 | grep -i backstage</pre></li><li class="listitem"><p class="simpara">
+							<span class="strong strong"><strong>Verify webhook service is configured:</strong></span>
+						</p><pre class="programlisting language-bash">kubectl get configmap argocd-notifications-cm -n openshift-gitops -o jsonpath='{.data.service\.webhook\.backstage}'</pre></li><li class="listitem"><p class="simpara">
+							<span class="strong strong"><strong>Verify annotations on application:</strong></span>
+						</p><pre class="programlisting language-bash">kubectl get application my-app -n openshift-gitops -o jsonpath='{.metadata.annotations}' | jq .</pre></li></ol></div></section><section class="section" id="notification-service-backstage-is-not-supported"><div class="titlepage"><div><div><h4 class="title">1.1.2. "notification service 'backstage' is not supported"</h4></div></div></div><p>
+					This error means the webhook service is not configured.
+				</p><p>
+					Common causes include the following:
+				</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+							<span class="strong strong"><strong>OpenShift GitOps:</strong></span> You edited the ConfigMap directly instead of using <code class="literal">NotificationsConfiguration</code> CR. The operator overwrites ConfigMap changes.
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Missing service configuration:</strong></span> The <code class="literal">service.webhook.backstage</code> key is not in the ConfigMap.
+						</li></ol></div><p>
+					<span class="strong strong"><strong>Solution:</strong></span> Use the <code class="literal">NotificationsConfiguration</code> CR for OpenShift GitOps (see Part 2).
+				</p></section><section class="section" id="webhook-returns-400-bad-request-not-valid-json"><div class="titlepage"><div><div><h4 class="title">1.1.3. Webhook Returns 400 Bad Request / "not valid JSON"</h4></div></div></div><p>
+					This means the trigger is using the wrong template format (text instead of JSON).
+				</p><p>
+					Common causes include the following:
+				</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+							<span class="strong strong"><strong>Template name conflicts:</strong></span> Using names like <code class="literal">template.app-sync-succeeded</code> that conflict with Argo CD defaults (which use email/message format, not webhook).
+						</li><li class="listitem">
+							<span class="strong strong"><strong>Wrong subscription:</strong></span> Application is subscribed to the default trigger instead of your custom one.
+						</li></ol></div><p>
+					<span class="strong strong"><strong>Solution:</strong></span> Use custom template/trigger names with a suffix like <code class="literal">-backstage</code>:
+				</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+							Template: <code class="literal">template.app-sync-succeeded-backstage</code>
+						</li><li class="listitem">
+							Trigger: <code class="literal">trigger.on-sync-succeeded-backstage</code>
+						</li><li class="listitem">
+							Subscription: <code class="literal">notifications.argoproj.io/subscribe.on-sync-succeeded-backstage.backstage</code>
+						</li></ul></div></section><section class="section" id="link-shows-emphasis-role-strong-no-value-emphasis-or-broken-url"><div class="titlepage"><div><div><h4 class="title">1.1.4. Link Shows <span class="strong strong"><strong>&lt;no value&gt;</strong></span> or Broken URL</h4></div></div></div><p>
+					The <code class="literal">{{.context.argocdUrl}}</code> template variable is not configured.
+				</p><p>
+					<span class="strong strong"><strong>Solution:</strong></span> Add the context configuration:
+				</p><p>
+					For OpenShift GitOps:
+				</p><pre class="programlisting language-bash">ARGOCD_URL=$(oc get routes -n openshift-gitops openshift-gitops-server -o jsonpath='https://{.spec.host}')
+oc patch notificationsconfiguration default-notifications-configuration -n openshift-gitops --type=merge -p "
+spec:
+  context:
+    argocdUrl: $ARGOCD_URL
+"</pre><p>
+					For standard Argo CD, add to ConfigMap:
+				</p><pre class="programlisting language-yaml">data:
+  context: |
+    argocdUrl: https://your-argocd-url.com</pre></section><section class="section" id="authentication-errors"><div class="titlepage"><div><div><h4 class="title">1.1.5. Authentication Errors</h4></div></div></div><p>
+					If you see <code class="literal">401 Unauthorized</code> or token errors:
+				</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+							Verify the token in <code class="literal">argocd-notifications-secret</code> matches your Backstage config.
+						</li><li class="listitem">
+							Check the Authorization header format: <code class="literal">Bearer $backstage-token</code>.
+						</li><li class="listitem"><p class="simpara">
+							Restart the notifications controller after secret changes:
+						</p><pre class="programlisting language-bash">kubectl rollout restart deployment -n openshift-gitops -l app.kubernetes.io/name=argocd-notifications-controller</pre></li></ol></div><p>
+					
+				</p></section></section><section class="section" id="security-considerations"><div class="titlepage"><div><div><h3 class="title">1.2. Security Considerations</h3></div></div></div><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+						<span class="strong strong"><strong>Use strong tokens</strong></span> - Generate random tokens with sufficient entropy.
+					</li><li class="listitem">
+						<span class="strong strong"><strong>Rotate tokens periodically</strong></span> - Update both Argo CD secret and Backstage config.
+					</li><li class="listitem">
+						<span class="strong strong"><strong>Use HTTPS</strong></span> - Ensure Backstage is accessible over HTTPS in production.
+					</li><li class="listitem">
+						<span class="strong strong"><strong>Network policies</strong></span> - Consider restricting which pods can reach Backstage.
+					</li></ol></div><p>
+				
+			</p></section><section class="section" id="additional-resources"><div class="titlepage"><div><div><h3 class="title">1.3. Additional Resources</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+						<a class="link" href="https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/">Argo CD Notifications Documentation</a>
+					</li><li class="listitem">
+						<a class="link" href="https://backstage.io/docs/notifications/">Backstage Notifications Plugin</a>
+					</li><li class="listitem">
+						<a class="link" href="https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/webhook/">Argo CD Webhook Service Configuration</a>
+					</li></ul></div></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm46504446580816"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+		Copyright <span class="trademark"/>© 2026 Red Hat, Inc.
+	</div><div class="para">
+		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
+	</div><div class="para">
+		Red Hat, as the licensor of this document, waives the right to enforce, and agrees not to assert, Section 4d of CC-BY-SA to the fullest extent permitted by applicable law.
+	</div><div class="para">
+		Red Hat, Red Hat Enterprise Linux, the Shadowman logo, the Red Hat logo, JBoss, OpenShift, Fedora, the Infinity logo, and RHCE are trademarks of Red Hat, Inc., registered in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Linux</span>® is the registered trademark of Linus Torvalds in the United States and other countries.
+	</div><div class="para">
+		<span class="trademark">Java</span>® is a registered trademark of Oracle and/or its affiliates.
+	</div><div class="para">
+		<span class="trademark">XFS</span>® is a trademark of Silicon Graphics International Corp. or its subsidiaries in the United States and/or other countries.
+	</div><div class="para">
+		<span class="trademark">MySQL</span>® is a registered trademark of MySQL AB in the United States, the European Union and other countries.
+	</div><div class="para">
+		<span class="trademark">Node.js</span>® is an official trademark of Joyent. Red Hat is not formally related to or endorsed by the official Joyent Node.js open source or commercial project.
+	</div><div class="para">
+		The <span class="trademark">OpenStack</span>® Word Mark and OpenStack logo are either registered trademarks/service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation, or the OpenStack community.
+	</div><div class="para">
+		All other trademarks are the property of their respective owners.
+	</div></div></div></section></div></div><script type="text/javascript">
+                        jQuery(document).ready(function() {
+                            initSwitchery();
+                            jQuery('pre[class*="language-"]').each(function(i, block){hljs.highlightBlock(block);});
+                        });
+                    </script></body></html>
