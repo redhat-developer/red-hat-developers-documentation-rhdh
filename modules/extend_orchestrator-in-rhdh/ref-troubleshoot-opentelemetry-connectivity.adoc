@@ -1,0 +1,75 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="troubleshoot-opentelemetry-connectivity_{context}"]
+= Troubleshoot OpenTelemetry connectivity
+
+[role="_abstract"]
+Diagnose and resolve missing observability data and context propagation.
+
+If traces or logs are missing, you lose the visibility required to debug application issues or trace execution paths across services. You must quickly diagnose and resolve misconfigurations in your OpenTelemetry deployment so that monitoring is restored.
+
+Traces do not appear::
+
+.. Check workflow configuration:
++
+[source,bash]
+----
+# Verify OpenTelemetry is enabled
+kubectl get cm onboarding-workflow-props -n workflows -o yaml
+
+# Check pod logs for OpenTelemetry initialization
+kubectl logs -n workflows deployment/onboarding-workflow | grep -i "otel\|trace"
+----
+
+.. Verify connectivity:
++
+[source,bash]
+----
+# Test Jaeger endpoint from workflow pod
+kubectl exec -n workflows deployment/greeting -- curl -v http://jaeger-collector.observability.svc.cluster.local:4317
+----
+
+Authentication issues::
++
+.. For platforms requiring authentication, configure headers:
++
+[source,bash]
+----
+quarkus.otel.exporter.otlp.headers=authorization=Bearer ${API_TOKEN}
+----
+
+.. To authenticate the test:
++
+[source,bash]
+----
+curl -v -X POST \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/x-protobuf" \
+  https://your-endpoint.com/v1/traces
+----
+
+High memory usage::
++
+.. Configure memory limits in collector:
++
+[source,yaml]
+----
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1000
+    spike_limit_mib: 200
+----
+
+Context lost between steps::
++
+Make sure there is a proper propagation:
++
+[source,bash]
+----
+# Include all required propagators
+quarkus.otel.propagators=tracecontext,baggage,jaeger
+
+# Enable JSON logging to verify trace IDs
+quarkus.log.console.json=true
+----

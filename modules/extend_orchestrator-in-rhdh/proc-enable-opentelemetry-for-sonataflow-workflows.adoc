@@ -1,0 +1,105 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-opentelemetry-for-sonataflow-workflows_{context}"]
+= Enable OpenTelemetry for SonataFlow workflows
+
+[role="_abstract"]
+Enable OpenTelemetry in your SonataFlow project to begin collecting distributed traces, metrics, and logs.
+
+The OpenTelemetry integration for SonataFlow provides the following:
+
+Distributed tracing:: Tracks workflow execution across multiple services and steps.
+Metrics collection:: Monitors performance, duration, and success rates.
+Log aggregation:: Centralized logging with trace correlation.
+Context propagation:: Maintains trace context across workflow boundaries and async operations.
+
+[NOTE]
+====
+To enable observability features like tracing and metrics in the SonataFlow runtime, use the `sonataflow-addons-quarkus-opentelemetry` addon. This addon provides a standard configuration that requires little additional setup.
+====
+
+.Prerequisites
+
+* You have installed and configured a SonataFlow Operator.
+* You have access to deploy observability infrastructure.
+* You have Kubernetes or OpenShift cluster with appropriate resources.
+* You understand OpenTelemetry concepts.
+
+.Procedure
+
+. Add the SonataFlow OpenTelemetry addon to your `QUARKUS_EXTENSIONS` environment variable during the image build process:
++
+[source,bash]
+----
+export QUARKUS_EXTENSIONS="${QUARKUS_EXTENSIONS},org.apache.kie.sonataflow:sonataflow-addons-quarkus-opentelemetry"
+----
+
+. Open the `{workflow-name}-props` ConfigMap for your workflow.
+
+. In the `application.properties` section, enable the OpenTelemetry integration:
++
+[source,bash]
+----
+# Application Identity
+quarkus.application.name=my-workflow
+quarkus.application.version=1.0.0
+
+# OpenTelemetry Configuration
+quarkus.otel.enabled=true
+quarkus.otel.traces.enabled=true
+quarkus.otel.metrics.enabled=true
+quarkus.otel.logs.enabled=true
+
+# Service Resource Attributes
+quarkus.otel.resource.attributes=\
+  service.name=my-workflow,\
+  service.namespace=workflows,\
+  service.version=1.0.0,\
+  deployment.environment=production
+
+# SonataFlow Specific Configuration
+# Master switch for SonataFlow OpenTelemetry integration
+sonataflow.otel.enabled=true
+# Service identification (uses Quarkus application name/version as defaults)
+sonataflow.otel.service-name=${quarkus.application.name:kogito-workflow-service}
+sonataflow.otel.service-version=${quarkus.application.version:unknown}
+# Enable span creation for workflow states
+sonataflow.otel.spans.enabled=true
+# Enable process lifecycle events (start, complete, error, state transitions)
+sonataflow.otel.events.enabled=true
+----
+
+. Save the ConfigMap and restart the workflow pod.
+
+.Verification
+
+* Check OpenTelemetry addon is loaded:
++
+[source,bash]
+----
+kubectl logs -n workflows deployment/onboarding-workflow | grep "sonataflow-addons-quarkus-opentelemetry"
+----
+
+* Verify trace export:
++
+[source,bash]
+----
+# Look for successful trace exports
+kubectl logs -n workflows deployment/greeting | grep -i "export\|batch"
+----
+
+* Check Jaeger health:
++
+[source,bash]
+----
+# Verify Jaeger is receiving data
+kubectl logs -n observability deployment/jaeger | grep -i "span\|trace"
+----
+
+* Test with debug exporter:
++
+[source,bash]
+----
+# Temporarily enable console logging
+%dev.quarkus.otel.traces.exporter=logging
+----

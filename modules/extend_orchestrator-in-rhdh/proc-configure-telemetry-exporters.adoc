@@ -1,0 +1,60 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-telemetry-exporters_{context}"]
+= Export telemetry data to an observability platform
+
+[role="_abstract"]
+When monitoring serverless workflows in a distributed environment, export trace data efficiently to an external observability platform (such as Jaeger or an OpenTelemetry Collector). Configuring your export strategy and externalizing environment variables makes sure that your telemetry data is delivered reliably without hardcoding sensitive configurations in your production builds.
+
+.Prerequisites
+
+* You have enabled OpenTelemetry in your workflow.
+
+.Procedure
+
+. Configure your export strategy
++
+Choose one of the following export strategies based on the requirements of your observability platform:
+
+.. OTLP exporter with batch processing (Recommended)
++
+For production environments, using an OTLP exporter with batch processing reduces network overhead and improves performance, as shown:
++
+[source,bash]
+----
+# OTLP exporter - Direct to Jaeger
+quarkus.otel.exporter.otlp.endpoint=http://jaeger-collector.observability.svc.cluster.local:4317
+quarkus.otel.exporter.otlp.protocol=grpc
+quarkus.otel.traces.exporter=cdi
+
+# Batch processing for production
+quarkus.otel.bsp.schedule.delay=5s
+quarkus.otel.bsp.max.export.batch.size=512
+quarkus.otel.bsp.export.timeout=2s
+quarkus.otel.bsp.max.queue.size=2048
+----
+
+.. Direct Export to an external platform
++
+For simpler setups or direct integrations, you can configure a direct export as shown:
++
+[source,bash]
+----
+# Example: Direct export to Jaeger
+quarkus.otel.exporter.otlp.endpoint=http://jaeger-collector:4317
+quarkus.otel.exporter.otlp.protocol=grpc
+quarkus.otel.traces.exporter=cdi
+----
+
+. Externalize configuration for production deployments
++
+To maintain secure and flexible production deployments, use environment variables to externalize your OpenTelemetry configuration:
++
+[source,bash]
+----
+# Externalized Configuration
+quarkus.otel.exporter.otlp.endpoint=${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4317}
+quarkus.otel.exporter.otlp.headers=${OTEL_EXPORTER_OTLP_HEADERS:}
+quarkus.application.name=${OTEL_SERVICE_NAME:my-workflow}
+quarkus.otel.resource.attributes=${OTEL_RESOURCE_ATTRIBUTES:deployment.environment=dev}
+----
