@@ -509,26 +509,23 @@ generate_dynamic_plugins_table() {
       (( index = count - 1 ))
       this_num_plugins=${num_plugins[$index]}
       echo -n -e "${green}[$count] Processing $d ${norm}..."
+      adocfile="${0/.sh/.${d}}"
       if [[ $this_num_plugins -gt 0 ]]; then
-        adocfile="${0/.sh/.${d}}"
         sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd;}' \
             -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
             "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
-        rm -f "$adocfile"
-        echo ""
       else
-        echo -e "${blue} no plugins to include: ${d}.adoc emptied.${norm}"
+        echo -e "${blue} no plugins to include: ${d}.adoc table removed.${norm}"
         (( empties = empties + 1 ))
-        echo "" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
+        # delete from table header line to end of file
+        sed -r -e '/\[%header,cols=.+\]/,$d' \
+            -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
+            "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
       fi
+      rm -f "$adocfile"
+      echo ""
       (( count = count + 1 ))
   done
-
-  if [[ $empties -gt 2 ]]; then
-    echo -e "${red}[ERROR] multiple tables have been emptied! Something bad has happened."
-    exit 1
-  fi
-
   # count enabled plugins
 
   # shellcheck disable=SC2002
@@ -717,7 +714,16 @@ pushd "${SCRIPT_DIR}"/../.. >/dev/null || exit
     ref-supported-plugins.adoc \
     ref-technology-preview-plugins.adoc \
     ; do
-    ./build/scripts/cqa-16-official-product-names.sh --fix modules/extend_dynamic-plugins-reference/$d >/dev/null 2>&1
+    if [[ -f "modules/extend_dynamic-plugins-reference/$d" ]]; then
+      # remove empty files
+      if [[ $(cat modules/extend_dynamic-plugins-reference/$d) == ":_mod-docs-content-type: REFERENCE" ]]; then
+        echo -e "${blue}[WARN] File modules/extend_dynamic-plugins-reference/$d is empty, so has been deleted."
+        rm -f modules/extend_dynamic-plugins-reference/$d
+        continue
+      fi
+      # fix product references
+      node build/scripts/cqa/index.js --check 16 --fix modules/extend_dynamic-plugins-reference/$d >/dev/null 2>&1
+    fi
   done
 popd >/dev/null || exit
 
