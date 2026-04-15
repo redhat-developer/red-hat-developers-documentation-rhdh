@@ -527,6 +527,9 @@ function printCqaSummary(cqaResult) {
   const s = cqaResult.stats || {};
   console.log(`Checks: ${s.total} total, ${s.pass} pass, ${s.fail} fail`);
   if (cqaResult.status === 'failed') {
+    if (cqaResult.output) {
+      console.log(cqaResult.output);
+    }
     console.log('CQA validation failed — run `node build/scripts/cqa/index.js --all` for details');
   }
 }
