@@ -39,8 +39,7 @@ You must manually install and configure the {ls-short} plugin, the {lcs-name} ({
 
 . Create the {lcs-name} ({lcs-short}) ConfigMap to store the service configuration:
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
-.. Click *Create ConfigMaps*.
-.. Select *YAML view* and edit the file using the following structure. This example demonstrates the configuration for the {lcs-short} ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
+.. Click *Create ConfigMaps*, select *YAML view*, and edit the file using the following structure. This example demonstrates the configuration for the {lcs-short} ConfigMap, typically named `lightspeed-stack`, which connects to the Llama Stack service locally on port `8321`:
 +
 [source,yaml]
 ----
@@ -53,8 +52,8 @@ data:
     name: Lightspeed Core Service (LCS)
     service:
       host: 0.0.0.0
-    # Use ${LIGHTSPEED_SERVICE_PORT} if you are not running the Service on port `8080`
-    # port: ${LIGHTSPEED_SERVICE_PORT}
+    # If the service does not run on port 8080, you must use ${env.LIGHTSPEED_SERVICE_PORT}. This value must match the port defined in lightspeed-app-config.yaml
+    # port: ${env.LIGHTSPEED_SERVICE_PORT}
       auth_enabled: false
       workers: 1
       color_log: true
@@ -77,21 +76,15 @@ data:
 +
 [IMPORTANT]
 ====
-LCS uses Llama Stack expansion syntax for environment variables. To make sure the service correctly parses variables in the `lightspeed-stack.yaml` file, you must use the `${env.VAR}` format. Variable names are case-sensitive and must be uppercase. The syntax `${env.var}` is not supported. For example:
-[source,yaml]
-----
-model_config:
-  api_key: ${env.VAR}
-----
+LCS requires Llama Stack expansion syntax for environment variables in the `lightspeed-stack.yaml` file. You must use the `${env.VAR}` format with uppercase variable names. The service does not support lowercase names or omitting the `env.` prefix, such as `${env.var}`.
 ====
 .. Click *Create*.
 
 . Create the {ls-short}  ConfigMap (`lightspeed-app-config`) for plugin configurations:
 .. In the {ocp-short} web console, navigate to your {product-very-short} instance and select the *ConfigMaps* tab.
-.. Click *Create ConfigMap*.
-.. Select the *YAML view* option and add the following configuration:
+.. Click *Create ConfigMap*, select *YAML view*, and add the following configuration:
 +
-[source,yaml]
+[source,yaml,subs=+attributes]
 ----
 kind: ConfigMap
 apiVersion: v1
@@ -108,7 +101,9 @@ data:
         - "data:"
         - https://img.freepik.com
         - https://cdn.dribbble.com
-        - https://avatars.githubusercontent.com # This is to load GitHub avatars in the UI
+        - https://avatars.githubusercontent.com # To load GitHub avatars
+        - https://secure.gravatar.com           # To load Gravatar icons
+        - https://<your_gitlab_url>            # To load GitLab icons
       script-src:
         - "'self'"
         - "'unsafe-eval'"
@@ -119,27 +114,30 @@ data:
       # If not provided, the plugin uses built-in default prompts
       prompts:
         - title: Getting Started with Red Hat Developer Hub
-          message: Can you guide me through the first steps to start using {product-short} as a developer, like exploring the Software Catalog and adding my service?
+          message: Can you guide me through the first steps to start using {product-very-short} as a developer, like exploring the Software Catalog and adding my service?
 
       # OPTIONAL: Port for lightspeed service (default: 8080)
       # servicePort: ${LIGHTSPEED_SERVICE_PORT}
 
-      # OPTIONAL: Override default RHDH system prompt
+      # OPTIONAL: Override default {product-very-short} system prompt
       # systemPrompt: "You are a helpful assistant focused on Red Hat Developer Hub development."
 ----
++
+[NOTE]
+====
+To display user icons from external providers such as Gravatar or GitLab, include the provider URLs in the `img-src` directive of your Content Security Policy (CSP).
+====
 .. Click *Create*.
 
 . Create Llama Stack Secret file (`llama-stack-secrets`) for LLM provider credentials:
 +
 [IMPORTANT]
 ====
-{product} {product-version} configures the Llama Stack image to use the vLLM provider exclusively. The vLLM provider supports the OpenAI API schema but does not support connecting directly to the official OpenAI service (`api.openai.com`).
-Do not use the official OpenAI API URL or token with vLLM in this release. Attempting this might result in errors or improper responses. Native OpenAI provider support is planned for future releases.
+* {product} {product-version} supports vLLM, native OpenAI, Vertex AI, and Ollama providers. The vLLM provider uses the OpenAI API schema but it does not support the official OpenAI service (api.openai.com). To use official OpenAI credentials, you must use the native OpenAI provider instead of vLLM. Using OpenAI credentials with the vLLM provider causes errors or improper responses.
 ====
 
 .. In the {ocp-short} web console, navigate to *Secrets*.
-.. Click *Create* -> *Key/value secret*.
-.. Select the *YAML view* option and add the following structure:
+.. Click *Create* -> *Key/value secret*, select *YAML view*, and add the following structure:
 +
 [source,yaml]
 ----
@@ -169,10 +167,11 @@ stringData:
 +
 where:
 
-`ENABLE_VLLM`:: Enables the vLLM provider. Set to true to activate.
-`ENABLE_OPENAI`:: Enables the OpenAI provider. Set to true to activate.
-`ENABLE_VERTEX_AI`:: Enables the Vertex AI provider. Set to true to activate.
-`ENABLE_OLLAMA`:: Enables the Ollama provider. Set to true to activate.
+`ENABLE_VLLM`:: Enables the vLLM provider. Set to `true` to activate.
+`ENABLE_OPENAI`:: Enables the OpenAI provider. Set to `true` to activate.
+`ENABLE_VERTEX_AI`:: Enables the Vertex AI provider. Set to `true` to activate.
+`ENABLE_OLLAMA`:: Enables the Ollama provider. Set to `true` to activate.
++
 [NOTE]
 ====
 To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
@@ -186,9 +185,14 @@ To disable a provider, leave the value blank. (for example: ENABLE_VLLM="")
 `VERTEX_AI_LOCATION`:: The Google Cloud region required to access Gemini through Vertex AI.
 `GOOGLE_APPLICATION_CREDENTIALS`:: The credentials required to authenticate with Google Cloud to access Vertex AI.
 `OLLAMA_URL`:: The URL for the Ollama service.
-`SAFETY_MODEL`:: The identifier for the safety model. The recommended value is llama-guard3:8b.
-`SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`).
-`SAFETY_API_KEY`:: The API key required to authenticate with the safety model, if applicable.
+`SAFETY_MODEL`:: The identifier for the safety model. The default model is `llama-guard3:8b`, which is optimized by Llama Stack for safety classification.
+`SAFETY_URL`:: The URL hosting the safety model. You must append `/v1` to the host address (for example: `localhost:#####/v1`) so the Llama Stack can correctly route moderation requests to the API.
+`SAFETY_API_KEY`:: The authentication token from your safety model required to secure the moderation channel and prevent unauthorized access to your safety infrastructure.
++
+[TIP]
+====
+To integrate {ls-short} effectively with Model Context Protocol (MCP), you must provide the correct authorization headers. For details instructions, see {model-context-protocol-link}#proc-configuring-mpc-clients-to-access-the-rhdh-server_assembly-model-context-protocol-tools[Configuring MCP clients to access the {product-very-short} server].
+====
 .. Click *Create*.
 
 . Update the dynamic plugins ConfigMap: Add the {ls-short} plugin image to your existing dynamic plugins ConfigMap (`dynamic-plugins-rhdh`).
@@ -291,22 +295,19 @@ volumes:
   - emptyDir: {}
     name: rag-data-volume
 ----
-... Add the `initContainers` section to initialize RAG data:
+... Update the `spec.deployment.patch.spec.template.spec.initContainers` specification section to initialize RAG data:
 [source,yaml]
 +
 ----
 initContainers:
   - name: init-rag-data
     image: 'quay.io/redhat-ai-dev/rag-content:release-1.9-lcs'
-    command:
-      - "sh"
-      - "-c"
-      - "echo 'Copying RAG data...'; cp -r /rag/vector_db/rhdh_product_docs /rag-content/ && cp -r /rag/embeddings_model /rag-content/ && echo 'Copy complete.'"
+    command: ["sh", "-c", "cp -r /rag/vector_db/rhdh_product_docs /rag-content/ && cp -r /rag/embeddings_model /rag-content/"]
     volumeMounts:
       - mountPath: /rag-content
         name: rag-data-volume
 ----
-... Add the Llama Stack and the {lcs-short} containers to the `spec.deployment.patch.spec.template.spec.containers` section:
+... Add the Llama Stack (`llama-stack`) and the {lcs-short} (`lightspeed-core`) containers to the `spec.deployment.patch.spec.template.spec.containers` section:
 +
 [source,yaml]
 ----
@@ -402,7 +403,7 @@ global:
       - emptyDir: {}
         name: rag-data-volume
 ----
-... Update the `initContainers` section (if supported by your Helm chart structure) to initialize RAG data.
+... Update the `upstream.backstage.initContainers` section (if supported by your Helm chart structure) to initialize RAG data.
 +
 [source,yaml]
 ----
