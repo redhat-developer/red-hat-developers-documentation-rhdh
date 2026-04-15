@@ -1,18 +1,16 @@
 :_mod-docs-content-type: CONCEPT
 
-[id="configure-observability-tools_{context}"]
-= Tools for configuring observability
+[id="observability-configuration-examples_{context}"]
+= Observability tool configuration examples
 
 [role="_abstract"]
-The following are working examples for two essential observability tools that integrate seamlessly with SonataFlow OpenTelemetry implementation.
+Use the following examples to deploy and integrate Jaeger and Loki with the SonataFlow OpenTelemetry implementation. These examples include configurations for development and production environments.
 
-. Jaeger distributed tracing tool.
+. Jaeger distributed tracing
 +
 Jaeger provides distributed tracing visualization for SonataFlow workflows.
 +
-Deploy Jaeger on OpenShift or Kubernetes as shown in the following examples:
-+
-All-in-one deployment (development or testing):::
+.Jaeger all-in-one deployment (development and testing)
 +
 [source,yaml]
 ----
@@ -104,8 +102,8 @@ spec:
     targetPort: 16686
   type: ClusterIP
 ----
-
-OpenShift route for UI access:::
++
+.OpenShift route for UI access
 +
 [source,yaml]
 ----
@@ -124,8 +122,10 @@ spec:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
 ----
-
-Workflow Configuration for Jaeger:::
++
+.Workflow configuration for Jaeger
++
+Add these properties to the `application.properties` file of your workflow:
 +
 [source,bash]
 ----
@@ -137,8 +137,8 @@ quarkus.otel.traces.exporter=cdi
 # Additional Jaeger-specific propagation
 quarkus.otel.propagators=tracecontext,baggage,jaeger
 ----
-
-Production Deployment with Elasticsearch:::
++
+.Production deployment with Elasticsearch
 +
 For production environments, use the Jaeger Operator with Elasticsearch storage:
 +
@@ -176,13 +176,11 @@ spec:
         memory: 512Mi
 ----
 
-. Loki log aggregation tool.
+. Loki log aggregation
 +
-Grafana Loki provides scalable log aggregation with native OpenTelemetry support, enabling comprehensive log analysis and correlation with traces. Loki natively supports OpenTelemetry Protocol (OTLP) for direct log ingestion from SonataFlow workflows.
+Loki supports OpenTelemetry Protocol (OTLP) for direct log ingestion from SonataFlow workflows.
 +
-Deploy Loki on OpenShift or Kubernetes as shown in the following examples:
-+
-Loki configuration for OpenTelemetry:::
+.Loki configuration for OpenTelemetry
 +
 [source,yaml]
 ----
@@ -237,8 +235,8 @@ data:
             prefix: index_
             period: 24h
 ----
-
-Loki deployment:::
++
+.Loki deployment
 +
 [source,yaml]
 ----
@@ -321,10 +319,10 @@ spec:
     targetPort: 9096
   type: ClusterIP
 ----
-
-. To configure workflow for Loki:
 +
-* Direct Connection to Loki (Recommended for simplicity):
+.Workflow configuration for Loki and Jaeger
++
+To route logs to Loki and traces to Jaeger, use the following configuration:
 +
 [source,bash]
 ----
@@ -353,27 +351,11 @@ quarkus.otel.resource.attributes=\
   deployment.environment=production
 ----
 
-. Optional: OpenTelemetry collector for advanced processing:
+. Optional: OpenTelemetry collector for advanced processing
 +
-For production environments requiring log processing, enrichment, or multi-backend export, you can optionally deploy an OpenTelemetry collector between your workflows and the observability backends.
+Deploy an OpenTelemetry collector between workflows and backends for advanced log processing, filtering, and multi-destination export.
 +
-The following are the benefits of using a collector:
-
-* Log enrichment with Kubernetes metadata
-* Filtering and sampling
-* Multi-destination export (for example, logs to both Loki and external SIEM)
-* Centralized processing and transformation
-
-. To quickly setup the collector:
-+
-[source,bash]
-----
-# Change workflow configuration to send to collector instead
-quarkus.otel.exporter.otlp.endpoint=http://otel-collector.observability.svc.cluster.local:4317
-----
-
-. To configure collector:
-+
+.Collector pipeline configuration
 [source,yaml,subs="+attributes,+quotes"]
 ----
 # Collector routes to both Jaeger and Loki
