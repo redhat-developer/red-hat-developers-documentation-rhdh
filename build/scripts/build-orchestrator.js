@@ -395,9 +395,9 @@ async function runCqa(repoRoot, verbose) {
   let checksTotal = 0, checksPass = 0, checksFail = 0;
   const summaryMatch = output.match(/Checks:\s+(\d+)\s+total,\s+(\d+)\s+pass,\s+(\d+)\s+fail/);
   if (summaryMatch) {
-    checksTotal = parseInt(summaryMatch[1], 10);
-    checksPass = parseInt(summaryMatch[2], 10);
-    checksFail = parseInt(summaryMatch[3], 10);
+    checksTotal = Number.parseInt(summaryMatch[1], 10);
+    checksPass = Number.parseInt(summaryMatch[2], 10);
+    checksFail = Number.parseInt(summaryMatch[3], 10);
   }
 
   return {
