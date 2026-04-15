@@ -661,9 +661,13 @@ async function main() {
     lycheeResult.errors = classifyErrors(lycheeResult.output, patterns);
   }
 
-  // Run CQA content quality assessment
-  console.log('\nRunning CQA content quality assessment...');
-  const cqaResult = await runCqa(repoRoot, args.verbose);
+  // Run CQA content quality assessment (skip when invoked from CQA-14 to avoid recursion)
+  const cqaResult = process.env.CQA_RUNNING
+    ? { status: 'passed', duration: 0, output: '', stats: { total: 0, pass: 0, fail: 0 } }
+    : await (async () => {
+        console.log('\nRunning CQA content quality assessment...');
+        return runCqa(repoRoot, args.verbose);
+      })();
 
   const totalDuration = Math.round((Date.now() - totalStart) / 1000);
 
