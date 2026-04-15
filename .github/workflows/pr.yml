@@ -188,10 +188,23 @@ jobs:
                   return `### ${r.title}\n${errs}`;
                 }).join('\n\n');
 
+                let cqaDetails = '';
+                if (report.cqa && report.cqa.status === 'failed') {
+                  const s = report.cqa.stats || {};
+                  cqaDetails = `### CQA (Content Quality Assessment)\n` +
+                    `${s.total} checks: ${s.pass} pass, ${s.fail} fail\n\n`;
+                  if (report.cqa.output) {
+                    cqaDetails += `<details>\n<summary>CQA checklist</summary>\n\n` +
+                      `${report.cqa.output}\n</details>\n\n`;
+                  }
+                  cqaDetails += `Run \`node build/scripts/cqa/index.js --all\` locally for details.\n\n`;
+                }
+
                 body = `## :x: Build failed\n\n` +
                   `${report.titles.passed}/${report.titles.total} titles built successfully | ` +
                   `${report.titles.failed} failed | ${report.duration}s\n\n` +
                   `${details}\n\n` +
+                  `${cqaDetails}` +
                   `[View full logs](${runUrl}) | ${now}`;
               } else {
                 body = `## :x: Build failed\n\n` +
