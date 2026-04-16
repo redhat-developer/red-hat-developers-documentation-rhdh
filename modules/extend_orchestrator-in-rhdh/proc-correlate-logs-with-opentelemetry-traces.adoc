@@ -4,11 +4,11 @@
 = Correlate logs with OpenTelemetry traces
 
 [role="_abstract"]
-Integrate OpenTelemetry (OTEL) with your workflow logging to provide end-to-end visibility. This adds `traceId` and `spanId` to your JSON logs, allowing you to navigate from a log entry directly to a distributed trace in your observability tool.
+Integrate OpenTelemetry with your workflow logging to improve diagnostic capabilities. This integration adds `traceId` and `spanId` to your JSON logs, which enables you to navigate from a log entry to a distributed trace in an observability tool.
 
 .Prerequisites
 
-* You have deployed an OpenTelemetry-compliant collector (for example, Jaeger) in your cluster.
+* You have deployed an OpenTelemetry-compliant collector (for example, Jaeger) in the cluster.
 
 * You have set `quarkus.log.console.json.print-details=true` to `true`.
 
@@ -24,22 +24,24 @@ quarkus.otel.exporter.otlp.traces.endpoint=http://jaeger-collector:14268/api/tra
 quarkus.otel.service.name=${workflow.name}
 ----
 
-. Set the resource attributes to help filter traces in your dashboard:
+. Set the resource attributes to filter traces in your observability dashboard:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
 quarkus.otel.resource.attributes=service.namespace=sonataflow-infra
 ----
 
-. Restart the workflow pod.
+. Restart the workflow pod to apply the new configuration.
 
 .Verification
 
-* Trigger a workflow execution and check the logs for trace identifiers:
+* Trigger a workflow execution.
+
+* Check the logs for trace identifiers:
 +
 [source,bash,subs="+attributes,+quotes"]
 ----
 oc logs <pod_name> | grep traceId
 ----
 
-* Make sure the `mdc` block in the JSON output now includes `traceId` and `spanId`.
+* Make sure the `mdc` block in the JSON output contains `traceId` and `spanId` fields with non-empty values.

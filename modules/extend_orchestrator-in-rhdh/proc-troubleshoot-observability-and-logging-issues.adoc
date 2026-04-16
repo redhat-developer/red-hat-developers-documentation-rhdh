@@ -4,50 +4,54 @@
 = Troubleshoot observability and log aggregation in SonataFlow
 
 [role="_abstract"]
-Diagnose and resolve common issues with JSON logging, process context correlation, and log collection in your SonataFlow environment.
+Diagnose and resolve common issues with JSON logging, process context correlation, and log collection in a SonataFlow environment.
 
 .Prerequisites
 
-* Access to the OpenShift or Kubernetes CLI (`oc` or `kubectl`).
+* You have access to the OpenShift (`oc`) or Kubernetes (`kubectl`) CLI.
 
-* Administrator access to the `sonataflow-infra` namespace.
+* You have administrator permissions for the `sonataflow-infra` and `sonataflow-observability` namespaces.
 
-* Access to the workflow project `pom.xml` and ConfigMap files.
+* You have access to the workflow project `pom.xml` and ConfigMap files.
 
 .Procedure
 
-. Verify JSON log formatting
+. Verify JSON log formatting.
 +
-If logs appear as plain text instead of structured JSON, perform the following checks:
+If logs appear as plain text instead of structured JSON, verify the following:
 
-* Make sure the `io.quarkus:quarkus-logging-json` extension is defined in your `pom.xml` workflow.
+* The `io.quarkus:quarkus-logging-json` extension is defined in the `pom.xml` file.
 
-* Confirm that `quarkus.log.console.json=true` is set in the `{workflow-name}-props` ConfigMap.
+* The `quarkus.log.console.json=true` property is set in the `{workflow-name}-props` ConfigMap.
 
-* Rebuild and redeploy the workflow image to ensure the extension is active.
+* The workflow image was rebuilt and redeployed after adding the extension.
 
-* Restart the workflow pod to apply ConfigMap changes.
+* The workflow pod was restarted after applying ConfigMap changes.
 
-. Diagnose missing process instance context
+. Diagnose missing process instance context.
 +
-If logs are in JSON format but the `processInstanceId` field is missing or empty:
+If logs are in JSON format but the `processInstanceId` field is missing or empty, verify the following:
 
-* Verify that workflow instances are actively running.
+* Workflow instances are actively running.
 
-* Check the workflow ConfigMap for the following property:
+* The following property is set in the workflow ConfigMap:
 +
 [source,bash]
 ----
 quarkus.log.console.json.print-details=true
 ----
 
-* Consult the release notes for your SonataFlow version to confirm if Mapped Diagnostic Context (MDC) is automatically populated.
+* The SonataFlow version in use supports automatic Mapped Diagnostic Context (MDC) population.
 
-. Resolve log collection failures in Loki
+. Resolve log collection failures in Loki.
 +
-If logs are generated but do not appear in Loki or your log aggregation dashboard:
+If logs are generated but do not appear in Loki or the aggregation dashboard, verify the following:
 
-* Verify the Promtail or Fluent Bit label selector matches the labels on your workflow pods.
+* The Promtail or Fluent Bit label selector matches the workflow pod labels.
+
+* The collector has the required Role-Based Access Control (RBAC) permissions to read logs from the workflow namespace.
+
+* The `scrape_configs` in the collector configuration include the correct namespace.
 
 * Check the collector logs for permission errors:
 +
@@ -56,13 +60,9 @@ If logs are generated but do not appear in Loki or your log aggregation dashboar
 oc logs -l app=promtail -n sonataflow-observability
 ----
 
-* Make sure that the collector has the necessary RBAC permissions to read logs from the workflow namespace.
-
-* Verify that the `scrape_configs` in the collector configuration include the correct namespace.
-
-. Mitigate high resource usage
+. Mitigate high resource usage.
 +
-If JSON logging causes performance degradation or high storage costs:
+If JSON logging causes performance degradation or high storage costs, implement the following changes:
 
 * Increase the log level for verbose categories to reduce output volume:
 +
@@ -78,13 +78,13 @@ quarkus.log.category."org.kie.kogito".level=WARN
 quarkus.log.console.async=true
 ----
 
-* Implement log rotation and set appropriate retention policies in your aggregation backend.
-
-* Monitor network bandwidth and storage usage to identify anomalies.
+* Configure log rotation and retention policies in the aggregation backend.
 
 .Verification
 
-* After applying a fix, trigger a workflow execution and inspect the logs:
+* After applying a fix, trigger a workflow execution.
+
+* Inspect the latest log entries. The logs appear in JSON format and include valid `processInstanceId`, `traceId`, and `spanId` fields:
 +
 [source,bash]
 ----

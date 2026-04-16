@@ -4,17 +4,19 @@
 = Aggregate logs using the Promtail, Loki and Grafana (PLG) stack
 
 [role="_abstract"]
-Deploy and configure a Promtail sidecar to scrape workflow logs and push them to a Loki instance for long-term storage and visualization in Grafana.
+Deploy and configure a Promtail sidecar to scrape workflow logs and push them to a Loki instance for storage and visualization in Grafana.
 
 .Prerequisites
 
-* You have a running Loki and Grafana instance.
+* You have running Loki and Grafana instances in the cluster.
 
 * You have configured workflow for file-based JSON logging.
 
+* You have `cluster-admin` permissions.
+
 .Procedure
 
-. For a quick start, deploy the PLG stack using Helm:
+. Deploy the PLG stack using Helm:
 +
 [source,bash]
 ----
@@ -33,17 +35,18 @@ helm install loki-stack grafana/loki-stack \
   --set promtail.config.logLevel=info \
   --set grafana.enabled=true
 ----
++
+[NOTE]
+====
+For production deployments, use a custom `values.yaml` file with appropriate resource limits and security contexts.
+====
 
-. For production deployment, use the complete Helm values configuration, `../observability/helm-values/` with proper resource limits, security contexts, and OpenShift-specific settings.
+. Create a ConfigMap for the Promtail sidecar. Select the configuration that matches your logging method:
 
-. Create a ConfigMap for the Promtail sidecar to parse the JSON logs. You can choose between the following options:
 
-* Scrape container stdout (default)
-* Custom JSON log files
-
-Scrape Container Stdout (Default)::
-
-This configuration uses Kubernetes service discovery to collect logs from container stdout:
+... Scrape Container Stdout
++
+Use this configuration to collect logs from container stdout using Kubernetes service discovery:
 +
 [source,yaml]
 ----
@@ -96,9 +99,9 @@ data:
           traceId:
 ----
 
-Scrape JSON log files::
-
-When using `[file-based JSON logging](#file-based-json-logging)`, configure Promtail as a sidecar to read from the shared log volume:
+... Scrape JSON log files
++
+If you use `[file-based JSON logging](#file-based-json-logging)`, configure Promtail to read from the shared log volume:
 +
 [source,yaml]
 ----
@@ -194,9 +197,9 @@ spec:
     - name: positions
       emptyDir: {}
 ----
-
-The following are query examples:
-
++
+. Querying logs in Grafana: After deploying the stack, use the following LogQL queries in the Grafana **Explore** view:
++
 .. Filter logs by process instance
 +
 [source,json,subs="+attributes,+quotes"]
@@ -227,9 +230,13 @@ The following are query examples:
 
 .Verification
 
-* In the Grafana *Explore* view, run the following LogQL query to find logs for a specific workflow instance:
+* Access the Grafana **Explore** view.
+
+* Run the following LogQL query, replacing `<instance_id>` with a valid ID:
 +
 [source,json,subs="+attributes,+quotes"]
 ----
-{job="sonataflow-workflows"} | json | processInstanceId="YOUR_INSTANCE_ID"
+{job="sonataflow-workflows"} | json | processInstanceId="<instance_id>"
 ----
++
+Expected result: Grafana displays the log entries associated with the specified process instance.
