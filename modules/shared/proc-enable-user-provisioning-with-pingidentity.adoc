@@ -1,0 +1,106 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-user-provisioning-with-pingidentity_{context}"]
+= Enable user provisioning with PingIdentity
+
+[role="_abstract"]
+You can provision users and groups from PingOne to the {product} software catalog by configuring the PingIdentity catalog provider plugin.
+
+include::{docdir}/artifacts/snip-technology-preview.adoc[]
+
+.Prerequisites
+* You have configured xref:enable-user-authentication-with-pingidentity_{context}[authentication with PingIdentity].
+
+* You have a PingOne environment with API access and have collected the required PingOne credentials:
+
+PingOne environment ID::
+Your PingOne environment ID.
+
+PingOne API path::
+Your PingOne API base path, such as `\https://api.pingone.com/v1`.
+
+PingOne auth path::
+Your PingOne auth base path, such as `\https://auth.pingone.com`.
+
+.Procedure
+. Add your PingOne credentials to {product-short}, by adding the following key-value pairs to {configuring-dynamic-plugins-book-link}#provisioning-your-custom-configuration[your {product-short} secrets].
+You can use these secrets in the {product-short} configuration files by using their environment variable name.
++
+`PING_ENV_ID`::
+Enter your PingOne environment ID.
+
+`PING_API_PATH`::
+Enter your PingOne API base path.
+
+`PING_AUTH_PATH`::
+Enter your PingOne auth base path.
++
+[NOTE]
+====
+This procedure reuses the `PING_CLIENT_ID` and `PING_CLIENT_SECRET` secrets from the authentication setup.
+If your PingOne API requires separate credentials, add them as additional secrets.
+====
+
+. Enable the PingIdentity catalog provider plugin in your `dynamic-plugins.yaml` file.
++
+This plugin imports PingOne users and groups to the {product-short} software catalog.
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-pingidentity-dynamic'
+    disabled: false
+----
+
+. Enable provisioning PingOne users and groups to the {product-short} software catalog, by adding the `catalog.providers.pingIdentityOrg` section to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+catalog:
+  providers:
+    pingIdentityOrg:
+      default:
+        apiPath: ${PING_API_PATH}
+        authPath: ${PING_AUTH_PATH}
+        envId: ${PING_ENV_ID}
+        clientId: ${PING_CLIENT_ID}
+        clientSecret: ${PING_CLIENT_SECRET}
+        schedule:
+          frequency: PT1H
+          timeout: PT15M
+----
+
+`apiPath`::
+Enter your PingOne API base path, defined earlier.
+
+`authPath`::
+Enter your PingOne auth base path, defined earlier.
+
+`envId`::
+Enter your PingOne environment ID, defined earlier.
+
+`clientId`::
+Enter your {product-short} application client ID in PingIdentity, defined earlier.
+
+`clientSecret`::
+Enter your {product-short} application client secret in PingIdentity, defined earlier.
+
+`schedule`::
+Enter your schedule information:
+
+`frequency`:::
+Enter your schedule frequency, in the cron, ISO duration, or "human duration" format.
+
+`timeout`:::
+Enter your schedule timeout, in the ISO duration or "human duration" format.
+
+.Verification
+* To verify user and group provisioning, check the console logs.
++
+Successful synchronization example:
++
+[source]
+----
+2025-10-15T20:45:49.072Z catalog info Read 4 PingIdentity users and 6 PingIdentity groups in 0.3 seconds. Committing... class="PingIdentityEntityProvider" taskId="PingIdentityEntityProvider:default:refresh" taskInstanceId="9bb48fd5-2f55-4096-9fd0-61cee6679952"
+2025-10-15T20:45:49.075Z catalog info Committed 4 PingIdentity users and 6 PingIdentity groups in 0.0 seconds. class="PingIdentityEntityProvider" taskId="PingIdentityEntityProvider:default:refresh" taskInstanceId="9bb48fd5-2f55-4096-9fd0-61cee6679952"
+----
