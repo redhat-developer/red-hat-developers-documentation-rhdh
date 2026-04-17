@@ -130,7 +130,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
         run: |
           echo "Building PR ${{ github.event.pull_request.number }}"
-          rsync -az trusted-scripts/* .lycheeignore lychee.toml pr-content/
+          rsync -az trusted-scripts/* pr-content/
+          # some files are new in main/1.10, so check if they exist before copying
+          for f in trusted-scripts/.lycheeignore trusted-scripts/lychee.toml; do
+            if [[ -f $f ]]; then rsync -az $f pr-content/; fi
+          done
           touch pr-content/.lycheecache
           cd pr-content
           build/scripts/build-ccutil.sh -b "pr-${{ github.event.number }}"
