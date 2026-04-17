@@ -54,3 +54,43 @@ global:
 The `@parfuemerie-douglas/scaffolder-backend-module-azure-repositories` is incompatible with {backstage} {product-backstage-version} and is no longer maintained.
 
 Update to {product-very-short} 1.9 to use the replacement `@backstage-community/plugin-scaffolder-backend-module-azure-devops` module.
+
+
+[id="breaking-change-rhdhbuhgs-2957"]
+== Existing 1.8.5 Operator users with Orchestator require a manual update in their dynamic-plugins ConfigMap
+
+If you are using an Operator-backed instance of {product-short} with the Orchestrator, you must manually update your dynamic-plugins ConfigMap. Once the {product-short} Operator is upgraded to 1.8.6, set the Orchestrator plugin versions to 1.8.10. Failure to update the ConfigMap prevents the {product-short} instance from completing the upgrade process.
+
+.Procedure
+. Update your `dynamic-plugins` ConfigMap to enable the Orchestrator plugins for version 1.8.10.
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@1.8.10"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.8.10"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.8.10"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.8.10"
+        disabled: false
+----
+
+
+[id="removed-functionality-rhdbugs-2288"]
+== PagerDuty plugins are removed
+
+The `@pagerduty/backstage-plugin` and `@pagerduty/backstage-plugin-backend` plugins are incompatible with {backstage} 1.42.5 and are no longer maintained.
+
+Update to {product-very-short} 1.9 to use the latest PagerDuty modules.
