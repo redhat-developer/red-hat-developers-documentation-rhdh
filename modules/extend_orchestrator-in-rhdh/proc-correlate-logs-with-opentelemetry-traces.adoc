@@ -1,0 +1,47 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="correlate-logs-with-opentelemetry-traces_{context}"]
+= Correlate logs with OpenTelemetry traces
+
+[role="_abstract"]
+Integrate OpenTelemetry with your workflow logging to improve diagnostic capabilities. This integration adds `traceId` and `spanId` to your JSON logs, which enables you to navigate from a log entry to a distributed trace in an observability tool.
+
+.Prerequisites
+
+* You have deployed an OpenTelemetry-compliant collector (for example, Jaeger) in the cluster.
+
+* You have set `quarkus.log.console.json.print-details=true` to `true`.
+
+.Procedure
+
+. Add the OpenTelemetry exporter and service identification properties to your workflow ConfigMap:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+# Enable OpenTelemetry integration
+quarkus.otel.enabled=true
+quarkus.otel.exporter.otlp.traces.endpoint=http://jaeger-collector:14268/api/traces
+quarkus.otel.service.name=${workflow.name}
+----
+
+. Set the resource attributes to filter traces in your observability dashboard:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+quarkus.otel.resource.attributes=service.namespace=sonataflow-infra
+----
+
+. Restart the workflow pod to apply the new configuration.
+
+.Verification
+
+* Trigger a workflow execution.
+
+* Check the logs for trace identifiers:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+oc logs <pod_name> | grep traceId
+----
+
+* Make sure the `mdc` block in the JSON output contains `traceId` and `spanId` fields with non-empty values.

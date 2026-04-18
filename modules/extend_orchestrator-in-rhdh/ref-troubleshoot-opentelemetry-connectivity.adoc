@@ -1,0 +1,74 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="troubleshoot-opentelemetry-connectivity_{context}"]
+= Troubleshoot OpenTelemetry connectivity
+
+[role="_abstract"]
+Diagnose and resolve issues with missing observability data or failed context propagation in SonataFlow.
+
+.OpenTelemetry troubleshooting guide
+[cols="25%,35%,40%", options="header"]
+|===
+| Symptom
+| Potential cause
+| Resolution
+
+| Traces do not appear in the dashboard.
+| OpenTelemetry is disabled or the endpoint is unreachable.
+| Verify the `quarkus.otel.enabled` property and test endpoint connectivity.
+
+| Authentication errors (`401`/`403`).
+| Missing or invalid authorization headers.
+| Configure the `quarkus.otel.exporter.otlp.headers` property with a valid token.
+
+| High memory usage in the collector.
+| Large telemetry batches or high traffic volume.
+| Implement a `memory_limiter` processor in the collector configuration.
+
+| Context is lost between workflow steps.
+| Incorrect propagator configuration.
+| Ensure `quarkus.otel.propagators` includes all required formats (for example, `tracecontext` and `baggage`).
+|===
+
+.Diagnosing missing traces
+
+.. Verify that OpenTelemetry is enabled in the workflow ConfigMap:
++
+[source,bash]
+----
+kubectl get cm {workflow-name}-props -n workflows -o yaml
+----
+
+.. Check the pod logs for initialization errors:
++
+[source,bash]
+----
+kubectl logs deployment/{deployment-name} -n workflows | grep -i "otel"
+----
+
+.. Test the connection to the Jaeger collector from within the workflow pod:
++
+[source,bash]
+----
+kubectl exec deployment/{deployment-name} -n workflows -- curl -v http://jaeger-collector.observability.svc.cluster.local:4317
+----
+
+.Configuring authentication headers
+If your observability platform requires authentication, add the following property to your `application.properties` file:
+
+[source,bash]
+----
+quarkus.otel.exporter.otlp.headers=authorization=Bearer ${API_TOKEN}
+----
+
+.Resolving context propagation issues
+To ensure trace IDs are maintained across service boundaries, configure the following propagators and enable JSON logging to verify the IDs in the output:
+
+[source,bash]
+----
+# Include required propagators
+quarkus.otel.propagators=tracecontext,baggage,jaeger
+
+# Enable JSON logging to verify trace IDs
+quarkus.log.console.json=true
+----
