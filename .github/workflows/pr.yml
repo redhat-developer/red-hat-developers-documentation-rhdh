@@ -23,17 +23,16 @@ on:
   # will prevent the job from running until it's approved manually by human intervention.
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: 
+    branches:
     - main
-    - rhdh-1.**
-    - 1.**.x
     - release-1.**
+    - release-2.**
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.event.pull_request.head.ref }}
   cancel-in-progress: true
 
-env: 
+env:
   GH_TEAM: rhdh
   GH_ORGANIZATION: redhat-developer
 jobs:
@@ -47,7 +46,7 @@ jobs:
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         with:
           app-id: ${{ secrets.RHDH_GITHUB_APP_ID }}
-          private-key: ${{ secrets.RHDH_GITHUB_APP_PRIVATE_KEY }} 
+          private-key: ${{ secrets.RHDH_GITHUB_APP_PRIVATE_KEY }}
       - name: Check team membership
         uses: redhat-developer/rhdh/.github/actions/check-author@main
         id: check-team-membership
@@ -86,10 +85,10 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout main branch to get trusted build scripts
+      - name: Checkout trusted build scripts from ${{ github.event.pull_request.base.ref }} branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.pull_request.base.ref }}
           path: trusted-scripts
 
       - name: Checkout PR branch for content to build
@@ -105,7 +104,7 @@ jobs:
           # update
           sudo apt-get update -y || true
           # install
-          sudo apt-get -y -q install podman && podman --version
+          sudo apt-get -y -q install podman rsync && podman --version
           echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
 
       - name: Install lychee
@@ -131,11 +130,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
         run: |
           echo "Building PR ${{ github.event.pull_request.number }}"
-          cp trusted-scripts/build/scripts/build-ccutil.sh pr-content/build/scripts/build-ccutil.sh
-          cp trusted-scripts/build/scripts/build-orchestrator.js pr-content/build/scripts/build-orchestrator.js
-          cp trusted-scripts/build/scripts/error-patterns.json pr-content/build/scripts/error-patterns.json
-          cp trusted-scripts/lychee.toml pr-content/lychee.toml
-          cp trusted-scripts/.lycheeignore pr-content/.lycheeignore
+          rsync -az trusted-scripts/* pr-content/
+          # some files are new in main/1.10, so check if they exist before copying
+          for f in trusted-scripts/.lycheeignore trusted-scripts/lychee.toml; do
+            if [[ -f $f ]]; then rsync -az $f pr-content/; fi
+          done
           touch pr-content/.lycheecache
           cd pr-content
           build/scripts/build-ccutil.sh -b "pr-${{ github.event.number }}"
