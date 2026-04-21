@@ -7,9 +7,9 @@
 #
 # SPDX-License-Identifier: EPL-2.0
 #
-# Wrapper for backward compatibility — delegates to Node.js build orchestrator.
-# Requires: Node.js, Podman
-# See build-orchestrator.js for the implementation.
+# Requires: Node.js
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec node "${SCRIPT_DIR}/build-orchestrator.js" "$@"
+pushd "${SCRIPT_DIR}" >/dev/null || exit
+node "cqa/index.js" --all # "$@"
+popd >/dev/null || exit
