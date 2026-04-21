@@ -523,6 +523,7 @@ function printLycheeSummary(lycheeResult) {
 }
 
 function printCqaSummary(cqaResult) {
+  if (cqaResult.status === 'skipped') return;
   console.log('\n=== CQA (Content Quality Assessment) ===');
   const s = cqaResult.stats || {};
   console.log(`Checks: ${s.total} total, ${s.pass} pass, ${s.fail} fail`);
@@ -662,9 +663,10 @@ async function main() {
     lycheeResult.errors = classifyErrors(lycheeResult.output, patterns);
   }
 
-  // Run CQA content quality assessment (skip when invoked from CQA-14 to avoid recursion)
-  const cqaResult = process.env.CQA_RUNNING
-    ? { status: 'passed', duration: 0, output: '', stats: { total: 0, pass: 0, fail: 0 } }
+  // Run CQA content quality assessment
+  // Skip when CQA_RUNNING env is set (CQA-14 recursion guard)
+  const cqaResult = (process.env.CQA_RUNNING)
+    ? { status: 'skipped', duration: 0, output: '', stats: { total: 0, pass: 0, fail: 0 } }
     : await (async () => {
         console.log('\nRunning CQA content quality assessment...');
         return runCqa(repoRoot, args.verbose);
