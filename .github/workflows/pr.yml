@@ -104,7 +104,7 @@ jobs:
           # update
           sudo apt-get update -y || true
           # install
-          sudo apt-get -y -q install podman rsync && podman --version
+          sudo apt-get -y -q install podman && podman --version
           echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
 
       - name: Install lychee
@@ -113,6 +113,17 @@ jobs:
           curl -sSfL "https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" \
             | sudo tar xz -C /usr/local/bin lychee
           lychee --version
+
+      - name: Install Vale
+        run: |
+          wget -q https://github.com/errata-ai/vale/releases/download/v3.9.5/vale_3.9.5_Linux_64-bit.tar.gz
+          tar -xzf vale_3.9.5_Linux_64-bit.tar.gz -C /usr/local/bin vale
+          vale --version
+
+      - name: Sync Vale styles
+        run: |
+          cd pr-content
+          vale sync
 
       - name: Restore lychee cache
         uses: actions/cache@v4
@@ -128,26 +139,69 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
+          # Used by CQA-15 (redirects check) to diff against the base branch
+          CQA_BASE_REF: base/${{ github.event.pull_request.base.ref }}
         run: |
           echo "Building PR ${{ github.event.pull_request.number }}"
-          rsync -az trusted-scripts/* pr-content/
-          # some files are new in main/1.10, so check if they exist before copying
-          for f in trusted-scripts/.lycheeignore trusted-scripts/lychee.toml; do
-            if [[ -f $f ]]; then rsync -az $f pr-content/; fi
+          # Copy trusted build scripts from base branch (not content)
+          # Guard each file — older branches may not have them
+          for f in build/scripts/build-ccutil.sh build/scripts/build-orchestrator.js build/scripts/error-patterns.json lychee.toml .lycheeignore; do
+            if [[ -f "trusted-scripts/$f" ]]; then cp "trusted-scripts/$f" "pr-content/$f"; fi
           done
+          if [[ -d "trusted-scripts/build/scripts/cqa" ]]; then
+            rm -rf pr-content/build/scripts/cqa
+            cp -r trusted-scripts/build/scripts/cqa pr-content/build/scripts/cqa
+          fi
           touch pr-content/.lycheecache
           cd pr-content
-          build/scripts/build-ccutil.sh -b "pr-${{ github.event.number }}"
+          # Add base branch as remote so CQA checks can diff PR content against it
+          git remote add base https://github.com/${{ github.event.pull_request.base.repo.full_name }}.git
+          git fetch base ${{ github.event.pull_request.base.ref }}
+          # Orchestrator runs ccutil + lychee + CQA; older branches fall back to ccutil only
+          if [[ -f "build/scripts/build-orchestrator.js" ]]; then
+            node build/scripts/build-orchestrator.js -b "pr-${{ github.event.number }}"
+          else
+            build/scripts/build-ccutil.sh -b "pr-${{ github.event.number }}"
+          fi
 
+      # Determine if HTML was generated, so deploy runs even when only CQA/lychee fail.
+      # Sets html_built=true when all titles built, false when any title failed or no report exists.
+      - name: Check if HTML was built
+        id: check_html
+        if: always() && steps.build.outcome != 'skipped'
+        run: |
+          # Older branches (release-1.8/1.9) use build-ccutil.sh and produce no report;
+          # fall back to the build step outcome
+          if [[ ! -f "pr-content/build-report.json" ]]; then
+            if [[ "${{ steps.build.outcome }}" == "success" ]]; then
+              echo "html_built=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "html_built=false" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
+          # Parse the report to check for title build failures specifically;
+          # CQA/lychee failures do NOT prevent deployment
+          title_failures=$(node -e "
+            const r = JSON.parse(require('fs').readFileSync('pr-content/build-report.json','utf8'));
+            console.log(r.results.some(t => t.status === 'failed') ? 'true' : 'false');
+          " 2>&1) || { echo "html_built=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          if [[ "$title_failures" == "true" ]]; then
+            echo "html_built=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "html_built=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Avoid push conflicts: pull latest gh-pages before deploying new preview content
       - name: Pull from origin before pushing (if possible)
-        if: steps.build.outcome == 'success'
+        if: steps.check_html.outputs.html_built == 'true'
         run: |
           cd pr-content
           /usr/bin/git pull origin gh-pages || true
 
-      # repo must be public for this to work
+      # Always publish the preview when HTML has been built, even with broken links or CQA alerts
       - name: Deploy
-        if: steps.build.outcome == 'success'
+        if: steps.check_html.outputs.html_built == 'true'
         uses: peaceiris/actions-gh-pages@v4
         # if: github.ref == 'refs/heads/main'
         with:
@@ -156,6 +210,10 @@ jobs:
           keep_files: true
           publish_dir: ./pr-content/titles-generated
 
+      # Post one consolidated PR comment with build results, preview link, and CQA checklist.
+      # Preview link is always shown; marked stale when title build failed (HTML not generated).
+      # CQA section is absent on older branches without CQA.
+      # Detects existing comments from both old (two-comment) and new (consolidated) formats.
       - name: Post or update PR comment with doc preview link
         if: always() && steps.build.outcome != 'skipped'
         uses: actions/github-script@v7
@@ -165,53 +223,74 @@ jobs:
             const fs = require('fs');
             const prNum = context.issue.number;
             const previewUrl = `https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pr-${prNum}/`;
-            const now = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
-            const buildOutcome = '${{ steps.build.outcome }}';
+            const now = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync('pr-content/build-report.json', 'utf8'));
+            } catch { report = null; }
 
-            let body;
-            if (buildOutcome === 'success') {
-              body = `Updated preview: ${previewUrl} @ ${now}`;
-            } else {
-              let report;
-              try {
-                report = JSON.parse(fs.readFileSync('pr-content/build-report.json', 'utf8'));
-              } catch { report = null; }
+            // ── Section 1: Build status + preview ──
+            let body = '## PR Build Results\n\n';
 
-              if (report) {
-                const failed = report.results.filter(r => r.status === 'failed');
-                const details = failed.map(r => {
-                  const errs = r.errors.map(e =>
+            if (report) {
+              const titlesFailed = report.results.filter(r => r.status === 'failed');
+              const hasTitleFailure = titlesFailed.length > 0;
+              const overallFailed = hasTitleFailure
+                || (report.lychee && report.lychee.status === 'failed')
+                || (report.cqa && report.cqa.status === 'failed');
+
+              if (overallFailed) {
+                body += `**Build failed** -- ${report.titles.passed}/${report.titles.total} titles | ${report.duration}s\n`;
+              } else {
+                body += `**Build passed** -- ${report.titles.passed}/${report.titles.total} titles | ${report.duration}s\n`;
+              }
+
+              if (hasTitleFailure) {
+                body += `Preview: ${previewUrl} (stale -- title build failed, showing previous version)\n\n`;
+              } else {
+                body += `Preview: ${previewUrl}\n\n`;
+              }
+
+              // ── Section 2: Build error details (title failures only) ──
+              if (hasTitleFailure) {
+                const details = titlesFailed.map(r => {
+                  const errs = (r.errors || []).map(e =>
                     `  **Error:** \`${e.line}\`\n  **Cause:** ${e.cause}\n  **Fix:** ${e.fix}`
                   ).join('\n\n');
                   return `### ${r.title}\n${errs}`;
                 }).join('\n\n');
-
-                let cqaDetails = '';
-                if (report.cqa && report.cqa.status === 'failed') {
-                  const s = report.cqa.stats || {};
-                  cqaDetails = `### CQA (Content Quality Assessment)\n` +
-                    `${s.total} checks: ${s.pass} pass, ${s.fail} fail\n\n`;
-                  if (report.cqa.output) {
-                    cqaDetails += `<details>\n<summary>CQA checklist</summary>\n\n` +
-                      `${report.cqa.output}\n</details>\n\n`;
-                  }
-                  cqaDetails += `Run \`node build/scripts/cqa/index.js --all\` locally for details.\n\n`;
-                }
-
-                body = `## :x: Build failed\n\n` +
-                  `${report.titles.passed}/${report.titles.total} titles built successfully | ` +
-                  `${report.titles.failed} failed | ${report.duration}s\n\n` +
-                  `${details}\n\n` +
-                  `${cqaDetails}` +
-                  `[View full logs](${runUrl}) | ${now}`;
-              } else {
-                body = `## :x: Build failed\n\n` +
-                  `The documentation build failed before producing a report.\n` +
-                  `[View full logs](${runUrl}) | ${now}`;
+                body += `${details}\n\n`;
               }
+
+              if (overallFailed) {
+                body += `[View full logs](${runUrl})\n\n`;
+              }
+
+              body += `---\n\n`;
+
+              // ── Section 3: CQA checklist ──
+              if (report.cqa && report.cqa.output) {
+                body += `## Content Quality Assessment\n\n`;
+                body += report.cqa.output + '\n\n';
+                const s = report.cqa.stats || {};
+                if (s.total) {
+                  body += `${s.total} checks: ${s.pass} pass, ${s.fail} fail\n\n`;
+                }
+                body += `Run \`node build/scripts/cqa/index.js --all --fix\` locally to review and auto-fix issues.\n\n`;
+                body += `---\n\n`;
+              }
+            } else {
+              // No report -- early crash
+              body += `**Build failed** -- build crashed before producing a report.\n`;
+              body += `Preview: ${previewUrl} (stale -- build crashed, showing previous version)\n\n`;
+              body += `[View full logs](${runUrl})\n\n`;
+              body += `---\n\n`;
             }
 
+            body += `*Updated ${now}*`;
+
+            // ── Upsert comment ──
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -219,6 +298,7 @@ jobs:
             });
 
             const existing = comments.find(c =>
+              c.body.includes('## PR Build Results') ||
               c.body.includes('preview: https://redhat-developer.github.io/') ||
               c.body.includes('Build failed')
             );
@@ -236,6 +316,19 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: prNum,
                 body: body
+              });
+            }
+
+            // ── Clean up old standalone CQA comment ──
+            const oldCqa = comments.find(c =>
+              c.body.includes('Content Quality Assessment Results') &&
+              (!existing || c.id !== existing.id)
+            );
+            if (oldCqa) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: oldCqa.id,
               });
             }
 
