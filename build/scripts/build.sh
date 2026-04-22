@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Copyright (c) 2023-2024 Red Hat, Inc.
+# Copyright (c) Red Hat, Inc.
 # This program and the accompanying materials are made
 # available under the terms of the Eclipse Public License 2.0
 # which is available at https://www.eclipse.org/legal/epl-2.0/
@@ -18,19 +18,19 @@ BRANCH="main"
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    '-b') BRANCH="$2"; shift 1;; 
+    '-b') BRANCH="$2"; shift 1;;
   esac
   shift 1
 done
 
-rm -fr titles-generated/; 
-mkdir -p titles-generated/"${BRANCH}"; 
+rm -fr titles-generated/;
+mkdir -p titles-generated/"${BRANCH}";
 echo "<html><head><title>Red Hat Developer Hub Documentation Preview - ${BRANCH}</title></head><body><ul>" > titles-generated/"${BRANCH}"/index.html;
 # exclude the rhdh-plugins-reference as it's embedded in the admin guide
 # shellcheck disable=SC2044,SC2013
 set -e
 for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TITLES}"); do
-    d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}}; 
+    d=${t%/*}; d=${d/titles/titles-generated\/${BRANCH}};
     CMD="asciidoctor \
            --backend=html5 \
            --destination-dir $d \
@@ -47,7 +47,7 @@ for t in $(find titles -name master.adoc | sort -uV | grep -E -v "${EXCLUDED_TIT
            -a toclevels=5 \
            -o index.html \
            $t";
-    echo -e -n "\nBuilding $t into $d ...\n  "; 
+    echo -e -n "\nBuilding $t into $d ...\n  ";
     echo "${CMD}" | sed -r -e "s/\  +/ \\\\\n    /g"
     $CMD
     # shellcheck disable=SC2013
@@ -67,14 +67,14 @@ if [[ $BRANCH == "pr-"* ]]; then
   # fetch the existing https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html to add prs and branches
   curl -sSL https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/pulls.html -o titles-generated/pulls.html
   if [[ -z $(grep "./${BRANCH}/index.html" titles-generated/pulls.html) ]]; then
-      echo "Building root index for $BRANCH in titles-generated/pulls.html ..."; 
+      echo "Building root index for $BRANCH in titles-generated/pulls.html ...";
       echo "<li><a href=./${BRANCH}/index.html>${BRANCH}</a></li>" >> titles-generated/pulls.html
   fi
-else 
+else
   # fetch the existing https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html to add prs and branches
   curl -sSL https://redhat-developer.github.io/red-hat-developers-documentation-rhdh/index.html -o titles-generated/index.html
   if [[ -z $(grep "./${BRANCH}/index.html" titles-generated/index.html) ]]; then
-      echo "Building root index for $BRANCH in titles-generated/index.html ..."; 
+      echo "Building root index for $BRANCH in titles-generated/index.html ...";
       echo "<li><a href=./${BRANCH}/index.html>${BRANCH}</a></li>" >> titles-generated/index.html
   fi
 fi

@@ -1,0 +1,68 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="understand-session-management-in-rhdh_{context}"]
+= Understand session management in {product-short}
+
+[role="_abstract"]
+Session management in {product} involves multiple mechanisms that control how long users stay authenticated and what happens when sessions expire.
+
+== What happens when a session expires
+
+When a session approaches expiration, {product-short} can display a pre-expiration warning dialog that includes a countdown timer.
+The timing of this warning depends on how you configure the auto-logout feature.
+
+After the session expires, {product-short} redirects the user to the login page.
+To continue working, the user must re-authenticate with the configured identity provider and is then returned to {product-short}.
+
+// TODO: Screenshot placeholder: warning dialog
+// TODO: Screenshot placeholder: login redirect
+
+== AutoLogout (frontend inactivity)
+
+The AutoLogout feature monitors user activity in the browser and logs out the user after a configurable idle period.
+AutoLogout revokes the refresh token for {product-short}, but does not end the Identity Provider (IdP) session.
+The logout mechanism is the same as if you manually logout from the user settings page.
+
+You configure AutoLogout under the `auth.autologout` section of your `{my-app-config-file}` file.
+
+== Session duration (provider-level)
+
+Session duration controls the absolute session lifetime regardless of user activity.
+This is a backend HTTP-only cookie configuration.
+When this duration elapses, no warning popup is displayed.
+Instead, the user is redirected to the sign-in page the next time they interact with {product-short}, such as navigating to a new page or refreshing the browser.
+
+You configure session duration per provider by using the `auth.providers.<name>.<env>.sessionDuration` parameter in your `{my-app-config-file}` file.
+This parameter accepts milliseconds, ISO duration, or human-readable duration values (for example, `24h`, `2 days`).
+
+== Identity Provider session settings
+
+Your Identity Provider (IdP), such as {rhbk-brand-name}, GitHub, {azure-brand-name}, or GitLab, maintains its own session timeout independently of {product-short}.
+
+Signing out of {product-short} does not end the IdP SSO session.
+This is expected behavior.
+If the IdP session is still active when a user signs back in to {product-short}, re-authentication might be seamless, with no password prompt.
+
+== How the mechanisms interact
+
+The three session management mechanisms operate at different layers:
+
+AutoLogout::
+Triggers on user inactivity in the browser.
+Frontend-only: does not revoke tokens or end server-side sessions.
+
+Session duration::
+Controls the absolute session lifetime on the server side.
+The session expires after the configured duration regardless of user activity.
+No warning popup is displayed; the user is redirected to the sign-in page on next interaction.
+
+Identity Provider session::
+Outlives {product-short} sign-out.
+A user might re-enter {product-short} without a password prompt if the IdP session is still active.
+
+The mechanism with the shortest timeout takes effect first.
+For example, if AutoLogout is set to 30 minutes of idle time but the session duration is set to 15 minutes, the session expires after 15 minutes regardless of user activity.
+
+[role="_additional-resources"]
+.Additional resources
+* xref:enable-auto-logout-for-inactive-users_{context}[Enable auto-logout for inactive users]

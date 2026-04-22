@@ -139,7 +139,7 @@ async function runAllChecks(checks, titles, fixMode) {
 
   // Output in alphabetical order by check ID
   const sortedChecks = [...checks].sort((a, b) => a.id.localeCompare(b.id));
-  printAllChecksReport(sortedChecks, results, fixMode);
+  return printAllChecksReport(sortedChecks, results, fixMode);
 }
 
 async function collectAllResults(checks, titles, fixMode) {
@@ -236,6 +236,7 @@ function printAllChecksReport(sortedChecks, results, fixMode) {
   }
 
   printFinalSummary({ checksPass, checksFail, totalAutofixable, totalManual, totalDelegated, totalFixed, fixMode });
+  return { checksPass, checksFail };
 }
 
 function printFinalSummary({ checksPass, checksFail, totalAutofixable, totalManual, totalDelegated, totalFixed, fixMode }) {
@@ -384,7 +385,8 @@ async function main() {
   }
 
   if (allMode) {
-    await runAllChecks(checks, titles, fixMode);
+    const { checksFail } = await runAllChecks(checks, titles, fixMode);
+    process.exit(checksFail > 0 ? 1 : 0);
   } else {
     runPerTitleMode(checks, titles, fixMode);
   }

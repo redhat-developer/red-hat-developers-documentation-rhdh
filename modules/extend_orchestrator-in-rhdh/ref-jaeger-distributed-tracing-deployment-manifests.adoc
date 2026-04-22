@@ -1,0 +1,167 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="jaeger-distributed-tracing-deployment-manifests_{context}"]
+= Jaeger distributed tracing deployment manifests
+
+[role="_abstract"]
+Deploy Jaeger to visualize distributed traces from SonataFlow workflows. Use these manifests to set up trace collection with pre-configured OTLP endpoints and resource limits for development or production environments.
+
+Jaeger provides distributed tracing visualization for SonataFlow workflows.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jaeger-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: jaeger-system
+  labels:
+    app: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - name: jaeger
+        image: jaegertracing/all-in-one:1.59
+        env:
+        - name: COLLECTOR_OTLP_ENABLED
+          value: "true"
+        ports:
+        - containerPort: 16686
+          name: query
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 14269
+          initialDelaySeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 14269
+          initialDelaySeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-collector
+  namespace: jaeger-system
+  labels:
+    app: jaeger
+spec:
+  selector:
+    app: jaeger
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-query
+  namespace: jaeger-system
+  labels:
+    app: jaeger
+spec:
+  selector:
+    app: jaeger
+  ports:
+  - name: query-http
+    port: 16686
+    targetPort: 16686
+  type: ClusterIP
+----
+
+[source,yaml]
+----
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: jaeger-query
+  namespace: jaeger-system
+spec:
+  to:
+    kind: Service
+    name: jaeger-query
+  port:
+    targetPort: query-http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+----
+
+Add these properties to the `application.properties` file of your workflow:
+
+[source,bash]
+----
+# Direct connection to Jaeger
+quarkus.otel.exporter.otlp.endpoint=http://jaeger-collector.jaeger-system.svc.cluster.local:4317
+quarkus.otel.exporter.otlp.protocol=grpc
+quarkus.otel.traces.exporter=cdi
+
+# Additional Jaeger-specific propagation
+quarkus.otel.propagators=tracecontext,baggage,jaeger
+----
+
+For production environments, use the Jaeger Operator with Elasticsearch storage:
+
+[source,yaml]
+----
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: jaeger-production
+  namespace: observability
+spec:
+  strategy: production
+  storage:
+    type: elasticsearch
+    elasticsearch:
+      nodeCount: 3
+      storage:
+        storageClassName: gp3
+        size: 50Gi
+      resources:
+        requests:
+          cpu: 500m
+          memory: 4Gi
+        limits:
+          cpu: 1000m
+          memory: 8Gi
+  collector:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+----

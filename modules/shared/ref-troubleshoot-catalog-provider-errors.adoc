@@ -1,0 +1,34 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="troubleshoot-catalog-provider-errors_{context}"]
+= Troubleshoot catalog provider errors
+
+[role="_abstract"]
+Catalog provider plugins can fail to ingest users and groups into the {product-short} software catalog.
+The following sections describe common catalog provider errors visible in the backend logs and their solutions.
+
+== LDAP: Malformed entity envelope
+
+----
+LdapOrgEntityProvider:default refresh failed, TypeError: Malformed entity envelope, TypeError: /metadata/name must NOT have fewer than 1 characters - limit: 1
+----
+
+This error occurs when a user being ingested from LDAP has no value for the `name` field, which is mapped to the `uid` LDAP attribute by default.
+
+To resolve this issue:
+
+* Add a filter to the LDAP users configuration to exclude users without a `uid`:
++
+[source,yaml]
+----
+catalog:
+  providers:
+    ldapOrg:
+      default:
+        users:
+          - dn: OU=Users,DC=example,DC=com
+            options:
+              filter: (uid=*)
+----
++
+For more information about LDAP user filters, see xref:enable-user-provisioning-with-ldap_import-users-and-groups-from-your-identity-provider[Enable user provisioning with LDAP].

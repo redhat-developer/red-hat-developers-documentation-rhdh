@@ -32,11 +32,10 @@ When creating PRs, follow `.github/pull_request_template.md`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `content-quality-assessment.yml` | PR (`.adoc`, `build/scripts/`) | Runs `node build/scripts/cqa/index.js --all` on entire repo. Posts checklist as PR comment. Scripts sourced from `main` branch (not base) for backport compatibility. |
 | `build-asciidoc.yml` | Push to main/release | Builds AsciiDoc docs and deploys to GitHub Pages. Cleans up merged PR preview branches. |
-| `pr.yml` | PR | Builds HTML preview, deploys to `gh-pages`, posts preview URL as PR comment. |
+| `pr.yml` | PR | Builds HTML preview, runs CQA checks, deploys to `gh-pages`, posts preview URL and CQA checklist as PR comments. Build scripts sourced from base branch. |
 | `style-guide.yml` | PR | Runs Vale linter on `assemblies/` for style guide compliance. |
 | `shellcheck.yml` | PR (`*.sh`) | Runs shellcheck on changed shell scripts via reviewdog. |
 | `generate-supported-plugins-pr.yml` | Manual dispatch | Updates Dynamic Plugins tables and creates a PR. |
 
-**Security:** `content-quality-assessment`, `pr`, and `shellcheck` use `pull_request_target` with an authorization gate — fork PRs from non-team members require manual approval via the `external` environment.
+**Security:** `pr` and `shellcheck` use `pull_request_target` with an authorization gate — fork PRs from non-team members require manual approval via the `external` environment.

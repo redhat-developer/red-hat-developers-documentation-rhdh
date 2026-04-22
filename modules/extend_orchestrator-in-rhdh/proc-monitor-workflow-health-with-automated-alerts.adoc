@@ -1,0 +1,66 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="monitor-workflow-health-with-automated-alerts_{context}"]
+= Monitor workflow health with automated alerts
+
+[role="_abstract"]
+Set up automated alerts to notify your team when workflows fail at high rates, process instances become stuck, or runtimes exceed thresholds. Proactive alerting reduces mean time to detection for production issues.
+
+.Prerequisites
+
+* You have enabled a structured JSON logging to provide metadata for LogQL and PromQL queries.
+
+* You have installed a monitoring stack, such as Prometheus or Loki with Alertmanager in the cluster.
+
+.Procedure
+
+. Create a configuration file containing the following alert rule groups based on your monitoring requirements:
+
+** To monitor failure rates:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+- alert: WorkflowHighErrorRate
+  expr: rate({job="sonataflow-workflows", level="ERROR"}[5m]) > 0.1
+  for: 2m
+  labels:
+    severity: warning
+  annotations:
+    summary: "High error rate in SonataFlow workflows"
+----
+
+** To identify stalled process instances:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+- alert: WorkflowInstanceStuck
+  expr: |
+    time() - max by (process_instance_id) (
+      {job="sonataflow-workflows"} | json | unwrap timestamp[1h]
+    ) > 3600
+  labels:
+    severity: critical
+----
+
+** To identify long-running workflows:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+  - alert: LongRunningWorkflow
+    expr: |
+      time() - min by (process_instance_id) (
+        {job="sonataflow-workflows"} | json | message="Workflow started" | unwrap timestamp[24h]
+      ) > 7200
+    labels:
+      severity: warning
+    annotations:
+      summary: "Workflow {{ $labels.process_instance_id }} running longer than 2 hours"
+----
+
+. Apply the alert rules to your cluster.
+
+.Verification
+
+. Access the monitoring dashboard, such as the Prometheus or OpenShift Console.
+
+. Verify that the alerts appear in the list under the *Alerts* tab.

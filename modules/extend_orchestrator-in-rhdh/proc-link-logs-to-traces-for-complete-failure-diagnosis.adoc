@@ -1,0 +1,47 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="link-logs-to-traces-for-complete-failure-diagnosis_{context}"]
+= Link logs to traces for complete failure diagnosis
+
+[role="_abstract"]
+Click a trace ID in any log entry to see the complete timeline of what happened across all services. Log-to-trace correlation turns a single error message into a full execution diagram showing every step and service call.
+
+.Prerequisites
+
+* You have deployed an OpenTelemetry-compliant collector (for example, Jaeger) in the cluster.
+
+* You have set `quarkus.log.console.json.print-details=true` to `true`.
+
+.Procedure
+
+. Add the OpenTelemetry exporter and service identification properties to your workflow ConfigMap:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+# Enable OpenTelemetry integration
+quarkus.otel.enabled=true
+quarkus.otel.exporter.otlp.traces.endpoint=http://jaeger-collector:4317
+quarkus.otel.service.name=${workflow.name}
+----
+
+. Set the resource attributes to filter traces in your observability dashboard:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+quarkus.otel.resource.attributes=service.namespace=sonataflow-infra
+----
+
+. Restart the workflow pod to apply the new configuration.
+
+.Verification
+
+. Trigger a workflow execution.
+
+. Check the logs for trace identifiers:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+oc logs <pod_name> | grep traceId
+----
+
+. Make sure the `mdc` block in the JSON output contains `traceId` and `spanId` fields with non-empty values.

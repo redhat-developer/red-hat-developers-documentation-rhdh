@@ -90,10 +90,12 @@ function getLycheeIssues(root) {
 
   try {
     // Run build orchestrator (builds fresh HTML + runs lychee with remapping)
+    // Set CQA_RUNNING to prevent build-orchestrator from running CQA again (recursion)
     execFileSync('node', ['build/scripts/build-orchestrator.js', '-b', 'main'], { // NOSONAR — fixed args, no user input
       cwd: root,
       stdio: 'pipe',
       timeout: 600000, // 10 minutes
+      env: { ...process.env, CQA_RUNNING: '1' },
     });
   } catch {
     // Build may exit non-zero if lychee finds broken links — that's expected

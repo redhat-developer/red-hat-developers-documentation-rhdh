@@ -1,0 +1,174 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="loki-log-aggregation-deployment-manifests_{context}"]
+= Loki log aggregation deployment manifests
+
+[role="_abstract"]
+Deploy Loki to aggregate logs from SonataFlow workflows using OpenTelemetry Protocol. These manifests include pre-configured OTLP settings, structured metadata support, and resource limits for immediate log collection.
+
+Loki supports OpenTelemetry Protocol (OTLP) for direct log ingestion from SonataFlow workflows.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: observability
+data:
+  loki-config.yaml: |
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+
+    distributor:
+      otlp_config:
+        # Default resource attributes as index labels
+        default_resource_attributes_as_index_labels:
+          - service.name
+          - service.namespace
+          - deployment.environment
+          - k8s.namespace.name
+          - k8s.cluster.name
+
+    limits_config:
+      # Enable structured metadata (default in Loki 3.0+)
+      allow_structured_metadata: true
+      # Maximum number of index labels per stream
+      max_label_names_per_series: 15
+
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13  # Required for OTLP support
+          index:
+            prefix: index_
+            period: 24h
+----
+
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: observability
+  labels:
+    app: loki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      securityContext:
+        fsGroup: 10001
+        runAsUser: 10001
+        runAsNonRoot: true
+      containers:
+      - name: loki
+        image: grafana/loki:3.0.0
+        args:
+          - -config.file=/etc/loki/loki-config.yaml
+        ports:
+        - containerPort: 3100
+          name: http-metrics
+        - containerPort: 9096
+          name: grpc
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/loki
+        - name: storage
+          mountPath: /loki
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: 3100
+          initialDelaySeconds: 45
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3100
+          initialDelaySeconds: 45
+      volumes:
+      - name: config
+        configMap:
+          name: loki-config
+      - name: storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: observability
+  labels:
+    app: loki
+spec:
+  selector:
+    app: loki
+  ports:
+  - name: http-metrics
+    port: 3100
+    targetPort: 3100
+  - name: grpc
+    port: 9096
+    targetPort: 9096
+  type: ClusterIP
+----
+
+To route logs to Loki and traces to Jaeger, use the following configuration:
+
+[source,bash]
+----
+# OpenTelemetry Configuration
+quarkus.otel.enabled=true
+quarkus.otel.traces.enabled=true
+quarkus.otel.metrics.enabled=true
+quarkus.otel.logs.enabled=true
+
+# OTLP Exporter - Send logs to Loki, traces to Jaeger
+quarkus.otel.exporter.otlp.logs.endpoint=http://loki.observability.svc.cluster.local:3100/otlp
+quarkus.otel.exporter.otlp.traces.endpoint=http://jaeger-collector.observability.svc.cluster.local:4317
+quarkus.otel.exporter.otlp.protocol=grpc
+
+# JSON Logging for better structure
+quarkus.log.console.json=true
+quarkus.log.console.json.pretty-print=false
+
+# Include trace correlation in logs
+quarkus.log.console.format=%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{3.}] (%t) traceId=%X{traceId}, spanId=%X{spanId} %s%e%n
+
+# Resource attributes for Loki labels
+quarkus.otel.resource.attributes=\
+  service.name=greeting-workflow,\
+  service.namespace=workflows,\
+  deployment.environment=production
+----

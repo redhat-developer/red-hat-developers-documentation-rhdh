@@ -1,0 +1,30 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="opentelemetry-collector-deployment-manifest_{context}"]
+= OpenTelemetry Collector deployment manifest
+
+[role="_abstract"]
+Deploy an OpenTelemetry Collector to route workflow telemetry to multiple backends. Use this intermediate layer for advanced log filtering, processing, and multi-destination export beyond direct workflow integration.
+
+Deploy an OpenTelemetry collector between workflows and backends for advanced log processing, filtering, and multi-destination export.
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+# Collector routes to both Jaeger and Loki
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger-collector:4317
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki]
+----
