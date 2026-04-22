@@ -1,4 +1,55 @@
-:_mod-docs-content-type: SNIPPET
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-authentication-with-rhbk_{context}"]
+= Enable authentication with {rhbk-brand-name} ({rhbk})
+
+[role="_abstract"]
+Configure {rhbk-brand-name} ({rhbk}) as your {product} sign-in provider by enabling the OIDC authentication provider.
+
+.Prerequisites
+* You have xref:share-a-secret-with-rhbk_{secrets-context}[shared a secret with {rhbk}].
+
+.Procedure
+
+. The OIDC provider authentication backend plugin requires {product-short} to support sessions.
+Enable session support by adding the session secret to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+auth:
+  session:
+    secret: ${SESSION_SECRET}
+----
+
+. Add an OIDC provider section to your  `{my-app-config-file}` file:
++
+[source,yaml]
+----
+auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+        metadataUrl: ${KEYCLOAK_BASE_URL}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+        prompt: auto
+signInPage: oidc
+----
+
+`environment: production`::
+Mark the environment as `production` to hide the Guest login in the {product-short} home page.
+
+`metadataUrl`, `clientId`, `clientSecret`::
+Configure the OIDC provider with your secrets.
+
+`prompt`::
+Enter `auto` to allow the identity provider to automatically determine whether to prompt for credentials or bypass the login redirect if an active {rhbk} session exists.
++
+The identity provider defaults to `none`, which assumes that you are already logged in. Sign-in requests without an active session are rejected.
+
+`signInPage`::
+Enter `oidc` to enable the OIDC provider as default sign-in provider.
 
 . Optional: Add optional fields to the OIDC authentication provider section in your `{my-app-config-file}` file:
 +
@@ -94,3 +145,16 @@ Enhance security and prevent potential misuse of older tokens by enabling a refr
 . From the *Realm Settings* page, click the *Tokens* tab.
 . From the *Refresh tokens* section of the *Tokens* tab, toggle the *Revoke Refresh Token* to the *Enabled* position.
 ====
+
+. To disable the guest login option, in the `{my-app-config-file}` file, set the authentication environment to `production`:
++
+[source,yaml]
+----
+auth:
+  environment: production
+----
+
+.Verification
+. Go to the {product-short} login page.
+. Your {product-short} sign-in page displays *Sign in using OIDC* and the Guest user sign-in is disabled.
+. Log in with OIDC by using the saved **Username** and **Password** values.

@@ -1,4 +1,46 @@
-:_mod-docs-content-type: SNIPPET
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-authentication-with-microsoft-azure_{context}"]
+= Enable authentication with {azure-brand-name}
+
+[role="_abstract"]
+Configure {azure-brand-name} as your {product} sign-in provider.
+
+.Prerequisites
+* You have xref:share-a-secret-with-microsoft-azure_{secrets-context}[shared a secret with {azure-brand-name}].
+
+.Procedure
+
+. Add the Microsoft authentication provider to your `{my-app-config-file}` file:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+auth:
+  environment: production
+  providers:
+    microsoft:
+      production:
+        clientId: ${MICROSOFT_CLIENT_ID}
+        clientSecret: ${MICROSOFT_CLIENT_SECRET}
+        tenantId: ${MICROSOFT_TENANT_ID}
+signInPage: microsoft
+----
+
+`environment`::
+Enter `production` to disable the **Guest** login option in the {product-short} login page.
+
+`clientId`::
+Enter the configured secret variable name:  `$\{MICROSOFT_CLIENT_ID}`.
+
+`clientSecret`::
+Enter the configured secret variable name:
+`$\{MICROSOFT_CLIENT_SECRET}`.
+
+`tenantId`::
+Enter the configured secret variable name: `$\{MICROSOFT_TENANT_ID}`.
+
+`signInPage`::
+Enter `microsoft` to set the {azure-short} provider as your {product-short} sign-in provider.
 
 . Optional: Add optional fields to the Microsoft authentication provider section in your `{my-app-config-file}` file:
 +
@@ -25,20 +67,16 @@ signInPage: microsoft
 ----
 
 `domainHint`::
-* Leave this parameter empty, or enter the tenant ID when your application registration is single-tenant.
-* Leave this parameter empty when your application registration is multitenant.
-* Enter the tenant ID to reduce login friction for users with accounts in multiple tenants, by automatically filtering out accounts from other tenants.
+Leave this parameter empty, or enter the tenant ID when your application registration is single-tenant.
 +
+Leave this parameter empty when your application registration is multitenant.
++
+Enter the tenant ID to reduce login friction for users with accounts in multiple tenants, by automatically filtering out accounts from other tenants.
 For more information, see link:https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/home-realm-discovery-policy[Home Realm Discovery].
 
 `additionalScopes`::
 Enter the list of additional scopes to add scopes for the application registration.
-The default and mandatory value lists following scopes:
-* `openid`
-* `offline_access`
-* `profile`
-* `email`
-* `User.Read`
+The default and mandatory value lists following scopes: `openid`, `offline_access`, `profile`, `email`, `User.Read`.
 
 `sessionDuration`::
 Lifespan of the user session.
@@ -77,3 +115,16 @@ Enter `true` to configure the sign-in resolver to bypass the user provisioning r
 ====
 In production mode, do not enable `dangerouslyAllowSignInWithoutUserInCatalog`.
 ====
+
+. To disable the guest login option, in the `{my-app-config-file}` file, set the authentication environment to `production`:
++
+[source,yaml]
+----
+auth:
+  environment: production
+----
+
+.Verification
+. Go to the {product-short} login page.
+. Your {product-short} sign-in page displays *Sign in using Microsoft* and the Guest user sign-in is disabled.
+. Log in with an {azure-short} account.
