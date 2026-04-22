@@ -1,0 +1,73 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="create-a-custom-transformer-to-provision-users-from-rhbk-to-the-software-catalog_{context}"]
+= Create a custom transformer to provision users from {rhbk-brand-name} ({rhbk}) to the software catalog
+
+[role="_abstract"]
+Customize how {product} provisions users and groups to {product-short} software catalog entities,
+by creating a backend module that uses the `keycloakTransformerExtensionPoint` to offer custom user and group transformers for the Keycloak backend.
+
+.Prerequisites
+* You have xref:import-users-and-groups-from-rhbk_{context}[imported users and groups from {rhbk-brand-name} ({rhbk}) to the software catalog].
+
+.Procedure
+. Create a new backend module with the `yarn new` command.
++
+----
+$ yarn new
+? What type of module would you like to create? backend-plugin-module
+? Enter the ID of the plugin [required] catalog
+? Enter the ID of the module [required] keycloak-org-transformer
+----
++
+The command creates a plugin named `catalog-backend-module-keycloak-org-transformer`.
+
+. Install required packages:
++
+[source,shell]
+----
+$ yarn --cwd plugins/catalog-backend-module-keycloak-org-transformer add @backstage/plugin-catalog-backend-module-keycloak-org
+----
+
+. Refer to the link:https://github.com/redhat-developer/rhdh-examples/tree/main/plugins/backstage-plugin-catalog-backend-module-keycloak-org-transformer[sample plugin] and implement `plugins/catalog-backend-module-keycloak-org-transformer/src/module.ts`.
+
+. Package and export the plugin as a Dynamic Plugin, and embed the required package for the custom transformer.
++
+[source,shell]
+----
+$ npx @red-hat-developer-hub/cli@latest plugin export \
+  --embed-package @backstage/plugin-catalog-backend-module-keycloak-org
+----
++
+[IMPORTANT]
+====
+Verify that the installed plugin version is compatible with the {backstage} version.
+
+See the {dynamic-plugins-reference-book-link}[{dynamic-plugins-reference-book-title}] for the version to import.
+====
+
+. Publish and enable the plugin in {product-short}.
+For more information, see {installing-and-viewing-plugins-book-link}#add-a-custom-dynamic-plugin-to-rhdh_installing-and-viewing-plugins-in-rhdh[{installing-and-viewing-plugins-book-title}].
+
+.Verification
+
+. Every time that {product-short} starts, it imports the users and groups.
+Check the console logs to verify the synchronization result.
++
+Successful synchronization example:
++
+[source,json]
+----
+{"class":"KeycloakOrgEntityProvider","level":"info","message":"Read 3 Keycloak users and 2 Keycloak groups in 1.5 seconds. Committing...","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
+{"class":"KeycloakOrgEntityProvider","level":"info","message":"Committed 3 Keycloak users and 2 Keycloak groups in 0.0 seconds.","plugin":"catalog","service":"backstage","taskId":"KeycloakOrgEntityProvider:default:refresh","taskInstanceId":"bf0467ff-8ac4-4702-911c-380270e44dea","timestamp":"2024-09-25 13:58:04"}
+----
+
+. After the first import is complete, go to the *Catalog* page and select **User** to view the list of users.
+
+. When you select a user, you see the information imported from {rhbk}.
+Verify that the user entities reflect the custom transformations you defined in the plugin.
+
+. You can select a group, view the list, and access or review the information imported from {rhbk}.
+Verify that the group entities reflect the custom transformations you defined in the plugin.
+
+. You can log in with an {rhbk} account.
