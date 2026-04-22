@@ -192,23 +192,12 @@ jobs:
             echo "html_built=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Avoid push conflicts: pull latest gh-pages before deploying new preview content
-      - name: Pull from origin before pushing (if possible)
+      - name: Deploy to gh-pages
         if: steps.check_html.outputs.html_built == 'true'
-        run: |
-          cd pr-content
-          /usr/bin/git pull origin gh-pages || true
-
-      # Always publish the preview when HTML has been built, even with broken links or CQA alerts
-      - name: Deploy
-        if: steps.check_html.outputs.html_built == 'true'
-        uses: peaceiris/actions-gh-pages@v4
-        # if: github.ref == 'refs/heads/main'
-        with:
-          github_token: ${{ secrets.RHDH_BOT_TOKEN }}
-          publish_branch: gh-pages
-          keep_files: true
-          publish_dir: ./pr-content/titles-generated
+        env:
+          GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash trusted-scripts/build/scripts/deploy-gh-pages.sh ./pr-content/titles-generated --message "Deploy PR ${{ github.event.number }} preview"
 
       # Post one consolidated PR comment with build results, preview link, and CQA checklist.
       # Preview link is always shown; marked stale when title build failed (HTML not generated).
