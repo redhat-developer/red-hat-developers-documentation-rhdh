@@ -32,9 +32,12 @@ PUBLISH_DIR="$(cd "$PUBLISH_DIR" && pwd)"
 : "${GITHUB_TOKEN:?GITHUB_TOKEN is required (set by GitHub Actions)}"
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required (set by GitHub Actions)}"
 
-MAX_RETRIES=3
-RETRY_DELAYS=(0 27 133)
+# ── Diagnostics: log PUBLISH_DIR contents before deploying ──
+echo "PUBLISH_DIR: $PUBLISH_DIR"
+echo "Top-level entries in PUBLISH_DIR:"
+find "$PUBLISH_DIR" -maxdepth 1 -not -path "$PUBLISH_DIR" -printf '%f\n'
 
+MAX_RETRIES=3
 DEPLOY_DIR="$(mktemp -d)"
 trap 'rm -rf "$DEPLOY_DIR"' EXIT
 
@@ -44,43 +47,52 @@ git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
+# ── Fetch gh-pages and prepare working tree ──
+fetch_output=$(git fetch origin gh-pages --depth=1 2>&1) && fetch_ok=true || fetch_ok=false
+if [[ "$fetch_ok" == "true" ]]; then
+  git checkout -B gh-pages FETCH_HEAD
+elif echo "$fetch_output" | grep -qi "not found\|couldn't find\|no such remote ref"; then
+  echo "gh-pages branch does not exist, creating orphan"
+  git checkout --orphan gh-pages
+  git rm -rf . 2>/dev/null || true
+else
+  echo "ERROR: Failed to fetch gh-pages: $fetch_output" >&2
+  exit 1
+fi
+
+# ── Copy content and stage ──
+cp -a "$PUBLISH_DIR"/. .
+
+# Force-add only the files from PUBLISH_DIR (bypasses .gitignore)
+publish_entries=()
+while IFS= read -r entry; do
+  publish_entries+=("$entry")
+done < <(find "$PUBLISH_DIR" -maxdepth 1 -not -path "$PUBLISH_DIR" -printf '%f\n')
+
+echo "Staging ${#publish_entries[@]} entries from PUBLISH_DIR..."
+git add --force -- "${publish_entries[@]}"
+
+if git diff --cached --quiet; then
+  echo "No changes to deploy"
+  exit 0
+fi
+
+echo "Staged files:"
+git diff --cached --stat
+
+git commit -q -m "$COMMIT_MSG"
+
+# ── Push with pull-before-push retry ──
 for attempt in $(seq 1 "$MAX_RETRIES"); do
-  echo "Deploy attempt $attempt/$MAX_RETRIES"
-
-  fetch_output=$(git fetch origin gh-pages --depth=1 2>&1) && fetch_ok=true || fetch_ok=false
-  if [[ "$fetch_ok" == "true" ]]; then
-    git checkout -B gh-pages FETCH_HEAD
-  elif echo "$fetch_output" | grep -qi "not found\|couldn't find\|no such remote ref"; then
-    echo "gh-pages branch does not exist, creating orphan"
-    git checkout --orphan gh-pages
-    git rm -rf . 2>/dev/null || true
-  else
-    echo "ERROR: Failed to fetch gh-pages: $fetch_output" >&2
-    exit 1
-  fi
-
-  cp -a "$PUBLISH_DIR"/. .
-  git add -A
-
-  if git diff --cached --quiet; then
-    echo "No changes to deploy"
-    exit 0
-  fi
-
-  git commit -q -m "$COMMIT_MSG"
-
   if git push origin gh-pages; then
     echo "Deployed successfully (attempt $attempt)"
     exit 0
   fi
 
   echo "Push rejected (attempt $attempt/$MAX_RETRIES)"
-
   if [[ $attempt -lt $MAX_RETRIES ]]; then
-    jitter=$((RANDOM % 10))
-    wait=$(( RETRY_DELAYS[attempt] + jitter ))
-    echo "Retrying in ${wait}s..."
-    sleep "$wait"
+    echo "Pulling remote changes before retrying..."
+    git pull --rebase origin gh-pages
   fi
 done
 
