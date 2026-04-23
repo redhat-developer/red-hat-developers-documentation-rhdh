@@ -115,20 +115,11 @@ jobs:
           cd pr-content
           build/scripts/build-ccutil.sh -b "pr-${{ github.event.number }}"
 
-      - name: Pull from origin before pushing (if possible)
-        run: |
-          cd pr-content
-          /usr/bin/git pull origin gh-pages || true
-
-      # repo must be public for this to work
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
-        # if: github.ref == 'refs/heads/main'
-        with:
-          github_token: ${{ secrets.RHDH_BOT_TOKEN }}
-          publish_branch: gh-pages
-          keep_files: true
-          publish_dir: ./pr-content/titles-generated
+      - name: Deploy to the gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash trusted-scripts/build/scripts/deploy-gh-pages.sh ./pr-content/titles-generated --message "Deploy PR ${{ github.event.number }} preview"
 
       - name: PR comment with doc preview, replacing existing comments with a new one each time
         shell: bash
