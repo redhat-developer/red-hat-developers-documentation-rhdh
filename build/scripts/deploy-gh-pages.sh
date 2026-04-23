@@ -36,9 +36,7 @@ MAX_RETRIES=3
 RETRY_DELAYS=(0 27 133)
 
 DEPLOY_DIR="$(mktemp -d)"
-# shellcheck disable=SC2329 # invoked via trap
-cleanup() { rm -rf "$DEPLOY_DIR"; }
-trap cleanup EXIT
+trap 'rm -rf "$DEPLOY_DIR"' EXIT
 
 cd "$DEPLOY_DIR"
 git init -q
