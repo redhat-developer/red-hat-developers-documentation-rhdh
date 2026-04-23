@@ -1,0 +1,62 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-schema-based-database-isolation_{context}"]
+= Configure schema-based database isolation
+
+[role="_abstract"]
+Configure a single PostgreSQL database for {product-short} by defining the database host, user credentials, and plugin division mode in your dynamic configuration file.
+
+.Prerequisites
+
+* You have an active PostgreSQL database instance. 
+* You have the host, port, database name, and service account credentials for your PostgreSQL server.
+* You have administrative access to the Red Hat Developer Hub project in the OpenShift web console.
+
+.Procedure
+
+. Open the OpenShift web console and navigate to the *ConfigMaps* section in the Red Hat Developer Hub project.
+
+. Edit the `app-config.yaml` file.
+
+. Navigate to the `backend.database` section and set the `pluginDivider` parameter to `schema`.
+
+. Ensure the `client` is set to `pg` and verify the connection details for your single database:
++
+[source,yaml]
+----
+backend:
+  database:
+    client: pg
+    pluginDivider: schema
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+      database: ${POSTGRES_DATABASE}
+----
+
+. Save the changes to the ConfigMap.
+
+. Restart the Red Hat Developer Hub deployment to apply the new configuration:
++
+[source,bash]
+----
+oc rollout restart deployment/rhdh-backstage
+----
+
+.Verification
+
+. Log in to your PostgreSQL database instance and run the following query to verify that the plugin schemas have been initialized:
++
+[source,sql]
+----
+SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'backstage_plugin_%';
+----
+
+. Verify the application logs for successful database migrations:
++
+[source,bash]
+----
+oc logs deployment/rhdh-backstage | grep "database migration"
+----
