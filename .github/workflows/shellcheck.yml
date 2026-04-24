@@ -89,9 +89,16 @@ jobs:
       - name: Get changed shell scripts
         id: changed-files
         run: |
-          # Get list of changed .sh files
+          # Get list of changed .sh files that still exist (exclude deletions)
           git fetch origin ${{ github.base_ref }}
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.sh$' || echo "")
+          ALL_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.sh$' || echo "")
+          CHANGED_FILES=""
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              CHANGED_FILES="${CHANGED_FILES:+$CHANGED_FILES
+          }$file"
+            fi
+          done <<< "$ALL_CHANGED"
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
