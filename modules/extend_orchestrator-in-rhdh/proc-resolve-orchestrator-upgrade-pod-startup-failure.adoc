@@ -1,0 +1,67 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-resolve-orchestrator-upgrade-pod-startup-failure_{context}"]
+= Resolve pod startup failure when upgrading to {product} 1.8.6 with Orchestrator
+
+[role="_abstract"]
+Update the `dynamic-plugins` ConfigMap to provide required integrity hashes and complete your upgrade from 1.8.5 to 1.8.6. This resolves pod startup failures caused by missing integrity hashes in Orchestrator plugin version 1.8.9.
+
+.Prerequisites
+
+* You have an Operator-backed instance of {product-short} 1.8.5 with Orchestrator 1.8.9.
+* You encounter the following error when upgrading to {product-short} 1.8.6:
++
+[source,terminal]
+----
+InstallException: No integrity hash provided for Package @redhat/backstage-plugin-orchestrator@1.8.9
+----
+
+.Procedure
+
+. Edit the `dynamic-plugins` ConfigMap to update the Orchestrator plugin version to `1.8.12`:
++
+[source,terminal]
+----
+$ oc edit configmap dynamic-plugins-rhdh -n <your_namespace>
+----
+
+. Update the plugin versions in the ConfigMap:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@1.8.12"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.8.12"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.8.12"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.8.12"
+        disabled: false
+----
+
+. Save and close the ConfigMap. The {product-short} pods restart automatically.
+
+.Verification
+
+. Wait for the {product-short} pods to restart:
++
+[source,terminal]
+----
+$ oc get pods -w
+----
+
+. Verify that all {product-short} pods are in `Running` status with no errors.
+
+.Additional resources
+* link:https://redhat.atlassian.net/browse/RHDHBUGS-2957[RHDHBUGS-2957]
