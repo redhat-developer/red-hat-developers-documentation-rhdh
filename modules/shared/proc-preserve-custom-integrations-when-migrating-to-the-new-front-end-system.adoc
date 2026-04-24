@@ -1,0 +1,139 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="preserve-custom-integrations-when-migrating-to-the-new-front-end-system_{context}"]
+= Preserve custom integrations when migrating to the new front-end system
+
+[role="_abstract"]
+Migrate your mount points and custom components from the Scalprum-based system to {product} new front-end system by converting YAML-based mount points to extension blueprints that attach to the extension tree.
+
+The new front-end system replaces mount points with extension inputs that use typed extension APIs and Zod-based configuration. Your existing mount points for entity pages, application headers, search filters, and admin pages map to specific extension attachment points in the new architecture.
+
+.Prerequisites
+
+* You have access to the `packages/app/src/App.tsx` file.
+* You have access to your `{my-app-config-file}` file.
+* You understand your current mount point configuration in the `dynamicPlugins.frontend` section.
+
+.Procedure
+
+. To begin migration, identify your current mount points in the `dynamicPlugins.frontend` configuration:
++
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    my-plugin:
+      mountPoints:
+        - mountPoint: entity.page.overview/cards  # Current mount point
+          importName: MyComponent
+          config:
+            if:
+              isKind: component
+            layout:
+              xs: { w: 12, h: 4 }
+----
+
+. To understand the migration path, map your mount points to new front-end system extension points:
++
+[options="header"]
+|===
+| Old Mount Point | New Extension Attachment | Blueprint to Use
+
+| `entity.page.overview/cards`
+| `page:catalog/entity` with input `contents`
+| `EntityContentBlueprint` or `EntityCardBlueprint`
+
+| `entity.page.*/cards`
+| `page:catalog/entity` with input `contents`
+| `EntityContentBlueprint`
+
+| `application/header`
+| `app/root` with custom attachment
+| Custom extension with `coreExtensionData.reactElement`
+
+| `search.page.results`
+| `page:search` with input `content`
+| Custom extension
+
+| `admin.page.plugins`
+| `page:admin` with input `content`
+| Custom extension
+|===
+
+. To migrate your configuration, convert your mount point configuration to extension blueprint code in your plugin's `/alpha` export file:
++
+[source,typescript]
+----
+// For entity page cards
+import { EntityCardBlueprint } from '@backstage/plugin-catalog-react/alpha';
+
+const myEntityCard = EntityCardBlueprint.make({
+  name: 'my-component',
+  params: {
+    filter: entity => entity.kind === 'Component',  # Replaces if.isKind condition
+    loader: () => import('./MyComponent').then(m => <m.MyComponent />),
+  },
+});
+
+export default createFrontendPlugin({
+  pluginId: 'my-plugin',
+  extensions: [myEntityCard],
+});
+----
+
+. To migrate entity tabs, convert `entityTabs` configuration to `EntityContentBlueprint`:
++
+[source,typescript]
+----
+// Old configuration
+dynamicPlugins:
+  frontend:
+    my-plugin:
+      entityTabs:
+        - path: /my-tab
+          title: My Tab
+          mountPoint: entity.page.my-tab
+
+// New extension blueprint
+import { EntityContentBlueprint } from '@backstage/plugin-catalog-react/alpha';
+
+const myTab = EntityContentBlueprint.make({
+  name: 'my-tab',
+  params: {
+    defaultPath: '/my-tab',
+    defaultTitle: 'My Tab',
+    loader: () => import('./MyTabContent').then(m => <m.MyTabContent />),
+  },
+});
+----
+
+. To activate the migrated plugin, update your `packages/app/src/App.tsx` file to import it:
++
+[source,typescript]
+----
+import { createApp } from '@backstage/frontend-defaults';
+import myPlugin from '@my-org/backstage-plugin-my-plugin/alpha';
+
+export default createApp({
+  features: [
+    myPlugin,
+    // Additional plugins
+  ],
+});
+----
+
+. To complete the migration, remove the old mount point configuration from your `{my-app-config-file}` file after verifying the migration works.
+
+.Verification
+
+. Open your {product} instance in a web browser.
+. Navigate to an entity page where your component should appear.
+. Verify that your custom component displays in the correct location.
+. Check that conditional rendering based on entity kind or type works as expected.
+. Verify that any custom layout configurations apply correctly.
+
+.Additional resources
+
+* Entity page mount points include: overview, topology, issues, pull-requests, ci, cd, kubernetes, image-registry, monitoring, api, dependencies, docs, definition, and diagram.
+* The extension tree resolves attachments by matching extension outputs to parent inputs.
+* Blueprints provide typed patterns for common extension types including pages, navigation items, and entity content.

@@ -1,0 +1,110 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="control-what-users-see-first-on-the-homepage_{context}"]
+= Control what users see first on the homepage
+
+[role="_abstract"]
+Choose which templates and widgets users see when they log in by configuring the dynamic homepage plugin to display onboarding guides, software templates, entity catalogs, and quick-access cards in customizable or fixed layouts.
+
+The dynamic homepage plugin exposes homepage cards from dynamic plugins and supports both customizable grids where users drag and resize cards, and read-only grids with fixed positions. Available widgets include onboarding sections, entity catalogs, templates, quick access, search bars, recently visited items, and top visited resources.
+
+.Prerequisites
+
+* You have installed the `@red-hat-developer-hub/backstage-plugin-dynamic-home-page` package.
+* You have access to the `packages/app/src/App.tsx` file.
+* You have access to the `{my-app-config-file}` file.
+
+.Procedure
+
+. To enable the dynamic homepage, import and register the homepage modules in your `packages/app/src/App.tsx` file:
++
+[source,typescript]
+----
+import { createApp } from '@backstage/frontend-defaults';
+import {
+  homePageDevModule,
+  homepageTranslationsModule,
+} from '@red-hat-developer-hub/backstage-plugin-dynamic-home-page/alpha';
+
+export default createApp({
+  features: [
+    homePageDevModule,
+    homepageTranslationsModule,
+    // Additional features
+  ],
+});
+----
+
+. To set the homepage route and visit tracking, configure them in your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+app:
+  extensions:
+    - page:home:
+        config:
+          path: /  # Set to / to make the homepage your landing page
+    - api:home/visits: true  # Enables visit tracking for recently visited and top visited widgets
+    - app-root-element:home/visit-listener: true  # Activates the visit listener to record page visits
+----
+
+. Choose a layout mode by setting the `customizable` option. Set to `true` for a customizable grid where users can drag and resize cards, or set to `false` for a read-only grid with fixed card positions:
++
+[source,yaml]
+----
+app:
+  extensions:
+    - home-page-layout:home/dynamic-homepage-layout:
+        config:
+          customizable: true  # Set to false to prevent users from moving or resizing cards
+----
+
+. To control widget display order and sizing, configure widget sections with priority values and responsive breakpoints. Priority values determine display order in read-only layouts, with higher values appearing first.
++
+[source,yaml]
+----
+app:
+  extensions:
+    - home-page-layout:home/dynamic-homepage-layout:
+        config:
+          customizable: false
+          widgetLayout:
+            RhdhTemplateSection:  # Software templates widget section
+              priority: 300  # Priority applies only to read-only layouts. Higher values display first.
+              breakpoints:  # Card dimensions (width w and height h in grid units) across device sizes
+                xl: { w: 12, h: 5 }
+                lg: { w: 12, h: 5 }
+                md: { w: 12, h: 5 }
+                sm: { w: 12, h: 5 }
+                xs: { w: 12, h: 7.5 }
+                xxs: { w: 12, h: 13.5 }
+            RhdhEntitySection:  # Entity catalog widget section showing registered components
+              priority: 200
+              breakpoints:
+                xl: { w: 12, h: 7 }
+                lg: { w: 12, h: 7 }
+                md: { w: 12, h: 7 }
+                sm: { w: 12, h: 7 }
+                xs: { w: 12, h: 9 }
+                xxs: { w: 12, h: 15 }
+            RhdhOnboardingSection:  # Onboarding widget section with getting started guides
+              priority: 100
+              breakpoints:
+                xl: { w: 12, h: 6 }
+                lg: { w: 12, h: 6 }
+                md: { w: 12, h: 6 }
+                sm: { w: 12, h: 6 }
+                xs: { w: 12, h: 8 }
+                xxs: { w: 12, h: 12 }
+----
+
+. Save the configuration file.
+. Restart your {product} instance to apply the homepage layout changes.
+
+.Verification
+
+. Open your {product} instance in a web browser.
+. Verify that the homepage displays at the configured path.
+. Check that widget cards appear in the expected order and size.
+. If `customizable: true`, confirm that you can drag and resize cards.
+. Verify that visit tracking works by navigating to different pages and checking the recently visited widget.
