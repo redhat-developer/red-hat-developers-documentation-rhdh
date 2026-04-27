@@ -250,6 +250,23 @@ jobs:
                 body += `${details}\n\n`;
               }
 
+              // ── Section 2b: Lychee link validation errors ──
+              if (report.lychee && report.lychee.status === 'failed' && report.lychee.errors && report.lychee.errors.length > 0) {
+                const s = report.lychee.stats || {};
+                body += `### Link Validation (lychee)\n\n`;
+                body += `Total: ${s.total || '?'} | OK: ${s.successful || 0} | Errors: ${s.errors || 0} | Excluded: ${s.excludes || 0} | Timeouts: ${s.timeouts || 0}\n\n`;
+                for (const e of report.lychee.errors) {
+                  if (e.sources && e.sources.length > 0) {
+                    for (const src of e.sources) {
+                      body += `- [ ] \`${src}\` \u2192 ${e.line}\n`;
+                    }
+                  } else {
+                    body += `- [ ] ${e.line}\n`;
+                  }
+                }
+                body += '\n';
+              }
+
               if (overallFailed) {
                 body += `[View full logs](${runUrl})\n\n`;
               }
