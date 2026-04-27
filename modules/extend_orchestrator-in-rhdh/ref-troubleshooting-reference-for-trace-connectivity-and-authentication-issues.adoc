@@ -1,0 +1,71 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="troubleshooting-reference-for-trace-connectivity-and-authentication-issues_{context}"]
+= Troubleshooting reference for trace connectivity and authentication issues
+
+[role="_abstract"]
+Symptom-to-solution reference table for missing traces, authentication failures, and broken context propagation. Use this troubleshooting guide when traces fail to appear in Jaeger, authentication errors occur, or telemetry delivery stops working.
+
+[cols="25%,35%,40%", options="header"]
+|===
+| Symptom
+| Potential cause
+| Resolution
+
+| Traces do not appear in the dashboard.
+| OpenTelemetry is disabled or the endpoint is unreachable.
+| Verify the `quarkus.otel.enabled` property and test endpoint connectivity.
+
+| Authentication errors (`401`/`403`).
+| Missing or invalid authorization headers.
+| Configure the `quarkus.otel.exporter.otlp.headers` property with a valid token.
+
+| High memory usage in the collector.
+| Large telemetry batches or high traffic volume.
+| Implement a `memory_limiter` processor in the collector configuration.
+
+| Context is lost between workflow steps.
+| Incorrect propagator configuration.
+| Ensure `quarkus.otel.propagators` includes all required formats (for example, `tracecontext` and `baggage`).
+|===
+
+== Diagnose missing traces
+
+. Verify that OpenTelemetry is enabled in the workflow ConfigMap:
++
+[source,bash]
+----
+oc get cm {workflow-name}-props -n workflows -o yaml
+----
+
+.. Check the pod logs for initialization errors:
++
+[source,bash]
+----
+oc logs deployment/{deployment-name} -n workflows | grep -i "otel"
+----
+
+.. Test the connection to the Jaeger collector from within the workflow pod:
++
+[source,bash]
+----
+oc exec deployment/{deployment-name} -- curl -v http://jaeger-collector:4317
+----
+
+. Configure authentication headers. If your observability platform requires authentication, add the following property to your `application.properties` file:
++
+[source,bash]
+----
+quarkus.otel.exporter.otlp.headers=authorization=Bearer ${API_TOKEN}
+----
+
+. Resolve context propagation issues. To ensure trace IDs are maintained across service boundaries, configure the following propagators and enable JSON logging to verify the IDs in the output:
+
+[source,bash]
+----
+# Include required propagators
+quarkus.otel.propagators=tracecontext,baggage,jaeger
+
+# Enable JSON logging to verify trace IDs
+quarkus.log.console.json=true
+----

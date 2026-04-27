@@ -1,0 +1,95 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="rotate-logs-automatically-to-prevent-pod-crashes-from-full-disks_{context}"]
+= Rotate logs automatically to prevent pod crashes from full disks
+
+[role="_abstract"]
+Automatically archive old logs before the disk fills up and crashes your workflow pods. Log rotation keeps recent logs available for debugging while preventing storage from becoming a production incident.
+
+[IMPORTANT]
+====
+When using file-based logging in Kubernetes, mount the log directory to a volume to prevent data loss or pod instability.
+====
+
+.Prerequisites
+
+* You have configured a shared Kubernetes volume in the `SonataFlow` custom resource.
+
+* Your workflow image includes the JSON logging extension.
+
+.Procedure
+
+. Add the following properties to the workflow ConfigMap to enable file-based JSON output:
++
+[source,bash]
+----
+quarkus.log.file.enable=true
+quarkus.log.file.path=/var/log/sonataflow/workflow.log
+quarkus.log.file.json=true
+----
+
+. Configure log rotation settings to manage disk usage:
++
+[source,bash]
+----
+quarkus.log.file.rotation.max-file-size=10M
+quarkus.log.file.rotation.max-backup-index=5
+quarkus.log.file.rotation.rotate-on-boot=true
+----
++
+This configuration does the following:
+
+. Rotates logs when they reach 10MB
+. Keeps up to 5 backup files
+. Adds date suffix to rotated files
+. Rotates on application startup
+
+. Set log level for file output:
++
+[source,bash]
+----
+quarkus.log.file.level=INFO
+----
+
+. Update the `SonataFlow` custom resource (CR) to mount the volume at the log path:
++
+[source,bash]
+----
+spec:
+  podTemplate:
+    container:
+      volumeMounts:
+      - name: shared-logs
+        mountPath: /var/log/sonataflow
+  volumes:
+  - name: shared-logs
+    emptyDir:
+      sizeLimit: 500Mi
+----
+
+. After applying the configuration, restart your workflow pod and check the log output:
++
+[source,bash]
+----
+# Get workflow pod name
+oc get pods -n sonataflow-infra -l sonataflow.org/workflow-app=your-workflow
+
+# Check logs for JSON format
+oc logs -n sonataflow-infra your-workflow-pod-name | head -5
+----
+
+.Verification
+
+. Access the workflow container and verify the log file exists and is receiving JSON data:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+oc exec <pod_name> -- ls -l /var/log/sonataflow/workflow.log
+----
+
+. Verify that the file contains JSON data:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+oc exec <pod_name> -- head -n 5 /var/log/sonataflow/workflow.log
+----
