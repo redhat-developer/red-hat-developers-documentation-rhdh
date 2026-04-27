@@ -32,7 +32,7 @@ When creating PRs, follow `.github/pull_request_template.md`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `build-asciidoc.yml` | Push to main/release | Builds AsciiDoc docs and deploys to GitHub Pages. Cleans up merged PR preview branches. |
+| `build-asciidoc.yml` | Push to main/release | Builds AsciiDoc docs and deploys to GitHub Pages (deploy includes cleanup of merged/closed PRs and deleted branches). |
 | `pr.yml` | PR | Builds HTML preview, runs CQA checks, deploys to `gh-pages`, posts preview URL and CQA checklist as PR comments. Build scripts sourced from base branch. |
 | `style-guide.yml` | PR | Runs Vale linter on `assemblies/` for style guide compliance. |
 | `shellcheck.yml` | PR (`*.sh`) | Runs shellcheck on changed shell scripts via reviewdog. |
