@@ -1,0 +1,93 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="diagnose-missing-observability-data-to-restore-visibility_{context}"]
+= Diagnose missing observability data to restore visibility
+
+[role="_abstract"]
+To restore monitoring visibility in {product}, you must identify why logs or traces are missing. Use these diagnostic steps to resolve issues with plain text logs, empty process instance IDs, or missing traces in Jaeger.
+
+
+.Prerequisites
+
+* You have access to the OpenShift (`oc`) CLI.
+
+* You have administrator permissions for the `sonataflow-infra` and `sonataflow-observability` namespaces.
+
+* You have access to the workflow project `pom.xml` and ConfigMap files.
+
+.Procedure
+
+. Verify JSON log formatting.
++
+If logs appear as plain text instead of structured JSON, verify the following:
+
+. The `io.quarkus:quarkus-logging-json` extension is defined in the `pom.xml` file.
+
+. The `quarkus.log.console.json=true` property is set in the `{workflow-name}-props` ConfigMap.
+
+. The workflow image was rebuilt and redeployed after adding the extension.
+
+. The workflow pod was restarted after applying ConfigMap changes.
+
+. Diagnose missing process instance context.
++
+If logs are in JSON format but the `processInstanceId` field is missing or empty, verify the following:
+
+. Workflow instances are actively running.
+
+. The following property is set in the workflow ConfigMap:
++
+[source,bash]
+----
+quarkus.log.console.json.print-details=true
+----
+
+. The SonataFlow version in use supports automatic Mapped Diagnostic Context (MDC) population.
+
+. Resolve log collection failures in Loki.
++
+If logs are generated but do not appear in Loki or the aggregation dashboard, verify the following:
+
+. The Promtail or Fluent Bit label selector matches the workflow pod labels.
+
+. The collector has the required Role-Based Access Control (RBAC) permissions to read logs from the workflow namespace.
+
+. The `scrape_configs` in the collector configuration include the correct namespace.
+
+. Check the collector logs for permission errors:
++
+[source,bash]
+----
+oc logs -l app=promtail -n sonataflow-observability
+----
+
+. Mitigate high resource usage.
++
+If JSON logging causes performance degradation or high storage costs, implement the following changes:
+
+. Increase the log level for verbose categories to reduce output volume:
++
+[source,bash]
+----
+quarkus.log.category."org.kie.kogito".level=WARN
+----
+
+. Enable asynchronous logging to reduce the impact on workflow execution time:
++
+[source,bash]
+----
+quarkus.log.console.async=true
+----
+
+. Configure log rotation and retention policies in the aggregation backend.
+
+.Verification
+
+. After applying a fix, trigger a workflow execution.
+
+. Inspect the latest log entries. The logs appear in JSON format and include valid `processInstanceId`, `traceId`, and `spanId` fields:
++
+[source,bash]
+----
+oc logs <workflow_pod_name> --tail=10
+----

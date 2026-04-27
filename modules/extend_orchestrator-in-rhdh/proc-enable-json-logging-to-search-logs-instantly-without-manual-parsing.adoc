@@ -1,0 +1,98 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-json-logging-to-search-logs-instantly-without-manual-parsing_{context}"]
+= Enable JSON logging to search logs instantly without manual parsing
+
+[role="_abstract"]
+Output logs as JSON instead of plain text so log platforms can automatically filter by process instance, error level, or trace ID. Structured logging eliminates manual parsing and enables instant searches across millions of log entries.
+
+SonataFlow workflows support structured JSON logging with automatic process instance correlation through:
+
+* Process instance context: Automatic `processInstanceId` correlation in all log entries
+* Structured format: JSON logs optimized for machine processing and aggregation
+* Multi-tenancy support: Log isolation by workflow and process instance
+
+.Prerequisites
+
+* You have deployed SonataFlow workflow by using the SonataFlow Operator on {platform-generic} or Kubernetes.
+
+* You have included the `io.quarkus:quarkus-logging-json` extension in your workflow `QUARKUS_EXTENSIONS` environment variable.
+
+* You have `cluster-admin` permissions for deploying log aggregation stack.
+
+.Procedure
+
+. Update your workflow build configuration to include the JSON logging extension:
++
+[source,bash,subs=+attributes]
+----
+export QUARKUS_EXTENSIONS="${QUARKUS_EXTENSIONS},io.quarkus:quarkus-logging-json"
+----
+
+. Open the `{workflow-name}-props` ConfigMap for your workflow.
+
+. Add the following properties to the `application.properties` section:
++
+[source,bash]
+----
+# Enable JSON logging with Quarkus JSON logging extension
+quarkus.log.console.json=true
+quarkus.log.console.json.pretty-print=false
+
+# Include all MDC context fields in JSON output
+# - processInstanceId: Set automatically by SonataFlow/Kogito
+# - traceId, spanId: Set by Quarkus OpenTelemetry (requires quarkus.otel.enabled=true)
+quarkus.log.console.json.print-details=true
+
+# Set log levels for workflow components
+quarkus.log.category."org.kie.kogito".level=DEBUG
+quarkus.log.category."io.serverlessworkflow".level=INFO
+
+# Optional: Enable additional context logging
+quarkus.log.category."org.kie.kogito.services.context".level=DEBUG
+----
+
+. Save the ConfigMap and restart the workflow pod.
++
+The following is an example of a workflow ConfigMap with an enabled JSON logging:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: greetings-props
+  namespace: sonataflow-infra
+data:
+  application.properties: |
+    # JSON logging configuration
+    quarkus.log.console.json=true
+    quarkus.log.console.json.pretty-print=false
+    quarkus.log.console.json.print-details=true
+
+    # Log levels
+    quarkus.log.category."org.kie.kogito".level=DEBUG
+    quarkus.log.category."io.serverlessworkflow".level=INFO
+----
+
+.Verification
+
+. Check the pod logs to verify the JSON format and the presence of the `processInstanceId`:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+oc logs <workflow_pod_name> | grep processInstanceId
+----
++
+[source,bash]
+----
+{"timestamp":"...","level":"INFO","message":"...","mdc":{"processInstanceId":"abc-123-..."}}
+----
+
+[NOTE]
+====
+If the Mapped Diagnostic Context (MDC) fields are empty, verify the following:
+
+. The workflow has processed at least one instance.
+. The SonataFlow version matches the required configuration for MDC propagation.
+====

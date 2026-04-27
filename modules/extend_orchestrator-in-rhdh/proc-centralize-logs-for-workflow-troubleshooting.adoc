@@ -1,0 +1,242 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="centralize-logs-for-workflow-troubleshooting_{context}"]
+= Centralize logs for workflow troubleshooting
+
+[role="_abstract"]
+Query logs from all workflow pods in your {product} cluster using a single Grafana dashboard. Centralized logging allows you to search by process ID, error type, or time range from a browser.
+
+.Prerequisites
+
+* You have running Loki and Grafana instances in the cluster.
+
+* You have configured workflow for file-based JSON logging.
+
+* You have `cluster-admin` permissions.
+
+.Procedure
+
+. Deploy the PLG stack by using Helm:
++
+[source,bash]
+----
+# Add Grafana Helm repository
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+# Create namespace
+oc new-project sonataflow-observability
+
+# Deploy Loki stack
+helm install loki-stack grafana/loki-stack \
+  --namespace sonataflow-observability \
+  --set loki.persistence.enabled=true \
+  --set loki.persistence.size=20Gi \
+  --set promtail.config.logLevel=info \
+  --set grafana.enabled=true
+----
++
+[NOTE]
+====
+For production deployments, use a custom `values.yaml` file with appropriate resource limits and security contexts.
+====
+
+. Create a ConfigMap for the Promtail sidecar by selecting the configuration that matches your logging method:
+
+
+... Scrape container stdout
++
+Use this configuration to collect logs from container `stdout` by using Kubernetes service discovery:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: sonataflow-observability
+data:
+  config.yml: |
+    server:
+      http_listen_port: 3101
+
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+
+    scrape_configs:
+    - job_name: sonataflow-workflows
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ["sonataflow-infra"]
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_sonataflow_org_workflow_app]
+        action: keep
+        regex: (.+)
+
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+
+      - source_labels: [__meta_kubernetes_pod_label_sonataflow_org_workflow_app]
+        target_label: workflow
+
+      pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            logger: logger
+            message: message
+            processInstanceId: mdc.processInstanceId
+            traceId: mdc.traceId
+            spanId: mdc.spanId
+
+      - labels:
+          level:
+          logger:
+          processInstanceId:
+          traceId:
+----
+
+... Scrape JSON log files
++
+If you use `[file-based JSON logging](#file-based-json-logging)`, configure Promtail to read from the shared log volume:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-sidecar-config
+  namespace: sonataflow-infra
+data:
+  config.yml: |
+    server:
+      http_listen_port: 3101
+
+    clients:
+      - url: http://loki.sonataflow-observability.svc.cluster.local:3100/loki/api/v1/push
+
+    positions:
+      filename: /var/log/positions.yaml
+
+    scrape_configs:
+    - job_name: sonataflow-json-files
+      static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: sonataflow-workflows
+          __path__: /var/log/sonataflow/*.log
+
+      pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            logger: loggerName
+            message: message
+            processInstanceId: mdc.processInstanceId
+            traceId: mdc.traceId
+            spanId: mdc.spanId
+
+      - labels:
+          level:
+          logger:
+          processInstanceId:
+          traceId:
+
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+----
+
+. Add the Promtail sidecar container to your `SonataFlow` custom resource:
++
+[source,yaml]
+----
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+metadata:
+  name: my-workflow
+  namespace: sonataflow-infra
+spec:
+  podTemplate:
+    container:
+      volumeMounts:
+      - name: shared-logs
+        mountPath: /var/log/sonataflow
+    containers:
+    - name: promtail-sidecar
+      image: grafana/promtail:2.9.0
+      args:
+        - -config.file=/etc/promtail/config.yml
+      volumeMounts:
+      - name: shared-logs
+        mountPath: /var/log/sonataflow
+        readOnly: true
+      - name: promtail-config
+        mountPath: /etc/promtail
+      - name: positions
+        mountPath: /var/log
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+    volumes:
+    - name: shared-logs
+      emptyDir:
+        sizeLimit: 500Mi
+    - name: promtail-config
+      configMap:
+        name: promtail-sidecar-config
+    - name: positions
+      emptyDir: {}
+----
++
+. Querying logs in Grafana: After deploying the stack, use the following LogQL queries in the Grafana **Explore** view:
++
+.. Filter logs by process instance
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | processInstanceId="abc-123-def-456"
+----
+
+.. Find workflow errors:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows", workflow="onboarding"} | json | level="ERROR"
+----
+
+.. Trace correlation:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | traceId="4bf92f3577b34da6a3ce929d0e0e4736"
+----
+
+.. Process instance timeline:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | processInstanceId="abc-123-def-456" | line_format "{{.timestamp}} [{{.level}}] {{.message}}"
+----
+
+.Verification
+
+. Access the Grafana **Explore** view.
+
+. Run the following LogQL query, replacing `<instance_id>` with a valid ID:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{job="sonataflow-workflows"} | json | processInstanceId="<instance_id>"
+----
++
+Confirm that Grafana displays the log entries associated with the specified process instance.

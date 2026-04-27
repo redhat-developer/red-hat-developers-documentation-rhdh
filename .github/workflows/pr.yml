@@ -90,6 +90,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.ref }}
           path: trusted-scripts
+          sparse-checkout: build/scripts
 
       - name: Checkout PR branch for content to build
         uses: actions/checkout@v4
@@ -104,7 +105,7 @@ jobs:
           # update
           sudo apt-get update -y || true
           # install
-          sudo apt-get -y -q install podman && podman --version
+          sudo apt-get -y -q install podman rsync && podman --version
           echo "GIT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
 
       - name: Install lychee
@@ -143,15 +144,12 @@ jobs:
           CQA_BASE_REF: base/${{ github.event.pull_request.base.ref }}
         run: |
           echo "Building PR ${{ github.event.pull_request.number }}"
-          # Copy trusted build scripts from base branch (not content)
-          # Guard each file — older branches may not have them
-          for f in build/scripts/build-ccutil.sh build/scripts/build-orchestrator.js build/scripts/error-patterns.json lychee.toml .lycheeignore; do
-            if [[ -f "trusted-scripts/$f" ]]; then cp "trusted-scripts/$f" "pr-content/$f"; fi
+          rm -rf pr-content/build/scripts
+          rsync -az trusted-scripts/build/scripts pr-content/build/
+          # some files are new in main/1.10, so check if they exist before copying
+          for f in trusted-scripts/.lycheeignore trusted-scripts/lychee.toml; do
+            if [[ -f $f ]]; then rsync -az $f pr-content/; fi
           done
-          if [[ -d "trusted-scripts/build/scripts/cqa" ]]; then
-            rm -rf pr-content/build/scripts/cqa
-            cp -r trusted-scripts/build/scripts/cqa pr-content/build/scripts/cqa
-          fi
           touch pr-content/.lycheecache
           cd pr-content
           # Add base branch as remote so CQA checks can diff PR content against it
@@ -192,23 +190,12 @@ jobs:
             echo "html_built=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Avoid push conflicts: pull latest gh-pages before deploying new preview content
-      - name: Pull from origin before pushing (if possible)
+      - name: Deploy to the gh-pages branch
         if: steps.check_html.outputs.html_built == 'true'
-        run: |
-          cd pr-content
-          /usr/bin/git pull origin gh-pages || true
-
-      # Always publish the preview when HTML has been built, even with broken links or CQA alerts
-      - name: Deploy
-        if: steps.check_html.outputs.html_built == 'true'
-        uses: peaceiris/actions-gh-pages@v4
-        # if: github.ref == 'refs/heads/main'
-        with:
-          github_token: ${{ secrets.RHDH_BOT_TOKEN }}
-          publish_branch: gh-pages
-          keep_files: true
-          publish_dir: ./pr-content/titles-generated
+        env:
+          GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash trusted-scripts/build/scripts/deploy-gh-pages.sh ./pr-content/titles-generated --message "Deploy PR ${{ github.event.number }} preview"
 
       # Post one consolidated PR comment with build results, preview link, and CQA checklist.
       # Preview link is always shown; marked stale when title build failed (HTML not generated).
@@ -261,6 +248,23 @@ jobs:
                   return `### ${r.title}\n${errs}`;
                 }).join('\n\n');
                 body += `${details}\n\n`;
+              }
+
+              // ── Section 2b: Lychee link validation errors ──
+              if (report.lychee && report.lychee.status === 'failed' && report.lychee.errors && report.lychee.errors.length > 0) {
+                const s = report.lychee.stats || {};
+                body += `### Link Validation (lychee)\n\n`;
+                body += `Total: ${s.total || '?'} | OK: ${s.successful || 0} | Errors: ${s.errors || 0} | Excluded: ${s.excludes || 0} | Timeouts: ${s.timeouts || 0}\n\n`;
+                for (const e of report.lychee.errors) {
+                  if (e.sources && e.sources.length > 0) {
+                    for (const src of e.sources) {
+                      body += `- [ ] \`${src}\` \u2192 ${e.line}\n`;
+                    }
+                  } else {
+                    body += `- [ ] ${e.line}\n`;
+                  }
+                }
+                body += '\n';
               }
 
               if (overallFailed) {
