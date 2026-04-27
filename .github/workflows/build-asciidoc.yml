@@ -68,39 +68,10 @@ jobs:
       run: |
         echo "Building branch ${{ env.GIT_BRANCH }}"
         touch .lycheecache
-        build/scripts/build-ccutil.sh -b ${{ env.GIT_BRANCH }}
+        node build/scripts/build-orchestrator.js -b ${{ env.GIT_BRANCH }} --no-cqa
 
     - name: Deploy to the gh-pages branch
       env:
         GITHUB_TOKEN: ${{ secrets.RHDH_BOT_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: bash build/scripts/deploy-gh-pages.sh ./titles-generated --message "Deploy ${{ env.GIT_BRANCH }}"
-
-    - name: Cleanup merged PR branches
-      run: |
-        PULL_URL="https://api.github.com/repos/redhat-developer/red-hat-developers-documentation-rhdh/pulls"
-        GITHUB_TOKEN="${{ secrets.RHDH_BOT_TOKEN }}"
-        git config user.name "rhdh-bot service account"
-        git config user.email "rhdh-bot@redhat.com"
-
-        git checkout gh-pages; git pull || true
-        dirs=$(find . -maxdepth 1 -name "pr-*" -type d | sed -r -e "s|^\./pr-||")
-        refs=$(cat pulls.html | grep pr- | sed -r -e "s|.+.html>pr-([0-9]+)</a>.+|\1|")
-        for d in $(echo -e "$dirs\n$refs" | sort -uV); do
-          PR="${d}"
-          echo -n "Check merge status of PR $PR ... "
-          PR_JSON=$(curl -sSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "$PULL_URL/$PR")
-          if [[ $(echo "$PR_JSON" | grep merged\") == *"merged\": true"* ]]; then
-            echo "merged, can delete from pulls.html and remove folder $d"
-            git rm -fr --quiet "pr-${d}" || rm -fr "pr-${d}"
-            sed -r -e "/pr-$PR\/index.html>pr-$PR</d" -i pulls.html
-          elif [[ $(echo "$PR_JSON" | grep \"state\") == *"state\": \"closed\""* ]]; then
-            echo "closed, can delete from pulls.html and remove folder pr-${d}"
-            git rm -fr --quiet "pr-${d}" || rm -fr "pr-${d}"
-            sed -r -e "/pr-$PR\/index.html>pr-$PR</d" -i pulls.html
-          else
-            echo "PR is not closed or merged (or could not read API)"
-          fi
-        done
-        git commit -s -m "remove merged PR branches" . || true # don't fail if there's nothing to do
-        git push origin gh-pages || true # don't fail if there's nothing to do
