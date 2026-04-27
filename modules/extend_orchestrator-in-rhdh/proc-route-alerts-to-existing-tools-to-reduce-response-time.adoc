@@ -1,0 +1,41 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="route-alerts-to-existing-tools-to-reduce-response-time_{context}"]
+= Route alerts to existing tools to reduce response time
+
+[role="_abstract"]
+Receive failure notifications where your team already monitors incidents instead of checking a separate dashboard. Routing alerts to existing channels ensures on-call engineers see critical workflow issues immediately.
+
+.Prerequisites
+
+* You have a valid webhook URL for the notification service (for example, Slack webhook).
+
+.Procedure
+
+. Define a receiver and a routing path in your Alertmanager configuration:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+route:
+  group_by: ['alertname', 'workflow']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+
+receivers:
+- name: 'web.hook'
+  slack_configs:
+  - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+    channel: '#workflow-alerts'
+    title: 'SonataFlow Alert'
+    text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+----
+
+. Reload the *Alertmanager* configuration to apply the changes.
+
+.Verification
+
+. Trigger a test alert in your workflow environment.
+
+. Monitor the external notification service (for example, the Slack channel `#workflow-alerts`). A notification appears in the external service containing the summary and details of the triggered alert.
