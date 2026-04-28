@@ -1,0 +1,109 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="unique-workflow-id-requirements-to-prevent-duplicates_{context}"]
+= Unique workflow ID requirements to prevent duplicates
+
+[role="_abstract"]
+Unique workflow IDs prevent duplicate entries in {product-very-short}. You must use distinct IDs for each deployment to avoid tracking conflicts and maintain clear workflow visibility.
+
+Understand how {product-very-short} identifies workflows::
++
+{product-very-short} identifies each workflow by using its unique ID. When you deploy or update workflows, the system uses this ID to track, display, and manage workflow instances. If multiple workflows share the same ID, {product-very-short} cannot distinguish between them, resulting in unexpected behavior.
+
+Follow workflow ID format requirements::
++
+Workflow identifiers must comply with RFC 1123 DNS label standards to function correctly across all deployment configurations. Your workflow IDs must meet these format requirements:
++
+* Contain only lowercase letters (a-z), digits (0-9), and hyphens (-)
+* Start and end with a lowercase letter or digit
+* Not contain underscores, uppercase letters, or leading or trailing hyphens
++
+Valid workflow ID examples:::
++
+* `order-processing`
+* `invoice123`
+* `customer-onboarding-flow`
+* `flow-01`
++
+Invalid workflow ID examples:::
++
+* `OrderProcessing` (contains uppercase letters)
+* `order_processing` (contains underscore)
+* `-orderflow` (starts with hyphen)
+* `orderflow-` (ends with hyphen)
+
+Maintain workflow ID consistency across configurations::
++
+You must use the same workflow identifier consistently across all configurations when you build and deploy your workflow. This requirement proves essential for operator-driven deployments that use the gitops profile.
++
+For gitops profile deployments, the Kubernetes resource name must match the workflow ID field in your workflow definition file (`.sw.yaml` or `.sw.json`). This consistency prevents deployment failures and maintains proper workflow tracking in {product-very-short}.
+
+Recognize version field limitations::
++
+Although the Serverless workflow specification allows you to define a workflow version attribute in your workflow definition, the current SonataFlow and {product-very-short} ecosystem does not support multiple versions of a workflow that share the same ID.
++
+[IMPORTANT]
+====
+Deploying multiple workflows with the same ID and different versions is not supported and results in unexpected behavior. Each workflow ID must be unique across all deployments.
+====
++
+The version field serves as metadata and appears in the {product-very-short} UI for informational purposes to help you identify workflow definitions. The backend retrieves version information from the Data Index GraphQL schema and displays it in both the workflow list view and on individual workflow details pages. If you do not specify a version in your workflow definition, the field appears empty in the UI.
++
+The system does not use the version field to differentiate between workflows or manage workflow versions. All workflow operations, including execution, deletion, and API calls, rely solely on the workflow ID.
+
+Avoid deploying workflows with duplicate IDs::
++
+Each workflow ID must be unique across all deployments, regardless of the configured version attribute. Deploying multiple workflows with the same ID and different versions is not supported and can result in the following issues:
++
+* Duplicate workflow entries appear in the {product-very-short} Orchestrator UI.
+* Workflow deletion operations become unpredictable.
+* Historical workflow data becomes difficult to interpret.
+* Workflow instance tracking becomes unreliable.
++
+Duplicate entries can occur when you deploy workflows with the same ID to different runtime servers over time, or when you redeploy a workflow with a new version by using the same ID. Because the Data Index records all workflow executions regardless of which runtime server executed them, historical records from multiple deployments with the same ID appear as duplicate entries in the {product-very-short} UI.
+
+Apply workflow version management best practices::
++
+To maintain different versions of a workflow, assign a new workflow ID for each version. Incorporate the version identifier into the workflow ID itself using a consistent naming convention.
++
+Recommended naming pattern::: Use a naming convention that clearly links related versions of the same workflow:
++
+* `workflow-name-v1` implements and deploys version 1
+* `workflow-name-v2` implements and deploys version 2
+* `workflow-name-v3` implements and deploys version 3
++
+Example workflow ID evolution:::
++
+----
+id: customer-onboarding-v1
+version: "1.0"
+name: Customer Onboarding Workflow
+----
++
+When you need to deploy an updated version:
++
+----
+id: customer-onboarding-v2
+version: "2.0"
+name: Customer Onboarding Workflow
+----
++
+This approach provides clarity and prevents conflicts when you manage multiple iterations of a workflow.
+
+Manage workflow transitions between versions::
++
+When you transition from one workflow version to another:
++
+. Deploy the new workflow version with a unique ID (for example, `workflow-name-v2`).
+. Verify the new workflow operates correctly.
+. Monitor running instances of the old workflow version.
+. After all instances of the old workflow complete, remove the old workflow deployment.
++
+This process helps you maintain workflow history and prevents disruption to running workflow instances.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://datatracker.ietf.org/doc/html/rfc1123[RFC 1123 - DNS Label Standards]
+* link:https://serverlessworkflow.io/[Serverless Workflow Specification]
+* xref:restore-workflow-visibility-by-removing-duplicate-entries_{context}[Restore workflow visibility by removing duplicate entries]
