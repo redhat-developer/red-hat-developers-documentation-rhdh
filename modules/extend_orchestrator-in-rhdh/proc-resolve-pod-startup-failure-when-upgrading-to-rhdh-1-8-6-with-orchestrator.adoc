@@ -1,0 +1,64 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="resolve-pod-startup-failure-when-upgrading-to-rhdh-1-8-6-with-orchestrator_{context}"]
+= Resolve pod startup failure when upgrading to {product-very-short} 1.8.6 with Orchestrator
+
+[role="_abstract"]
+To ensure successful pod startup during a {product-very-short} upgrade, update Orchestrator plugin versions to match the {product-very-short} 1.8.6 configuration (version 1.8.12). This update enables the Orchestrator to automatically infer integrity hashes and prevents configuration errors.
+
+.Prerequisites
+
+* You have an Operator-backed instance of {product-very-short} 1.8.5 with Orchestrator 1.8.9.
+* You encounter the following error when upgrading to {product-very-short} 1.8.6:
++
+[source,terminal]
+----
+InstallException: No integrity hash provided for Package @redhat/backstage-plugin-orchestrator@1.8.9
+----
+
+.Procedure
+
+. Edit the `dynamic-plugins` ConfigMap to update the Orchestrator plugin version to `1.8.12`:
++
+[source,terminal]
+----
+$ oc edit configmap dynamic-plugins-rhdh -n <your_namespace>
+----
+
+. Update the plugin versions in the ConfigMap:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: "@redhat/backstage-plugin-orchestrator@1.8.12"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-backend-dynamic@1.8.12"
+        disabled: false
+        dependencies:
+          - ref: sonataflow
+      - package: "@redhat/backstage-plugin-scaffolder-backend-module-orchestrator-dynamic@1.8.12"
+        disabled: false
+      - package: "@redhat/backstage-plugin-orchestrator-form-widgets@1.8.12"
+        disabled: false
+----
+
+. Save and close the ConfigMap. The {product-very-short} pods restart automatically.
+
+.Verification
+
+. Monitor the status of the  {product-very-short}  pods to ensure they restart:
++
+[source,terminal]
+----
+$ oc get pods -w
+----
+
+. Verify that all {product-very-short} pods are in `Running` status with no errors.
