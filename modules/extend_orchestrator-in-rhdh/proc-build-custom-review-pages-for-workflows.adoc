@@ -1,0 +1,128 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="build-custom-review-pages-for-workflows_{context}"]
+= Build custom review pages for workflows
+
+[role="_abstract"]
+To build a custom review page that displays workflow data in your preferred layout, adds validation messages, or integrates with your design system, implement the `getReviewComponent()` method in your form API.
+
+.Prerequisites
+
+* You have configured the Orchestrator plugins in your {product-short} instance.
+* You have a plugin or module that implements the `OrchestratorFormApi` interface from the `orchestrator-form-api` package.
+* You are familiar with React component development and TypeScript.
+
+.Procedure
+
+. In your plugin that implements `OrchestratorFormApi`, import the required types:
++
+[source,typescript]
+----
+import type {
+  OrchestratorFormApi,
+  ReviewComponentProps,
+} from '@red-hat-developer-hub/backstage-plugin-orchestrator-form-api';
+----
+
+. Import the helper utilities from the `orchestrator-form-react` package:
++
+[source,typescript]
+----
+import {
+  generateReviewTableData,
+  schemaHasUiHiddenFields,
+  ReviewHiddenParametersAlert,
+  NestedReviewTable,
+} from '@red-hat-developer-hub/backstage-plugin-orchestrator-form-react';
+----
++
+These utilities ensure your custom review page handles hidden fields, password masking, and nested data structures correctly.
+
+. Create your custom review page component:
++
+[source,typescript]
+----
+import React from 'react';
+import { Button, Box, Typography } from '@mui/material';
+
+export const CustomReviewPage = (props: ReviewComponentProps) => {
+  const { busy, schema, data, handleBack, handleExecute } = props;
+  const [showHiddenFields, setShowHiddenFields] = React.useState(false);
+
+  const reviewData = React.useMemo(
+    () => generateReviewTableData(schema, data, {
+      includeHiddenFields: showHiddenFields
+    }),
+    [schema, data, showHiddenFields]
+  );
+
+  const hasHiddenFields = schemaHasUiHiddenFields(schema);
+
+  return (
+    <Box>
+      <Typography variant="h5">Review Your Workflow Data</Typography>
+
+      {hasHiddenFields && (
+        <ReviewHiddenParametersAlert
+          showHiddenFields={showHiddenFields}
+          onShowHiddenFieldsChange={setShowHiddenFields}
+        />
+      )}
+
+      <NestedReviewTable data={reviewData} />
+
+      <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+        <Button onClick={handleBack} disabled={busy}>
+          Back
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleExecute}
+          disabled={busy}
+        >
+          Execute Workflow
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+----
+
+. Add the `getReviewComponent()` method to your `OrchestratorFormApi` implementation:
++
+[source,typescript]
+----
+export class MyFormApi implements OrchestratorFormApi {
+  getReviewComponent() {
+    return CustomReviewPage;
+  }
+
+  // ... other OrchestratorFormApi methods
+}
+----
+
+. Register your custom form API with the Orchestrator plugin according to your plugin's extension mechanism.
+
+.Verification
+
+. In the {product-short} web interface, navigate to the Orchestrator plugin.
+. Select a workflow and fill the workflow form.
+. Proceed to the review step.
+. Verify that your custom review page component displays with your custom layout and styling.
+. Click *Back*.
+. Verify that the workflow form is displayed.
+. Click *Execute Workflow*.
+. Verify that the workflow execution is successful.
+
+.Next steps
+
+To revert to the default Orchestrator review page, return `undefined` from the `getReviewComponent()` method:
+
+[source,typescript]
+----
+export class MyFormApi implements OrchestratorFormApi {
+  getReviewComponent() {
+    return undefined; // Uses default review page
+  }
+}
+----
