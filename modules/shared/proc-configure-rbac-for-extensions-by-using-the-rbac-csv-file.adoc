@@ -1,0 +1,77 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-rbac-for-extensions-by-using-the-rbac-csv-file_{context}"]
+= Configure RBAC for Extensions by using the RBAC CSV file
+
+[role="_abstract"]
+You can grant access to Extensions plugin management by adding permission policies to your RBAC CSV file.
+
+.Prerequisites
+
+* You have {authorization-book-link}#enabling-and-giving-access-to-rbac_title-authorization[enabled RBAC and assigned a policy administrator role].
+* You have added `extensions` to the list of authorized plugins under your `permission.rbac.pluginsWithPermission` configuration.
+
+.Procedure
+
+. Add the following policies to your CSV file to allow users to view and manage plugins in Extensions:
++
+[source,csv,subs="+quotes"]
+----
+g, user:default/_<YOUR_USERNAME>_, role:default/extensions-admin
+p, role:default/extensions-admin, extensions.plugin.configuration.read, read, allow
+p, role:default/extensions-admin, extensions.plugin.configuration.write, create, allow
+p, role:default/extensions-admin, catalog.entity.read, read, allow
+----
++
+See xref:extensions-permissions_permission-policies-reference[Extensions permissions].
+
+. Optional: Restrict access to specific plugins by defining a conditional policy in the `rbac-conditional-policies.yaml` file as described in {authorization-book-link}#managing-authorizations-by-using-external-files[Defining conditional policies]:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+result: CONDITIONAL
+roleEntityRef: "role:default/extensions-admin"
+pluginId: extensions
+resourceType: extensions-plugin
+permissionMapping:
+  - create
+conditions:
+  rule: HAS_NAME
+  resourceType: extensions-plugin
+  params:
+    pluginNames: [_<your_plugin_name>_]
+----
++
+where:
+
+`pluginNames`:: Enter the plugin name or title for user access.
++
+This policy allows users to install or update only the specified plugins and restricts access to all other plugins.
+
+. Optional: Restrict access by annotation by defining a conditional policy:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+result: CONDITIONAL
+roleEntityRef: "role:default/extensions-admin"
+pluginId: extensions
+resourceType: extensions-plugin
+permissionMapping:
+  - create
+conditions:
+  rule: HAS_ANNOTATION
+  resourceType: extensions-plugin
+  params:
+    annotation: "extensions.backstage.io/certified-by"
+    value: "Red Hat"
+----
++
+This policy allows users to install or update only the plugins that have the specified annotation.
+
+.Verification
+
+* Verify that the user can view and manage plugins in Extensions.
+
+.Additional resources
+* xref:extensions-permissions_permission-policies-reference[Extensions permissions]
+* {installing-and-viewing-plugins-book-link}#configure-rbac-to-manage-extensions_extensions-in-rhdh[Configure RBAC to manage Extensions]
