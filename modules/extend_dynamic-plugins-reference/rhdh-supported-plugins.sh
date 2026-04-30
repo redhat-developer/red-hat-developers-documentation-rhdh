@@ -294,9 +294,7 @@ generate_dynamic_plugins_table() {
 
           # only RH authoried content should show up as GA
           # exception for the Roadie http-request scaffolder (GA) and the wrapped Roadie Argocd backend and scaffolder plugins (1.9 only) 
-          if [[ $author == "Red Hat"* ]] || [[ $Plugin == "@roadiehq/scaffolder-backend-module-http-request" ]]
-            || [[ $Plugin == "@roadiehq/backstage-plugin-argo-cd-backend" ]]
-            || [[ $Plugin == "@roadiehq/scaffolder-backend-argocd" ]]; then
+          if [[ $author == "Red Hat"* ]] || [[ $Plugin == "@roadiehq/scaffolder-backend-module-http-request" ]]|| [[ $Plugin == "@roadiehq/backstage-plugin-argo-cd-backend" ]]|| [[ $Plugin == "@roadiehq/scaffolder-backend-argocd" ]]; then
               if [[ $support == "production"* ]] || [[ $support == "generally-available"* ]]; then
                   Support_Level="Production"
               elif [[ $support == "tech-preview"* ]]; then
