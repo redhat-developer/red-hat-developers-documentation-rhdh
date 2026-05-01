@@ -1,0 +1,128 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-homepage-card-visibility-to-match-user-permissions_{context}"]
+= Configure homepage card visibility to match user permissions
+
+[role="_abstract"]
+Define visibility conditions based on RBAC groups, roles, or permissions to control which users see which homepage cards.
+Visibility conditions enable fine-grained control over individual cards and ensure users see only homepage content they can actually use.
+
+.Prerequisites
+
+* You installed the homepage backend plugin.
+* You understand homepage visibility rules.
+* You defined RBAC groups for your user personas.
+* You have administrative access to modify the `{my-app-config-file}` configuration file.
+
+.Procedure
+
+. Identify which user personas should see which homepage cards.
++
+Create a mapping table:
++
+[options="header"]
+|===
+|Card |Visible To |Rationale
+|TemplateSection |Developers only |Only developers create components from templates
+|Scorecards |Managers and team leads |Portfolio health monitoring is a management responsibility
+|RBACManagement |Platform engineers with admin role |Only administrators manage RBAC policies
+|===
+
+. Open your `{my-app-config-file}` configuration file.
+
+. Add visibility conditions to each homepage card by using the `visibilityRules` field.
+
+. To configure group-based visibility, add the `groups` field with an array of RBAC group names:
++
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: TemplateSection
+  config:
+    layouts:
+      xl: { w: 12, h: 5 }
+    visibilityRules:
+      groups: ['team/developers']
+----
++
+Users who belong to any of the listed groups see the card.
+
+. To configure visibility for multiple groups (OR condition), list all applicable groups:
++
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: ScorecardCard
+  config:
+    layouts:
+      xl: { w: 6, h: 6 }
+    visibilityRules:
+      groups: ['team/managers', 'team/team-leads']
+----
++
+Users in either the `team/managers` group or the `team/team-leads` group see the card.
+
+. To configure role-based visibility, add the `roles` field:
++
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: AdminDashboard
+  config:
+    layouts:
+      xl: { w: 12, h: 6 }
+    visibilityRules:
+      roles: ['admin']
+----
+
+. To combine multiple visibility conditions (AND logic), specify both groups and roles:
++
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: RBACManagement
+  config:
+    layouts:
+      xl: { w: 12, h: 8 }
+    visibilityRules:
+      groups: ['team/platform-engineering']
+      roles: ['admin']
+----
++
+Only users who belong to the `team/platform-engineering` group AND have the `admin` role see the card.
+
+. To configure permission-based visibility, add the `permissions` field:
++
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: PolicyManagement
+  config:
+    layouts:
+      xl: { w: 12, h: 6 }
+    visibilityRules:
+      permissions: ['policy.entity.update']
+----
++
+Only users who have the `policy.entity.update` permission see the card.
+
+. Save the configuration file and restart {product}:
++
+[source,terminal]
+----
+$ kubectl rollout restart deployment/<rhdh-deployment-name>
+----
+
+.Verification
+
+. Log in as a test user who should see the configured card.
++
+Verify the homepage displays the card.
+
+. Log in as a test user who should NOT see the card.
++
+Verify the homepage hides the card.
+
+. If you configured visibility for users in multiple groups, log in as a test user in each group.
++
+Verify users in all applicable groups can see the card.

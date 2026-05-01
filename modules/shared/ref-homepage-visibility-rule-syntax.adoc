@@ -1,0 +1,160 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="homepage-visibility-rule-syntax_{context}"]
+= Homepage visibility rule syntax
+
+[role="_abstract"]
+Reference information about the visibility rule configuration syntax for homepage cards.
+Use these syntax rules to control which users can see which homepage cards based on RBAC groups, roles, and permissions.
+
+== Visibility rule fields
+
+The fields you can use in the `visibilityRules` configuration section:
+
+[cols="20%,15%,15%,50%", frame="all", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+
+|`groups`
+|array of strings
+|No
+|RBAC groups that can see this card.
+Users who are members of any listed group can see the card.
+
+|`roles`
+|array of strings
+|No
+|RBAC roles that can see this card.
+Users who have any listed role can see the card.
+
+|`permissions`
+|array of strings
+|No
+|Permissions required to see this card.
+Users who have any listed permission can see the card.
+|===
+
+== Logical operators
+
+Visibility rules use the following logical behavior:
+
+* *Within a field (OR logic)*: If a field contains multiple values (for example, multiple groups), the user must match any value.
+
+* *Across fields (AND logic)*: If a visibility rule specifies multiple fields (for example, both `groups` and `roles`), the user must match all fields.
+
+* *No visibility rule (default to visible)*: If you do not specify a `visibilityRules` section, all authenticated users can see the card.
+
+== Group-based visibility
+
+Show a card only to users in the `team/developers` group:
+
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: TemplateSection
+  config:
+    layouts:
+      xl: { w: 12, h: 5 }
+    visibilityRules:
+      groups: ['team/developers']
+----
+
+== Multiple groups (OR logic)
+
+Show a card to users in either the `team/managers` or `team/team-leads` group:
+
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: ScorecardCard
+  config:
+    layouts:
+      xl: { w: 6, h: 6 }
+    visibilityRules:
+      groups: ['team/managers', 'team/team-leads']
+----
+
+== Group and role (AND logic)
+
+Show a card only to users who are in the `team/platform-engineering` group AND have the `admin` role:
+
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: AdminDashboard
+  config:
+    layouts:
+      xl: { w: 12, h: 6 }
+    visibilityRules:
+      groups: ['team/platform-engineering']
+      roles: ['admin']
+----
+
+== Permission-based visibility
+
+Show a card only to users who have the `policy.entity.update` permission:
+
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: RBACManagement
+  config:
+    layouts:
+      xl: { w: 12, h: 8 }
+    visibilityRules:
+      permissions: ['policy.entity.update']
+----
+
+== Visible to all users
+
+Show a card to all authenticated users by specifying an empty visibility rules object:
+
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: SearchBar
+  config:
+    layouts:
+      xl: { w: 10, h: 1, x: 1 }
+    visibilityRules: {}
+----
+
+Or by omitting the `visibilityRules` field entirely:
+
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: QuickAccessCard
+  config:
+    layouts:
+      xl: { w: 6, h: 6 }
+----
+
+[NOTE]
+====
+`visibilityRules: {}` and omitting `visibilityRules` are functionally identical. Use `visibilityRules: {}` when you want to explicitly indicate the card is intentionally visible to all users.
+====
+
+== Complex example with multiple conditions
+
+Show a card to users who are in specific groups OR have specific permissions:
+
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: AdvancedAnalytics
+  config:
+    layouts:
+      xl: { w: 12, h: 6 }
+    visibilityRules:
+      groups: ['team/data-scientists', 'team/analysts']
+      permissions: ['analytics.view']
+----
+
+Users who meet both conditions see this card:
+
+* The user belongs to the `team/data-scientists` group or the `team/analysts` group
+* The user has the `analytics.view` permission

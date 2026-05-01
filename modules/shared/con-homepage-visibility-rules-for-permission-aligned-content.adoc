@@ -1,0 +1,64 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="homepage-visibility-rules-for-permission-aligned-content_{context}"]
+= Homepage visibility rules for permission-aligned content
+
+[role="_abstract"]
+Homepage visibility rules control which cards display to users based on RBAC groups, roles, and permissions. Fine-grained conditions ensure users see only content relevant to their role and responsibilities.
+
+== How visibility rules work
+
+When a user logs in and views the homepage, the backend API processes visibility rules to determine which cards appear:
+
+. *Build user context*: The backend API extracts the logged-in user's RBAC groups, roles, and permissions from the authentication system.
+
+. *Process visibility conditions*: For each homepage card, the backend API compares visibility conditions against the user's context to determine whether the card matches the card's visibility rules.
+
+. *Return matching cards*: The API response includes cards with visibility rules that match the user's context.
+The front-end renders only the cards the response includes.
+
+. *Apply default visibility*: All authenticated users can see cards without visibility rules by default.
++
+NOTE: Users who have authentication but no RBAC group memberships will see cards with `visibilityRules: {}` (empty visibility rules) or cards where you omit the `visibilityRules` field.
+The API response excludes cards with specific group, role, or permission requirements from users with no RBAC groups.
+
+The backend API processes visibility rules on every homepage load.
+Changes to a user's RBAC group membership or role assignments take effect immediately when the user refreshes the homepage.
+
+== User context attributes for visibility rules
+
+Platform engineers can configure visibility rules by using the following user context attributes:
+
+* *User groups*: RBAC groups the user belongs to (for example, `team/developers`, `team/data-scientists`, `team/managers`).
+Group-based visibility is the most common approach for persona-based homepages.
+
+* *User roles*: RBAC roles assigned to the user (for example, `admin`, `team-lead`).
+Role-based visibility enables permission-level control.
+
+* *User permissions*: Specific permissions granted to the user (for example, `catalog.entity.create`, `policy.entity.update`).
+Permission-based visibility ensures only users who can actually use the underlying features see the cards.
+
+== Logical operators and condition syntax
+
+Visibility rules support simple logical operations:
+
+* *Within a field (OR logic)*: If a visibility rule specifies multiple values for the same field (for example, multiple groups), the user must match ANY of the values.
++
+Example: `groups: ['team/developers', 'team/data-scientists']` shows the card to users in either group.
+
+* *Across fields (AND logic)*: If a visibility rule specifies multiple fields (for example, both groups and roles), the user must match ALL fields.
++
+Example: Only users who belong to the `team/platform-engineering` group AND have the `admin` role see a card with both `groups: ['team/platform-engineering']` and `roles: ['admin']`.
+
+* *No visibility rule (default to visible)*: All authenticated users see cards without visibility rules.
+
+== Performance considerations
+
+Visibility rule processing impacts homepage load time:
+
+* *Processing occurs on every homepage load*: The backend API processes visibility rules each time a user accesses the homepage.
+
+* *Complex rules might impact performance*: Visibility rules that require extensive permission checks or complex condition processing can slow down homepage rendering.
+
+* *Recommendation*: Keep visibility rules simple and focused on RBAC groups when possible.
+Group-based visibility provides the best balance of flexibility and performance.

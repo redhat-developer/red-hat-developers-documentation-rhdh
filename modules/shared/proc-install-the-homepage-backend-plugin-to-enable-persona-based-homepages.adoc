@@ -1,0 +1,133 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="install-the-homepage-backend-plugin-to-enable-persona-based-homepages_{context}"]
+= Install the homepage backend plugin to enable persona-based homepages
+
+[role="_abstract"]
+Install and enable the homepage backend plugin to support persona-based homepage features in {product-very-short}.
+The backend plugin exposes an API endpoint for role-appropriate homepage cards based on the logged-in user's RBAC groups, roles, and permissions.
+
+.Prerequisites
+
+* You have {product} {product-version} or later running.
+* You have administrative access to modify the `{my-app-config-file}` configuration file.
+* You understand how to configure dynamic plugins in {product-very-short}.
+* The homepage backend plugin package is available in your deployment.
+Verify the plugin is available:
++
+[source,terminal]
+----
+$ kubectl exec deployment/<rhdh-deployment-name> -- \
+  ls /opt/app-root/src/dynamic-plugins/dist/ | grep homepage-backend
+----
++
+Expected output: `red-hat-developer-hub.backstage-plugin-homepage-backend`
+
+.Procedure
+
+. Open your `{my-app-config-file}` configuration file in a text editor.
+
+. Add the homepage backend plugin to the `dynamicPlugins.backend` section:
++
+[source,yaml]
+----
+dynamicPlugins:
+  backend:
+    red-hat-developer-hub.backstage-plugin-homepage-backend:
+      enabled: true
+----
++
+[NOTE]
+====
+For Helm-based deployments, add the configuration to your `values.yaml` file under `global.dynamic.plugins` or `upstream.backstage.appConfig` depending on your chart version.
+====
+
+. Configure the homepage backend plugin by adding the `homepage.backend` section:
++
+[source,yaml]
+----
+homepage:
+  backend:
+    defaultWidgets:
+      enabled: true
+----
+
+. Save the configuration file.
+
+. Restart {product} to apply the changes:
++
+[source,terminal]
+----
+$ kubectl rollout restart deployment/<rhdh-deployment-name>
+----
++
+Replace `<rhdh-deployment-name>` with the name of your {product-very-short} deployment.
+
+.Verification
+
+. Check the plugin logs to confirm the homepage backend plugin initialized successfully:
++
+[source,terminal]
+----
+$ kubectl logs deployment/<rhdh-deployment-name> | grep homepage
+----
++
+Expected output:
++
+[source,text]
+----
+[1] 2026-05-01T12:00:00.000Z homepage-backend info Initializing homepage backend plugin
+[1] 2026-05-01T12:00:01.000Z homepage-backend info Homepage backend plugin initialized successfully
+----
+
+. Optional: Verify the backend API endpoint is accessible by sending a test request.
++
+For OpenShift deployments, use the OpenShift CLI token:
++
+[source,terminal]
+----
+$ curl -H "Authorization: Bearer $(oc whoami -t)" \
+  https://<rhdh-url>/api/homepage/defaultWidgets
+----
++
+For non-OpenShift Kubernetes deployments, use a token obtained from your authentication provider:
++
+[source,terminal]
+----
+$ TOKEN="your-access-token"
+$ curl -H "Authorization: Bearer $TOKEN" \
+  https://<rhdh-url>/api/homepage/defaultWidgets
+----
++
+Replace `<rhdh-url>` with your {product-very-short} instance URL.
++
+Expected output:
++
+[source,json]
+----
+[
+  {
+    "mountPoint": "home.page/cards",
+    "importName": "SearchBar",
+    "config": {
+      "layouts": {
+        "xl": { "w": 10, "h": 1, "x": 1 }
+      }
+    }
+  }
+]
+----
+
+.Troubleshooting
+
+If the plugin does not load:
+
+* Verify the plugin name and version match your {product} version.
+* Check the `{my-app-config-file}` file for YAML syntax errors by using a YAML validator.
+* Review the {product-very-short} pod logs for plugin initialization errors.
+
+If the API is not accessible:
+
+* Verify the `homepage.backend.defaultWidgets.enabled` flag has the value `true`.
+* Check network connectivity between the front-end and backend services.
+* Confirm RBAC permissions allow access to the homepage API.

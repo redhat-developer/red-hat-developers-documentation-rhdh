@@ -1,0 +1,219 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-homepage-configuration-to-persona-based-model_{context}"]
+= Migrate homepage configuration to persona-based model
+
+[role="_abstract"]
+Migrate an existing {product} 1.9.x default homepage configuration to the persona-based model introduced in {product} {product-version}. Convert a single default homepage layout into multiple persona-specific configurations based on RBAC groups.
+
+.Prerequisites
+
+* You have an existing {product} 1.9.x installation with a custom homepage configuration.
+* You are upgrading to {product} {product-version} or later.
+* You installed the homepage backend plugin.
+* You defined RBAC groups for your target user personas.
+* You have backed up your current `{my-app-config-file}` configuration file.
+
+.Procedure
+
+. Document your current default homepage configuration.
++
+Locate the existing `dynamicPlugins.frontend.red-hat-developer-hub.backstage-plugin-dynamic-home-page` configuration section in one of the following locations:
++
+. `app-config.yaml` file (file-based deployments)
+. `app-config` ConfigMap (ConfigMap-based deployments)
+. Helm values file under `global.dynamic.plugins` or `upstream.backstage.appConfig` (Helm-based deployments)
++
+Copy the entire configuration to a separate file for reference.
+
+. Analyze which homepage cards are relevant to which user personas.
++
+Create a mapping table that associates each currently configured card with target personas:
++
+[options="header"]
+|===
+|Card |Relevant Personas |Rationale
+|SearchBar |All users |Search is universally useful
+|TemplateSection |Developers |Only developers create components from templates
+|CatalogStarredEntitiesCard |All users |All users can star catalog entities
+|Scorecards |Managers |Portfolio health is a management concern
+|===
+
+. Create persona-based homepage configurations in the `homepage.backend.defaultWidgets.mountPoints` section.
++
+For each persona, add mount points for the relevant cards with appropriate visibility rules.
+
+. Define fallback configuration for users not in any persona group.
++
+Add mount points for essential cards that all users should see, by using empty visibility rules:
++
+[source,yaml]
+----
+homepage:
+  backend:
+    defaultWidgets:
+      mountPoints:
+        # Fallback cards - visible to all users
+        - mountPoint: home.page/cards
+          importName: SearchBar
+          config:
+            layouts:
+              xl: { w: 10, h: 1, x: 1 }
+            visibilityRules: {}
+
+        - mountPoint: home.page/cards
+          importName: QuickAccessCard
+          config:
+            layouts:
+              xl: { w: 6, h: 6 }
+            visibilityRules: {}
+----
+
+. Add persona-specific cards with visibility rules.
++
+For example, migrate the TemplateSection card so only developers see it:
++
+[source,yaml]
+----
+        # Developer persona cards
+        - mountPoint: home.page/cards
+          importName: TemplateSection
+          config:
+            layouts:
+              xl: { w: 12, h: 5 }
+            visibilityRules:
+              groups: ['team/developers']
+----
+
+. Test the migration in a non-production environment before deploying to production.
++
+Apply the new configuration to a test or staging {product-very-short} instance:
++
+[source,terminal]
+----
+$ kubectl apply -f <test-app-config-file>
+$ kubectl rollout restart deployment/<test-rhdh-deployment>
+----
+
+. Verify the persona configurations work as expected.
++
+.. Log in as test users from different RBAC groups.
+.. Verify each persona sees the expected homepage cards.
+.. Log in as a test user who is not a member of any persona group.
+.. Verify they see the fallback configuration.
+
+. If the migration does not work as expected, roll back to the previous configuration.
++
+.. Restore the backed-up `{my-app-config-file}` configuration file.
+.. Restart {product}:
++
+[source,terminal]
+----
+$ kubectl rollout restart deployment/<rhdh-deployment-name>
+----
++
+.. Verify the system restored the original homepage configuration:
++
+... Log in as a test user.
+... Verify the homepage displays the original layout.
+... Check the pod logs to confirm the original configuration loaded successfully.
++
+.. Review migration errors and adjust the persona configuration.
+
+. After validating the migration in a test environment, deploy the persona-based configuration to production.
++
+.. Apply the validated configuration to the production `{my-app-config-file}` file.
+.. Restart {product-very-short}:
++
+[source,terminal]
+----
+$ kubectl rollout restart deployment/<rhdh-deployment-name>
+----
++
+.. Monitor user feedback during the first few days after migration.
+.. Adjust persona configurations based on user feedback and usage patterns.
++
+Migration example:
++
+The following example shows how to migrate from a 1.9.x configuration to a persona-based model:
++
+*Before (1.9.x configuration)*:
+
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    red-hat-developer-hub.backstage-plugin-dynamic-home-page:
+      mountPoints:
+        - mountPoint: home.page/cards
+          importName: SearchBar
+          config:
+            layouts:
+              xl: { w: 10, h: 1, x: 1 }
+
+        - mountPoint: home.page/cards
+          importName: TemplateSection
+          config:
+            layouts:
+              xl: { w: 12, h: 5 }
+
+        - mountPoint: home.page/cards
+          importName: CatalogStarredEntitiesCard
+          config:
+            layouts:
+              xl: { w: 5, h: 4 }
+----
+
+*After ({product-version} persona-based configuration)*:
+
+[source,yaml]
+----
+homepage:
+  backend:
+    defaultWidgets:
+      mountPoints:
+        # Visible to all users
+        - mountPoint: home.page/cards
+          importName: SearchBar
+          config:
+            layouts:
+              xl: { w: 10, h: 1, x: 1 }
+            visibilityRules: {}
+
+        # Visible only to developers
+        - mountPoint: home.page/cards
+          importName: TemplateSection
+          config:
+            layouts:
+              xl: { w: 12, h: 5 }
+            visibilityRules:
+              groups: ['team/developers']
+
+        # Visible to all authenticated users
+        - mountPoint: home.page/cards
+          importName: CatalogStarredEntitiesCard
+          config:
+            layouts:
+              xl: { w: 5, h: 4 }
+            visibilityRules: {}
+----
+
+.Troubleshooting
+
+If cards are missing after migration:
+
+. Verify the visibility rules syntax is correct.
+. Check that RBAC group names match exactly (group names are case-sensitive).
+. Confirm users are members of the expected RBAC groups.
+
+If users see the wrong homepage cards:
+
+. Review your persona-to-group mapping.
+. Verify user RBAC group membership by using the RBAC web UI.
+. Check the homepage backend plugin logs for visibility evaluation errors.
+
+If configuration syntax errors prevent {product-very-short} from starting:
+
+. Validate your YAML syntax by using a YAML validator.
+. Check for typos in field names (for example, `visibilityRules` versus `visibilityRule`).
+. Review the {product-very-short} pod logs for configuration parsing errors.
