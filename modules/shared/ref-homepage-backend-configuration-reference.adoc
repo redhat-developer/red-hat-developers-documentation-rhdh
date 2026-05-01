@@ -1,0 +1,176 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="homepage-backend-configuration-reference_{context}"]
+= Homepage backend configuration reference
+
+[role="_abstract"]
+Reference information about the homepage backend plugin configuration options, mount point structure, and API endpoints.
+Use this reference when configuring persona-based homepage features in {product-very-short}.
+
+== Configuration options
+
+The configuration fields available in the `homepage.backend` section of your `{my-app-config-file}` file:
+
+[cols="35%,15%,15%,35%", frame="all", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+
+|`homepage.backend.defaultWidgets.enabled`
+|boolean
+|No
+|Enable or disable the default widgets API.
+Default: `true`
+
+|`homepage.backend.defaultWidgets.mountPoints`
+|array
+|No
+|List of default card mount points with visibility rules and layout configuration.
+Default: `[]`
+
+|`homepage.backend.defaultWidgets.cacheConfig.ttl`
+|number
+|No
+|Cache time-to-live (TTL) for default widgets responses, in seconds.
+Increasing TTL improves performance but delays visibility of RBAC group changes.
+Decreasing TTL provides fresher content but increases backend load.
+For most deployments, the default 60 seconds balances performance and freshness.
+Default: `60`
+|===
+
+== Mount point configuration
+
+Each object in the `homepage.backend.defaultWidgets.mountPoints` array supports the following fields:
+
+[cols="25%,15%,15%,45%", frame="all", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+
+|`mountPoint`
+|string
+|Yes
+|Mount point identifier where the front-end renders the card.
+Use `home.page/cards` for homepage cards.
+
+|`importName`
+|string
+|Yes
+|Name of the card component to import and render.
+Must match an available homepage card.
+
+|`config.layouts`
+|object
+|No
+|Responsive grid layouts for different screen breakpoints (xl, lg, md, sm, xs, xxs).
+Each layout specifies width (w), height (h), and optional x/y position.
+
+|`config.props`
+|object
+|No
+|Component-specific properties passed to the card.
+Properties vary by card type.
+
+|`config.visibilityRules`
+|object
+|No
+|Visibility conditions that control which users can see this card.
+If not specified, all users see the card.
+|===
+
+== Configuration example
+
+The following example shows a complete homepage backend configuration with persona-based visibility:
+
+[source,yaml]
+----
+homepage:
+  backend:
+    defaultWidgets:
+      enabled: true
+      cacheConfig:
+        ttl: 300
+      mountPoints:
+        # Search bar - visible to all users
+        - mountPoint: home.page/cards
+          importName: SearchBar
+          config:
+            layouts:
+              xl: { w: 10, h: 1, x: 1 }
+              lg: { w: 10, h: 1, x: 1 }
+            visibilityRules: {}
+
+        # Templates - visible only to developers
+        - mountPoint: home.page/cards
+          importName: TemplateSection
+          config:
+            layouts:
+              xl: { w: 12, h: 5 }
+              lg: { w: 12, h: 5 }
+            visibilityRules:
+              groups: ['team/developers']
+
+        # Quick access - visible to all users
+        - mountPoint: home.page/cards
+          importName: QuickAccessCard
+          config:
+            layouts:
+              xl: { w: 6, h: 8 }
+              lg: { w: 6, h: 8 }
+            props:
+              title: Quick Access
+            visibilityRules: {}
+----
+
+== API endpoints
+
+The homepage backend plugin exposes the following API endpoints:
+
+[cols="40%,15%,45%", frame="all", options="header"]
+|===
+|Endpoint
+|Method
+|Description
+
+|`/api/homepage/defaultWidgets`
+|GET
+|Returns an array of widget configurations for the logged-in user based on their RBAC groups, roles, and permissions.
+The response includes only cards that match the user's visibility rules.
+|===
+
+== API response format
+
+The `/api/homepage/defaultWidgets` endpoint returns a JSON array of widget configurations:
+
+[source,json]
+----
+[
+  {
+    "mountPoint": "home.page/cards",
+    "importName": "SearchBar",
+    "config": {
+      "layouts": {
+        "xl": { "w": 10, "h": 1, "x": 1 }
+      }
+    }
+  },
+  {
+    "mountPoint": "home.page/cards",
+    "importName": "QuickAccessCard",
+    "config": {
+      "layouts": {
+        "xl": { "w": 6, "h": 8 }
+      },
+      "props": {
+        "title": "Quick Access"
+      }
+    }
+  }
+]
+----
+
+The response contains only the widgets the current user can see based on visibility rule processing.
