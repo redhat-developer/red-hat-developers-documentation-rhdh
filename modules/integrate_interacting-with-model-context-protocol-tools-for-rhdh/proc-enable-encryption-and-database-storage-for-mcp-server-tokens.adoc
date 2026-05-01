@@ -1,0 +1,67 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-encryption-and-database-storage-for-mcp-server-tokens_{context}"]
+= Enable encryption and database storage for MCP server tokens
+
+[role="_abstract"]
+To protect sensitive credentials and persist user preferences, you must configure encryption and database settings in the `{my-app-config-file}` file. 
+
+Configuring encryption prevents the system from storing Model Context Protocol (MCP) tokens as plaintext in the database.
+
+.Prerequisites
+
+* You have administrator access to the {product-very-short} environment.
+* Your backend secet is available in the `BACKEND_SECRET` environment variable.
+
+.Procedure
+
+. To enable encryption for MCP server tokens, add the following snippet to the `backend` section of your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+backend:
+  auth:
+    keys:
+    - secret: ${BACKEND_SECRET}
+----
+
+. To store MCP server user preferences, configure the database connection. Use the configuration example that matches your environment:
+
+** *Local development (In-memory):*
++
+[source,yaml]
+----
+backend:
+  database:
+    client: better-sqlite3
+    connection: ':memory:'
+----
+
+** *Local path storage:*
++
+[source,yaml]
+----
+backend:
+  database:
+    client: better-sqlite3
+    connection:
+      directory: './sqlite-data'
+----
+
+** *Deployed PostgreSQL database:*
++
+[source,yaml]
+----
+backend:
+  database:  
+    client: pg
+    connection:
+      host: localhost
+      port: 5432
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+----
+
+.Verification
+
+* Restart the {product-very-short} instance and ensure no errors appear in the logs related to the `backend-auth` or `database` plugins.
