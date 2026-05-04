@@ -4,12 +4,13 @@
 = Configure persona-specific homepage layouts for role-based experiences
 
 [role="_abstract"]
-Attach homepage configurations to RBAC groups to provide role-specific layouts. Users automatically see homepage cards appropriate to their group's responsibilities.
+Configure different homepage layouts for different user roles by connecting homepage cards to RBAC groups.
+Users automatically see only the homepage cards that are relevant to their role, improving their daily workflow efficiency.
 
 .Prerequisites
 
-* You installed and configured the homepage backend plugin.
-* You defined RBAC groups for each user persona (for example, `team/developers`, `team/data-scientists`, `team/managers`).
+* You have {product} {product-version} or later running with the homepage backend plugin enabled.
+* You defined RBAC groups for each user persona (for example, `group:default/developers`, `group:default/data-scientists`, `group:default/managers`).
 * You have administrative access to modify the `{my-app-config-file}` configuration file.
 
 .Procedure
@@ -21,10 +22,10 @@ Create a mapping table that associates each user role with an RBAC group:
 [options="header"]
 |===
 |Persona |RBAC Group |Purpose
-|Developer |`team/developers` |Software developers creating and deploying applications
-|Data Scientist |`team/data-scientists` |Data scientists working with ML models and pipelines
-|Manager |`team/managers` |Engineering managers monitoring team health
-|Platform Engineer |`team/platform-engineering` |Platform engineers managing {product-very-short}
+|Developer |`group:default/developers` |Software developers creating and deploying applications
+|Data Scientist |`group:default/data-scientists` |Data scientists working with ML models and pipelines
+|Manager |`group:default/managers` |Engineering managers monitoring team health
+|Platform Engineer |`group:default/platform-engineering` |Platform engineers managing {product-very-short}
 |===
 +
 [NOTE]
@@ -32,107 +33,108 @@ Create a mapping table that associates each user role with an RBAC group:
 Replace example group names with your organization's actual RBAC group names.
 ====
 
-. Verify the RBAC groups exist in your {product-very-short} configuration.
+. Verify that you created the RBAC groups in your {product-very-short} configuration.
 +
-Verify RBAC group existence by using the RBAC web UI or by reviewing your RBAC configuration file.
-Ensure you defined all groups referenced in your persona mapping before proceeding.
+Check that the RBAC groups exist by using the RBAC web UI or by reviewing your RBAC configuration file.
+You must create all groups referenced in your persona mapping before configuring homepage visibility.
 
 . Open your `{my-app-config-file}` configuration file.
 
-. Define the homepage layout for each persona in the `homepage.backend.defaultWidgets.mountPoints` section.
+. Define the homepage layout for each persona in the `homepage.defaultWidgets` section.
 +
-For example, configure a developer persona homepage with search, quick access, templates, and starred entities.
+For example, configure a developer persona homepage by grouping cards under a shared visibility condition.
 +
 [source,yaml]
 ----
 homepage:
-  backend:
-    defaultWidgets:
-      mountPoints:
-        - mountPoint: home.page/cards
-          importName: SearchBar
-          config:
-            layouts:
-              xl: { w: 10, h: 1, x: 1 }
-              lg: { w: 10, h: 1, x: 1 }
-            visibilityRules:
-              groups: ['team/developers']
+  defaultWidgets:
+    # Group developer cards with shared visibility
+    - if:
+        groups: [group:default/developers]
+      children:
+        - id: developer-onboarding
+          ref: 'rhdh-onboarding-section'
+          layout:
+            xl: { w: 12, h: 6 }
+            lg: { w: 12, h: 6 }
 
-        - mountPoint: home.page/cards
-          importName: QuickAccessCard
-          config:
-            layouts:
-              xl: { w: 7, h: 8 }
-              lg: { w: 7, h: 8 }
-            props:
-              title: Developer Quick Access
-            visibilityRules:
-              groups: ['team/developers']
+        - id: developer-quickaccess
+          ref: quickaccess-card
+          props:
+            title: Developer Quick Access
+          layout:
+            xl: { w: 7, h: 8 }
+            lg: { w: 7, h: 8 }
 
-        - mountPoint: home.page/cards
-          importName: TemplateSection
-          config:
-            layouts:
-              xl: { w: 12, h: 5 }
-              lg: { w: 12, h: 5 }
-            visibilityRules:
-              groups: ['team/developers']
+        - id: templates
+          ref: TemplateSection
+          layout:
+            xl: { w: 12, h: 5 }
+            lg: { w: 12, h: 5 }
 
-        - mountPoint: home.page/cards
-          importName: CatalogStarredEntitiesCard
-          config:
-            layouts:
-              xl: { w: 5, h: 4, x: 7 }
-              lg: { w: 5, h: 4, x: 7 }
-            visibilityRules:
-              groups: ['team/developers']
+        - id: starred-entities
+          ref: CatalogStarredEntitiesCard
+          layout:
+            xl: { w: 5, h: 4, x: 7 }
+            lg: { w: 5, h: 4, x: 7 }
 ----
 
-. Attach each homepage configuration to its corresponding RBAC group by using the `visibilityRules.groups` field.
+. Control which users see the homepage cards by adding the `if.groups` field to a parent group.
 +
-The `groups` field accepts an array of RBAC group names.
-Users in any of the listed groups will see the card.
+The `groups` field accepts an array of RBAC group entity references.
+Users who belong to any of the listed groups see all child cards.
++
+Individual child cards can include their own `if` conditions to further restrict visibility beyond the parent group's rules.
 +
 [NOTE]
 ====
-The front-end positions cards according to layout coordinates (`x`, `y`, `w`, `h`), not array order. The order in the configuration array does not affect rendering position.
+The front-end positions cards according to layout coordinates (`x`, `y`, `w`, `h`), not array order.
+The configuration array order does not affect rendering position.
 ====
-. Configure a default fallback homepage for users who are not members of any persona-specific RBAC group.
+. Configure a default homepage that all users can see.
 +
-Provide a minimal safe default with essential cards:
+Create cards without `if` conditions so that all authenticated users see essential homepage content, including users who do not belong to any RBAC group:
 +
 [source,yaml]
 ----
-        - mountPoint: home.page/cards
-          importName: SearchBar
-          config:
-            layouts:
-              xl: { w: 10, h: 1, x: 1 }
-            visibilityRules: {}  # Visible to all users
+    # Default cards visible to all users
+    - id: onboarding
+      ref: 'rhdh-onboarding-section'
+      layout:
+        xl: { w: 12, h: 6 }
 
-        - mountPoint: home.page/cards
-          importName: QuickAccessCard
-          config:
-            layouts:
-              xl: { w: 6, h: 6 }
-            visibilityRules: {}  # Visible to all users
+    - id: quickaccess-card
+      ref: quickaccess-card
+      layout:
+        xl: { w: 6, h: 6 }
 ----
 
 . Save the configuration file and restart {product}:
 +
-[source,terminal]
+[source,terminal,subs="+quotes"]
 ----
-$ kubectl rollout restart deployment/<rhdh-deployment-name>
+$ kubectl rollout restart deployment/_<rhdh-deployment-name>_
 ----
 +
-Replace `<rhdh-deployment-name>` with the name of your {product-very-short} deployment.
+Replace _<rhdh-deployment-name>_ with the name of your {product-very-short} deployment.
++
+[IMPORTANT]
+====
+The backend validates the homepage configuration when it starts.
+If the configuration contains errors, {product-very-short} will fail to start.
+Check the pod logs for configuration validation errors if the deployment does not become ready.
+====
 
 .Verification
 
 . Log in to {product} as a test user who belongs to one of the configured RBAC groups.
++
+The homepage displays only the cards configured for that user's persona.
 
-. Verify that the homepage displays only the cards from that user's persona configuration.
+. Log in as a test user from a different RBAC group.
++
+The homepage displays a different set of cards based on the second user's group membership.
 
-. Log in as a test user from a different RBAC group and verify they see a different set of homepage cards.
-
-. Log in as a test user who is not a member of any persona group and verify they see the fallback homepage configuration.
+. Log in as a test user who does not belong to any persona-specific RBAC group.
++
+The homepage displays only the default cards that have no `if` conditions.
