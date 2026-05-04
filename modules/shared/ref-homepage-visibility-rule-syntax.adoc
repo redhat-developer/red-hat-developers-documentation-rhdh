@@ -4,12 +4,12 @@
 = Homepage visibility rule syntax
 
 [role="_abstract"]
-Reference information about the visibility rule configuration syntax for homepage cards.
-Use these syntax rules to control which users can see which homepage cards based on RBAC groups, roles, and permissions.
+Reference information about controlling who can see homepage cards.
+Use visibility conditions to show specific cards to individual users, RBAC groups, or users with certain permissions.
 
-== Visibility rule fields
+== Visibility condition fields
 
-The `visibilityRules` configuration section supports the following fields:
+The `if` configuration section supports the following optional fields:
 
 [cols="20%,15%,15%,50%", frame="all", options="header"]
 |===
@@ -18,143 +18,164 @@ The `visibilityRules` configuration section supports the following fields:
 |Required
 |Description
 
+|`users`
+|array of strings
+|No
+|User references that can see this card.
+Users whose reference matches any listed value can see the card.
+Example: `user:default/jane`
+
 |`groups`
 |array of strings
 |No
-|RBAC groups that can see this card.
-Users who are members of any listed group can see the card.
-
-|`roles`
-|array of strings
-|No
-|RBAC roles that can see this card.
-Users who have any listed role can see the card.
+|RBAC groups whose members can see this card.
+Users who belong to any of the listed groups can see the card.
+{product-very-short} verifies group membership through the catalog.
+Users who are not in the catalog cannot match group-based visibility conditions.
 
 |`permissions`
 |array of strings
 |No
 |Permissions required to see this card.
 Users who have any listed permission can see the card.
+The permissions service validates permission names.
 |===
 
 == Logical operators
 
-Visibility rules use the following logical behavior:
+Visibility conditions use the following logical behavior:
 
-* *Within a field (OR logic)*: If a field contains multiple values (for example, multiple groups), the user must match any value.
+* *Multiple values in one field (OR)*: When a field lists multiple values (for example, multiple groups), the user must match at least one value to see the card.
 
-* *Across fields (AND logic)*: If a visibility rule specifies multiple fields (for example, both `groups` and `roles`), the user must match all fields.
+* *Multiple fields in one condition (OR)*: When an `if` block includes multiple fields (for example, both `groups` and `permissions`), the user must satisfy at least one condition from any field to see the card.
 
-* *No visibility rule (default to visible)*: If you do not specify a `visibilityRules` section, all authenticated users can see the card.
+* *No visibility condition*: When you omit the `if` section, or when all lists within `if` are empty, all authenticated users can see the card.
 
-== Group-based visibility
+* *Parent group inheritance*: When a parent group's `if` condition fails, {product-very-short} hides all child cards, even if individual child cards have their own `if` conditions that would otherwise match.
 
-Show a card only to users in the `team/developers` group:
+== Show a card to a specific RBAC group
 
-[source,yaml]
-----
-- mountPoint: home.page/cards
-  importName: TemplateSection
-  config:
-    layouts:
-      xl: { w: 12, h: 5 }
-    visibilityRules:
-      groups: ['team/developers']
-----
-
-== Multiple groups (OR logic)
-
-Show a card to users in either the `team/managers` or `team/team-leads` group:
+To display a card only to members of the `group:default/developers` group:
 
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: ScorecardCard
-  config:
-    layouts:
-      xl: { w: 6, h: 6 }
-    visibilityRules:
-      groups: ['team/managers', 'team/team-leads']
+- id: templates
+  ref: TemplateSection
+  if:
+    groups: [group:default/developers]
+  layout:
+    xl: { w: 12, h: 5 }
 ----
 
-== Group and role (AND logic)
+== Show a card to multiple RBAC groups
 
-Show a card only to users who are in the `team/platform-engineering` group AND have the `admin` role:
+To display a card to members of either the `group:default/managers` or `group:default/team-leads` group:
 
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: AdminDashboard
-  config:
-    layouts:
-      xl: { w: 12, h: 6 }
-    visibilityRules:
-      groups: ['team/platform-engineering']
-      roles: ['admin']
+- id: scorecard
+  ref: ScorecardCard
+  if:
+    groups: [group:default/managers, group:default/team-leads]
+  layout:
+    xl: { w: 6, h: 6 }
 ----
 
-== Permission-based visibility
+== Show a card to a specific user
 
-Show a card only to users who have the `policy.entity.update` permission:
+To display a card only to a specific user by their user reference:
 
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: RBACManagement
-  config:
-    layouts:
-      xl: { w: 12, h: 8 }
-    visibilityRules:
-      permissions: ['policy.entity.update']
+- id: admin-dashboard
+  ref: AdminDashboard
+  if:
+    users: [user:default/admin]
+  layout:
+    xl: { w: 12, h: 6 }
 ----
 
-== Visible to all users
+== Show a card based on permissions
 
-Show a card to all authenticated users by specifying an empty visibility rules object:
+To display a card only to users with the `homepage.default-widgets.read` permission:
 
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: SearchBar
-  config:
-    layouts:
-      xl: { w: 10, h: 1, x: 1 }
-    visibilityRules: {}
+- id: rbac-management
+  ref: RBACManagement
+  if:
+    permissions: [homepage.default-widgets.read]
+  layout:
+    xl: { w: 12, h: 8 }
 ----
 
-Or by omitting the `visibilityRules` field entirely:
+== Show a card to all users
+
+To display a card to all authenticated users, omit the `if` field:
 
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: QuickAccessCard
-  config:
-    layouts:
-      xl: { w: 6, h: 6 }
+- id: search-bar
+  ref: SearchBar
+  layout:
+    xl: { w: 10, h: 1, x: 1 }
+----
+
+Alternatively, specify an empty `if` object with no conditions:
+
+[source,yaml]
+----
+- id: quickaccess-card
+  ref: QuickAccessCard
+  if: {}
+  layout:
+    xl: { w: 6, h: 6 }
 ----
 
 [NOTE]
 ====
-`visibilityRules: {}` and omitting `visibilityRules` are functionally identical. Use `visibilityRules: {}` when you want to explicitly indicate the card is intentionally visible to all users.
+Omitting `if`, using `if: {}`, or using `if` with all empty lists are functionally identical.
+All authenticated users can see the card.
 ====
 
-== Complex example with multiple conditions
+== Combine groups and permissions
 
-Show a card to users who are in specific groups OR have specific permissions:
+To display a card to users who satisfy at least one condition—either belong to specific groups OR have specific permissions:
 
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: AdvancedAnalytics
-  config:
-    layouts:
-      xl: { w: 12, h: 6 }
-    visibilityRules:
-      groups: ['team/data-scientists', 'team/analysts']
-      permissions: ['analytics.view']
+- id: analytics
+  ref: AdvancedAnalytics
+  if:
+    groups: [group:default/data-scientists, group:default/analysts]
+    permissions: [analytics.view]
+  layout:
+    xl: { w: 12, h: 6 }
 ----
 
-Users who meet both conditions see this card:
+The card displays to users who match any of these conditions:
 
-* The user belongs to the `team/data-scientists` group or the `team/analysts` group
-* The user has the `analytics.view` permission
+* The user belongs to `group:default/data-scientists` OR `group:default/analysts`
+* OR the user has the `analytics.view` permission
+
+== Apply the same visibility to multiple cards
+
+To apply a shared visibility condition to multiple cards, use a parent with `children`:
+
+[source,yaml]
+----
+- if:
+    groups: [group:default/platform-team]
+  children:
+    - id: metrics-card
+      ref: platform-metrics
+      layout:
+        xl: { w: 6, h: 8 }
+    - id: logs-card
+      ref: platform-logs
+      layout:
+        xl: { w: 6, h: 8 }
+----
+
+Both cards display only to members of `group:default/platform-team`.
+The parent group configuration does not appear in the API response—only the individual child cards appear in the homepage.
