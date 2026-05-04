@@ -36,6 +36,6 @@ When creating PRs, follow `.github/pull_request_template.md`:
 | `pr.yml` | PR | Builds HTML preview, runs CQA checks, deploys to `gh-pages`, posts preview URL and CQA checklist as PR comments. Build scripts sourced from base branch. |
 | `style-guide.yml` | PR | Runs Vale linter on `assemblies/` for style guide compliance. |
 | `shellcheck.yml` | PR (`*.sh`) | Runs shellcheck on changed shell scripts via reviewdog. |
-| `generate-supported-plugins-pr.yml` | Manual dispatch | Updates Dynamic Plugins tables and creates a PR. |
+| `generate-supported-plugins-pr.yml` | Weekly schedule (Monday 04:00 UTC) and manual dispatch | Updates Dynamic Plugins tables for configured branches and creates a PR. |
 
 **Security:** `pr` and `shellcheck` use `pull_request_target` with an authorization gate — fork PRs from non-team members require manual approval via the `external` environment.
