@@ -1,0 +1,95 @@
+:_mod-docs-content-type: PROCEDURE
+[id="enable-event-driven-workflows-by-configuring-kafka-connectivity_{context}"]
+= Enable event-driven workflows by configuring Kafka connectivity
+
+[role="_abstract"]
+Configure Apache Kafka connectivity in the Orchestrator backend to enable workflows triggered by CloudEvents. This configuration allows workflows to respond asynchronously to business events from your messaging infrastructure.
+
+.Prerequisites
+
+* You have enabled Orchestrator plugins.
+* You have deployed Apache Kafka broker infrastructure and ensured it is accessible from {product-very-short}.
+* You have Kafka broker URLs and connection credentials.
+* You have verified network connectivity between {product-very-short} and Kafka brokers.
+
+.Procedure
+
+. Locate your {product-short} application configuration file.
++
+The location depends on your deployment method:
++
+--
+* For Operator deployments: The configuration is in a ConfigMap, typically named `{my-app-config-config-map}`.
+* For Helm deployments: The configuration is in the `values.yaml` file or a custom configuration file referenced in your Helm values.
+--
+
+. Add the `orchestrator.kafka` configuration section to your `{my-app-config-file}` file.
++
+[source,yaml,subs="+attributes"]
+----
+orchestrator:
+  kafka:
+    clientId: my-rhdh-orchestrator
+    brokers:
+      - kafka-broker-1.example.com:9092
+      - kafka-broker-2.example.com:9092
+      - kafka-broker-3.example.com:9092
+    # logLevel override for the orchestrator kafka services. Defaults to INFO which is 4
+    # logLevel values based on KafkaJS values https://kafka.js.org/docs/configuration#logging
+    # logLevel: 5 // DEBUG
+    logLevel: 4
+----
++
+where:
++
+`clientId`:: Unique identifier for the {product-very-short} Kafka client. This identifier is displayed in Kafka broker logs and metrics.
+`brokers`:: Array of Kafka broker URLs. Include multiple brokers for high availability.
+`logLevel`:: Optional. Kafka client logging level. Valid numeric values based on link:https://kafka.js.org/docs/configuration#logging[KafkaJS values] are `0` (NOTHING), `1` (ERROR), `2` (WARN), `4` (INFO), or `5` (DEBUG). Default is `4` (INFO).
+
+. Apply the configuration changes.
++
+--
+* For Operator deployments: Update the ConfigMap and restart the {product-very-short} instance by scaling the deployment to zero and back to the target replica count, or by deleting the pod to trigger a restart.
++
+Replace `<my_deployment_name>` with the name of your deployment:
++
+[source,terminal,subs="+attributes"]
+----
+$ oc rollout restart deployment/<my_deployment_name>
+----
+
+* For Helm deployments: Upgrade the Helm release with the updated configuration.
++
+[source,terminal,subs="+attributes"]
+----
+$ helm upgrade {my-product-cr-name} redhat-developer/backstage -f values.yaml -n {my-product-namespace}
+----
+--
+
+.Verification
+
+. Check the orchestrator-backend plugin logs for Kafka connection messages.
++
+Replace `<my_deployment_name>` with the name of your deployment:
++
+[source,terminal,subs="+attributes"]
+----
+$ oc logs deployment/<my_deployment_name> | grep -i kafka
+----
++
+Successful connection logs include messages indicating the Kafka client has connected to the broker cluster.
+
+. Navigate to the Orchestrator plugin in the {product-very-short} UI.
+
+. Verify that the *Run as Event* button is displayed next to workflows.
++
+The button is only visible when Kafka connectivity is successfully configured.
+
+.Troubleshooting
+
+If the *Run as Event* button does not appear:
+
+* Verify that the Kafka broker URLs are correct and accessible from the {product-very-short} pod.
+* Check the orchestrator-backend logs for connection errors or authentication failures.
+* Confirm that network policies allow traffic between {product-very-short} and the Kafka brokers.
+* Verify that the `orchestrator.kafka` configuration section is correctly formatted in the configuration file.
