@@ -1,0 +1,59 @@
+:_mod-docs-content-type: PROCEDURE
+[id="run-workflows-asynchronously-through-the-ui-with-cloudevents_{context}"]
+= Run workflows asynchronously through the UI with CloudEvents
+
+[role="_abstract"]
+Publish CloudEvents to Apache Kafka from the {product-very-short} UI to trigger workflows asynchronously. This method enables fire-and-forget operation without blocking on workflow completion.
+
+.Prerequisites
+
+* You have configured Kafka connectivity for the Orchestrator.
+* You have deployed an event-type workflow that appears in the Orchestrator plugin.
+
+.Procedure
+
+. In the {product-very-short} UI, navigate to the Orchestrator plugin.
+
+. In the workflows list, locate the workflow you want to trigger.
+
+. Click the *Run as Event* button next to the workflow.
++
+[NOTE]
+====
+The *Run as Event* button appears only when you have configured Kafka connectivity and the workflow supports event-driven execution.
+====
+
+. If the workflow requires input data, complete the workflow input form.
++
+The form fields correspond to the workflow's input schema.
+The CloudEvent data payload includes the values you provide.
+
+. Click *Submit* to send the CloudEvent to Kafka.
++
+The {product-very-short} UI transmits a CloudEvent to the configured Kafka broker with the workflow input data.
+The workflow starts when the Kafka broker delivers the event to the SonataFlow engine.
+
+. Monitor the workflow status.
++
+After submitting the CloudEvent, one of two outcomes occurs:
++
+--
+Immediate start:: If the workflow starts before the UI timeout period, the UI navigates to the workflow instance detail page, where you can monitor progress.
+
+Delayed start:: If the workflow has not started when the UI timeout expires, the UI displays an informational message indicating that it sent the event to Kafka as a `kafkaEvent`.
+The UI navigates to the workflow runs list, where the workflow instance appears when the workflow starts.
+--
+
+. If the workflow does not start immediately, locate the workflow in the workflow runs list.
++
+The workflow instance appears in the list when the Kafka broker delivers the CloudEvent and the workflow engine starts the workflow.
+Depending on Kafka broker latency and workflow engine processing time, this can take several seconds.
+
+.Troubleshooting
+
+If the workflow does not appear in the workflow runs list after several minutes:
+
+* Verify that the Kafka broker is running and accessible.
+* Check the orchestrator-backend logs for errors related to Kafka message publishing.
+* Confirm that you configured the workflow to consume CloudEvents from the correct Kafka topic.
+* Verify that the CloudEvent type matches the workflow's event type configuration.

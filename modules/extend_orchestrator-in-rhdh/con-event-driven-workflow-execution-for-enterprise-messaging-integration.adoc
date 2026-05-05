@@ -1,0 +1,96 @@
+:_mod-docs-content-type: CONCEPT
+[id="event-driven-workflow-execution-for-enterprise-messaging-integration_{context}"]
+= Event-driven workflow execution for enterprise messaging integration
+
+[role="_abstract"]
+Event-driven workflows enable {product-very-short} Orchestrator to respond to business events from existing messaging systems. This architecture maintains loose coupling and integrates workflows into established enterprise event streams.
+
+== Why CloudEvents matter for workflow integration
+
+When you integrate workflows with message-driven systems, you need a common event format that works across different platforms and services without custom adapters for each system.
+
+CloudEvents is a Cloud Native Computing Foundation (CNCF) specification that standardizes how to describe event data across services, platforms, and systems. This common envelope format ensures that systems can produce and consume events without custom integration code for each platform.
+
+A CloudEvent includes required metadata fields such as the event type, source, unique identifier, and specification version.
+Optional fields provide additional context such as content type, data schema, subject, and timestamp.
+The `data` field contains the event payload itself, which can include structured data relevant to the event type.
+
+For example, a CloudEvent might describe a deployment request, a compliance check trigger, or a customer order placement.
+Because CloudEvents standardizes the event format, multiple systems can process these events by using common libraries and tools, reducing integration complexity.
+
+== How your workflows respond to CloudEvents
+
+When you configure a workflow for event-driven execution, {product-very-short} Orchestrator processes incoming CloudEvents sourced from Apache Kafka that match specific event types.
+The underlying SonataFlow engine natively supports CloudEvents, which means your workflows can consume events without additional transformation or middleware.
+
+When a CloudEvent arrives:
+
+. The workflow engine validates the CloudEvent structure and extracts the event metadata.
+. The engine matches the event type to registered workflows configured to handle that event type.
+. The workflow instance starts automatically, with the CloudEvent data available as workflow input.
+. The workflow runs its defined steps, which can include calling APIs, orchestrating services, or emitting additional CloudEvents.
+
+This event-driven model differs from HTTP-triggered workflows, where you explicitly call a workflow endpoint to start the workflow.
+
+== Event-driven versus HTTP-triggered workflow execution
+
+Event-driven and HTTP-triggered workflows serve different integration patterns:
+
+HTTP-triggered workflows::
+This approach is appropriate for synchronous operations where the caller needs immediate feedback or must wait for workflow completion.
+The caller sends an HTTP request to a specific workflow endpoint and receives a response indicating the workflow status.
+This pattern works well for user-initiated actions in web applications or API integrations that require request-response semantics.
+
+Event-driven workflows::
+Use this approach when your event producers need to continue working immediately without waiting for workflow completion.
+Your producers publish CloudEvents to Apache Kafka, and workflows start automatically when events arrive, without blocking the producer.
+This pattern supports fire-and-forget semantics, enabling the producer to continue processing without blocking on the workflow.
+Event-driven workflows also provide better scalability for high-volume workloads and support complex event routing and filtering capabilities that the message broker provides.
+
+== Benefits of event-driven workflows
+
+Integrating workflows with CloudEvents and message brokers provides several architectural advantages:
+
+Loose coupling::
+Event producers do not need direct knowledge of workflow endpoints or {product-very-short} infrastructure.
+They publish standardized CloudEvents to a message broker, and the workflow engine consumes events independently.
+This separation allows services to evolve independently without tight coupling.
+
+Asynchronous execution::
+Event producers do not block waiting for workflows to complete.
+This improves system responsiveness and allows workflows to handle long-running operations without impacting the producing system.
+
+Architectural consistency::
+Organizations that have standardized on message-oriented middleware can integrate {product-very-short} workflows into existing event-driven architectures without creating HTTP-based exceptions.
+This maintains architectural consistency across the enterprise.
+
+Enterprise messaging standards::
+CloudEvents specification provides a vendor-neutral event format that major cloud providers and messaging platforms support.
+This ensures portability and reduces vendor lock-in.
+
+== CloudEvent type to Kafka topic mapping
+
+When you configure workflows to consume CloudEvents from Kafka, you decide how CloudEvent types map to Kafka topics based on your workflow design and organizational standards.
+
+A common pattern maps each workflow to a specific Kafka topic, where the topic name corresponds to the CloudEvent type that triggers the workflow.
+For example, a workflow that processes deployment requests might subscribe to a `deployment.request` topic, and producers would publish CloudEvents with `type: deployment.request` to that topic.
+
+You can organize workflows by business capability and route events to the appropriate workflow by using Kafka topic-based routing.
+You can also use Kafka consumer groups to scale workflow processing across multiple {product-very-short} instances.
+
+== When to use CloudEvent triggering
+
+Choose CloudEvent-based workflow triggering when:
+
+* Your organization has standardized on message brokers such as Apache Kafka for system-to-system communication.
+* Your workflows respond to business events produced by other systems in your architecture.
+* You need asynchronous, fire-and-forget workflow execution.
+* You want to decouple workflow callers from {product-very-short} infrastructure.
+* Your workflows integrate into existing event-driven architectural patterns.
+
+Use HTTP-triggered workflows when:
+
+* Your users need immediate workflow feedback or synchronous responses.
+* Your workflows serve as APIs for external systems that expect request-response patterns.
+* Your organization has not deployed message broker infrastructure.
+* Your workflow execution is strictly on-demand rather than event-driven.
