@@ -22,7 +22,7 @@ const __dirname = dirname(__filename);
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
-const EXCLUDED_TITLES = null;
+const EXCLUDED_TITLES = /rhdh-plugins-reference/;
 const CCUTIL_IMAGE = 'quay.io/ivanhorvath/ccutil:amazing';
 const LYCHEE_VERSION = 'v0.23.0';
 const PAGES_BASE = 'https://redhat-developer.github.io/red-hat-developers-documentation-rhdh';
