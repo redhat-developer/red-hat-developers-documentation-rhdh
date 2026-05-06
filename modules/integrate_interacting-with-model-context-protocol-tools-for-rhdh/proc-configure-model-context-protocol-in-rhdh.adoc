@@ -6,7 +6,7 @@
 [role="_abstract"]
 Enable MCP client applications to access {product-very-short} information and workflows by configuring authentication tokens and server endpoints.
 
-You can enable your MCP client applications to use the MCP protocol to access {product-very-short} information and workflows. This configuration is a prerequisite for MCP clients to use the defined MCP tools and access the exposed capabilities of {product-very-short}.
+This configuration is a prerequisite for MCP clients to use the defined MCP tools and access the exposed capabilities of {product-very-short}.
 
 .Prerequisites
 
@@ -41,16 +41,39 @@ $ node -p `require("crypto").randomBytes(24).toString("base64")`
 ----
 ====
 
-. Register the MCP tools that you install as a plugin source:
+. Register the MCP tools that you install as a plugin source in your `{my-app-config-file}` file:
+
+** To use the installed `extras` plugins, you must register them as a plugin sources:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
 backend:
   actions:
     pluginSources:
-      - software-catalog-mcp-tool
-      - techdocs-mcp-tool
+      - software-catalog-mcp-extras
+      - techdocs-mcp-extras
+      - scaffolder-mcp-extras
 ----
+
+** To use the built-in {backstage} catalog tools for fetching entities and registering or unregistering components, you must register `catalog` or `scaffolder` in your plugin source:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  actions:
+    pluginSources:
+      - catalog
+      - scaffolder
+----
+
+** If you are using an OpenAI models with the {product-very-short} MCP server, you must also add the following section to your `{my-app-config-file}` file:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+mcpActions: 
+  namespacedToolNames: false
+----
+
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -68,8 +91,11 @@ auth:
 backend:
   actions:
     pluginSources:
-      - 'software-catalog-mcp-tool'
-      - 'techdocs-mcp-tool'
+      - software-catalog-mcp-extras
+      - techdocs-mcp-extras
+      - scaffolder-mcp-extras
+      - catalog
+      - scaffolder
   auth:
     externalAccess:
       - type: static
@@ -83,3 +109,4 @@ backend:
     origin: "${{product-very-short}_BASE_URL}"
 signInPage: oidc
 ----
+
