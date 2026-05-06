@@ -1,0 +1,83 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="custom-review-page-api-reference_{context}"]
+= Custom review page API reference
+
+[role="_abstract"]
+The custom review page API provides the `ReviewComponentProps` interface, helper utilities for data processing, and UI components to implement custom review pages for {product} Orchestrator workflows.
+
+== ReviewComponentProps interface
+
+Your custom review component receives the following properties through the `ReviewComponentProps` interface:
+
+[cols="2,2,5",options="header"]
+|===
+|Property |Type |Description
+
+|`busy`
+|`boolean`
+|Indicates whether a workflow run is in progress. Disable action buttons when this value is `true` to prevent duplicate submissions.
+
+|`schema`
+|`JSONSchema7`
+|Defines field structure, titles, and UI hints such as hidden fields for the workflow form.
+
+|`data`
+|`JsonObject`
+|Contains the user-submitted form values structured according to the schema and awaiting review before the workflow runs.
+
+|`handleBack`
+|`() => void`
+|Returns to the previous step (same behavior as the default review page). This callback matches the default review page behavior.
+
+|`handleExecute`
+|`() => void`
+|Runs the workflow with the reviewed data. Call this function when the user clicks *Run* to start the workflow.
+|===
+
+== Helper utilities
+
+The `orchestrator-form-react` package exports the following utilities to help you build custom review pages that handle data correctly:
+
+[cols="2,3,4",options="header"]
+|===
+|Function |Signature |Description
+
+|`generateReviewTableData`
+|`(schema: JSONSchema7, data: JsonObject, options?: {includeHiddenFields?: boolean}) => JsonObject`
+|Processes form data for display. Respects `ui:hidden` fields, masks password fields, and structures nested data. Use this to prepare data for rendering in your custom review component.
+
+|`schemaHasUiHiddenFields`
+|`(schema: JSONSchema7) => boolean`
+|Returns `true` if the schema contains fields marked with `ui:hidden` in the UI schema. Use this to determine if the UI should display a toggle for hidden fields.
+|===
+
+== Helper components
+
+The `orchestrator-form-react` package exports the following React components for use in custom review pages:
+
+[cols="2,2,5",options="header"]
+|===
+|Component |Props |Description
+
+|`NestedReviewTable`
+|`data: JsonObject`
+|Renders form data in a nested table structure. Accepts data processed by `generateReviewTableData()` and displays it with proper formatting for nested objects and arrays.
+
+|`ReviewHiddenParametersAlert`
+|`showHiddenFields: boolean, onShowHiddenFieldsChange: (includeHidden: boolean) => void`
+|Displays an alert with a toggle switch for showing or hiding fields marked as `ui:hidden` in the schema. Use this component when `schemaHasUiHiddenFields()` returns `true`.
+|===
+
+== OrchestratorFormApi method
+
+To provide a custom review page, implement the following method in your `OrchestratorFormApi` implementation:
+
+[cols="2,3,4",options="header"]
+|===
+|Method |Return Type |Description
+
+|`getReviewComponent()`
+|`React.ComponentType<ReviewComponentProps> \| undefined`
+|Returns your custom review page component, or `undefined` to use the default Orchestrator review page. The returned component must accept `ReviewComponentProps` as its props.
+|===

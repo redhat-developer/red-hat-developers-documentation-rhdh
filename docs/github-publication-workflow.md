@@ -50,7 +50,7 @@ The orchestrator replaces the sequential `build-ccutil.sh` with parallel title b
 
 **Phases:**
 
-1. **Title discovery** -- scans `titles/` for directories containing `master.adoc`, excluding `rhdh-plugins-reference`.
+1. **Title discovery** -- scans `titles/` for directories containing `master.adoc`.
 2. **Parallel builds** -- runs `podman run ... ccutil compile` for each title, limited by a semaphore (`--jobs`, defaults to CPU count). Each title produces HTML under `titles-generated/<branch>/<title>/`.
 3. **Image copy** -- parses each generated `index.html` to find image references and copies them into the output directory.
 4. **Branch index** -- generates `titles-generated/<branch>/index.html` listing all successfully built titles, with an optional release notes link.
