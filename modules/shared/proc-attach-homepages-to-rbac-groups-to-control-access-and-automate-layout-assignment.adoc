@@ -1,15 +1,16 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="author-persona-based-homepage-layouts-to-deliver-role-specific-content_{context}"]
-= Author persona-based homepage layouts to deliver role-specific content
+[id="attach-homepages-to-rbac-groups-to-control-access-and-automate-layout-assignment_{context}"]
+= Attach homepages to RBAC groups to control access and automate layout assignment
 
 [role="_abstract"]
-Author persona-based homepage layouts and attach them to RBAC groups to deliver role-specific content that improves workflow efficiency by showing users only the cards, templates, and resources relevant to their responsibilities.
+Attach persona-specific homepage layouts to RBAC groups to control access and automate layout assignment, ensuring users automatically see only the homepage content relevant to their role based on group membership.
 
 .Prerequisites
 
 * You have {product} {product-version} or later running with the homepage backend plugin enabled.
 * You defined RBAC groups for each user persona (for example, `group:default/developers`, `group:default/data-scientists`, `group:default/managers`).
+* You authored persona-based homepage layouts in your `{my-app-config-file}` configuration file.
 * You have administrative access to modify the `{my-app-config-file}` configuration file.
 
 .Procedure
@@ -29,6 +30,7 @@ Example persona mapping:
 |Persona |RBAC Group
 |Developer |`group:default/developers`
 |Manager |`group:default/managers`
+|Data Scientist |`group:default/data-scientists`
 |===
 --
 
@@ -39,15 +41,15 @@ You must create all groups referenced in your persona mapping before configuring
 
 . Open your `{my-app-config-file}` configuration file.
 
-. Define the homepage layout for each persona in the `homepage.defaultWidgets` section.
+. Attach persona-specific layouts to RBAC groups by adding the `if.groups` field to group cards under a shared visibility condition.
 +
-For example, configure a developer persona homepage by grouping cards under a shared visibility condition.
+For example, attach the developer persona layout to the developers RBAC group:
 +
 [source,yaml]
 ----
 homepage:
   defaultWidgets:
-    # Group developer cards with shared visibility
+    # Attach developer layout to developers group
     - if:
         groups: [group:default/developers]
       children:
@@ -77,11 +79,11 @@ homepage:
             xl: { w: 5, h: 4, x: 7 }
             lg: { w: 5, h: 4, x: 7 }
 ----
-
-. Control which users see the homepage cards by adding the `if.groups` field to a parent group.
 +
 The `groups` field accepts an array of RBAC group entity references.
 Users who belong to any of the listed groups see all child cards.
+
+. Control visibility for multiple RBAC groups by adding additional `if.groups` configurations.
 +
 Individual child cards can include their own `if` conditions to further restrict visibility beyond the parent group's rules.
 +
@@ -90,23 +92,6 @@ Individual child cards can include their own `if` conditions to further restrict
 The front-end positions cards according to layout coordinates (`x`, `y`, `w`, `h`), not array order.
 The configuration array order does not affect rendering position.
 ====
-. Configure a default homepage that all users can see.
-+
-Create cards without `if` conditions so that all authenticated users see essential homepage content, including users who do not belong to any RBAC group:
-+
-[source,yaml]
-----
-    # Default cards visible to all users
-    - id: onboarding
-      ref: 'rhdh-onboarding-section'
-      layout:
-        xl: { w: 12, h: 6 }
-
-    - id: quickaccess-card
-      ref: quickaccess-card
-      layout:
-        xl: { w: 6, h: 6 }
-----
 
 . Save the configuration file and restart {product}:
 +
