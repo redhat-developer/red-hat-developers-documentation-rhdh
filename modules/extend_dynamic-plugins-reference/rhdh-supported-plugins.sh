@@ -5,7 +5,7 @@ export LC_ALL=C
 
 # script to generate rhdh-supported-plugins.adoc from content in
 # https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/extensions/packages/
-# and optionally generate ref-community-plugins.adoc from
+# and optionally generate ref-community-supported-plugins.adoc from
 # https://github.com/redhat-developer/rhdh-plugin-export-overlays
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
@@ -543,7 +543,7 @@ if [[ $SKIP_TABLES -eq 0 ]]; then
 fi
 
 # ============================================================================
-# Generate ref-community-plugins.adoc from rhdh-plugin-export-overlays
+# Generate ref-community-supported-plugins.adoc from rhdh-plugin-export-overlays
 # ============================================================================
 generate_community_table() {
     if [[ ! -d "$overlaystmpdir" ]]; then
@@ -656,8 +656,8 @@ generate_community_table() {
     fi
 
     # Generate the migration adoc file from template
-    community_template="${0/rhdh-supported-plugins.sh/ref-community-plugins.template.adoc}"
-    community_output="${0/rhdh-supported-plugins.sh/ref-community-plugins.adoc}"
+    community_template="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.template.adoc}"
+    community_output="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.adoc}"
 
     if [[ -f "$community_template" ]]; then
         # Replace placeholders in template
@@ -694,7 +694,7 @@ if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;sort -u "${ENABLED_PLUGINS}.e
 # clean up CQA warnings
 pushd "${SCRIPT_DIR}"/../.. >/dev/null || exit
   for d in \
-    ref-community-plugins.adoc \
+    ref-community-supported-plugins.adoc \
     ref-deprecated-plugins.adoc \
     ref-other-installable-plugins.adoc \
     ref-supported-plugins.adoc \
