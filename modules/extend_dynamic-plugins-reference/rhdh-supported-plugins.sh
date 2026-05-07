@@ -5,7 +5,7 @@ export LC_ALL=C
 
 # script to generate rhdh-supported-plugins.adoc from content in
 # https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/extensions/packages/
-# and optionally generate ref-community-plugins-migration.adoc from
+# and optionally generate ref-community-plugins.adoc from
 # https://github.com/redhat-developer/rhdh-plugin-export-overlays
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
@@ -21,7 +21,7 @@ DO_CLEAN=0
 
 BRANCH=main
 SKIP_TABLES=0
-SKIP_MIGRATION=0
+SKIP_COMMUNITY_TABLE=0
 
 rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
@@ -58,19 +58,19 @@ Usage:
 $0 -b stable-ref-branch [options]
 
 Options:
-  -b, --ref-branch    : Branch against which plugin versions should be incremented, like release-1.y; default: main
-  --skip-tables       : Skip re-generating dynamic plugin tables and .csv
-  --skip-migration    : Skip re-generating the migation guide
-  --clean             : Force a clean GH checkout (do not reuse files on disk)
-  -v                  : more verbose output
-  -h, --help          : Show this help
+  -b, --ref-branch          : Branch against which plugin versions should be incremented, like release-1.y; default: main
+  --skip-tables             : Skip re-generating dynamic plugin tables and .csv
+  --skip-community-table    : Skip re-generating the community plugins table 
+  --clean                   : Force a clean GH checkout (do not reuse files on disk)
+  -v                        : more verbose output
+  -h, --help                : Show this help
 
 Examples:
 
-  $0 -b release-1.9
-  $0 -b release-1.9 --clean
-  $0 -b release-1.9 --skip-migration  # Only regen dynamic plugin tables
-  $0 -b main        --skip-tables     # Only regen migration guide
+  $0 -b release-1.10
+  $0 -b release-1.10 --clean
+  $0 -b release-1.10 --skip-community-table   # Only regen dynamic plugin tables
+  $0 -b main        --skip-tables            # Only regen community table
 
 EOF
 }
@@ -82,7 +82,7 @@ while [[ "$#" -gt 0 ]]; do
     '--clean') DO_CLEAN=1;;
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
     '--skip-tables') SKIP_TABLES=1;;
-    '--skip-migration') SKIP_MIGRATION=1;;
+    '--skip-community-table') SKIP_COMMUNITY_TABLE=1;;
     '-v') QUIET=0;;
     '-h'|'--help') usage; exit 0;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
@@ -100,7 +100,7 @@ if [[ $DO_CLEAN -eq 1 ]]; then
     rm -fr /tmp/plugin-versions_"${BRANCH}".txt "${rhdhtmpdir}" "${overlaystmpdir}"
 fi
 
-# fetch rhdh repo - not needed when regenerating migration table
+# fetch rhdh repo - not needed when regenerating community table
 if [[ $SKIP_TABLES -eq 0 ]]; then
     if [[ ! -d "${rhdhtmpdir}" ]]; then
         echo -e "${green}Cloning $rhdhRepo (branch: $BRANCH)...${norm}"
@@ -110,7 +110,7 @@ if [[ $SKIP_TABLES -eq 0 ]]; then
     fi
 fi
 
-# need this for BOTH the migration table generation AND the dynamic plugin tables generation
+# need this for BOTH the community table generation AND the dynamic plugin tables generation
 if [[ ! -d "$overlaystmpdir" ]]; then
     echo -e "${green}Cloning $overlaysRepo (branch: $BRANCH)...${norm}"
     pushd /tmp >/dev/null || exit
@@ -543,21 +543,21 @@ if [[ $SKIP_TABLES -eq 0 ]]; then
 fi
 
 # ============================================================================
-# Generate ref-community-plugins-migration.adoc from rhdh-plugin-export-overlays
+# Generate ref-community-plugins.adoc from rhdh-plugin-export-overlays
 # ============================================================================
-generate_migration_table() {
+generate_community_table() {
     if [[ ! -d "$overlaystmpdir" ]]; then
         echo -e "${red}[ERROR] Overlays repo not found: $overlaystmpdir${norm}"
         return 1
     fi
 
-    echo -e "${green}Generating community plugins migration table from $overlaystmpdir (branch: $BRANCH)${norm}"
+    echo -e "${green}Generating community plugins table from $overlaystmpdir (branch: $BRANCH)${norm}"
 
-    MIGRATION_TABLE_FILE="/tmp/migration_table_${BRANCH}.txt"
+    COMMUNITY_TABLE_FILE="/tmp/community_table_${BRANCH}.txt"
     BUNDLED_PLUGINS_FILE="/tmp/bundled_plugins_${BRANCH}.txt"
 
-    rm -f "$MIGRATION_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
-    touch "$MIGRATION_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
+    rm -f "$COMMUNITY_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
+    touch "$COMMUNITY_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
 
     # Read the community packages list
     COMMUNITY_PACKAGES_FILE="$overlaystmpdir/rhdh-community-packages.txt"
@@ -567,7 +567,7 @@ generate_migration_table() {
         return 1
     fi
 
-    migration_count=0
+    community_count=0
 
     # Track processed plugins to avoid duplicates using a temp file
     PROCESSED_PLUGINS_FILE="/tmp/processed_plugins_${BRANCH}.txt"
@@ -617,8 +617,6 @@ generate_migration_table() {
             fi
             echo "$plugin_name" >> "$PROCESSED_PLUGINS_FILE"
 
-            # Construct old path from plugin name
-            old_path="./dynamic-plugins/dist/${plugin_name}"
 
             # Extract new path - get the base URL without the version/integrity part
             # Format: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
@@ -632,65 +630,53 @@ generate_migration_table() {
             display_title="${plugin_title:-$plugin_name}"
 
             if [[ $QUIET -eq 0 ]]; then
-                echo " * Migration: $display_title"
+                echo " * Plugin: $display_title"
                 echo "   Version: $plugin_version"
-                echo "   Old: $old_path"
-                echo "   New: $new_path"
+                echo "   Path: $new_path"
             fi
 
-            # Add to migration table (sorted by title)
+            # Add to community table (sorted by title)
             # shellcheck disable=SC2028
-            echo "${display_title}||*${display_title}*\n|${plugin_version}|\`${old_path}\`\n|\`${new_path}\`" >> "$MIGRATION_TABLE_FILE"
+            echo "${display_title}||*${display_title}*\n|${plugin_version}|\`${new_path}\`" >> "$COMMUNITY_TABLE_FILE"
 
-            migration_count=$((migration_count + 1))
+            community_count=$((community_count + 1))
         done
     done < "$COMMUNITY_PACKAGES_FILE"
 
     # Cleanup processed plugins tracking file
     rm -f "$PROCESSED_PLUGINS_FILE"
 
-    # Add known bundled plugins - these are hardcoded as they require manual tracking
-    # These plugins continue to be bundled in 1.9 while transitioning to ghcr.io
-    # Format matches migration table: Plugin Name | Old Path | New Path
-    # shellcheck disable=SC2129
-    echo -e "|*Quay*\n|1.28.1|\`./dynamic-plugins/dist/backstage-community-plugin-quay\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Scaffolder Backend Module Quay*\n|2.14.0|\`./dynamic-plugins/dist/backstage-community-plugin-scaffolder-backend-module-quay-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-scaffolder-backend-module-quay:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Tekton*\n|3.33.3|\`./dynamic-plugins/dist/backstage-community-plugin-tekton\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tekton:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Roadie ArgoCD Backend*\n|4.6.0|\`./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "|*Scaffolder Backend ArgoCD*\n|1.8.1|\`./dynamic-plugins/dist/roadiehq-scaffolder-backend-argocd-dynamic\`\n|\`oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-scaffolder-backend-argocd:<tag>\`\n" >> "$BUNDLED_PLUGINS_FILE"
-    echo -e "${green}Found $migration_count community plugins to migrate${norm}"
-
-    # Sort the migration table by plugin title and format for adoc
-    MIGRATION_TABLE_SORTED="/tmp/migration_table_sorted_${BRANCH}.txt"
-    if [[ -f "$MIGRATION_TABLE_FILE" ]]; then
-        sort -t '|' -k1,1 "$MIGRATION_TABLE_FILE" | while IFS='||' read -r key content; do
-            echo -e "$content\n" >> "$MIGRATION_TABLE_SORTED"
+    
+    # Sort the community table by plugin title and format for adoc
+    COMMUNITY_TABLE_SORTED="/tmp/community_table_sorted_${BRANCH}.txt"
+    if [[ -f "$COMMUNITY_TABLE_FILE" ]]; then
+        sort -t '|' -k1,1 "$COMMUNITY_TABLE_FILE" | while IFS='||' read -r key content; do
+            echo -e "$content\n" >> "$COMMUNITY_TABLE_SORTED"
         done
     fi
 
     # Generate the migration adoc file from template
-    migration_template="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration-to-the-github-container-registry.template.adoc}"
-    migration_output="${0/rhdh-supported-plugins.sh/ref-community-plugins-migration-to-the-github-container-registry.adoc}"
+    community_template="${0/rhdh-supported-plugins.sh/ref-community-plugins.template.adoc}"
+    community_output="${0/rhdh-supported-plugins.sh/ref-community-plugins.adoc}"
 
-    if [[ -f "$migration_template" ]]; then
+    if [[ -f "$community_template" ]]; then
         # Replace placeholders in template
-        sed -e "/%%MIGRATION_TABLE%%/{r $MIGRATION_TABLE_SORTED" -e 'd;}' \
-            -e "/%%BUNDLED_PLUGINS%%/{r $BUNDLED_PLUGINS_FILE" -e 'd;}' \
-            -e "s/%%MIGRATION_COUNT%%/$migration_count/g" \
-            "$migration_template" > "$migration_output"
+        sed -e "/%%COMMUNITY_TABLE_CONTENT%%/{r $COMMUNITY_TABLE_SORTED" -e 'd;}' \
+            -e "s/%%COMMUNITY_TABLE_COUNT%%/$community_count/g" \
+            "$community_template" > "$community_output"
 
-        echo -e "${green}Generated $migration_output with $migration_count migrated plugins${norm}"
+        echo -e "${green}Generated $community_output with $community_count migrated plugins${norm}"
     else
-        echo -e "${red}[ERROR] Migration template not found: $migration_template${norm}"
+        echo -e "${red}[ERROR] Community template not found: $community_template${norm}"
     fi
 
     # Cleanup temp files
-    rm -f "$MIGRATION_TABLE_FILE" "$MIGRATION_TABLE_SORTED" "$BUNDLED_PLUGINS_FILE"
+    rm -f "$COMMUNITY_TABLE_FILE" "$COMMUNITY_TABLE_SORTED" "$BUNDLED_PLUGINS_FILE"
 }
 
 # Call function if not skipped
-if [[ $SKIP_MIGRATION -eq 0 ]]; then
-    generate_migration_table
+if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
+    generate_community_table
 fi
 
 # summary of changes since last time
@@ -708,7 +694,7 @@ if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;sort -u "${ENABLED_PLUGINS}.e
 # clean up CQA warnings
 pushd "${SCRIPT_DIR}"/../.. >/dev/null || exit
   for d in \
-    ref-community-plugins-migration-to-the-github-container-registry.adoc \
+    ref-community-plugins.adoc \
     ref-deprecated-plugins.adoc \
     ref-other-installable-plugins.adoc \
     ref-supported-plugins.adoc \
