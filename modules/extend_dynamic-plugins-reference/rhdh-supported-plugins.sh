@@ -659,16 +659,14 @@ generate_community_table() {
     community_template="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.template.adoc}"
     community_output="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.adoc}"
 
-    if [[ -f "$community_template" ]]; then
-        # Replace placeholders in template
-        sed -e "/%%COMMUNITY_TABLE_CONTENT%%/{r $COMMUNITY_TABLE_SORTED" -e 'd;}' \
-            -e "s/%%COMMUNITY_TABLE_COUNT%%/$community_count/g" \
-            "$community_template" > "$community_output"
 
-        echo -e "${green}Generated $community_output with $community_count migrated plugins${norm}"
-    else
-        echo -e "${red}[ERROR] Community template not found: $community_template${norm}"
-    fi
+    # Replace placeholders in template
+    sed -e "/%%COMMUNITY_TABLE_CONTENT%%/{r $COMMUNITY_TABLE_SORTED" -e 'd;}' \
+        -e "s/%%COMMUNITY_TABLE_COUNT%%/$community_count/g" \
+        "$community_template" > "$community_output"
+
+    echo -e "${green}Generated $community_output with $community_count migrated plugins${norm}"
+
 
     # Cleanup temp files
     rm -f "$COMMUNITY_TABLE_FILE" "$COMMUNITY_TABLE_SORTED" "$BUNDLED_PLUGINS_FILE"
