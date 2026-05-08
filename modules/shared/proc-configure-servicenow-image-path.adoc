@@ -1,0 +1,65 @@
+:_mod-docs-content-type: PROCEDURE
+[id="configure-servicenow-plugin-configmap_{context}"]
+= Configure the ServiceNow plugin in the ConfigMap
+
+[role="_abstract"]
+Update the `{product}` ConfigMap to enable the ServiceNow backend, frontend, and Scaffolder actions. This configuration defines the connection parameters and UI components required to integrate ServiceNow with your software catalog.
+
+.Prerequisites
+
+* You have administrator access to an {ocp-brand-name} cluster.
+
+* {product} is installed on the cluster.
+
+.Procedure
+
+. Open your `{product}` ConfigMap for editing.
+
+. Add the ServiceNow backend and frontend plugin packages to the `dynamic-plugins.yaml` section, including the connection and UI configuration:
++
+[source,yaml]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rhdh-plugin-config
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-servicenow-backend:bs_1.45.3__1.6.1'
+        disabled: false
+        pluginConfig:
+          servicenow:
+            instanceUrl: ${SERVICENOW_BASE_URL}
+            basicAuth:
+              username: ${SERVICENOW_USERNAME}
+              password: ${SERVICENOW_PASSWORD}
+          scaffolder:
+            servicenow:
+              baseUrl: ${SERVICENOW_BASE_URL}
+              username: ${SERVICENOW_USERNAME}
+              password: ${SERVICENOW_PASSWORD}
+      - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-servicenow:bs_1.45.3__1.6.0'
+        disabled: false
+        pluginConfig:
+          dynamicPlugins:
+            frontend:
+              backstage-community.plugin-servicenow:
+                entityTabs:
+                  - path: /servicenow
+                    title: ServiceNow
+                    mountPoint: entity.page.servicenow
+                mountPoints:
+                  - mountPoint: entity.page.servicenow/cards
+                    importName: ServicenowPage
+                    config:
+                      layout:
+                        gridColumn: 1 / -1
+                        height: 75vh
+----
+
+. Save the changes to the ConfigMap.
+
+. Wait for the {product-very-short} Operator to redeploy the pods. The plugins are available once the pods are in a `Running` state.
