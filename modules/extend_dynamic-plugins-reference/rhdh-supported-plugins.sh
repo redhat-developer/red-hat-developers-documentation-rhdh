@@ -655,7 +655,7 @@ generate_community_table() {
         done
     fi
 
-    # Generate the migration adoc file from template
+    # Generate the community supported plugins adoc file from template
     community_template="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.template.adoc}"
     community_output="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.adoc}"
 
