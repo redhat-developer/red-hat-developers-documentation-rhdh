@@ -60,7 +60,7 @@ $0 -b stable-ref-branch [options]
 Options:
   -b, --ref-branch          : Branch against which plugin versions should be incremented, like release-1.y; default: main
   --skip-tables             : Skip re-generating dynamic plugin tables and .csv
-  --skip-community-table    : Skip re-generating the community plugins table 
+  --skip-community-table    : Skip re-generating the community plugins table
   --clean                   : Force a clean GH checkout (do not reuse files on disk)
   -v                        : more verbose output
   -h, --help                : Show this help
@@ -157,7 +157,7 @@ generate_dynamic_plugins_table() {
   fi
   jq -r '.dependencies' "${rhdhtmpdir}"/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> "$pluginVersFile"
   # Use LC_ALL=C for consistent sorting across different locales
-  sort -u "$pluginVersFile" > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
+  LC_ALL=C sort -u "$pluginVersFile" > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
 
   rm -fr /tmp/warnings_"${BRANCH}".txt
 
@@ -272,14 +272,14 @@ generate_dynamic_plugins_table() {
 
           # check if there's a newer version at npmjs.com and warn if so
           # for tags and associated repo digests (git head)
-          # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.versions[]|(.version+", "+.gitHead)' | sort -uV
+          # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.versions[]|(.version+", "+.gitHead)' | LC_ALL=C sort -uV
           # for timestamp when tag is created
-          # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.time' | grep -v -E "created|modified|{|}" | sort -uV
+          # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.time' | grep -v -E "created|modified|{|}" | LC_ALL=C sort -uV
           # echo "Searching for ${Plugin/\//%2f} at npmjs.org..."
           allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
           # echo "Found $allVersionsPublished"
           # clean out any pre-release versions
-          latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | sort -u | tail -1)"
+          latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | LC_ALL=C sort -u | tail -1)"
           # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
           if [[ "$latestXYRelease" != "$Version" ]]; then
               echo -e "${blue}[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
@@ -335,7 +335,7 @@ generate_dynamic_plugins_table() {
           if [[ -n "$appConfig" && "$appConfig" != "null" ]]; then
               # Extract ${VARIABLE_NAME} patterns
               # shellcheck disable=SC2016
-              vars=$(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | sort -u)
+              vars=$(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | LC_ALL=C sort -u)
               for var in $vars; do
                   if [[ $var ]]; then
                     Required_Variables="${Required_Variables}\`$var\`\n\n"
@@ -410,8 +410,8 @@ generate_dynamic_plugins_table() {
               echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.production.tmp"
           elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
               echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.tech-preview.tmp"
-          else
-              echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.community.tmp"
+          # else
+          #     echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.community.tmp"
           fi
 
           # Group CSV by support level
@@ -443,7 +443,7 @@ generate_dynamic_plugins_table() {
   rm -f "$out_file"
   count=0
   if [[ -f "$temp_file" ]]; then
-      sort "$temp_file" | while IFS='|' read -r key content; do
+      LC_ALL=C sort "$temp_file" | while IFS='|' read -r key content; do
           (( count = count + 1 ))
           debug " * [$count] $key [ ${out_file##*/} ]"
           echo -e "$content" >> "$out_file"
@@ -459,7 +459,7 @@ generate_dynamic_plugins_table() {
   rm -f "$out_file"
   count=0
   if [[ -f "$temp_file" ]]; then
-      sort "$temp_file" | while IFS='|' read -r key content; do
+      LC_ALL=C sort "$temp_file" | while IFS='|' read -r key content; do
           (( count = count + 1 ))
           debug " * [$count] $key [ ${out_file##*/} ]"
           echo -e "$content" >> "$out_file"
@@ -476,7 +476,7 @@ generate_dynamic_plugins_table() {
   rm -f "$out_file"
   count=0
   if [[ -f "$temp_file" ]]; then
-      sort "$temp_file" | while IFS='|' read -r key content; do
+      LC_ALL=C sort "$temp_file" | while IFS='|' read -r key content; do
           (( count = count + 1 ))
           debug " * [$count] $key [ ${out_file##*/} ]"
           echo -e "$content" >> "$out_file"
@@ -486,10 +486,10 @@ generate_dynamic_plugins_table() {
   # shellcheck disable=SC2206
   num_plugins+=($count)
 
-  # Process CSV: sort by SupportSort (1,2,3,4) then PrettyName, and omit techdocs
+  # Process CSV: LC_ALL=C sort by SupportLC_ALL=C sort (1,2,3,4) then PrettyName, and omit techdocs
   if [[ -f "$TEMP_DIR/csv.tmp" ]]; then
       debug
-      sort -t '|' -k1,1 -k2,2 "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
+      LC_ALL=C sort -t '|' -k1,1 -k2,2 "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
           # RHIDP-4196 omit techdocs plugins from the .csv
           if [[ $key != *"techdocs"* ]]; then
               echo -e "$content" >> "${0/.sh/.csv}"
@@ -501,7 +501,7 @@ generate_dynamic_plugins_table() {
 
   debug
 
-  # merge the content from the 4 .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
+  # merge the content from the 3 .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
   count=1
   index=0
   empties=0
@@ -526,11 +526,15 @@ generate_dynamic_plugins_table() {
       echo ""
       (( count = count + 1 ))
   done
-  # count enabled plugins
+
+  # LC_ALL=C sort the list of enabled plugins
+  LC_ALL=C sort -uV "$ENABLED_PLUGINS" > "$ENABLED_PLUGINS".sorted; mv -f "$ENABLED_PLUGINS".sorted "$ENABLED_PLUGINS"
 
   # shellcheck disable=SC2002
   COUNT_ENABLED_PLUGINS=$(cat "$ENABLED_PLUGINS" | wc -l ) # if we use wc by itself we get the count AND the filename; only want the count
+  # count enabled plugins
   echo "Got COUNT_ENABLED_PLUGINS = $COUNT_ENABLED_PLUGINS preinstalled plugins"
+
   # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc, and the counter
   sed -r -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
       -e "s/%%COUNT_ENABLED_PLUGINS%%/$COUNT_ENABLED_PLUGINS/" \
@@ -595,6 +599,9 @@ generate_community_table() {
             continue
         fi
 
+        if [[ $QUIET -eq 0 ]]; then
+            echo -e "${blue}[WARN] Check overlay metadata: $metadata_dir${norm}"
+        fi
         # Process each metadata YAML file in the workspace
         for metadata_file in "$metadata_dir"/*.yaml; do
             [[ ! -f "$metadata_file" ]] && continue
@@ -615,6 +622,8 @@ generate_community_table() {
             if grep -qF "$plugin_name" "$PROCESSED_PLUGINS_FILE" 2>/dev/null; then
                 continue
             fi
+
+            # only include this plugin if its metadata matches the entry we're looking for 
             echo "$plugin_name" >> "$PROCESSED_PLUGINS_FILE"
 
 
@@ -646,11 +655,11 @@ generate_community_table() {
     # Cleanup processed plugins tracking file
     rm -f "$PROCESSED_PLUGINS_FILE"
 
-    
-    # Sort the community table by plugin title and format for adoc
+
+    # LC_ALL=C sort the community table by plugin title and format for adoc
     COMMUNITY_TABLE_SORTED="/tmp/community_table_sorted_${BRANCH}.txt"
     if [[ -f "$COMMUNITY_TABLE_FILE" ]]; then
-        sort -t '|' -k1,1 "$COMMUNITY_TABLE_FILE" | while IFS='||' read -r key content; do
+        LC_ALL=C sort -t '|' -k1,1 "$COMMUNITY_TABLE_FILE" | while IFS='||' read -r key content; do
             echo -e "$content\n" >> "$COMMUNITY_TABLE_SORTED"
         done
     fi
@@ -687,7 +696,7 @@ pushd "$SCRIPT_DIR" >/dev/null || exit
 popd >/dev/null || exit
 
 # see https://issues.redhat.com/browse/RHIDP-3187 - only GA plugins should be enabled by default
-if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;sort -u "${ENABLED_PLUGINS}.errors"; fi
+if [[ -f "${ENABLED_PLUGINS}.errors" ]]; then echo;LC_ALL=C sort -u "${ENABLED_PLUGINS}.errors"; fi
 
 # clean up CQA warnings
 pushd "${SCRIPT_DIR}"/../.. >/dev/null || exit
