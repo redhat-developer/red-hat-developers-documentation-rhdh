@@ -47,7 +47,7 @@ Generate an updated table of dynamic plugins from content in the following two r
 * $rhdhRepo
 * $overlaysRepo
 
-By default, both repos are processed. Use --skip-tables or --skip-migration to skip either.
+By default, both repos are processed. Use --skip-tables or --skip-community-table to skip either.
 
 Requires:
 * jq 1.6+
