@@ -146,6 +146,23 @@ titlecase() {
     done; echo;
 }
 
+# Extract ${VAR_NAME} placeholders from spec.appConfigExamples[0].content for docs tables.
+get_required_variables() {
+    local metadata_file="$1"
+    local Required_Variables=""
+    local appConfig
+    appConfig=$(yq -r '.spec.appConfigExamples[0].content // empty' "$metadata_file" 2>/dev/null)
+    if [[ -n "$appConfig" && "$appConfig" != "null" ]]; then
+        # Extract ${VARIABLE_NAME} patterns
+        # shellcheck disable=SC2016
+        while IFS= read -r var; do
+            [[ -n "$var" ]] && Required_Variables="${Required_Variables}\`${var}\`\\n\\n"
+        done < <(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | LC_ALL=C sort -u)
+    fi
+    printf '%s' "$Required_Variables"
+}
+
+
 generate_dynamic_plugins_table() {
   # generate a list of plugin:version mapping from the following files
   # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
@@ -330,18 +347,7 @@ generate_dynamic_plugins_table() {
           fi
 
           # compute Required_Variables from appConfigExamples in YAML
-          Required_Variables=""
-          appConfig=$(yq -r '.spec.appConfigExamples[0].content // empty' "$y" 2>/dev/null)
-          if [[ -n "$appConfig" && "$appConfig" != "null" ]]; then
-              # Extract ${VARIABLE_NAME} patterns
-              # shellcheck disable=SC2016
-              vars=$(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | LC_ALL=C sort -u)
-              for var in $vars; do
-                  if [[ $var ]]; then
-                    Required_Variables="${Required_Variables}\`$var\`\n\n"
-                  fi
-              done
-          fi
+          Required_Variables=$(get_required_variables "$y")
           Required_Variables_CSV=$(echo -e "$Required_Variables" | tr -s "\n" ";")
           # not currently used due to policy and support concern with upstream content linked from downstream doc
           # URL="https://www.npmjs.com/package/$Plugin"
@@ -612,6 +618,7 @@ generate_community_table() {
             plugin_version=$(yq -r '.spec.version // ""' "$metadata_file")
             dynamic_artifact=$(yq -r '.spec.dynamicArtifact // ""' "$metadata_file")
             support=$(yq -r '.spec.support // "unknown"' "$metadata_file")
+            Required_Variables=$(get_required_variables "$metadata_file")
 
             # Skip if not a community plugin or no dynamic artifact
             [[ "$support" != "community" ]] && continue
@@ -641,12 +648,12 @@ generate_community_table() {
             if [[ $QUIET -eq 0 ]]; then
                 echo " * Plugin: $display_title"
                 echo "   Version: $plugin_version"
-                echo "   Path: $new_path"
+                echo "   Path: $new_path \n\n$Required_Variables"
             fi
 
             # Add to community table (sorted by title)
             # shellcheck disable=SC2028
-            echo "${display_title}||*${display_title}*\n|${plugin_version}|\`${new_path}\`" >> "$COMMUNITY_TABLE_FILE"
+            echo "${display_title}||*${display_title}*\n|${plugin_version}|\`${new_path}\`\n\n${Required_Variables}\`" >> "$COMMUNITY_TABLE_FILE"
 
             community_count=$((community_count + 1))
         done
