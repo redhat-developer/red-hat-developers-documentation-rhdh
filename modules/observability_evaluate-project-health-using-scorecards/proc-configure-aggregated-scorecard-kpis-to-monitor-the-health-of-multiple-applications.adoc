@@ -1,0 +1,61 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-aggregated-scorecard-kpis-to-monitor-the-health-of-multiple-applications_{context}"]
+= Configure aggregated Scorecard KPIs to monitor the health of multiple applications
+
+[role="_abstract"]
+Configure the {product} Scorecard plugin to enable drill-down capabilities. This allows you to investigate the specific catalog entities and metrics that contribute to aggregated KPI scores, helping to identify and troubleshoot failing applications across a portfolio.
+
+.Prerequisites
+
+* You have installed {product}.
+* You have configured at least one Scorecard metric provider, such as GitHub or Jira.
+* You have configured aggregated KPIs.
+
+.Procedure
+
+. Define the metric ID for drill-down in your `app-config.yaml` file. 
++
+Drill-downs are metric-scoped. Even when you click an aggregated KPI, the system requires the underlying `metricId` to query the catalog for related entities.
++
+[source,yaml]
+----
+jira:
+  product: cloud
+  baseUrl: ${JIRA_URL}
+  token: ${JIRA_TOKEN} 
+jira:
+  product: cloud
+  baseUrl: ${JIRA_URL}
+  token: ${JIRA_TOKEN}      
+scorecard:
+  plugins:
+    jira:
+      open_issues:
+        schedule:
+          frequency: { minutes: 5 }
+          timeout: { minutes: 10 }
+          initialDelay: { seconds: 10 }
+----
+
+. Configure Role-Based Access Control (RBAC) permissions for the relevant user roles to enable scorecard access.
+
+.. Open your RBAC policy file, typically `rbac-policy.csv`.
+
+.. Add the following permission to read both scorecard metrics and catalog entities.
++
+[source,csv]
+----
+p, role:default/team_lead, scorecard.metric.read, read, allow
+p, role:default/team_lead, catalog.entity.read, read, allow
+----
+
+.Verification
+
+.. Navigate to the {product} Home Page.
+
+.. Click an aggregated KPI tile, such as *Critical Jira Issues*.
+
+.. Verify that a list of individual catalog entities appears, showing the components contributing to that aggregate score.
++
+If the list does not appear, ensure you are using the latest version of the {product-very-short} plugins.
