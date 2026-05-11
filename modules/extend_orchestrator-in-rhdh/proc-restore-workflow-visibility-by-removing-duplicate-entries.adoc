@@ -1,0 +1,105 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="restore-workflow-visibility-by-removing-duplicate-entries_{context}"]
+= Restore workflow visibility by removing duplicate entries
+
+[role="_abstract"]
+To restore clear workflow visibility in the Orchestrator UI, identify workflows that share the same ID and assign unique identifiers. When you deploy multiple versions with distinct IDs, you remove duplicate entries and maintain accurate workflow tracking.
+
+.Prerequisites
+
+* You have administrator access to the {product-very-short} instance.
+* You have access to the workflow definitions and deployment manifests.
+
+.Procedure
+
+. Identify duplicate workflows in the Orchestrator UI:
+.. Navigate to the Orchestrator plugin in {product-very-short}.
+.. Review the workflow list for entries that appear multiple times with the same workflow name.
+.. Note the version information displayed in the version column of the workflow list and on the workflow details page to distinguish between duplicate entries.
++
+[NOTE]
+====
+The version column displays metadata from the workflow definition, retrieved from the Data Index GraphQL schema. This information helps you identify which workflows share the same ID but does not prevent the duplicate entries. If a workflow definition does not specify a version, the field appears empty in the UI. Duplicate entries can occur when you deploy the same workflow ID to different runtime servers over time, because the Data Index records all executions.
+====
+
+. Verify the workflow IDs in your workflow definitions:
+.. Locate the workflow definition files (`.sw.yaml` or `.sw.json` files).
+.. Check the `id` field in each workflow definition.
+.. Identify workflows that use the same `id` value, even if they have different `version` values.
+.. Review the `version` field in each workflow definition to understand how workflows appear in the UI.
++
+Example of problematic workflow definitions:
++
+[source,yaml]
+----
+# First deployment
+id: customer-onboarding
+version: "1.0"
+name: Customer Onboarding
+
+# Second deployment (causes duplicate)
+id: customer-onboarding
+version: "2.0"
+name: Customer Onboarding
+----
+
+. Determine which workflow version to retain:
+.. Review the workflow instances and their execution history.
+.. Identify which version is currently in active use.
+.. Check for any running instances of older versions that must complete before removal.
+
+. Update workflow definitions with unique IDs:
+.. For the new workflow version, modify the `id` field to include a version identifier:
++
+[source,yaml]
+----
+id: customer-onboarding-v2
+version: "2.0"
+name: Customer Onboarding
+----
+.. Maintain the original workflow ID for the current deployment.
+.. Build and deploy the updated workflow definition.
+
+. Remove outdated workflow deployments:
+.. After confirming the new workflow operates correctly, remove the old workflow deployment.
+.. Verify that all instances of the old workflow have completed.
+.. Delete the workflow resources from your cluster:
++
+[source,bash]
+----
+oc delete sonataflow <old-workflow-name> -n <workflow-namespace>
+----
++
+[NOTE]
+====
+Deleting the workflow deployment removes it from the cluster but preserves historical execution records in the Data Index. Users can still view past workflow runs in {product-very-short}.
+====
+
+. Clean historical data if necessary:
++
+If duplicate entries persist in the UI after you remove the workflow deployments, the Data Index database has historical records from earlier workflow executions. These records preserve the execution history of workflows that ran on different runtime servers over time.
++
+[IMPORTANT]
+====
+Back up your workflow execution records before you remove historical data from the Data Index database. Removing this data permanently prevents access to past execution records.
+====
++
+.. Connect to the Data Index database to verify the duplicate entries.
+.. Query the workflow definitions to identify duplicate entries:
++
+[source,sql]
+----
+SET search_path TO "sonataflow-platform-data-index-service";
+SELECT id, version, name FROM definitions;
+----
+.. Evaluate whether to remove the historical data.
+You can keep the historical data to retain past workflow execution records, which allows you to view the execution history and results of completed workflow instances.
+Alternatively, contact your system administrator or {company-name} Support for guidance on safely removing historical duplicate entries from the Data Index without affecting active workflow operations.
+
+.Verification
+
+. Navigate to the Orchestrator plugin in {product-very-short}.
+. Confirm that the UI shows only one entry for each workflow.
+. Verify that the version information displays correctly for each workflow.
+. Test workflow execution to confirm the correct version runs.
