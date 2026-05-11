@@ -646,9 +646,9 @@ generate_community_table() {
             display_title="${plugin_title:-$plugin_name}"
 
             if [[ $QUIET -eq 0 ]]; then
-                echo " * Plugin: $display_title"
-                echo "   Version: $plugin_version"
-                echo "   Path: $new_path \n\n$Required_Variables"
+                echo    " * Plugin: $display_title"
+                echo    "   Version: $plugin_version"
+                printf  '   Path: %s\n\n%b\n' "$new_path" "$Required_Variables"
             fi
 
             # Add to community table (sorted by title)
