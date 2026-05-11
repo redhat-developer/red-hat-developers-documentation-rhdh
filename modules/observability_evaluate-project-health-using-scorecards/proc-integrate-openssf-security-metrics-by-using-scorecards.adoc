@@ -1,0 +1,114 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="integrate-openssf-security-metrics-by-using-scorecards_{context}"]
+= Integrate OpenSSF security metrics by using Scorecards
+
+include::{docdir}/artifacts/snip-developer-preview-scorecard.adoc[]
+
+[role="_abstract"]
+You can configure the OpenSSF Scorecard module to display security and compliance metrics from the https://scorecard.dev[OpenSSF Scorecard] project in your {product-very-short} catalog.
+
+By default, the module fetches data from the public OpenSSF Scorecard API, which requires no authentication and supports public GitHub repositories. Alternatively, the annotation can point to any HTTPS endpoint that serves OpenSSF Scorecard JSON data, such as a self-hosted instance or a static file.
+
+.Prerequisites
+
+* You have {install-category-link}[installed your {product-very-short} instance].
+* You have {scorecard-plugin-book-link}#set-up-scorecards-to-monitor-your-project-health_{context}[set up the Scorecard plugin].
+* You have {configuring-book-link}[added a custom {product-short} application configuration].
+* The target repositories are publicly accessible on GitHub, or you have an alternative HTTPS endpoint that serves OpenSSF Scorecard JSON data.
+
+.Procedure
+
+. Enable the OpenSSF Scorecard module: Add the following configuration to your {product-very-short} `dynamic-plugins-config.yaml` file:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-openssf:<tag>
+    disabled: false
+----
+
+. Annotate catalog entities: Link a component to the OpenSSF Scorecard data source by editing the `catalog-info.yaml` file for your {product-very-short} entity and adding the required annotation as shown in the following code:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    openssf/scorecard-location: https://api.securityscorecards.dev/projects/github.com/_<owner>_/_<repository>_
+spec:
+  type: service
+  lifecycle: production
+  owner: _<your_team_name>_
+----
++
+where:
+
+`annotations:openssf/scorecard-location`:: Specifies the full URL to the OpenSSF Scorecard API endpoint for the repository. The URL must start with `https://`.
+`spec:owner`:: Specifies your team name.
++
+[NOTE]
+====
+For organizations running a self-hosted OpenSSF Scorecard instance, replace `api.securityscorecards.dev` with the URL of your instance.
+====
+
+. Ingest the catalog entity: Add the location of your `catalog-info.yaml` to the `catalog.locations` section in your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+catalog:
+  locations:
+    - type: url
+      target: https://github.com/<owner>/<repository>/catalog-info.yaml
+----
+
+. Optional: Exclude specific metrics per entity: To hide specific OpenSSF metrics for an individual component, add the `scorecard.io/exclude_metrics` annotation to the `catalog-info.yaml` file:
++
+[source,yaml]
+----
+metadata:
+  annotations:
+    openssf/scorecard-location: https://api.securityscorecards.dev/projects/github.com/_<owner>_/_<repository>_
+    scorecard.io/exclude_metrics: openssf.maintained,openssf.packaging
+----
++
+where:
+
+`scorecard.io/exclude_metrics`:: Specifies a comma-separated list of metric IDs to exclude for this entity.
+
+. Optional: Exclude or include metrics globally: To exclude or include specific metrics across all entities, add the following configuration to your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+scorecard:
+  exclude_metrics:
+    - openssf.code_review
+  include_metrics:
+    - openssf.packaging
+----
++
+where:
+
+`exclude_metrics`:: Specifies a list of metric IDs to exclude globally.
+`include_metrics`:: Specifies a list of metric IDs to include. When set, only listed metrics are displayed.
+
+. Optional: Enable or disable the OpenSSF metric provider: To control which metric providers are active, add the following configuration to your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    openssf:
+      enabled: true
+----
++
+[IMPORTANT]
+====
+OpenSSF metrics use fixed, non-configurable thresholds. Unlike GitHub and Jira metrics, you cannot customize these thresholds.
+
+Error:: Score below 2.
+Warning:: Score between 2 and 7.
+Success:: Score above 7.
+====
