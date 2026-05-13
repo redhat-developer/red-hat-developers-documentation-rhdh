@@ -3,44 +3,48 @@
 = Use ServiceNow scaffolder actions in software templates
 
 [role="_abstract"]
-Add ServiceNow actions to your Software Templates to automate ticket creation and record updates during the software scaffolding process. Use these actions to ensure consistent tracking and compliance throughout your development lifecycle.
+Add ServiceNow actions to your software templates to automate the creation, retrieval, and modification of ServiceNow records during the software scaffolding process.
 
 .Prerequisites
-* You have configured the ServiceNow instance parameters in the `scaffolder.notifications.servicenow` section of your `app-config.yaml` file.
+
+* You have configured the ServiceNow instance parameters in the {product}ConfigMap or app-config.yaml file.
 * You have the required permissions to edit Software Templates in the source repository.
 * You have registered the Software Template in the {product} catalog.
 
 .Procedure
 
-. Open your Software Template YAML file. For example, `template.yaml`.
+. Open your software template YAML file.
 
-. Add the `servicenow:create-incident` action to the `spec.steps` block.
+. In the `spec.steps` section, add the ServiceNow action that corresponds to your goal.
+
+. Define the `tableName` and the `requestBody` containing the fields to populate or modify. The following example demonstrates how to use the `servicenow:now:table:createRecord` action to generate an incident ticket:
 +
-...
 [source,yaml]
 ----
-spec:
-  steps:
-    - id: create-incident
-      name: Create ServiceNow Incident
-      action: servicenow:create-incident
-      input:
-        instanceName: 'production' # <1>
-        short_description: 'Incident created from RHDH Software Template'
+steps:
+  - id: create-incident
+    name: Create ServiceNow Incident
+    action: servicenow:now:table:createRecord
+    input:
+      tableName: incident
+      requestBody:
+        short_description: "New project scaffolded"
+        description: "A new software component was created via the Developer Hub."
+        severity: "3"
 ----
+
+. Optional: To perform other operations, use the appropriate action ID and parameters:
 +
-spec.steps.action:: Specifies the `servicenow:create-incident` identifier to trigger the ServiceNow integration.
-spec.steps.input.instanceName:: Specifies the name of the ServiceNow instance defined in your `app-config.yaml` file.
+|===
+| Goal | Action ID | Key Input Parameters
 
-. Save the changes and push them to your Git repository.
+| **Delete a record** | `servicenow:now:table:deleteRecord` | `tableName`, `sysId`
+| **Modify a record** | `servicenow:now:table:modifyRecord` | `tableName`, `sysId`, `requestBody`
+| **Retrieve a record** | `servicenow:now:table:retrieveRecord` | `tableName`, `sysId`
+| **Update a record** | `servicenow:now:table:updateRecord` | `tableName`, `sysId`, `requestBody`
+|===
 
-
-.Verification
-
-. In {product}, navigate to the *Create* menu and select your template.
-
-. Fill out the required fields and click *Next Step* until the dry-run or execution begins.
-
-. After the task completes, log in to your ServiceNow instance.
-
-. Confirm that the new incident appears with the description provided in the template.
+[TIP]
+====
+To view the full schema and all available ServiceNow actions for your specific installation, navigate to **Create** > **Installed Actions** in the {product} interface.
+====

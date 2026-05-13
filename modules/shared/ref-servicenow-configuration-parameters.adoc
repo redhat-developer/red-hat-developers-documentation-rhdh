@@ -3,52 +3,87 @@
 = ServiceNow configuration parameters
 
 [role="_abstract"]
-Configure the ServiceNow integration by defining instance connection parameters in the app-config.yaml file. This reference provides the required configuration blocks and syntax for both the ServiceNow UI plugin and Scaffolder actions.
+The ServiceNow integration requires specific parameters in your configuration files to establish a connection between {product} and your ServiceNow instances. Use these parameters to define authentication methods, instance URLs, and UI layouts.
 
-== ServiceNow backend configuration
+== ServiceNow backend and frontend configuration
+Define the following parameters in the `app-config.yaml` file or the `dynamic-plugins.yaml` section of the `{product}` ConfigMap to enable the backend and frontend plugins.
 
-The following parameters apply to the core ServiceNow integration used by the UI plugin and Scaffolder actions.
-
-== ServiceNow global configuration parameters
-
-[cols="3,1,1,5", options="header"]
 |===
-| Parameter | Type | Default | Description
+| Parameter | Description | Requirement
 
-| `baseUrl` | String | N/A | Required. The base URL of your ServiceNow instance (for example, `https://instance.service-now.com`).
-| `username` | String | N/A | The username for Basic Authentication. Required if not using OAuth.
-| `password` | String | N/A | The password for Basic Authentication. Required if not using OAuth.
-| `apiToken` | String | N/A | An alternative to username/password for token-based authentication.
+| `instanceUrl` | The base URL of your ServiceNow instance (e.g., `https://dev12345.service-now.com`). | Required
+| `basicAuth.username` | The service account username for Basic authentication. | Optional
+| `basicAuth.password` | The service account password for Basic authentication. | Optional
+| `oauth.grantType` | The OAuth 2.0 grant type. Supports `client_credentials` or `password`. | Optional
+| `oauth.clientId` | The client ID for OAuth authentication. | Optional
+| `oauth.clientSecret` | The client secret for OAuth authentication. | Optional
 |===
 
-== OAuth 2.0 authentication
+== ServiceNow scaffolder configuration
+The ServiceNow Scaffolder module requires a separate configuration block. Note that this module uses `baseUrl` instead of `instanceUrl`.
 
-If your organization uses OAuth 2.0, use the following parameters instead of `username` and `password`:
+|===
+| Parameter | Description | Requirement
 
-* `oauthClientId`: The Client ID from your ServiceNow OAuth application.
-* `oauthClientSecret`: The Client Secret from your ServiceNow OAuth application.
-* `oauthTokenUrl`: The URL used to retrieve the access token.
+| `baseUrl` | The base URL of your ServiceNow instance. | Required
+| `username` | The service account username. | Required for Basic Auth
+| `password` | The service account password. | Required for Basic Auth
+|===
 
-== Scaffolder actions configuration
+== Authentication examples
+The following examples demonstrate how to structure different authentication methods in your configuration.
 
-To use ServiceNow actions in software templates, define your instances under the `scaffolder.notifications.servicenow` block.
+.Basic authentication example
+[source,yaml]
+----
+servicenow:
+  instanceUrl: ${SERVICENOW_INSTANCE_URL}
+  basicAuth:
+    username: ${SERVICENOW_USER}
+    password: ${SERVICENOW_PASS}
+----
+
+.OAuth with Client Credentials
+[source,yaml]
+----
+servicenow:
+  instanceUrl: ${SERVICENOW_INSTANCE_URL}
+  oauth:
+    grantType: client_credentials
+    clientId: ${SERVICENOW_CLIENT_ID}
+    clientSecret: ${SERVICENOW_CLIENT_SECRET}
+----
+
+.OAuth with Password Grant
+[source,yaml]
+----
+servicenow:
+  instanceUrl: ${SERVICENOW_INSTANCE_URL}
+  oauth:
+    grantType: password
+    clientId: ${SERVICENOW_CLIENT_ID}
+    clientSecret: ${SERVICENOW_CLIENT_SECRET}
+    username: ${SERVICENOW_USER}
+    password: ${SERVICENOW_PASS}
+----
+
+== Frontend UI configuration
+The frontend plugin configuration defines how ServiceNow data appears on component entity pages.
 
 [source,yaml]
 ----
-scaffolder:
-  notifications:
-    servicenow:
-      production:
-        baseUrl: ${SERVICENOW_PROD_URL}
-        username: ${SERVICENOW_USER}
-        password: ${SERVICENOW_PASS}
+dynamicPlugins:
+  frontend:
+    backstage-community.plugin-servicenow:
+      entityTabs:
+        - path: /servicenow
+          title: ServiceNow
+          mountPoint: entity.page.servicenow
+      mountPoints:
+        - mountPoint: entity.page.servicenow/cards
+          importName: ServicenowPage
+          config:
+            layout:
+              gridColumn: 1 / -1
+              height: 75vh
 ----
-+
-scaffolder.notifications.servicenow.<instance_name>:: Defines a unique key for a ServiceNow instance used by the Scaffolder.
-
-== Catalog annotations
-
-The ServiceNow plugin does not use `app-config.yaml` for entity mapping or filtering. To link catalog entities to ServiceNow, use the following annotations in the `catalog-info.yaml` file:
-
-* `servicenow.com/service-id`: Maps the entity to a specific ServiceNow Service ID.
-* `servicenow.com/category:` Filters incidents by a specific ServiceNow category.
