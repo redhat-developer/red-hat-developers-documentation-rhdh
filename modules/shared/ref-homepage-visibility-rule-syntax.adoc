@@ -5,7 +5,7 @@
 
 [role="_abstract"]
 Reference information about controlling who can see homepage cards.
-Use visibility conditions to show specific cards to individual users, RBAC groups, or users with certain permissions.
+Use visibility conditions to show specific cards to individual users and group memberships.
 
 == Visibility condition fields
 
@@ -28,17 +28,10 @@ Example: `user:default/jane`
 |`groups`
 |array of strings
 |No
-|RBAC groups whose members can see this card.
+|Groups whose members can see this card.
 Users who belong to any of the listed groups can see the card.
 {product-very-short} verifies group membership through the catalog.
 Users who are not in the catalog cannot match group-based visibility conditions.
-
-|`permissions`
-|array of strings
-|No
-|Permissions required to see this card.
-Users who have any listed permission can see the card.
-The permissions service validates permission names.
 |===
 
 == Logical operators
@@ -47,7 +40,7 @@ Visibility conditions use the following logical behavior:
 
 * *Multiple values in one field (OR)*: When a field lists multiple values (for example, multiple groups), the user must match at least one value to see the card.
 
-* *Multiple fields in one condition (OR)*: When an `if` block includes multiple fields (for example, both `groups` and `permissions`), the user must satisfy at least one condition from any field to see the card.
+* *Multiple fields in one condition (OR)*: When an `if` block includes multiple fields (for example, both `users` and `groups`), the user must satisfy at least one condition from any field to see the card.
 
 * *No visibility condition*: When you omit the `if` section, or when all lists within `if` are empty, all authenticated users can see the card.
 
@@ -95,20 +88,6 @@ The following example restricts card visibility to a specific user by their user
     xl: { w: 12, h: 6 }
 ----
 
-== Permission-based visibility
-
-The following example restricts card visibility to users with the `homepage.default-widgets.read` permission:
-
-[source,yaml]
-----
-- id: rbac-management
-  ref: RBACManagement
-  if:
-    permissions: [homepage.default-widgets.read]
-  layout:
-    xl: { w: 12, h: 8 }
-----
-
 == Default visibility for all users
 
 The following example makes a card visible to all authenticated users by omitting the `if` field:
@@ -137,26 +116,6 @@ Alternatively, an empty `if` object produces the same result:
 Omitting `if`, using `if: {}`, or using `if` with all empty lists are functionally identical.
 All authenticated users can see the card.
 ====
-
-== Combined group and permission visibility
-
-The following example displays a card to users who satisfy at least one condition—either belong to specific groups OR have specific permissions:
-
-[source,yaml]
-----
-- id: analytics
-  ref: AdvancedAnalytics
-  if:
-    groups: [group:default/data-scientists, group:default/analysts]
-    permissions: [analytics.view]
-  layout:
-    xl: { w: 12, h: 6 }
-----
-
-The card displays to users who match any of these conditions:
-
-* The user belongs to `group:default/data-scientists` OR `group:default/analysts`
-* OR the user has the `analytics.view` permission
 
 == Shared visibility for multiple cards
 
