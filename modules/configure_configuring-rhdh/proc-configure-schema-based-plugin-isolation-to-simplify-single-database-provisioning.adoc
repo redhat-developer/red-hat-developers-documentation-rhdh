@@ -1,0 +1,38 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-schema-based-plugin-isolation-to-simplify-single-database-provisioning_{context}"]
+= Configure schema-based plugin isolation to simplify single-database provisioning
+
+[role="_abstract"]
+Configure schema-based plugin isolation to support database users without `CREATEDB` privileges or to reduce database provisioning overhead. Each {product-very-short} plugin uses its own PostgreSQL schema within a single shared database.
+
+.Prerequisites
+
+* An external PostgreSQL instance is configured using the Operator or the Helm chart. 
+* Your database user has `CREATE SCHEMA` privileges on the target database, or your database administrator will create the required schemas.
+
+[NOTE]
+====
+By default, when `pluginDivisionMode` is set to `schema`, {product-very-short} automatically creates the required schemas because the `ensureExists` configuration defaults to `true`. The database user must have `CREATE SCHEMA` privileges on the target database.
+====
+
+.Procedure
+
+. Add `pluginDivisionMode: schema` to the `backend.database` section of your {product-very-short} configuration in the `app-config-rhdh` ConfigMap:
++
+[source,yaml]
+----
+backend:
+  database:
+    client: pg
+    pluginDivisionMode: schema
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+----
+
+. Save the configuration changes.
+
+. Restart the {product} deployment to apply the new configuration.
