@@ -520,13 +520,15 @@ generate_dynamic_plugins_table() {
         sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd;}' \
             -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
             "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
-      else
+      elif [[ $d == ref-deprecated-plugins ]]; then
+
         echo -e "${blue} no plugins to include: ${d}.adoc table removed.${norm}"
         (( empties = empties + 1 ))
-        # delete from table header line to end of file
-        sed -r -e '/\[%header,cols=.+\]/,$d' \
-            -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
-            "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
+        # Only ref-deprecated-plugins can be empty; print through [role="_abstract"], then fixed sentence ({product} etc. resolve at book build).
+        {
+          sed -n '1,/^\[role="_abstract"\]$/p' "${0/rhdh-supported-plugins.sh/${d}.template.adoc}"
+          printf '%s\n' 'There are no deprecated plugins in this release of {product} ({product-very-short})'
+        } > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
       fi
       rm -f "$adocfile"
       echo ""
