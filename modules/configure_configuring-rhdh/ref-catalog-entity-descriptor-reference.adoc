@@ -6,11 +6,10 @@
 [role="_abstract"]
 Use these reference tables to identify required YAML attributes and mandatory fields for registering components in the {product} catalog.
 
-== Mandatory fields for catalog entities
+== Mandatory fields by entity kind
 
 The following table lists the fields required for each entity kind supported by {product-very-short}. If you do not provide a mandatory field, the catalog processor fails to validate the entity and throws a `TypeError`.
 
-== Mandatory fields by entity kind
 [cols="1,3", options="header"]
 |===
 | Entity Kind | Mandatory Fields
@@ -40,33 +39,55 @@ The following table lists the fields required for each entity kind supported by 
 | `apiVersion`, `kind`, `metadata.name`, `spec.owner`
 
 | *Location*
-| `apiVersion`, `kind`, `metadata.name`, `spec` (can be an empty object `{}`)
+| `apiVersion`, `kind`, `metadata.name`, `spec.type`, `spec.target`
 |===
 
 == Conditional UI behavior for components
 
+[IMPORTANT]
+====
+Tab visibility logic for *Provided APIs* and *Consumed APIs* applies exclusively to entities of `kind: Component`. Other entity kinds follow distinct schema rules and UI layouts.
+====
+
 The visibility of navigation tabs in the {product-very-short} interface is determined by the `spec.type` attribute or specific metadata annotations within the component descriptor.
 
-== Component UI behavior mapping
+.Component UI behavior mapping
 [cols="1,1,2", options="header"]
 |===
 | Field or Annotation | Setting | UI Change
 
 | `spec.type`
 | `service`
-| The *API* tab is visible in the component interface.
+| Enables the **Provided APIs** and **Consumed APIs** tabs.
 
 | `spec.type`
 | `website` or `library`
-| The *API* tab is hidden, but provided and consumed APIs remain visible under the *Dependencies* tab.
+| Hides the API tabs, but displays provided and consumed APIs under the **Dependencies** tab.
 
 | `metadata.annotations`
 | `backstage.io/techdocs-ref`
-| The *Docs* tab is visible, providing access to TechDocs documentation.
+| Enables the **Docs** tab.
 |===
 
-[role="_additional-resources"]
-== Additional resources
+== Spec fields for locations
 
-* For information about establishing ownership relations in the catalog graph, see link:https://backstage.io/docs/features/software-catalog/descriptor-format/#spec-field[Upstream descriptor documentation].
-* To learn more about namespace assignments, see link:https://backstage.io/docs/features/software-catalog/descriptor-format/#common-to-all-kinds-the-metadata[Common metadata fields].
+While the `spec` block for a `kind: Location` entity can technically be empty, you must define the following fields for practical use:
+
+`type`:: Specifies the location engine type, such as `url`.
+`target`:: Specifies the explicit URI pointing to the target data, such as a Git repository URL. This field is required.
+
+[source,yaml,subs="+attributes"]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: organizational-catalog-targets
+spec:
+  type: url
+  target: https://github.com/org/repo/blob/main/catalog-info.yaml
+----
++
+where
++
+`spec.type`:: Specifies the location engine type, which is typically `url`.
+`spec.target`:: Specifies the URI pointing to the entity data to be registered.

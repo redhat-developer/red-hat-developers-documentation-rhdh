@@ -6,6 +6,11 @@
 [role="_abstract"]
 Populate the {product} software catalog by creating YAML descriptor files for components, APIs, and resources.
 
+[IMPORTANT]
+====
+Tab visibility logic for *Provided APIs* and *Consumed APIs* applies exclusively to entities of `kind: Component`. Other entity kinds follow distinct schema rules and UI layouts.
+====
+
 .Prerequisites
 
 * You have an active {product-very-short} instance.
@@ -15,26 +20,34 @@ Populate the {product} software catalog by creating YAML descriptor files for co
 
 . Create a YAML file named `catalog-info.yaml` in the root directory of your software component.
 
-. Define the base metadata for the entity using the following template:
+. Define the entity by using the descriptor format. 
+
+. Set the `kind` field to `Component`, `API`, `Resource`, or `Location`. 
+
+. For `kind: Component`, specify the `spec.type` to determine user interface (UI) visibility.
 +
 [source,yaml]
 ----
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: example-component
-  description: A description of your component
+  name: example-service
+  annotations:
+    backstage.io/techdocs-ref: dir:. 
 spec:
   type: service
   lifecycle: production
-  owner: group:example-team
+  owner: group:default/engineering-team
 ----
++
+where:
++
+`metadata.annotations.backstage.io/techdocs-ref`:: Specifies the `techdocs-ref` annotation that identifies the source directory for the Docs tab.
+`spec.type.`:: Specifies the service type that enables the *Provided APIs* and *Consumed APIs* tabs.
 
-. To enable specific user interface elements, configure the `spec.type` or add annotations:
-
-** To display the *API* tab, set `spec.type` to `service`.
-
-** To display the *Docs* tab, add the `backstage.io/techdocs-ref` annotation to the `metadata` section.
+. Optional: Configure the *Docs* tab for the entity:
+.. Add the `backstage.io/techdocs-ref` annotation to the entity metadata.
+.. Ensure the cluster administrator has configured the `TechDocs` plugin and a compatible storage backend. If these are not configured, the *Docs* tab will not appear.
 
 . Save the file and commit it to your Git repository.
 
