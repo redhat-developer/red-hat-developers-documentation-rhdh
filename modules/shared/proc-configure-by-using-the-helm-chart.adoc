@@ -1,0 +1,98 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-by-using-the-helm-chart_{context}"]
+= Configure {ls-short} by using the Helm chart
+
+[role="_abstract"]
+Configure {ls-short} by using the Helm chart to manage large language model (LLM) providers, enable validation guardrails, and authorize custom role-based access control (RBAC) policies.
+
+.Prerequisites
+* You have access to a running {product-very-short} instance deployed with Helm.
+* You have operational credentials for your chosen LLM provider.
+
+.Procedure
+
+. Optional: To disable the chat interface, update the `global.lightspeed.enabled` parameter to `false` in your Helm `values.yaml` file:
++
+[source,yaml]
+----
+global:
+  lightspeed:
+    enabled: false
+----
+
+. Create a manual Kubernetes Secret to store your provider credentials.
++
+[NOTE]
+====
+By default, the Helm installation creates a temporary Kubernetes Secret containing keys for various LLM providers. On subsequent `helm upgrade` cycles, the system deletes this default Secret. You must create a manual Kubernetes Secret to persist your credentials.
+====
++
+Add the following keys to your secret based on your provider requirements:
+`vLLM`:: 
+** Set `ENABLE_VLLM` to `"true"`
+** Set `VLLM_URL` to `"<your_url>/v1"`
+** Set `VLLM_API_KEY` to your key string
+`OpenAI`:: 
+** Set `ENABLE_OPENAI` to `"true"`
+** Set `OPENAI_API_KEY` to your secret key
+`Ollama`:: 
+** Set `ENABLE_OLLAMA` to `"true"`
+** Set `OLLAMA_URL` to your endpoint URL
+`Vertex AI`:: 
+** Set `ENABLE_VERTEX_AI` to `"true"`
+** Set `VERTEX_AI_PROJECT` to your project ID
+** Set `VERTEX_AI_LOCATION` to your region
+** Set `GOOGLE_APPLICATION_CREDENTIALS` to the path of your mounted credentials JSON file. 
++
+[NOTE]
+====
+Vertex AI requires custom architecture mapping and has received limited testing.
+====
+
+. Optional: To filter and reject off-topic user queries, add validation guardrails to your manual Secret:
+* Set `ENABLE_VALIDATION` to `"true"`.
+* Set `VALIDATION_PROVIDER` to your enabled validation provider (for example, `openai`).
+* Set `VALIDATION_MODEL_NAME` to your specific verification model (for example, `gpt-4o-mini`).
+
+. Reference your manual secret inside the `values.yaml` file:
++
+[source,yaml]
+----
+global:
+  lightspeed:
+    secret:
+      create: false
+      name: "my-custom-secret"
+----
+
+. Optional: To protect configuration files like `lightspeed-stack.yaml`, `config.yaml`, or `rhdh-profile.py` from being overwritten during updates, you must use a custom ConfigMap:
++
+[source,yaml]
+----
+global:
+  lightspeed:
+    configMaps:
+      - name: stack
+        create: false
+        nameOverride: "my-custom-stack"
+        mountPath: /app-root/lightspeed-stack.yaml
+        subPath: lightspeed-stack.yaml
+        sourceFile: lightspeed-stack.yaml
+        optional: false
+----
+
+. To grant non-administrator teams access to the virtual assistant, append permission strings to the `rbac-policies.csv` section of your `values.yaml` file, replacing `<team>` with the target group name:
++
+[source,text]
+----
+p, role:default/<team>, lightspeed.chat.read, read, allow
+p, role:default/<team>, lightspeed.chat.create, create, allow
+----
+
+. Run the `helm upgrade` command to apply your configurations to the cluster.
+
+.Verification
+. Log in to your console instance.
+. Verify that the *Open Lightspeed* floating action button (FAB) appears on the home page.
+. Select the FAB and confirm that the chat window initializes successfully.
