@@ -1,0 +1,65 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-an-aggregation-card-with-a-custom-tracking-type_{context}"]
+= Configure an aggregation card with a custom tracking type
+
+[role="_abstract"]
+Configure a scorecard aggregation card to display status-grouped metric counts or weighted portfolio scores across multiple components.
+
+.Prerequisites
+
+* The scorecard plugin is installed and configured in your {product} instance.
+
+* You have identified the source metric provider and group from the Software Catalog you wish to aggregate.
+
+.Procedure
+. Open your `app-config.yaml` file.
+
+. Navigate to the `scorecard` section and define your backend Key Performance Indicator (KPI) map within an `aggregationKPIs` block:
++
+[source,yaml]
+----
+scorecard:
+  aggregationKPIs:
+    team-alpha-bugs:
+      title: "Team Alpha Bug KPI"
+      description: "Portfolio bug counts grouped by status threshold"
+      type: statusGrouped
+      metricId: jira.open_issues
+----
+
+. Open your dynamic plugin configuration file.
+
+. Reference your custom aggregation ID inside the homepage card properties block under the `home.page/cards` mount point:
++
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: ScorecardHomepageCard
+  config:
+    props:
+      aggregationId: "team-alpha-bugs"
+    layouts:
+      xl: { w: 3, h: 6 }
+      lg: { w: 4, h: 6 }
+      md: { w: 6, h: 6 }
+      sm: { w: 12, h: 6 }
+      xs: { w: 12, h: 6 }
+      xxs: { w: 12, h: 6 }
+----
++
+where:
++
+`scorecard.aggregationKPIs`:: Map of KPI keys to KPI definitions. Each key is an aggregation ID.
+`title`:: Title shown for the KPI.
+`description`:: Short description of the KPI.
+`type`:: Aggregation strategy. Use `statusGrouped` for counts per threshold status, or `average` for a weighted portfolio score.
+`metricId`:: Metric provider ID.
+
+. Save the modified configuration files and restart your {product} instance.
+
+.Verification
+
+* Access your {product} interface.
+
+* Verify that the custom scorecard summary card displays with your defined title and calculated values.
