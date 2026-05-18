@@ -1,0 +1,102 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-by-using-the-operator_{context}"]
+= Configure {ls-short} by using the Operator
+
+[role="_abstract"]
+Configure {ls-short} by updating your {backstage} custom resource (CR) to map environment variables, manage configurations, and set access rights.
+
+.Prerequisites
+* The {product-very-short} Operator is installed on your cluster.
+* You have cluster administrator privileges.
+
+.Procedure
+
+. Optional: To disable the chat interface and prevent the Operator from injecting unconfigured sidecar containers, set the `lightspeed.enabled` flag to `false` in the `spec` section of your {backstage} CR YAML file:
++
+[source,yaml]
+----
+spec:
+  application:
+    lightspeed:
+      enabled: false
+----
+
+. Create an opaque Kubernetes Secret containing your operational credentials and query safety guardrails before applying the {backstage} CR.
++
+[cols="1,2", options="header"]
+|===
+| Key | Description
+| `ENABLE_<PROVIDER>` | Enables the specific LLM layer (`VLLM`, `OPENAI`, `OLLAMA`, or `VERTEX_AI`) when set to `true`.
+| `<PROVIDER>_API_KEY` | Stores the authorization token for your inference platform.
+| `<PROVIDER>_URL` | Specifies the endpoint target URL for your provider.
+| `ENABLE_VALIDATION` | Activates query guardrails when set to `true`.
+| `VALIDATION_PROVIDER` | Defines which active provider manages verification routines.
+|===
++
+The following code shows an example configuration Secret for vLLM with validation:
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lightspeed-auth-secrets
+type: Opaque
+stringData:
+  ENABLE_VLLM: "true"
+  VLLM_URL: "https://<api_endpoint>/v1"
+  VLLM_API_KEY: "<api_key>"
+  ENABLE_VALIDATION: "true"
+  VALIDATION_PROVIDER: "vllm"
+  VALIDATION_MODEL_NAME: "gpt-4o-mini"
+----
+
+. Map your secret inside the `extraEnvs` section of the {backstage} CR to complete container provisioning:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: lightspeed-rhdh
+spec:
+  application:
+    extraEnvs:
+      secrets:
+        - name: lightspeed-auth-secrets
+          containers:
+            - lightspeed-core
+----
+
+. Optional: To protect settings such as Model Context Protocol (MCP) server additions from being overwritten during reconciliation loops, define a custom ConfigMap mapping in the `extraFiles` section of the CR:
++
+[source,yaml]
+----
+    extraFiles:
+      configMaps:
+        - name: "my-custom-config"
+          mountPath: /app-root
+          key: lightspeed-stack.yaml
+          containers:
+            - lightspeed-core
+----
+
+. To grant non-administrator teams access to the virtual assistant, update the RBAC policy inside your {backstage} CR by appending permission lines to the `rbac-policies.csv` section, replacing `<team>` with your team name:
++
+[source,text]
+----
+p, role:default/<team>, lightspeed.chat.read, read, allow
+p, role:default/<team>, lightspeed.chat.create, create, allow
+----
+
+. Apply the updated custom resource manifest to your cluster:
++
+[source,bash]
+----
+oc apply -f <backstage_cr_file>.yaml
+----
+
+.Verification
+. Log in to your console instance.
+. Verify that the *Open Lightspeed* floating action button (FAB) appears on the home page.
+. Select the FAB and confirm that the chat window initializes successfully.

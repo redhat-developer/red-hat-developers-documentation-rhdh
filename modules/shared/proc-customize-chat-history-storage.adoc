@@ -1,0 +1,46 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="customize-chat-history-storage_{context}"]
+= Customize chat history storage
+
+[role="_abstract"]
+Configure chat history storage to choose between non-persistent local logs and a persistent external database for user conversations. 
+
+By default, the system stores chat history in a non-persistent local database within the {lcs-name} ({lcs-short}) container. To retain data across system restarts, you must configure a PostgreSQL database connection.
+
+[WARNING]
+====
+Storing chat history records user prompts and responses. You must assess data privacy and security implications if your user chat history contains private, sensitive, or confidential information. For users that want to have their chat data removed, they must request their platform administrator to perform this action. {company-name} does not collect or access this chat history data.
+====
+
+.Prerequisites
+
+* You created and referenced a custom ConfigMap in your deployment to ensure configuration changes persist during system upgrades or Operator reconciliation loops.
+
+.Procedure
+. Open your custom configuration file, typically named `lightspeed-stack.yaml`.
+. Modify the `conversation_cache` block to specify your storage configuration:
+** To enable persistent storage, add your PostgreSQL database credentials and endpoint properties:
++
+[source,yaml]
+----
+conversation_cache:
+  type: postgres
+  postgres:
+    host: _<your_database_host>_
+    port: _<your_database_port>_
+    db: _<your_database_name>_
+    user: _<your_user_name>"_
+    password: _<postgres_password>_
+----
+* To retain the default non-persistent SQLite setup, verify that the parameters match the following paths:
++
+[source,yaml]
+----
+conversation_cache:
+  type: "sqlite"
+  sqlite:
+    db_path: "/tmp/data/conversations/lcs_cache.db"
+----
+
+. Restart the {lcs-short} service to apply your new database configuration.

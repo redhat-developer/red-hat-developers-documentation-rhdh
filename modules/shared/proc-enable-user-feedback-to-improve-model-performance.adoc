@@ -1,0 +1,46 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-user-feedback-to-improve-model-performance_{context}"]
+= Enable user feedback to improve model performance
+
+[role="_abstract"]
+Enable user feedback collection to allow users to rate chat responses and submit text comments directly within the console interface. 
+
+The {lcs-name} ({lcs-short}) stores this data as JSON files inside your cluster. Because {company-name} does not collect or access this data, platform administrators must manage, analyze, and delete these files locally.
+
+.Prerequisites
+* You have platform administrator privileges.
+* You created and referenced a custom ConfigMap in your deployment to ensure configuration changes persist during system upgrades or Operator reconciliation loops.
+
+.Procedure
+
+. Open your custom configuration file, such as `lightspeed-stack.yaml`.
+. Modify the `user_data_collection` block to configure your data preferences:
+
+** To enable feedback collection, set the `feedback_enabled` parameter to `true`:
++
+[source,yaml]
+----
+user_data_collection:
+  feedback_enabled: true
+  feedback_storage: "/tmp/data/feedback"
+  transcripts_enabled: true
+  transcripts_storage: "/tmp/data/transcripts"
+----
+** To disable feedback collection, set the `feedback_enabled` parameter to `false`:
++
+[source,yaml]
+----
+user_data_collection:
+  feedback_enabled: false
+  feedback_storage: "/tmp/data/feedback"
+  transcripts_enabled: true
+  transcripts_storage: "/tmp/data/transcripts"
+----
+
+[NOTE]
+====
+Do not modify the `feedback_storage` or `transcripts_storage` data paths when disabling feedback. Altering these path strings prevents the service from locating existing historical logs.
+====
+
+. Apply the updated configuration file changes to your cluster by running your platform's standard deployment or upgrade sequence.
