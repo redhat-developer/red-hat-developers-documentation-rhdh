@@ -1,0 +1,120 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-data-persistence-for-developer-lightspeed-notebooks_{context}"]
+= Enable data persistence for Developer Lightspeed Notebooks
+
+[role="_abstract"]
+To persist Notebook sessions, documents, and AI history across service restarts, you must configure the Notebooks storage backends to use persistent volumes. 
+
+By default, the service uses ephemeral storage in the `/tmp` directory, which the system clears during a pod restart.
+
+.Prerequisites
+
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
+* You have authored and provisioned a custom config map for your deployment. For more information, see link:{configuring-book-link}#provision-your-custom-rhdh-configuration_provision-and-use-your-custom-rhdh-configuration[Provision your custom {product} configuration].
+* A Persistent Volume Claim (PVC) is provisioned in your cluster and mounted to the {lcs-short} container (for example, at `/var/lib/lightspeed-data`).
+
+.Procedure
+
+. Update your custom config map `llama-stack-configs/config.yaml` file to point the `kv_notebooks` storage backend to your persistent mount point:
++
+[source,yaml]
+----
+spec:
+  initContainers:
+    - name: init-notebooks-dir
+      # ... complete init container
+  containers:
+    - name: lightspeed-core
+      image: quay.io/lightspeed-core/lightspeed-stack:0.5.1
+      ports:
+        - containerPort: 8080
+      volumeMounts:
+        - name: notebooks-storage
+          mountPath: /var/lib/lightspeed-data
+        - name: config  # ← Added all ConfigMap mounts
+          mountPath: /app-root/config.yaml
+          subPath: config.yaml
+        - name: lightspeed-config
+          mountPath: /app-root/lightspeed-stack.yaml
+          subPath: lightspeed-stack.yaml
+        - name: profile
+          mountPath: /app-root/rhdh-profile.py
+          subPath: rhdh-profile.py
+      livenessProbe:  # ← Added health checks
+        httpGet:
+          path: /readiness
+          port: 8080          
+      readinessProbe:
+        httpGet:
+          path: /readiness
+          port: 8080
+  volumes:  # ← Added all volume definitions
+    - name: notebooks-storage
+      persistentVolumeClaim:
+        claimName: lightspeed-notebooks-pvc
+    - name: config
+      configMap:
+        name: llama-stack-config
+    - name: lightspeed-config
+      configMap:
+        name: lightspeed-core-config
+    - name: profile
+      configMap:
+        name: rhdh-profile
+----
+. Update your deployment manifest to include the init container, volume mounts, and volume definitions:
++
+[source,yaml]
+----
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: init-notebooks-storage
+          image: registry.access.redhat.com/ubi9/ubi-minimal
+          command: ["sh", "-c", "mkdir -p /var/lib/lightspeed-data/notebooks && chmod -R 777 /var/lib/lightspeed-data/notebooks"]
+          volumeMounts:
+            - name: lightspeed-notebooks
+              mountPath: /var/lib/lightspeed-data
+      containers:
+        - name: lightspeed-stack
+          image: quay.io/lightspeed-core/lightspeed-stack:0.5.1
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: lightspeed-notebooks
+              mountPath: /var/lib/lightspeed-data
+            - name: config
+              mountPath: /app-root/config.yaml
+              subPath: config.yaml
+          livenessProbe:
+            httpGet:
+              path: /readiness
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8080
+      volumes:
+        - name: lightspeed-notebooks
+          persistentVolumeClaim:
+            claimName: lightspeed-notebooks-pvc
+        - name: config
+          configMap:
+            name: llama-stack-config
+----
+. Apply the updated configuration and restart the service.
+
+.Verification
+
+. In {product}, create a Notebook and upload a test document.
+. Send a message to the virtual assistant and verify that the response is based on the document.
+. Restart the pod:
++
+[source,terminal]
+----
+$ oc delete pod <pod_name>
+----
+. After the pod recovers, refresh the *My Notebooks* dashboard.
+. Verify that the Notebook and the uploaded file are still accessible.
