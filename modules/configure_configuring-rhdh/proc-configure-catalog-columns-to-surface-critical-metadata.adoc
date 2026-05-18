@@ -1,0 +1,131 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-catalog-columns-to-surface-critical-metadata_{context}"]
+= Configure catalog columns to surface critical metadata
+
+[role="_abstract"]
+Configure catalog table columns to show entity metadata relevant to your organization. Hide unused default columns and add custom fields.
+
+.Prerequisites
+
+* You can access {product-short} as an administrator.
+* You can modify the `app-config.yaml` configuration file.
+
+.Procedure
+
+. Open your `app-config.yaml` file.
+
+. Add the `catalog.table.columns` configuration block.
++
+[source,yaml]
+----
+catalog:
+  table:
+    columns:
+      # Configuration options go here
+----
+
+. Configure columns using one of the following approaches:
++
+--
+* *Hide specific columns*: Add an `exclude` array.
++
+[source,yaml]
+----
+catalog:
+  table:
+    columns:
+      exclude:
+        - createdAt
+        - type
+        - namespace
+----
+
+* *Show only specific columns*: Add an `include` array. This option overrides `exclude`.
++
+[source,yaml]
+----
+catalog:
+  table:
+    columns:
+      include:
+        - name
+        - owner
+        - type
+        - lifecycle
+----
++
+NOTE: Columns appear in the order you specify in the `include` array.
+
+* *Add custom columns*: Add a `custom` array.
++
+[source,yaml]
+----
+catalog:
+  table:
+    columns:
+      custom:
+        - title: Security Tier
+          field: "metadata.annotations['custom/security-tier']"
+          width: 120
+          defaultValue: Not Set
+          sortable: true
+        - title: Cost Center
+          field: "metadata.labels['cost-center']"
+          sortable: true
+        - title: API Version
+          field: spec.definition.version
+          kind: API
+        - title: Team
+          field: spec.team
+          kind:
+            - Component
+            - Resource
+----
++
+.Custom column configuration options
+[cols="1,1,3",options="header"]
+|===
+|Field |Required |Description
+
+|`title`
+|Yes
+|Column header text.
+
+|`field`
+|Yes
+|Entity field path. Supports dot notation (`spec.team`, `metadata.namespace`) and bracket notation for annotations (`metadata.annotations['custom/key']`).
+
+|`width`
+|No
+|Column width in pixels.
+
+|`sortable`
+|No
+|Column sorting state. Default: `true`.
+
+|`defaultValue`
+|No
+|Default value when field is missing or undefined.
+
+|`kind`
+|No
+|Entity kind or kinds that display this column. Specify a single string (`kind: API`) or an array (`kind: [Component, Resource]`). If omitted, all kinds display this column.
+|===
+--
+
+. Save the `app-config.yaml` file and restart {product-short} to apply the changes.
+
+.Verification
+
+. Open the *Catalog* page.
+. Verify the following:
+** Excluded columns no longer appear.
+** Only columns in the `include` array appear (if you used `include`).
+** Custom columns display the expected metadata values.
+** Custom columns with `sortable: true` support sorting.
+
+.Additional resources
+
+* xref:software-catalog-default-column-identifiers_{context}[Software Catalog default column identifiers]
+* link:https://backstage.io/docs/features/software-catalog/descriptor-format/[{backstage} Entity Descriptor Format]
