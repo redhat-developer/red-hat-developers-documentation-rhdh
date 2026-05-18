@@ -4,93 +4,18 @@
 = Configure Orchestrator to connect to existing PostgreSQL infrastructure
 
 [role="_abstract"]
-Connect the Orchestrator plugins to your existing PostgreSQL database infrastructure to leverage centralized database management and meet compliance requirements. This configuration bypasses the default operator-managed database and integrates with external PostgreSQL services.
+Connect the Orchestrator plugins to your existing PostgreSQL database to leverage centralized database management and meet compliance requirements.
 
-By default, when you enable the Orchestrator plugin using the Operator, the `dependencies: - ref: sonataflow` field automatically provisions a `SonataFlowPlatform` CR and creates the required PostgreSQL database resources. The Operator uses specific naming patterns for these resources (such as `backstage-psql-{{backstage-name}}` for the Service and `backstage-psql-secret-{{backstage-name}}` for the Secret).
+By default, when you enable the Orchestrator plugin using the Operator, the `dependencies: - ref: sonataflow` field automatically provisions a `SonataFlowPlatform` custom resource (CR) and creates the required PostgreSQL database resources. The Operator uses specific naming patterns for these resources (such as `backstage-psql-{{backstage-name}}` for the Service and `backstage-psql-secret-{{backstage-name}}` for the Secret).
 
 However, when you use an external PostgreSQL database that the Operator does not manage, these default resources and naming patterns do not exist. You must explicitly configure the `SonataFlowPlatform` CR to reference your external database resources and remove the automatic dependency provisioning.
 
 .Prerequisites
 * You have installed {product-very-short} on {ocp-short}.
-* You have an external PostgreSQL database available and accessible from your {ocp-short} cluster.
-* You have created a Kubernetes Service object in your namespace that points to the external PostgreSQL database. The cluster must resolve this Service from within.
-+
-[NOTE]
-====
-If your external database is outside the cluster, you can create a Service with an `ExternalName` type or an `Endpoints` object that maps to the external database IP address.
-====
-* You have created a Kubernetes Secret containing the following database credentials:
-** `POSTGRES_HOST`: The hostname or IP address of the external PostgreSQL server
-** `POSTGRES_PORT`: The port number of the PostgreSQL service
-** `POSTGRES_USER`: The database user name
-** `POSTGRES_PASSWORD`: The database user password
+* You have {configuring-book-link}#configure-external-postgresql-databases_configuring-rhdh[configured an external PostgreSQL database] that is available and accessible from your {ocp-short} cluster, including a Kubernetes Service and Secret for the database connection.
 * You have access to create Jobs, Secrets, ConfigMaps, and custom resources in the namespace where you deploy the {product-custom-resource-type} CR.
 
 .Procedure
-
-. Create the required Kubernetes resources for your external database connection. You can create the Service and `Secret` in parallel:
-+
-.. Create a Kubernetes Service that points to your external PostgreSQL database:
-+
-[source,yaml,subs="+attributes,+quotes"]
-----
-apiVersion: v1
-kind: Service
-metadata:
-  name: external-postgresql-service  # Use this name in subsequent steps where <SERVICE-NAME-TO-DB> is referenced
-spec:
-  type: ExternalName  # Creates a CNAME record to the external database hostname
-  externalName: __<your-external-db-hostname>__  # FQDN of your external PostgreSQL server, for example, postgres.example.com
-  ports:
-    - port: 5432
-      targetPort: 5432
-      protocol: TCP
-----
-+
-[NOTE]
-====
-If your external database uses an IP address instead of a hostname, create a Service with Endpoints:
-
-[source,yaml,subs="+attributes,+quotes"]
-----
-apiVersion: v1
-kind: Service
-metadata:
-  name: external-postgresql-service
-spec:
-  ports:
-    - port: 5432
-      targetPort: 5432
-      protocol: TCP
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: external-postgresql-service
-subsets:
-  - addresses:
-      - ip: __<your-external-db-ip>__  # IP address of your external PostgreSQL server
-    ports:
-      - port: 5432
-        protocol: TCP
-----
-====
-
-.. Create a Kubernetes Secret containing your external database credentials:
-+
-[source,yaml,subs="+attributes,+quotes"]
-----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: external-db-credentials  # Use this name in subsequent steps where <SECRET-NAME-WITH-DB-CREDENTIALS> is referenced
-type: Opaque
-stringData:
-  POSTGRES_HOST: "__<your-database-host>__"  # Hostname or IP address (must match the Service configuration)
-  POSTGRES_PORT: "__<your-database-port>__"  # Port number, typically 5432
-  POSTGRES_USER: "__<your-database-username>__"  # Database user with permissions to create databases and tables
-  POSTGRES_PASSWORD: "__<your-database-password>__"
-----
 
 . Create the `backstage_plugin_orchestrator` database on your external PostgreSQL server by applying the following Job:
 +
@@ -124,7 +49,7 @@ spec:
                 - ALL
           envFrom:
             - secretRef:
-                name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__  # Name of the Secret created in step 1
+                name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
           command: [ "sh", "-c" ]
           args:
             - |
@@ -155,24 +80,24 @@ spec:
       persistence:
         postgresql:
           secretRef:
-            name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__  # Secret created in step 1
+            name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
             userKey: POSTGRES_USER
             passwordKey: POSTGRES_PASSWORD
           serviceRef:
-            name: __<SERVICE-NAME-TO-DB>__  # Service created in step 1
-            namespace: __<{product-very-short}-NAMESPACE>__  # Namespace where you deploy the {product-custom-resource-type} CR
+            name: __<SERVICE-NAME-TO-DB>__
+            namespace: __<{product-very-short}-NAMESPACE>__
             databaseName: backstage_plugin_orchestrator
     jobService:
       enabled: true
       persistence:
         postgresql:
           secretRef:
-            name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__  # Secret created in step 1
+            name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
             userKey: POSTGRES_USER
             passwordKey: POSTGRES_PASSWORD
           serviceRef:
-            name: __<SERVICE-NAME-TO-DB>__  # Service created in step 1
-            namespace: __<{product-very-short}-NAMESPACE>__  # Namespace where you deploy the {product-custom-resource-type} CR
+            name: __<SERVICE-NAME-TO-DB>__
+            namespace: __<{product-very-short}-NAMESPACE>__
             databaseName: backstage_plugin_orchestrator
 ----
 +
@@ -231,7 +156,7 @@ spec:
     dynamicPluginsConfigMapName: orchestrator-plugin
     extraEnvs:
       secrets:
-        - name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__  # Secret created in step 1
+        - name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
 ----
 
 .Verification

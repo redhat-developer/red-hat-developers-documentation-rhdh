@@ -87,6 +87,62 @@ Where:
 `<ssl_mode>`:: Optional: For TLS connections, the required SSL mode.
 `<abs_path_to_pem_file>`:: Optional: For TLS connections, the absolute path to the Privacy-Enhanced Mail (PEM) file, for example `/opt/app-root/src/postgres-crt.pem`.
 
+. Create a Kubernetes Service that points to your external PostgreSQL database:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-postgresql-service
+spec:
+  type: ExternalName
+  externalName: __<your-external-db-hostname>__
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+----
++
+Where:
+
+`external-postgresql-service`:: Name of the Service to reference in plugin configurations.
+`ExternalName`:: Service type that creates a CNAME record to the external database hostname.
+`__<your-external-db-hostname>__`:: FQDN of your external PostgreSQL server, for example, `postgres.example.com`.
++
+[NOTE]
+====
+If your external database is outside the cluster or uses an IP address instead of a hostname, create a Service with Endpoints:
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-postgresql-service
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: external-postgresql-service
+subsets:
+  - addresses:
+      - ip: __<your-external-db-ip>__
+    ports:
+      - port: 5432
+        protocol: TCP
+----
+
+Where:
+
+`__<your-external-db-ip>__`:: IP address of your external PostgreSQL server.
+====
+
 . Configure your PostgreSQL instance in the Helm configuration file named `values.yaml`:
 +
 [source,yaml,subs="+quotes,+attributes"]
