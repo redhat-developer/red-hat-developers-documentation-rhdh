@@ -16,53 +16,7 @@ However, when you use an external PostgreSQL database that the Operator does not
 * You have access to create jobs, secrets, config maps, and custom resources in the namespace where you deploy the {product-custom-resource-type} CR.
 
 .Procedure
-
-. Create the `backstage_plugin_orchestrator` database on your external PostgreSQL server by applying the following job:
-+
-[source,yaml,subs="+attributes,+quotes"]
-----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: create-sonataflow-database-developer-hub
-spec:
-  ttlSecondsAfterFinished: 30
-  activeDeadlineSeconds: 120
-  template:
-    spec:
-      containers:
-        - name: psql
-          image: quay.io/fedora/postgresql-15:latest
-          resources:
-            limits:
-              cpu: "100m"
-              memory: "128Mi"
-            requests:
-              cpu: "100m"
-              memory: "64Mi"
-          securityContext:
-            readOnlyRootFilesystem: true
-            allowPrivilegeEscalation: false
-            runAsNonRoot: true
-            capabilities:
-              drop:
-                - ALL
-          envFrom:
-            - secretRef:
-                name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
-          command: [ "sh", "-c" ]
-          args:
-            - |
-              set -e
-              # Check if the backstage_plugin_orchestrator database exists
-              DB_EXISTS=$(PGPASSWORD=${POSTGRES_PASSWORD} psql -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -tAc "SELECT 1 FROM pg_database WHERE datname='backstage_plugin_orchestrator'" postgres)
-              if [ -z "$DB_EXISTS" ]; then
-                # Create the database if it does not exist
-                PGPASSWORD=${POSTGRES_PASSWORD} psql -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -c "CREATE DATABASE backstage_plugin_orchestrator;" postgres
-              fi
-      restartPolicy: Never
-----
-
+include::../shared/snip-create-orchestrator-database.adoc[leveloffset=+1]
 . Create a `SonataFlowPlatform` CR that references your external PostgreSQL service:
 +
 [source,yaml,subs="+attributes,+quotes"]
