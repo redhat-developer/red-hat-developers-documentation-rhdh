@@ -6,7 +6,7 @@
 [role="_abstract"]
 Connect the Orchestrator plugins to your existing PostgreSQL database when deploying with the Helm Chart to leverage centralized database management and meet compliance requirements.
 
-By default, when you enable the Orchestrator plugin using the Helm Chart with `orchestrator.enabled=true`, the chart automatically provisions a `SonataFlowPlatform` custom resource (CR) and creates the required PostgreSQL database resources. The chart uses the `orchestrator.sonataflowPlatform` values to configure these resources.
+By default, when you enable the Orchestrator plugin by using the Helm Chart with `orchestrator.enabled=true`, the chart automatically provisions a `SonataFlowPlatform` custom resource (CR) and creates the required PostgreSQL database resources. The chart uses the `orchestrator.sonataflowPlatform` values to configure these resources.
 
 However, when you use an external PostgreSQL database that the Helm Chart does not manage, you must explicitly configure the `orchestrator.sonataflowPlatform` values to reference your external database resources.
 
@@ -16,8 +16,7 @@ However, when you use an external PostgreSQL database that the Helm Chart does n
 * You have access to create jobs, secrets, services, and custom resources in the namespace where you deploy {product-very-short}.
 
 .Procedure
-include::../shared/snip-create-orchestrator-database.adoc[leveloffset=+1]
-include::../shared/snip-create-kubernetes-service-for-external-postgresql.adoc[leveloffset=+1]
+include::../shared/snip-create-orchestrator-database.adoc[]
 . Configure your external PostgreSQL database for Orchestrator in your Helm configuration file `values.yaml`:
 +
 [source,yaml,subs="+quotes,+attributes"]
@@ -27,11 +26,12 @@ orchestrator:
   sonataflowPlatform:
     externalDBsecretRef: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
     externalDBName: backstage_plugin_orchestrator
-    externalDBHost: __<SERVICE-NAME-TO-DB>__  # Typically external-postgresql-service
+    externalDBHost: __<SERVICE-NAME-TO-DB>__
     externalDBPort: "5432"
 ----
 +
 Where:
+
 `orchestrator.enabled`:: Set to `true` to enable the Orchestrator plugin.
 `orchestrator.sonataflowPlatform.externalDBsecretRef`:: The secret name containing database credentials with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, and `POSTGRES_PORT` keys.
 `orchestrator.sonataflowPlatform.externalDBName`:: The database name for Orchestrator data (must be `backstage_plugin_orchestrator`).
@@ -42,12 +42,14 @@ Where:
 ====
 Unlike the default configuration where the Helm Chart automatically provisions database resources, this configuration explicitly references your external database Service and Secret. The `SonataFlowPlatform` CR will use these resources to connect to your external database instead of creating new database resources.
 ====
++
 . Apply the configuration changes in your Helm configuration file `values.yaml`:
 +
 [source,terminal,subs="+attributes"]
 ----
 $ helm upgrade -n <your_namespace> <your_deploy_name> openshift-helm-charts/redhat-developer-hub -f values.yaml --version {product-chart-version}
 ----
+
 .Verification
 . Verify that the `SonataFlowPlatform` CR is running:
 +
@@ -56,4 +58,5 @@ $ helm upgrade -n <your_namespace> <your_deploy_name> openshift-helm-charts/redh
 $ oc get sonataflowplatform sonataflow-platform -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
 True
 ----
++
 . In the {product-very-short} console, confirm that the Orchestrator frontend and backend features are available and can connect to your external database.
