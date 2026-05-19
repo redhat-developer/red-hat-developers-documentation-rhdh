@@ -1,0 +1,125 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-orchestrator-to-connect-to-existing-postgresql-infrastructure_{context}"]
+= Configure Orchestrator to connect to existing PostgreSQL infrastructure
+
+[role="_abstract"]
+Connect the Orchestrator plugins to your existing PostgreSQL database to leverage centralized database management and meet compliance requirements.
+
+By default, when you enable the Orchestrator plugin by using the Operator, the `dependencies: - ref: sonataflow` field automatically provisions a `SonataFlowPlatform` custom resource (CR) and creates the required PostgreSQL database resources. The Operator uses specific naming patterns for these resources (such as `backstage-psql-{{backstage-name}}` for the service and `backstage-psql-secret-{{backstage-name}}` for the secret).
+
+However, when you use an external PostgreSQL database that the Operator does not manage, these default resources and naming patterns do not exist. You must explicitly configure the `SonataFlowPlatform` CR to reference your external database resources and remove the automatic dependency provisioning.
+
+.Prerequisites
+* You have installed {product-very-short} by using the Operator.
+* You have {configuring-book-link}#configure-external-postgresql-databases_configuring-rhdh[configured {product-short} to use an external PostgreSQL database].
+* You have access to create jobs, secrets, config maps, and custom resources in the namespace where you deploy the {product-custom-resource-type} CR.
+
+.Procedure
+include::../shared/snip-create-orchestrator-database.adoc[]
+. Create a `SonataFlowPlatform` CR that references your external PostgreSQL service:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlowPlatform
+metadata:
+  name: sonataflow-platform
+spec:
+  monitoring:
+    enabled: true
+  services:
+    dataIndex:
+      enabled: true
+      persistence:
+        postgresql:
+          secretRef:
+            name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
+            userKey: POSTGRES_USER
+            passwordKey: POSTGRES_PASSWORD
+          serviceRef:
+            name: __<SERVICE-NAME-TO-DB>__
+            namespace: __<{product-very-short}-NAMESPACE>__
+            databaseName: backstage_plugin_orchestrator
+    jobService:
+      enabled: true
+      persistence:
+        postgresql:
+          secretRef:
+            name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
+            userKey: POSTGRES_USER
+            passwordKey: POSTGRES_PASSWORD
+          serviceRef:
+            name: __<SERVICE-NAME-TO-DB>__
+            namespace: __<{product-very-short}-NAMESPACE>__
+            databaseName: backstage_plugin_orchestrator
+----
++
+[IMPORTANT]
+====
+Unlike the default configuration that uses the `dependencies: - ref: sonataflow` field to automatically provision database resources with specific naming patterns, this configuration explicitly references your external database Service and Secret. The `SonataFlowPlatform` CR will use these resources to connect to your external database instead of creating new database resources.
+====
++
+. Configure the Orchestrator plugins in your dynamic plugins config map to remove the default `sonataflow` dependency and explicitly reference the SonataFlowPlatform services:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-plugin
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      # Orchestrator plugins
+      - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
+        disabled: false
+      - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}"
+        disabled: false
+        pluginConfig:
+          orchestrator:
+            dataIndexService:
+              url: http://__<SERVICE-NAME-SONATAFLOW-PLATFORM-DATA-INDEX>__
+        dependencies: [{}]  # Empty array removes default 'ref: sonataflow' to prevent automatic database provisioning
+      - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator:{{inherit}}"
+        disabled: false
+        pluginConfig:
+          orchestrator:
+            dataIndexService:
+              url: http://__<SERVICE-NAME-SONATAFLOW-PLATFORM-DATA-INDEX>__
+        dependencies: [{}]  # Empty array removes default 'ref: sonataflow' to prevent automatic database provisioning
+      - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}"
+        disabled: false
+----
++
+. Update your {product-custom-resource-type} CR to reference the orchestrator plugin config map and inject the database credentials secret:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: orchestrator
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: app-config-rhdh
+    dynamicPluginsConfigMapName: orchestrator-plugin
+    extraEnvs:
+      secrets:
+        - name: __<SECRET-NAME-WITH-DB-CREDENTIALS>__
+----
+
+.Verification
+. Verify that the `SonataFlowPlatform` CR is running:
++
+[source,terminal]
+----
+$ oc get sonataflowplatform sonataflow-platform -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+True
+----
++
+. In the {product-very-short} console, confirm that the Orchestrator frontend and backend features are available and can connect to your external database.
