@@ -29,7 +29,7 @@ on:
     - release-2.**
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.event.pull_request.head.ref }}
+  group: ${{ github.workflow }}-${{ github.event.number || github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 env:
@@ -55,6 +55,7 @@ jobs:
           organization: ${{ env.GH_ORGANIZATION }}
           gh_token: ${{ steps.app-token.outputs.token }}
           author: ${{ github.event.pull_request.user.login }}
+          whitelisted_authors: '["openshift-cherrypick-robot"]'
 
   authorize:
     # The 'external' environment is configured with the rhdh-content team as required reviewers.
@@ -96,7 +97,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           path: pr-content
 
