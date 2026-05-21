@@ -1,0 +1,161 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-rbac-visibility-rules-to-hide-unauthorized-ui-elements_{context}"]
+= Configure RBAC visibility rules to hide unauthorized UI elements
+
+[role="_abstract"]
+Configure RBAC visibility rules in {product} to hide unauthorized UI elements by using the `if` predicate in extension blueprints, ensuring users only see pages, tabs, and navigation items they have permission to access.
+
+.Prerequisites
+
+* You have administrative access to {product-very-short}.
+* You have enabled the RBAC feature in {product-very-short}.
+* You have defined the required permissions for your plugins.
+
+.Procedure
+
+. Determine which UI elements you want to control with RBAC permissions.
+
+. Identify the permission names that should get access to those UI elements.
++
+[NOTE]
+====
+Permissions must follow the naming pattern `<resource>.<action>` where the action is one of `create`, `read`, `update`, or `delete`. The system automatically infers the action attribute from the permission name.
+====
+
+. Configure the `if` predicate in your extension blueprint to control UI visibility based on permissions:
++
+. To control the visibility of entire pages, use the `if` predicate in the `PageBlueprint`:
++
+[source,typescript]
+----
+PageBlueprint.make({
+  name: 'rbac',
+  params: {
+    path: '/rbac',
+    title: 'RBAC',
+    icon: <RbacIcon />,
+    routeRef: rootRouteRef,
+    noHeader: true,
+    loader: async () => import('../components/Router').then(m => <m.Router />),
+  },
+  if: {
+    permissions: { $contains: 'policy.entity.read' },
+  },
+});
+----
++
+In this example, the RBAC page is only visible to users who have the `policy.entity.read` permission.
+
+. To control the visibility of tabs on entity pages, use the `if` predicate in the `EntityContentBlueprint`:
++
+[source,typescript]
+----
+EntityContentBlueprint.make({
+  name: 'tektonEntityContent',
+  params: {
+    path: '/ci-cd',
+    title: 'CI/CD',
+    filter: isTektonCIAvailable,
+    loader: () => import('./components/Router').then(m => <m.Router />),
+  },
+  if: {
+    $all: [
+      {
+        permissions: { $contains: 'kubernetes.resources.read' },
+      },
+      {
+        permissions: { $contains: 'kubernetes.clusters.read' },
+      },
+    ],
+  },
+});
+----
++
+In this example, the CI/CD tab is only visible to users who have both the `kubernetes.resources.read` and `kubernetes.clusters.read` permissions.
+The `$all` operator ensures that all specified permissions are required.
+
+. To control the visibility of cards on pages, use the `if` predicate in the `EntityCardBlueprint` or `HomePageWidgetBlueprint`:
++
+[source,typescript]
+----
+EntityCardBlueprint.make({
+  name: 'labels',
+  params: {
+    type: 'info',
+    filter: { 'metadata.labels': { $exists: true } },
+    loader: async () =>
+      import('../components/EntityLabelsCard').then(m => (
+        <m.EntityLabelsCard />
+      )),
+  },
+  if: {
+    permissions: { $contains: 'catalog.entity.read' },
+  },
+});
+----
++
+For homepage widgets:
++
+[source,typescript]
+----
+HomePageWidgetBlueprint.make({
+  name: 'rhdh-entity-section',
+  params: {
+    name: '{product} - Software Catalog',
+    layout: defaultCardLayout,
+    components: () =>
+      import('../../components/EntitySection').then(m => ({
+        Content: () => compatWrapper(<m.EntitySection />),
+      })),
+  },
+  if: {
+    permissions: { $contains: 'catalog.entity.read' },
+  },
+});
+----
+
+. Use permission operators to combine multiple permission checks:
++
+`$contains`::
+Checks if the user has a specific permission.
++
+[source,typescript]
+----
+if: {
+  permissions: { $contains: 'permission.name' },
+}
+----
+
+`$all`::
+Requires the user to have all specified permissions.
++
+[source,typescript]
+----
+if: {
+  $all: [
+    { permissions: { $contains: 'permission.one' } },
+    { permissions: { $contains: 'permission.two' } },
+  ],
+}
+----
+
+`$any`::
+Requires the user to have at least one of the specified permissions.
++
+[source,typescript]
+----
+if: {
+  $any: [
+    { permissions: { $contains: 'permission.one' } },
+    { permissions: { $contains: 'permission.two' } },
+  ],
+}
+----
+
+.Verification
+
+. Log in to {product-very-short} as a user with limited permissions.
+. Verify that UI elements requiring permissions you do not have are hidden from view.
+. Log in as a user with the required permissions.
+. Verify that the UI elements are now visible and accessible.
