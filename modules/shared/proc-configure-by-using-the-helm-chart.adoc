@@ -28,22 +28,9 @@ global:
 By default, the Helm installation creates a temporary Kubernetes Secret containing keys for various LLM providers. On subsequent `helm upgrade` cycles, the system overwrites this default Secret. You must create a manual Kubernetes Secret to persist your credentials.
 ====
 +
-Add the following keys to your secret based on your provider requirements:
-`vLLM`:: 
-** Set `ENABLE_VLLM` to `"true"`
-** Set `VLLM_URL` to `"<your_url>/v1"`
-** Set `VLLM_API_KEY` to your key string
-`OpenAI`:: 
-** Set `ENABLE_OPENAI` to `"true"`
-** Set `OPENAI_API_KEY` to your secret key
-`Ollama`:: 
-** Set `ENABLE_OLLAMA` to `"true"`
-** Set `OLLAMA_URL` to your endpoint URL
-`Vertex AI`:: 
-** Set `ENABLE_VERTEX_AI` to `"true"`
-** Set `VERTEX_AI_PROJECT` to your project ID
-** Set `VERTEX_AI_LOCATION` to your region
-** Set `GOOGLE_APPLICATION_CREDENTIALS` to the path of your mounted credentials JSON file. 
+Add the required keys to your secret based on your provider requirements:
++
+include::snip-lightspeed-secret-keys.adoc[]
 +
 [NOTE]
 ====
@@ -68,6 +55,11 @@ global:
 
 . Optional: To protect configuration files like `lightspeed-stack.yaml`, `config.yaml`, or `rhdh-profile.py` from being overwritten during updates, you must use a custom ConfigMap:
 +
+[IMPORTANT]
+====
+You must only modify the `create` and `nameOverride` fields. Keep the default mount paths and file configurations unchanged.
+====
++
 [source,yaml]
 ----
 global:
@@ -82,13 +74,9 @@ global:
         optional: false
 ----
 
-. To grant non-administrator teams access to the virtual assistant, append permission strings to the `rbac-policies.csv` section of your `values.yaml` file, replacing `<team>` with the target group name:
+. Configure access rights by updating your RBAC definitions:
 +
-[source,text]
-----
-p, role:default/<team>, lightspeed.chat.read, read, allow
-p, role:default/<team>, lightspeed.chat.create, create, allow
-----
+include::snip-rbac-policies.adoc[]
 
 . Run the `helm upgrade` command to apply your configurations to the cluster.
 
