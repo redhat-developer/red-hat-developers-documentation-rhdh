@@ -1,0 +1,106 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="deploy-rhdh-for-workflow-automation_{context}"]
+= Deploy {product} for workflow automation
+
+[role="_abstract"]
+To automate CI/CD pipeline setup, deploy {product} with workflow orchestration by using predefined Operator configurations.
+
+.Prerequisites
+
+* You have installed the {product} Operator in your OpenShift cluster.
+* You have installed required infrastructure components:
+** OpenShift Serverless Operator
+** Knative Serving
+** Knative Eventing
+** OpenShift Serverless Logic Operator
+* Optional: For production deployments, you have {configuring-book-link}#configure-external-postgresql-databases_configuring-rhdh[configured an external PostgreSQL database] and created a Secret with connection credentials.
+* Optional: You have AMQ Streams (`Kafka`) installed for event-driven workflow processing.
+
+.Procedure
+
+. Create a namespace for your {product} instance or use an existing namespace:
++
+[source,terminal,subs="+attributes"]
+----
+$ oc new-project {my-product-namespace}
+----
+
+. Create a {product-custom-resource-type} CR with the Orchestrator deployment configuration:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ cat <<EOF | oc -n {my-product-namespace} create -f -
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: <backstage_instance_name>
+spec:
+  flavours:
+    - name: orchestrator
+      enabled: true
+EOF
+----
++
+Where:
++
+`<backstage_instance_name>`:: A name for your {product} instance, for example `developer-hub-orchestrator`.
+`spec.flavours`:: The pre-configured settings array. Set `name: orchestrator` with `enabled: true` to automatically configure workflow orchestration capabilities.
+
++
+[NOTE]
+====
+This example uses the default local PostgreSQL database.
+For production deployments, Red Hat recommends using an external PostgreSQL database.
+If you configured an external database in the prerequisites, add the database configuration to the CR as shown in {configuring-book-link}#configure-external-postgresql-databases_configuring-rhdh[Configure external PostgreSQL databases].
+====
+
+. Wait for the Operator to reconcile the {product-custom-resource-type} CR:
++
+[source,terminal,subs="+attributes"]
+----
+$ oc get backstage <backstage_instance_name> -n {my-product-namespace} -w
+----
++
+The deployment is ready when the `PHASE` column shows `Deployed`.
+
+.Verification
+
+. Verify that the Data Index service pod is running:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc get pods -n {my-product-namespace} | grep sonataflow
+----
++
+You should see the Data Index service pod. The Orchestrator backend plugin runs within the main {product} pod.
+
+. Access the {product} UI:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc get route backstage-<backstage_instance_name> -n {my-product-namespace} -o jsonpath='{.spec.host}'
+----
++
+Go to the URL in your browser.
+
+. Verify the Orchestrator plugin is displayed in the {product} navigation menu.
+Look for the *Orchestrator* option in the left navigation panel.
+
+. Optional: Test workflow deployment by creating a sample workflow. For detailed workflow examples, see {product-docs-link}/html/orchestrator_in_red_hat_developer_hub/index[Orchestrator in {product}].
+
+.Troubleshooting
+
+If workflow pods fail to start::
+Verify the PostgreSQL connection by checking the Operator logs:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc logs -n openshift-operators deployment/rhdh-operator -c manager
+----
++
+Ensure the database credentials in the Secret are correct and the database is accessible from the cluster.
+
+If the Data Index service fails::
+Verify that the PostgreSQL user has permissions to create schemas and tables.
+The Orchestrator deployment configuration automatically initializes required database schemas.
