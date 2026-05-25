@@ -1,0 +1,122 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="attach-homepages-to-groups-to-control-access-and-automate-layout-assignment_{context}"]
+= Attach homepages to groups to control access and automate layout assignment
+
+[role="_abstract"]
+Assign persona-specific homepage layouts to user groups to automate role-based content access.
+
+.Prerequisites
+
+* You have {product} {product-version} or later running with the homepage backend plugin enabled.
+* You defined groups for each user persona (for example, `group:default/developers`, `group:default/data-scientists`, `group:default/managers`).
+* You authored persona-based homepage layouts in your `{my-app-config-file}` configuration file.
+* You have administrative access to modify the `{my-app-config-file}` configuration file.
+
+.Procedure
+
+. Identify your user personas and their corresponding groups.
++
+--
+[IMPORTANT]
+====
+Replace the example group names below with your organization's actual group names.
+====
+
+[options="header"]
+|===
+|Persona |Group
+|Developer |`group:default/developers`
+|Manager |`group:default/managers`
+|Data Scientist |`group:default/data-scientists`
+|===
+--
+
+. Verify that you created the groups in your {product-very-short} configuration.
++
+Check that the groups exist by using the RBAC web UI or by reviewing your RBAC configuration file.
+You must create all groups referenced in your persona mapping before configuring homepage visibility.
+
+. Open your `{my-app-config-file}` configuration file.
+
+. Attach persona-specific layouts to groups by adding the `if.groups` field to group cards under a shared visibility condition.
++
+For example, attach the developer persona layout to the developers group:
++
+[source,yaml]
+----
+homepage:
+  defaultWidgets:
+    # Attach developer layout to developers group
+    - if:
+        groups: [group:default/developers]
+      children:
+        - id: developer-onboarding
+          ref: 'rhdh-onboarding-section'
+          layout:
+            xl: { w: 12, h: 6 }
+            lg: { w: 12, h: 6 }
+
+        - id: developer-quickaccess
+          ref: quickaccess-card
+          props:
+            title: Developer Quick Access
+          layout:
+            xl: { w: 7, h: 8 }
+            lg: { w: 7, h: 8 }
+
+        - id: templates
+          ref: TemplateSection
+          layout:
+            xl: { w: 12, h: 5 }
+            lg: { w: 12, h: 5 }
+
+        - id: starred-entities
+          ref: CatalogStarredEntitiesCard
+          layout:
+            xl: { w: 5, h: 4, x: 7 }
+            lg: { w: 5, h: 4, x: 7 }
+----
++
+The `groups` field accepts an array of group entity references.
+Users who belong to any of the listed groups see all child cards.
+
+. Control visibility for multiple groups by adding additional `if.groups` configurations.
++
+Individual child cards can include their own `if` conditions to further restrict visibility beyond the parent group's rules.
++
+[NOTE]
+====
+The front-end positions cards according to layout coordinates (`x`, `y`, `w`, `h`), not array order.
+The configuration array order does not affect rendering position.
+====
+
+. Save the configuration file and restart {product}:
++
+[source,terminal,subs="+quotes"]
+----
+$ kubectl rollout restart deployment/_<rhdh-deployment-name>_
+----
++
+Replace _<rhdh-deployment-name>_ with the name of your {product-very-short} deployment.
++
+[IMPORTANT]
+====
+{product-very-short} validates the homepage configuration at startup.
+If the configuration contains errors, {product-very-short} will fail to start.
+Check the pod logs for configuration validation errors if the deployment does not become ready.
+====
+
+.Verification
+
+. Log in to {product} as a test user who belongs to one of the configured groups.
++
+The homepage displays only the cards configured for that user's persona.
+
+. Log in as a test user from a different group.
++
+The homepage displays a different set of cards based on the second user's group membership.
+
+. Log in as a test user who does not belong to any persona-specific group.
++
+The homepage displays only the default cards that have no `if` conditions.
