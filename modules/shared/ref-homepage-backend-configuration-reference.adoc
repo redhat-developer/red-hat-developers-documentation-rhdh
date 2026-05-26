@@ -1,0 +1,138 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="homepage-backend-configuration-reference_{context}"]
+= Homepage backend configuration reference
+
+[role="_abstract"]
+Use these backend plugin configuration options, card structures, and API endpoints to customize and manage your homepage data.
+
+== Configuration options
+
+The configuration fields available in the `homepage` section of your `{my-app-config-file}` file:
+
+[cols="35%,15%,15%,35%", frame="all", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+
+|`homepage.defaultWidgets`
+|array
+|No
+|List of default homepage cards and groups with visibility rules and layout configuration.
+{product-very-short} validates this configuration at startup.
+Configuration errors prevent {product-very-short} from starting.
+Default: `[]`
+|===
+
+== Card configuration
+
+Each card in the `homepage.defaultWidgets` array supports the following fields:
+
+[cols="25%,15%,15%,45%", frame="all", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+
+|`id`
+|string
+|Yes (for cards)
+|Unique identifier for the card.
+Each card must have a unique ID within the configuration.
+
+|`ref`
+|string
+|Yes (for cards)
+|Name of the widget component to render.
+Must match an available homepage card.
+
+|`layout`
+|object
+|No
+|Responsive grid layouts for different screen breakpoints (xl, lg, md, sm, xs, xxs).
+Each layout specifies width (w), height (h), and optional x/y position.
+
+|`props`
+|object
+|No
+|Component-specific properties passed to the card.
+Properties vary by card type.
+
+|`if`
+|object
+|No
+|Visibility conditions that control which users can see this card.
+If not specified or all lists are empty, all users see the card.
+|===
+
+== Group configuration
+
+Parent groups that contain multiple cards support the following fields:
+
+[NOTE]
+====
+Groups must not include `id` or `ref` fields. Only individual cards require these fields.
+====
+
+[cols="25%,15%,15%,45%", frame="all", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+
+|`children`
+|array
+|Yes (for groups)
+|List of child cards that inherit the parent group's visibility rules.
+Child cards can include their own `if` conditions to further restrict visibility.
+
+|`if`
+|object
+|No
+|Visibility conditions applied to all children.
+Child cards remain hidden if the parent fails its visibility check.
+|===
+
+== Configuration example
+
+The following example shows a complete homepage backend configuration with persona-based visibility:
+
+[source,yaml]
+----
+homepage:
+  defaultWidgets:
+    # Search bar - visible to all users
+    - id: onboarding
+      ref: 'rhdh-onboarding-section'
+      layout:
+        xl: { w: 12, h: 6 }
+        lg: { w: 12, h: 6 }
+
+    # Quick access card - visible to all users
+    - id: quickaccess-card
+      ref: quickaccess-card
+      layout:
+        xl: { w: 6, h: 8, x: 6 }
+
+    # Group with shared visibility - visible only to admins
+    - if:
+        groups: [group:default/admins]
+      children:
+        - id: rbac
+          ref: RBAC
+          layout:
+            xl: { w: 12, h: 6 }
+
+    # Templates - visible only to developers
+    - id: templates
+      ref: TemplateSection
+      if:
+        groups: [group:default/developers]
+      layout:
+        xl: { w: 12, h: 5 }
+        lg: { w: 12, h: 5 }
+----
