@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Integrating Red Hat Developer Hub with your Git provider</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub platform engineer, you can integrate Developer Hub with GitHub and GitLab Git providers."/><link rel="next" href="#integrate-with-github_integrating-rhdh-with-your-git-provider" title="1. Integrate with GitHub"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm46830974003616"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.10</span></div><div><h1 class="title">Integrating Red Hat Developer Hub with your Git provider</h1></div><div><h3 class="subtitle"><em>Configuring integration to Git providers in Red Hat Developer Hub</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm46830956372720">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
+<html xmlns="http://www.w3.org/1999/xhtml" class="chrometwo"><head><title>Integrating Red Hat Developer Hub with your Git provider</title><link rel="stylesheet" type="text/css" href="Common_Content/css/default.css"/><meta name="generator" content="publican v4.3.2"/><meta name="description" content="As a Red Hat Developer Hub platform engineer, you can integrate Developer Hub with GitHub and GitLab Git providers."/><link rel="next" href="#integrate-with-github_integrating-rhdh-with-your-git-provider" title="1. Integrate with GitHub"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><script type="text/javascript" src="Common_Content/scripts/jquery-1.7.1.min.js"> </script><script type="text/javascript" src="Common_Content/scripts/utils.js"> </script><script type="text/javascript" src="Common_Content/scripts/highlight.js/highlight.pack.js"> </script></head><body><div id="chrometwo"><div id="main"><section xml:lang="en-US" class="article" id="idm45796726862704"><div class="titlepage"><div><div class="producttitle"><span class="productname">Red Hat Developer Hub</span> <span class="productnumber">1.10</span></div><div><h1 class="title">Integrating Red Hat Developer Hub with your Git provider</h1></div><div><h3 class="subtitle"><em>Configuring integration to Git providers in Red Hat Developer Hub</em></h3></div><div><div xml:lang="en-US" class="authorgroup"><span class="orgname">Red Hat Customer Content Services</span></div></div><div><a href="#idm45796725055872">Legal Notice</a></div><div><div class="abstract"><p class="title"><strong>Abstract</strong></p><div class="para">
 				As a Red Hat Developer Hub platform engineer, you can integrate Developer Hub with GitHub and GitLab Git providers.
 			</div></div></div></div><hr/></div><div class="toc"><ul class="toc"><li><span class="section"><a href="#integrate-with-github_integrating-rhdh-with-your-git-provider">1. Integrate with GitHub</a></span><ul><li><span class="section"><a href="#enable-github-repository-discovery_integrate-with-github">1.1. Enable GitHub repository discovery</a></span></li><li><span class="section"><a href="#bulk-importing-from-github_integrate-with-github">1.2. Bulk importing from GitHub</a></span></li></ul></li><li><span class="section"><a href="#integrate-with-gitlab_integrate-with-github">2. Integrate with GitLab</a></span><ul><li><span class="section"><a href="#bulk-importing-from-gitlab_integrate-with-gitlab">2.1. Bulk importing from GitLab</a></span></li></ul></li></ul></div><p class="_abstract _abstract">
 		Connect Red Hat Developer Hub to GitHub or GitLab to discover repositories automatically and import multiple projects efficiently using bulk import capabilities.
@@ -131,7 +131,9 @@ integrations:
 				</p></div></div><section class="section" id="repository-visibility-in-bulk-import_bulk-importing-from-github"><div class="titlepage"><div><div><h4 class="title">1.2.1. Repository visibility in Bulk Import</h4></div></div></div><p class="_abstract _abstract">
 					The Bulk Import feature displays repositories based on the current user’s access permissions and filters out repositories that are already imported, ensuring users can only import repositories they have authorization to access and have not already added to the catalog.
 				</p><section class="section" id="user-scoped-repository-access"><div class="titlepage"><div><div><h5 class="title">1.2.1.1. User-scoped repository access</h5></div></div></div><p>
-						When you use Bulk Import, Red Hat Developer Hub retrieves the list of available repositories using your authenticated user credentials through OAuth. This approach provides several benefits:
+						When you use Bulk Import, Red Hat Developer Hub retrieves the list of available repositories using your authenticated user credentials through OAuth. Repository and organization listing API calls use your OAuth token for each configured source code management (SCM) host, ensuring that results match your personal access permissions rather than server-wide integration credentials.
+					</p><p>
+						This approach provides several benefits:
 					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
 								<span class="strong strong"><strong>User-scoped access</strong></span>: You see only repositories you can access in GitHub or GitLab, matching your experience in those platforms.
 							</li><li class="listitem">
@@ -140,7 +142,17 @@ integrations:
 								<span class="strong strong"><strong>Permission alignment</strong></span>: Repository visibility respects your organizational access policies and role-based permissions.
 							</li></ul></div><p>
 						This differs from catalog discovery providers, which use service account credentials to automatically discover and import repositories containing <code class="literal">catalog-info.yaml</code> files across an entire organization.
-					</p></section><section class="section" id="automatic-filtering-of-imported-repositories"><div class="titlepage"><div><div><h5 class="title">1.2.1.2. Automatic filtering of imported repositories</h5></div></div></div><p>
+					</p></section><section class="section" id="technical-implementation"><div class="titlepage"><div><div><h5 class="title">1.2.1.2. Technical implementation</h5></div></div></div><p>
+						Bulk Import requires user authentication for all repository and organization listing operations. The following API endpoints require a valid OAuth token:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								<code class="literal">GET /repositories</code> - List all accessible repositories
+							</li><li class="listitem">
+								<code class="literal">GET /organizations/{org}/repositories</code> - List repositories in a specific organization
+							</li></ul></div><p>
+						These endpoints use the <code class="literal">X-SCM-Tokens</code> header to pass user OAuth tokens for GitHub and GitLab hosts. There is no fallback to server-wide integration credentials (GitHub App, PAT, or GitLab token) for these listing operations. Requests without valid user OAuth tokens are rejected with HTTP 401 Unauthorized.
+					</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+							Deployments that previously relied on integration-only listing must configure SCM authentication providers and register <code class="literal">ScmAuthApi</code> for user authentication. See the Bulk Import plugin documentation for configuration details.
+						</p></div></div></section><section class="section" id="automatic-filtering-of-imported-repositories"><div class="titlepage"><div><div><h5 class="title">1.2.1.3. Automatic filtering of imported repositories</h5></div></div></div><p>
 						The Bulk Import interface automatically excludes repositories that are already present in your Developer Hub catalog, showing only repositories that have not yet been imported. This filtering helps you:
 					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
 								Avoid duplicate catalog entries
@@ -150,31 +162,49 @@ integrations:
 								Identify which repositories remain to be imported from your Git provider
 							</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
 							If a repository is removed from the catalog, it will reappear in the Bulk Import repository list and can be imported again.
-						</p></div></div></section><section class="section" id="prerequisites-for-repository-visibility"><div class="titlepage"><div><div><h5 class="title">1.2.1.3. Prerequisites for repository visibility</h5></div></div></div><p>
-						To view and import repositories through Bulk Import, you must:
+						</p></div></div></section><section class="section" id="prerequisites-for-repository-visibility"><div class="titlepage"><div><div><h5 class="title">1.2.1.4. Prerequisites for repository visibility</h5></div></div></div><p>
+						User authentication with OAuth is a mandatory requirement for the Bulk Import feature. To view and import repositories through Bulk Import, you must:
 					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
 								Authenticate to Developer Hub using GitHub or GitLab as your authentication provider
+							</li><li class="listitem">
+								Configure SCM authentication providers with OAuth support for your Git hosts
 							</li><li class="listitem">
 								Have the <code class="literal">bulk.import</code> permission configured in RBAC policies
 							</li><li class="listitem">
 								Maintain an active OAuth session with your Git provider
-							</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
-							If you cannot see expected repositories in the Bulk Import interface, verify that:
-						</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
-									Your user account has access to those repositories in GitHub or GitLab
-								</li><li class="listitem">
-									The repositories are not already imported into the Developer Hub catalog
-								</li><li class="listitem">
-									Your Developer Hub session has not expired
-								</li><li class="listitem">
-									You have configured GitHub or GitLab authentication correctly
-								</li></ul></div></div></div></section></section><section class="section" id="enable-and-authorize-bulk-import-capabilities-in-rhdh_bulk-importing-from-github"><div class="titlepage"><div><div><h4 class="title">1.2.2. Enable and authorize Bulk Import capabilities in Red Hat Developer Hub</h4></div></div></div><p class="_abstract _abstract">
+							</li></ul></div><div class="admonition warning"><div class="admonition_header">Warning</div><div><p>
+							Repository and organization listing operations require user OAuth tokens. There is no fallback to server-wide integration credentials. Deployments without user authentication configured will receive HTTP 401 errors when accessing Bulk Import.
+						</p></div></div></section><section class="section" id="troubleshooting-repository-visibility"><div class="titlepage"><div><div><h5 class="title">1.2.1.5. Troubleshooting repository visibility</h5></div></div></div><p>
+						If you cannot see expected repositories in the Bulk Import interface, verify the following:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								<span class="strong strong"><strong>User access</strong></span>: Your user account has access to those repositories in GitHub or GitLab
+							</li><li class="listitem">
+								<span class="strong strong"><strong>Catalog status</strong></span>: The repositories are not already imported into the Developer Hub catalog
+							</li><li class="listitem">
+								<span class="strong strong"><strong>Session validity</strong></span>: Your Developer Hub OAuth session has not expired
+							</li><li class="listitem">
+								<span class="strong strong"><strong>Authentication configuration</strong></span>: GitHub or GitLab authentication provider is correctly configured
+							</li><li class="listitem">
+								<span class="strong strong"><strong>ScmAuthApi registration</strong></span>: The <code class="literal">ScmAuthApi</code> is properly registered for your SCM hosts
+							</li></ul></div><p>
+						If you receive HTTP 401 Unauthorized errors when accessing the Bulk Import page, this indicates that user OAuth tokens are not available. Verify that:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								You have authenticated to Developer Hub using GitHub or GitLab as your authentication provider
+							</li><li class="listitem">
+								Your authentication provider includes OAuth scopes required for repository access
+							</li><li class="listitem">
+								The SCM authentication provider is configured and registered in your Developer Hub deployment
+							</li></ul></div></section></section><section class="section" id="enable-and-authorize-bulk-import-capabilities-in-rhdh_bulk-importing-from-github"><div class="titlepage"><div><div><h4 class="title">1.2.2. Enable and authorize Bulk Import capabilities in Red Hat Developer Hub</h4></div></div></div><p class="_abstract _abstract">
 					Enable Bulk Import plugins and configure RBAC permissions to allow users to import multiple GitHub repositories and GitLab projects into the catalog.
 				</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
-							You have configured user authentication with <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-github">GitHub</a> or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-gitlab">GitLab</a> as your authentication provider.
+							You have configured user authentication with <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-github">GitHub</a> or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-gitlab">GitLab</a> as your authentication provider. This is a mandatory requirement for Bulk Import, as repository listings use user OAuth tokens.
+						</li><li class="listitem">
+							You have configured and registered <code class="literal">ScmAuthApi</code> for your SCM hosts to enable user-scoped repository access.
 						</li><li class="listitem">
 							For GitHub only: You have <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/integrating_red_hat_developer_hub_with_your_git_provider/index#enabling-github-repository-discovery">enabled GitHub repository discovery</a>.
-						</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						</li></ul></div><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+						Bulk Import requires user OAuth tokens for all repository and organization listing operations. Deployments without user authentication configured will receive HTTP 401 Unauthorized errors when accessing the Bulk Import feature.
+					</p></div></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
 							The Bulk Import plugins are installed but disabled by default. To enable the <code class="literal">./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import-backend-dynamic</code> and <code class="literal">./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import</code> plugins, edit your <code class="literal">dynamic-plugins.yaml</code> with the following content:
 						</p><pre class="programlisting language-yaml">plugins:
   - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import-backend-dynamic
@@ -443,7 +473,9 @@ g, user:default/<span class="emphasis"><em>&lt;your_user&gt;</em></span>, role:d
 				</p></div></div><section class="section" id="repository-visibility-in-bulk-import_bulk-importing-from-gitlab"><div class="titlepage"><div><div><h4 class="title">2.1.1. Repository visibility in Bulk Import</h4></div></div></div><p class="_abstract _abstract">
 					The Bulk Import feature displays repositories based on the current user’s access permissions and filters out repositories that are already imported, ensuring users can only import repositories they have authorization to access and have not already added to the catalog.
 				</p><section class="section" id="user-scoped-repository-access-2"><div class="titlepage"><div><div><h5 class="title">2.1.1.1. User-scoped repository access</h5></div></div></div><p>
-						When you use Bulk Import, Red Hat Developer Hub retrieves the list of available repositories using your authenticated user credentials through OAuth. This approach provides several benefits:
+						When you use Bulk Import, Red Hat Developer Hub retrieves the list of available repositories using your authenticated user credentials through OAuth. Repository and organization listing API calls use your OAuth token for each configured source code management (SCM) host, ensuring that results match your personal access permissions rather than server-wide integration credentials.
+					</p><p>
+						This approach provides several benefits:
 					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
 								<span class="strong strong"><strong>User-scoped access</strong></span>: You see only repositories you can access in GitHub or GitLab, matching your experience in those platforms.
 							</li><li class="listitem">
@@ -452,7 +484,17 @@ g, user:default/<span class="emphasis"><em>&lt;your_user&gt;</em></span>, role:d
 								<span class="strong strong"><strong>Permission alignment</strong></span>: Repository visibility respects your organizational access policies and role-based permissions.
 							</li></ul></div><p>
 						This differs from catalog discovery providers, which use service account credentials to automatically discover and import repositories containing <code class="literal">catalog-info.yaml</code> files across an entire organization.
-					</p></section><section class="section" id="automatic-filtering-of-imported-repositories-2"><div class="titlepage"><div><div><h5 class="title">2.1.1.2. Automatic filtering of imported repositories</h5></div></div></div><p>
+					</p></section><section class="section" id="technical-implementation-2"><div class="titlepage"><div><div><h5 class="title">2.1.1.2. Technical implementation</h5></div></div></div><p>
+						Bulk Import requires user authentication for all repository and organization listing operations. The following API endpoints require a valid OAuth token:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								<code class="literal">GET /repositories</code> - List all accessible repositories
+							</li><li class="listitem">
+								<code class="literal">GET /organizations/{org}/repositories</code> - List repositories in a specific organization
+							</li></ul></div><p>
+						These endpoints use the <code class="literal">X-SCM-Tokens</code> header to pass user OAuth tokens for GitHub and GitLab hosts. There is no fallback to server-wide integration credentials (GitHub App, PAT, or GitLab token) for these listing operations. Requests without valid user OAuth tokens are rejected with HTTP 401 Unauthorized.
+					</p><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+							Deployments that previously relied on integration-only listing must configure SCM authentication providers and register <code class="literal">ScmAuthApi</code> for user authentication. See the Bulk Import plugin documentation for configuration details.
+						</p></div></div></section><section class="section" id="automatic-filtering-of-imported-repositories-2"><div class="titlepage"><div><div><h5 class="title">2.1.1.3. Automatic filtering of imported repositories</h5></div></div></div><p>
 						The Bulk Import interface automatically excludes repositories that are already present in your Developer Hub catalog, showing only repositories that have not yet been imported. This filtering helps you:
 					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
 								Avoid duplicate catalog entries
@@ -462,31 +504,49 @@ g, user:default/<span class="emphasis"><em>&lt;your_user&gt;</em></span>, role:d
 								Identify which repositories remain to be imported from your Git provider
 							</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
 							If a repository is removed from the catalog, it will reappear in the Bulk Import repository list and can be imported again.
-						</p></div></div></section><section class="section" id="prerequisites-for-repository-visibility-2"><div class="titlepage"><div><div><h5 class="title">2.1.1.3. Prerequisites for repository visibility</h5></div></div></div><p>
-						To view and import repositories through Bulk Import, you must:
+						</p></div></div></section><section class="section" id="prerequisites-for-repository-visibility-2"><div class="titlepage"><div><div><h5 class="title">2.1.1.4. Prerequisites for repository visibility</h5></div></div></div><p>
+						User authentication with OAuth is a mandatory requirement for the Bulk Import feature. To view and import repositories through Bulk Import, you must:
 					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
 								Authenticate to Developer Hub using GitHub or GitLab as your authentication provider
+							</li><li class="listitem">
+								Configure SCM authentication providers with OAuth support for your Git hosts
 							</li><li class="listitem">
 								Have the <code class="literal">bulk.import</code> permission configured in RBAC policies
 							</li><li class="listitem">
 								Maintain an active OAuth session with your Git provider
-							</li></ul></div><div class="admonition note"><div class="admonition_header">Note</div><div><p>
-							If you cannot see expected repositories in the Bulk Import interface, verify that:
-						</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
-									Your user account has access to those repositories in GitHub or GitLab
-								</li><li class="listitem">
-									The repositories are not already imported into the Developer Hub catalog
-								</li><li class="listitem">
-									Your Developer Hub session has not expired
-								</li><li class="listitem">
-									You have configured GitHub or GitLab authentication correctly
-								</li></ul></div></div></div></section></section><section class="section" id="enable-and-authorize-bulk-import-capabilities-in-rhdh_bulk-importing-from-gitlab"><div class="titlepage"><div><div><h4 class="title">2.1.2. Enable and authorize Bulk Import capabilities in Red Hat Developer Hub</h4></div></div></div><p class="_abstract _abstract">
+							</li></ul></div><div class="admonition warning"><div class="admonition_header">Warning</div><div><p>
+							Repository and organization listing operations require user OAuth tokens. There is no fallback to server-wide integration credentials. Deployments without user authentication configured will receive HTTP 401 errors when accessing Bulk Import.
+						</p></div></div></section><section class="section" id="troubleshooting-repository-visibility-2"><div class="titlepage"><div><div><h5 class="title">2.1.1.5. Troubleshooting repository visibility</h5></div></div></div><p>
+						If you cannot see expected repositories in the Bulk Import interface, verify the following:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								<span class="strong strong"><strong>User access</strong></span>: Your user account has access to those repositories in GitHub or GitLab
+							</li><li class="listitem">
+								<span class="strong strong"><strong>Catalog status</strong></span>: The repositories are not already imported into the Developer Hub catalog
+							</li><li class="listitem">
+								<span class="strong strong"><strong>Session validity</strong></span>: Your Developer Hub OAuth session has not expired
+							</li><li class="listitem">
+								<span class="strong strong"><strong>Authentication configuration</strong></span>: GitHub or GitLab authentication provider is correctly configured
+							</li><li class="listitem">
+								<span class="strong strong"><strong>ScmAuthApi registration</strong></span>: The <code class="literal">ScmAuthApi</code> is properly registered for your SCM hosts
+							</li></ul></div><p>
+						If you receive HTTP 401 Unauthorized errors when accessing the Bulk Import page, this indicates that user OAuth tokens are not available. Verify that:
+					</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+								You have authenticated to Developer Hub using GitHub or GitLab as your authentication provider
+							</li><li class="listitem">
+								Your authentication provider includes OAuth scopes required for repository access
+							</li><li class="listitem">
+								The SCM authentication provider is configured and registered in your Developer Hub deployment
+							</li></ul></div></section></section><section class="section" id="enable-and-authorize-bulk-import-capabilities-in-rhdh_bulk-importing-from-gitlab"><div class="titlepage"><div><div><h4 class="title">2.1.2. Enable and authorize Bulk Import capabilities in Red Hat Developer Hub</h4></div></div></div><p class="_abstract _abstract">
 					Enable Bulk Import plugins and configure RBAC permissions to allow users to import multiple GitHub repositories and GitLab projects into the catalog.
 				</p><div class="itemizedlist"><p class="title"><strong>Prerequisites</strong></p><ul class="itemizedlist" type="disc"><li class="listitem">
-							You have configured user authentication with <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-github">GitHub</a> or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-gitlab">GitLab</a> as your authentication provider.
+							You have configured user authentication with <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-github">GitHub</a> or <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/authentication_in_red_hat_developer_hub/index#enabling-user-authentication-with-gitlab">GitLab</a> as your authentication provider. This is a mandatory requirement for Bulk Import, as repository listings use user OAuth tokens.
+						</li><li class="listitem">
+							You have configured and registered <code class="literal">ScmAuthApi</code> for your SCM hosts to enable user-scoped repository access.
 						</li><li class="listitem">
 							For GitHub only: You have <a class="link" href="https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html-single/integrating_red_hat_developer_hub_with_your_git_provider/index#enabling-github-repository-discovery">enabled GitHub repository discovery</a>.
-						</li></ul></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
+						</li></ul></div><div class="admonition important"><div class="admonition_header">Important</div><div><p>
+						Bulk Import requires user OAuth tokens for all repository and organization listing operations. Deployments without user authentication configured will receive HTTP 401 Unauthorized errors when accessing the Bulk Import feature.
+					</p></div></div><div class="orderedlist"><p class="title"><strong>Procedure</strong></p><ol class="orderedlist" type="1"><li class="listitem"><p class="simpara">
 							The Bulk Import plugins are installed but disabled by default. To enable the <code class="literal">./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import-backend-dynamic</code> and <code class="literal">./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import</code> plugins, edit your <code class="literal">dynamic-plugins.yaml</code> with the following content:
 						</p><pre class="programlisting language-yaml">plugins:
   - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import-backend-dynamic
@@ -759,7 +819,7 @@ g, user:default/<span class="emphasis"><em>&lt;your_user&gt;</em></span>, role:d
 								Structure the Scaffolder template to receive the repository data as template parameters for the current workflow run. The template must be generic, and not specific to a single repository, so that it can successfully run for every repository in the bulk list.
 							</dd><dt><span class="term">Automate processing for each repository</span></dt><dd>
 								Implement the custom logic needed for a single repository within the template. The Orchestrator iterates through the repository list, launching the template once for each repository and passes only the data for that single repository to the template run. This allows you to automate tasks such as creating the <code class="literal">catalog-info.yaml</code>, running compliance checks, or registering the entity with the catalog.
-							</dd></dl></div></section></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm46830956372720"><h1 class="legalnotice">Legal Notice</h1><div class="para">
+							</dd></dl></div></section></section></section><div><div xml:lang="en-US" class="legalnotice" id="idm45796725055872"><h1 class="legalnotice">Legal Notice</h1><div class="para">
 		Copyright <span class="trademark"/>© 2026 Red Hat, Inc.
 	</div><div class="para">
 		The text of and illustrations in this document are licensed by Red Hat under a Creative Commons Attribution–Share Alike 3.0 Unported license ("CC-BY-SA"). An explanation of CC-BY-SA is available at <a class="uri" href="http://creativecommons.org/licenses/by-sa/3.0/">http://creativecommons.org/licenses/by-sa/3.0/</a>. In accordance with CC-BY-SA, if you distribute this document or an adaptation of it, you must provide the URL for the original version.
