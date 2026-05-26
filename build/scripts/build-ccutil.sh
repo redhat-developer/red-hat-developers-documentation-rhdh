@@ -71,5 +71,13 @@ else
   fi
 fi
 
-# Test the links with htmltest
-podman run --rm --tty --volume "$(pwd)":/test:Z docker.io/wjdp/htmltest:latest -c .htmltest.yml
+# Test the links with lychee
+if ! command -v lychee &>/dev/null; then
+  LYCHEE_VERSION="v0.23.0"
+  mkdir -p ./bin
+  curl -sSfL "https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" \
+    | tar xz -C ./bin lychee
+  export PATH="./bin:$PATH"
+fi
+lychee --version
+lychee --config lychee.toml titles-generated/
