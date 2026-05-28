@@ -1,0 +1,143 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="pre-configured-settings-for-common-use-cases_{context}"]
+= Pre-configured settings for common use cases
+
+[role="_abstract"]
+To choose the appropriate configuration for your use case, review the available predefined settings, their infrastructure prerequisites, and minimal Custom Resource examples.
+
+{product} Operator 1.10.0 and later includes pre-configured settings for common use cases.
+Each configuration automatically applies required plugins, dependencies, and app-config settings.
+
+[cols="1,2,2,2", options="header"]
+|===
+| Name
+| Purpose
+| Infrastructure prerequisites
+| Default status
+
+| `orchestrator`
+| Workflow automation for CI/CD pipelines
+| OpenShift Serverless Operator, Knative Serving, Knative Eventing, OpenShift Serverless Logic Operator, PostgreSQL database, optional AMQ Streams
+| Disabled by default - enable explicitly
+
+| `lightspeed`
+| AI chat assistance for developers
+| External LLM provider (OpenAI-compatible API)
+| Enabled by default - disable to turn off
+|===
+
+== Orchestrator
+
+Enable workflow automation with automatic plugin configuration.
+
+*Automatically configured components:*
+
+* Orchestrator front-end plugin (`red-hat-developer-hub-backstage-plugin-orchestrator`)
+* Orchestrator backend plugin (`red-hat-developer-hub-backstage-plugin-orchestrator-backend`)
+* Orchestrator backend module for Scaffolder (`red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator`)
+* Orchestrator form widgets plugin (`red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets`)
+* `SonataFlow` Operator integration
+* Data Index service
+* Job service
+
+*Minimal CR example:*
+
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub-orchestrator
+spec:
+  flavours:
+    - name: orchestrator
+      enabled: true
+----
+
+[NOTE]
+====
+This example uses the default local PostgreSQL database.
+For production deployments, Red Hat recommends using an external PostgreSQL database.
+For configuration details, see {configuring-book-link}#configure-external-postgresql-databases_configuring-rhdh[Configure external PostgreSQL databases].
+====
+
+*Prerequisites:*
+
+* OpenShift Serverless Operator, Knative Serving, Knative Eventing, and OpenShift Serverless Logic Operator
+* PostgreSQL database (external database recommended for production)
+* Optional: AMQ Streams (Kafka) for event-driven workflows
++
+For detailed steps, see xref:deploy-rhdh-for-workflow-automation_{context}[Deploy {product} for workflow automation].
+
+== {ls-short}
+
+{ls-short} is enabled by default in {product} 1.10.0 and later. Connect your LLM provider to use AI chat assistance.
+
+*Automatically configured components:*
+
+* {ls-short} front-end plugin
+* {ls-short} backend plugin
+* {lcs-name} sidecar
+
+*Minimal CR example:*
+
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub
+spec:
+  application:
+    extraEnvs:
+      secrets:
+        - name: lightspeed-secrets
+          containers:
+            - lightspeed-core
+----
+
+[NOTE]
+====
+{ls-short} is enabled by default.
+You do not need to set `spec.flavours` to enable AI assistance.
+To disable, set `spec.flavours: [{name: lightspeed, enabled: false}]`.
+====
+
+*Prerequisites:*
+
+* External LLM provider endpoint (OpenAI, {azure-short} OpenAI, or compatible API)
+* LLM API credentials
++
+For complete configuration details, provider-specific guidance, and troubleshooting, see {developer-lightspeed-book-link}#install-and-configure_interacting-with-developer-lightspeed-for-rhdh[Install and configure {ls-brand-name}].
+
+== Multiple pre-configured settings
+
+Enable both Orchestrator and {ls-short} in a single deployment:
+
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: developer-hub-full
+spec:
+  flavours:
+    - name: orchestrator
+      enabled: true
+  application:
+    extraEnvs:
+      secrets:
+        - name: lightspeed-secrets
+          containers:
+            - lightspeed-core
+----
+
+[NOTE]
+====
+{ls-short} is enabled by default, so you only need to explicitly enable Orchestrator.
+Settings from both configurations merge automatically.
+For production deployments with external PostgreSQL database, add the database configuration as shown in {configuring-book-link}#configure-external-postgresql-databases_configuring-rhdh[Configure external PostgreSQL databases].
+====
+
+You must meet prerequisites for both: OpenShift Serverless components for Orchestrator and external LLM provider for {ls-short}.
