@@ -1,0 +1,101 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="rhdh-configuration-files-overview_{context}"]
+= {product} configuration files overview
+
+[role="_abstract"]
+When configuring {product}, a common question is "Where do I configure this?" {product} uses several configuration files and Kubernetes resources, each serving a different purpose and provisioned differently depending on your deployment method.
+
+{product-short} configuration files fall into two categories:
+
+Cluster-provisioned files:: Created by platform engineers and provisioned as ConfigMaps or Secrets on the target cluster. These files control the runtime behavior and deployment of your {product-very-short} instance.
+
+Git-stored files:: Authored by developers and committed to source repositories. These files define catalog entities, software templates, and documentation configuration that {product-very-short} consumes at runtime.
+
+== Cluster-provisioned files
+
+The following table lists configuration files that platform engineers create and provision as Kubernetes resources on the target cluster.
+
+[cols="1,2,1,2,2", options="header", subs="+attributes"]
+|===
+| File
+| Purpose
+| Format
+| Operator provisioning
+| Helm chart provisioning
+
+| `{my-app-config-file}`
+| Main application configuration (URLs, auth, catalog, database, plugin settings).
+| YAML
+a| ConfigMap referenced via `spec.application.appConfig.configMaps` in the `{product-custom-resource-type}` CR.
+a| Inline via `upstream.backstage.appConfig` values, or external ConfigMap via `upstream.backstage.extraAppConfig`.
+
+| Secrets (for example, `my-rhdh-secrets`)
+| Authentication credentials, backend secret, database passwords, and other sensitive values.
+| Kubernetes Secret
+a| Secret referenced via `spec.application.extraEnvs.secrets` in the `{product-custom-resource-type}` CR.
+a| Referenced via `upstream.backstage.extraEnvs.secrets`.
+
+| `dynamic-plugins.yaml`
+| Enable, disable, and configure dynamic plugins.
+| YAML
+a| ConfigMap referenced via `spec.application.dynamicPluginsConfigMapName` in the `{product-custom-resource-type}` CR.
+a| Inline via `global.dynamic.plugins` Helm values.
+
+| `rbac-policy.csv`
+| RBAC permission policies and role assignments (Casbin format).
+| CSV
+a| ConfigMap mounted as file, path configured in `{my-app-config-file}` under `permission.rbac.policies-csv-file`.
+a| Same.
+
+| `rbac-conditional-policies.yaml`
+| RBAC conditional policies with criteria-based filtering.
+| YAML
+a| ConfigMap mounted as file, path configured in `{my-app-config-file}` under `permission.rbac.conditionalPoliciesFile`.
+a| Same.
+
+| `{product-custom-resource-type}` CR
+| Operator-side deployment configuration (references config files, routes, database, replicas).
+| YAML (Kubernetes CR)
+a| Applied directly as a `{product-custom-resource-type}` Custom Resource.
+| N/A
+
+| Helm `values.yaml`
+| Helm-side deployment configuration (image, replicas, resources, routes).
+| YAML
+| N/A
+a| Passed via `helm install -f values.yaml` or `--set`.
+
+|===
+
+== Git-stored files
+
+The following table lists configuration files that developers author and store in Git repositories.
+
+[cols="1,2,1,1,2", options="header", subs="+attributes"]
+|===
+| File
+| Purpose
+| Format
+| Stored in
+| Consumed by
+
+| `catalog-info.yaml`
+| Entity descriptor that defines components, APIs, systems, and their metadata and annotations.
+| YAML
+| Root of a source repository.
+| Software Catalog (through catalog locations or discovery providers).
+
+| `template.yaml`
+| Software template definition with scaffolding steps for creating new components.
+| YAML
+| Template repository.
+a| Software Templates (registered through `catalog.locations` URL in `{my-app-config-file}`).
+
+| `mkdocs.yml`
+| TechDocs configuration that controls how documentation is built from Markdown.
+| YAML
+| Alongside source repository docs.
+| TechDocs plugin.
+
+|===
