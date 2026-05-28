@@ -1,22 +1,20 @@
 :_mod-docs-content-type: SNIPPET
 
-[IMPORTANT]
-====
-Starting with {product-short} 1.9, the `install-dynamic-plugins` init container pulls a catalog index image at startup for automatic plugin discovery. In an air-gapped environment, you must mirror this image to your internal registry and configure the Helm chart to use it.
-
-Mirror the catalog index image to your internal registry:
-
+. Mirror the catalog index image to your internal registry. The `install-dynamic-plugins` init container pulls this image at startup for plugin discovery.
++
 [source,terminal,subs="+quotes,+attributes"]
 ----
 $ skopeo copy docker://registry.redhat.io/rhdh/plugin-catalog-index:{product-version} docker://_<target_registry>_/rhdh/plugin-catalog-index:{product-version}
 ----
-
-Then add the following `--set` options to your `helm install` command:
-
++
+Then add the following `--set` option to your `helm install` command to point to your mirrored image:
++
 [source,terminal,subs="+quotes"]
 ----
 --set global.catalogIndex.image.registry=_<target_registry>_
 ----
-
++
+[NOTE]
+====
 Cluster-level mirroring resources such as `ImageDigestMirrorSet` or `ImageContentSourcePolicy` do not apply to the init container because it uses `skopeo` directly to pull images.
 ====
