@@ -1,18 +1,14 @@
 :_mod-docs-content-type: SNIPPET
 
-[IMPORTANT]
-====
-Starting with {product-short} 1.9, the `install-dynamic-plugins` init container pulls a catalog index image at startup for automatic plugin discovery. In an air-gapped environment, you must mirror this image and configure the init container to use your internal registry.
-
-Mirror the catalog index image to your internal registry:
-
+. Mirror the catalog index image to your internal registry. The `install-dynamic-plugins` init container pulls this image at startup for plugin discovery.
++
 [source,terminal,subs="+quotes,+attributes"]
 ----
 $ skopeo copy docker://registry.redhat.io/rhdh/plugin-catalog-index:{product-version} docker://_<target_registry>_/rhdh/plugin-catalog-index:{product-version}
 ----
 
-Then create a ConfigMap with a `registries.conf` file that redirects the init container to your internal registry:
-
+. Create a ConfigMap with a `registries.conf` file that redirects the init container to your internal registry:
++
 [source,yaml,subs="+quotes"]
 ----
 apiVersion: v1
@@ -26,8 +22,8 @@ data:
     location = "_<target_registry>_/rhdh"
 ----
 
-Mount the ConfigMap in the `install-dynamic-plugins` init container by adding the following to your `{product-custom-resource-type}` CR:
-
+. Mount the ConfigMap in the `install-dynamic-plugins` init container by adding the following to your `{product-custom-resource-type}` CR:
++
 [source,yaml,subs="+attributes"]
 ----
 spec:
@@ -40,6 +36,8 @@ spec:
           containers:
             - install-dynamic-plugins
 ----
-
++
+[NOTE]
+====
 Cluster-level mirroring resources such as `ImageDigestMirrorSet` or `ImageContentSourcePolicy` do not apply to the init container because it uses `skopeo` directly to pull images.
 ====
