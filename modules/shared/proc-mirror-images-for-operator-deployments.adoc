@@ -1,0 +1,43 @@
+:_mod-docs-content-type: PROCEDURE
+[id="mirror-images-for-operator-deployments_{context}"]
+= Mirror {ls-short} images for Operator deployments
+
+[role="_abstract"]
+Mirror the required {ls-short} container images and plugins to your local registry to provide chat assistance in an air-gapped environment. 
+
+The `prepare-restricted-environment.sh` script does not automatically parse `{ls-short}` images from the bundle manifest, so you must mirror these images manually before running the script.
+
+.Prerequisites
+* You have a target mirror registry accessible to your disconnected cluster.
+* You authenticated to the {rhcr} and your target mirror registry.
+
+.Procedure
+
+. Extract the deployment configurations from the official Operator bundle:
++
+[source,terminal,subs=+attributes]
+----
+BUNDLE_IMAGE="registry.redhat.io/rhdh/rhdh-operator-bundle:{product-version}"
+CONTAINER_ID=$(podman create "${BUNDLE_IMAGE}")
+podman cp $CONTAINER_ID:/manifests/rhdh-flavour-lightspeed-config_v1_configmap.yaml ./lightspeed-config.yaml
+podman rm $CONTAINER_ID
+----
+
+. Identify the initialization and sidecar container image tags from the extracted configuration file:
++
+[source,terminal]
+----
+LS_RAG_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.initContainers[] | select(.name == "init-rag-data") | .image')
+LS_CORE_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.containers[] | select(.name == "lightspeed-core") | .image')
+----
+
+. Mirror the images to your internal registry by running the `skopeo copy` command:
++
+[source,terminal]
+----
+skopeo copy docker://${LS_RAG_IMAGE} docker://<mirror_registry>/<ls_rag_repo>:<tag>
+skopeo copy docker://${LS_CORE_IMAGE} docker://<mirror_registry>/<ls_core_repo>:<tag>
+----
+
+.Additional resources
+* {installing-in-air-gap-book-link}[{installing-in-air-gap-book-title}]
