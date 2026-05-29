@@ -3,27 +3,124 @@
 = Mirror {ls-short} images for air-gapped environments
 
 [role="_abstract"]
-To provide chat assistance in a network environment without internet access, you must mirror the required {ls-short} container images to your local registry in addition to the standard {product-short} images. 
+To provide chat assistance in a network environment without internet access, you must mirror the required {ls-short} container images and plugins to your local registry in addition to the standard {product-short} images. 
 
 This action ensures your secure environment can pull the necessary images inside your network perimeter.
 
 You must mirror the following {ls-short} images:
+
 * The {lcs-name}({lcs-short}) sidecar container
 * The initialization container for retrieval-augmented generation (RAG) data
+* The {ls-short} plugin
 
 .Prerequisites
-* You have a target mirror registry accessible to your disconnected cluster.
+* You have a target mirror registry accessible to your disconnected {platform-generic} cluster.
 * You authenticated to the {rhcr} and your target mirror registry.
-* You updated the cluster install secret (the 'pull-secret' in the 'openshift-config' namespace) to include the authentication credentials to your mirror registry. The `kubelet` requires these credentials to pull the sidecar images when starting up the {product-very-short} pod.
+* You updated the cluster install secret ('pull-secret' in the 'openshift-config' namespace) to include the authentication credentials for your mirror registry. The `kubelet` requires these credentials to pull the sidecar images when starting the {product-very-short} pod.
 
 .Procedure
-. Extract or identify the image digests for the {ls-short} sidecar and initialization container images.
-. Mirror the images directly to your internal mirror registry by running the `skopeo copy` command:
+
+* Choose one of the following procedures based on your deployment method and platform:
+
+** Procedure for Operator deployments: The `prepare-restricted-environment.sh` script does not automatically parse `{ls-short}` images from the bundle manifest. You must mirror these images manually before running the script.
+
+... Extract the deployment configurations from the official Operator bundle:
 +
 [source,terminal]
 ----
-
+BUNDLE_IMAGE="registry.redhat.io/rhdh/rhdh-operator-bundle:{product-version}"
+CONTAINER_ID=$(podman create "${BUNDLE_IMAGE}")
+podman cp $CONTAINER_ID:/manifests/rhdh-flavour-lightspeed-config_v1_configmap.yaml ./lightspeed-config.yaml
+podman rm $CONTAINER_ID
 ----
+... Identify the initialization and sidecar container image tags from the extracted configuration file:
++
+[source,terminal]
+----
+LS_RAG_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.initContainers[] | select(.name == "init-rag-data") | .image')
+LS_CORE_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.containers[] | select(.name == "lightspeed-core") | .image')
+----
+
+... Mirror the images to your internal registry by running the `skopeo copy` command:
++
+[source,terminal]
+----
+skopeo copy docker://${LS_RAG_IMAGE} docker://<mirror_registry>/<ls_rag_repo>:<tag>
+skopeo copy docker://${LS_CORE_IMAGE} docker://<mirror_registry>/<ls_core_repo>:<tag>
+----
+
+** Procedure for Helm chart deployments on {ocp-short}: When deploying the Helm chart on an {ocp-short} cluster, you use the `oc-mirror` plugin. You must update your `ImageSetConfiguration` file to include the `{ls-short}` images.
+
+... Identify the initialization and sidecar container images from the default values file of the chart:
++
+[source,terminal]
+----
+LS_RAG_IMAGE=$(yq '.global.lightspeed.initContainer.image | .registry + "/" + .repository' values.default.yaml)
+LS_RAG_DIGEST=$(yq '.global.lightspeed.initContainer.image.tag' values.default.yaml)
+LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
+LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
+----
+... Add these images to the `additionalImages` section of your `ImageSetConfiguration` file:
++
+[source,yaml]
+----
+apiVersion: mirror.openshift.io/v2alpha1
+kind: ImageSetConfiguration
+mirror:
+  additionalImages:
+    - name: ${LS_RAG_IMAGE}:${LS_RAG_DIGEST}
+    - name: ${LS_CORE_IMAGE}:${LS_CORE_DIGEST}
+  helm:
+    repositories:
+      - name: openshift-charts
+        url: https://charts.openshift.io
+        charts:
+          - name: redhat-developer-hub
+            version: "1.10"
+----
+
+** Procedure for Helm chart deployments on non-{platform-generic} platforms: When deploying the Helm chart on non-{platform-generic} platforms, you must manually isolate the image references, copy them to your internal registry, and update your configuration file.
+
+... Extract the image references from the default values file of the chart:
++
+[source,terminal]
+----
+LS_RAG_IMAGE=$(yq '.global.lightspeed.initContainer.image | .registry + "/" + .repository' values.default.yaml)
+LS_RAG_DIGEST=$(yq '.global.lightspeed.initContainer.image.tag' values.default.yaml)
+LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
+LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
+----
+... Mirror the images to your internal mirror registry:
++
+[source,terminal]
+----
+skopeo copy --all docker://${LS_RAG_IMAGE}:${LS_RAG_DIGEST} docker://<mirror_registry_name>/<ls_rag_repo_name>:${LS_RAG_DIGEST}
+skopeo copy --all docker://${LS_CORE_IMAGE}:${LS_CORE_DIGEST} docker://<mirror_registry_name>/<ls_core_repo_name>:${LS_CORE_DIGEST}
+----
+... Update your custom Helm values file with the mirrored registry locations and plugin references:
++
+[source,yaml]
+----
+global:
+  lightspeed:
+    initContainer:
+      image:
+        registry: "<mirror_registry_name>"
+        repository: <ls_rag_repo_name>
+        tag: "${LS_RAG_DIGEST}"
+    sidecar:
+      image:
+        registry: "<mirror_registry_name>"
+        repository: <ls_core_repo_name>
+        tag: "${LS_CORE_DIGEST}"
+    plugins:
+      - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed@<ls_frontend_digest>"
+        disabled: false
+      - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed-backend@<ls_backend_digest>"
+        disabled: false
+----
+
 
 .Additional resources
 * {installing-in-air-gap-book-link}[{installing-in-air-gap-book-title}]
+* {installing-and-viewing-plugins-book-link}#mirror-rhdh-dynamic-plugins-in-disconnected-environments_install-dynamic-plugins-in-rhdh[Mirror {product} dynamic plugins in disconnected environments]
