@@ -17,7 +17,7 @@ You can enable the Orchestrator plugins in {product-very-short} by configuring d
 [source,yaml,subs="+attributes,+quotes"]
 ----
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
- disabled: false
+  disabled: false
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}"
   disabled: false
   dependencies:
@@ -30,11 +30,11 @@ You can enable the Orchestrator plugins in {product-very-short} by configuring d
 +
 [NOTE]
 ====
-When you enable the plugins, the pre-loaded plugin configuration are used.
-Additionally, the `ref: sonataflow` field installs the OpenShift Serverless and OpenShift Serverless Logic resources. This happens automatically when you are using the Operator.
+. The `{{inherit}}` attribute in the package versions automatically resolves to the plugin version and default plugin configuration provided in the configured plugin catalog index image (or the index image defined in the {product-version} version). This simplifies plugin management by eliminating the need to manually update versions when upgrading {product-very-short}.
+. The `ref: sonataflow` field installs the OpenShift Serverless and OpenShift Serverless Logic resources. This happens automatically when you are using the Operator.
 ====
 +
-The following example shows a complete configuration of the Orchestrator plugin:
+The following example shows a complete configuration of the Orchestrator plugin dynamic-plugins ConfigMap:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -57,20 +57,9 @@ data:
           disabled: false
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}"
           disabled: false
----
-apiVersion: rhdh.redhat.com/v1alpha5
-kind: {product-custom-resource-type}
-metadata:
-  name: orchestrator
-spec:
-  application:
-    appConfig:
-      configMaps:
-        - name: app-config-rhdh
-    dynamicPluginsConfigMapName: orchestrator-plugin
 ----
 
-. Create a secret containing the `BACKEND_SECRET` value as shown in the following example:
+. Configure backend authentication by creating a secret containing a securely generated `BACKEND_SECRET` value:
 +
 [source,yaml,subs="attributes+"]
 ----
@@ -80,12 +69,6 @@ metadata:
   name: app-config-rhdh
 data:
   {my-app-config-file}: |-
-    auth:
-      environment: development
-      providers:
-        guest:
-          # using the guest user to query the '/api/dynamic-plugins-info/loaded-plugins' endpoint.
-          dangerouslyAllowOutsideDevelopment: true
     backend:
       auth:
         externalAccess:
@@ -99,13 +82,17 @@ kind: Secret
 metadata:
   name: backend-auth-secret
 stringData:
-  # generated with the command below (from https://backstage.io/docs/auth/service-to-service-auth/#setup):
+  # Generate a secure random value using:
   # node -p 'require("crypto").randomBytes(24).toString("base64")'
-  # notsecret
-  BACKEND_SECRET: "R2FxRVNrcmwzYzhhN3l0V1VRcnQ3L1pLT09WaVhDNUEK"
+  BACKEND_SECRET: "<GENERATED_VALUE>"
 ----
++
+[IMPORTANT]
+====
+Replace `<GENERATED_VALUE>` with a securely generated random token. Never use example or placeholder values in production environments.
+====
 
-. Configure your {product-custom-resource-type} CR to update the secret name in the `extraEnvs` field as shown in the following example:
+. Configure your {product-custom-resource-type} CR to reference the secret in the `extraEnvs` field as shown in the following example:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -121,7 +108,6 @@ spec:
     dynamicPluginsConfigMapName: orchestrator-plugin
     extraEnvs:
       secrets:
-          # secret that contains the BACKEND_SECRET key
         - name: backend-auth-secret
 ----
 
