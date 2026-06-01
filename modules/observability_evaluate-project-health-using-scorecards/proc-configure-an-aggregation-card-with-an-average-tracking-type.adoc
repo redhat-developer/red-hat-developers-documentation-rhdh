@@ -1,0 +1,84 @@
+:_mod-docs-content-type: PROCEDURE
+[id="configure-an-aggregation-card-with-an-average-tracking-type_{context}"]
+= Configure an aggregation card with an average tracking type
+
+[role="_abstract"]
+Configure a scorecard aggregation card to calculate a single weighted portfolio score across multiple components.
+
+.Prerequisites
+* The scorecard plugin is installed and configured in your Red Hat Developer Hub instance.
+
+.Procedure
+
+. Open your `app-config.yaml` file.
+
+. Navigate to the `scorecard` section and define your backend Key Performance Indicator (KPI) map within an `aggregationKPIs` block, setting the tracking type to `average`.
+
+. Add the required `statusScores` map to bind numeric weights to your status rules:
++
+[source,yaml]
+----
+scorecard:
+  aggregationKPIs:
+    portfolio-average-health:
+      title: "Portfolio Health KPI"
+      description: "Weighted average score across portfolio components"
+      type: average
+      metricId: github.open_prs
+      options:
+        statusScores:
+          success: 100
+          warning: 50
+          error: 0
+----
+
+. Optional: To override the built-in system defaults, add custom threshold parameters using a continuous, gapless number range evaluated on a scale of `0` to `100`:
++
+[source,yaml]
+----
+options:
+  statusScores:
+    success: 100
+    warning: 50
+    error: 0
+  thresholds:
+    rules:
+    - key: success
+      expression: '>=80'
+      color: '#6bb300' 
+    - key: warning
+      expression: '51-80'
+      color: 'rgb(224, 189, 108)'
+    - key: error
+      expression: '<51'
+      color: '#be1ec7' 
+    - key: critical
+      expression: '<10'
+      color: '#ff0000'
+----
+
+. Open your dynamic plugin configuration file.
+
+. Reference your average tracking aggregation ID inside the homepage card properties block under the `home.page/cards` mount point:
++
+[source,yaml]
+----
+- mountPoint: home.page/cards
+  importName: ScorecardHomepageCard
+  config:
+    props:
+      aggregationId: "portfolio-average-health"
+    layouts:
+      xl: { w: 3, h: 6 }
+      lg: { w: 4, h: 6 }
+      md: { w: 6, h: 6 }
+      sm: { w: 12, h: 6 }
+      xs: { w: 12, h: 6 }
+      xxs: { w: 12, h: 6 }
+----
+
+. Save the modified configuration files and restart your {product} instance.
+
+.Verification
+. Access your {product-short} homepage interface.
+. Verify that the weighted average scorecard summary card displays with your custom scores and thresholds.
