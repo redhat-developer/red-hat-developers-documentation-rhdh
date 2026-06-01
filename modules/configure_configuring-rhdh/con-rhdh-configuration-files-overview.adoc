@@ -6,11 +6,11 @@
 [role="_abstract"]
 When configuring {product}, a common question is "Where do I configure this?". {product} uses several configuration files and Kubernetes resources, each serving a different purpose and provisioned differently depending on your deployment method.
 
-{product-short} configuration files fall into two categories:
+{product-short} configuration files fall into two categories based on how they are consumed:
 
-Cluster-provisioned files:: Created by platform engineers and provisioned as ConfigMaps or Secrets on the target cluster. These files control the runtime behavior and deployment of your {product-very-short} instance.
+Cluster-provisioned files:: Provisioned as Kubernetes resources (config maps or secrets) on the target cluster, typically by platform engineers. These files control the runtime behavior and deployment of your {product-very-short} instance. While the source files can be stored in a Git repository, they must be applied to the cluster to take effect.
 
-Git-stored files:: Authored by developers and committed to source repositories. These files define catalog entities, software templates, and documentation configuration that {product-very-short} consumes at runtime.
+Application-consumed files:: Authored by developers and committed to source repositories. {product-very-short} reads these files directly from Git at runtime to populate the software catalog, execute templates, and build documentation.
 
 == Cluster-provisioned files
 
@@ -34,7 +34,7 @@ a| Inline via `upstream.backstage.appConfig` values, or external ConfigMap via `
 | Authentication credentials, backend secret, database passwords, and other sensitive values.
 | Kubernetes Secret
 a| Secret referenced via `spec.application.extraEnvs.secrets` in the `{product-custom-resource-type}` CR.
-a| Referenced via `upstream.backstage.extraEnvs.secrets`.
+a| Referenced via `upstream.backstage.extraEnvVarsSecrets` or `upstream.backstage.extraEnvVars` (using a `secretKeyRef`).
 
 | `dynamic-plugins.yaml`
 | Enable, disable, and configure dynamic plugins.
@@ -68,9 +68,9 @@ a| Passed via `helm install -f values.yaml` or `--set`.
 
 |===
 
-== Git-stored files
+== Application-consumed files
 
-The following table lists configuration files that developers author and store in Git repositories.
+The following table lists configuration files that developers author and store in Git repositories. {product-very-short} reads these files directly from Git at runtime.
 
 [cols="1,2,1,1,2", options="header", subs="+attributes"]
 |===
