@@ -1,0 +1,53 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-http-server-timeouts_{context}"]
+= Configure HTTP server timeouts
+
+[role="_abstract"]
+Adjust HTTP server timeouts to prevent connection drops behind load balancers or when handling long-running API requests.
+
+If your {product} ({product-very-short}) instance is deployed behind a load balancer or reverse proxy, you might need to adjust the backend HTTP server timeouts.
+For example, if the load balancer closes idle connections before the {product-very-short} backend does, clients might experience unexpected disconnects.
+Similarly, long-running operations such as large catalog imports or slow upstream API calls might require longer request timeouts.
+
+.Procedure
+
+* In your `{my-app-config-file}` configuration file, add or update the `backend.server` section:
++
+[source,yaml]
+----
+backend:
+  server:
+    keepAliveTimeout:
+      minutes: 1
+    headersTimeout:
+      minutes: 2
+    requestTimeout:
+      minutes: 1
+    timeout:
+      minutes: 5
+    maxHeadersCount: 2000
+    maxRequestsPerSocket: 100
+----
++
+Where:
++
+`keepAliveTimeout`:: Maximum time an idle keep-alive connection stays open before the server closes it. Set this higher than your load balancer's idle timeout to avoid premature disconnects.
+`headersTimeout`:: Maximum time allowed to receive the complete HTTP request headers. Must be greater than `keepAliveTimeout`.
+`requestTimeout`:: Maximum time allowed for the entire HTTP request, including headers and body.
+`timeout`:: Socket inactivity timeout. Maximum time a socket can remain idle before being closed.
+`maxHeadersCount`:: Maximum number of incoming HTTP headers allowed per request.
+`maxRequestsPerSocket`:: Maximum number of requests a socket can handle before the connection is closed.
++
+When these settings are not configured, the Node.js defaults apply.
+Timeout values support multiple formats, including human-readable strings, duration objects, and ISO 8601 duration strings.
+For more information, see xref:time-syntax-in-rhdh_rhdh-default-configuration[Time syntax in {product}].
+
+.Verification
+
+* Verify that long-running requests or idle connections behave as expected with the new timeout values.
+
+.Additional resources
+
+* xref:time-syntax-in-rhdh_rhdh-default-configuration[Time syntax in {product}]
+* {configuring-dynamic-plugins-book-link}#override-core-backend-service-configuration_configuring-dynamic-plugins[Override Core Backend Service Configuration]
