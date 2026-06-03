@@ -12,26 +12,20 @@ Configure {ls-short} by using the Helm chart to manage large language model (LLM
 
 .Procedure
 
-. Create a manual Kubernetes Secret to store your provider credentials.
-+
-[NOTE]
-====
-By default, the Helm installation creates a temporary Kubernetes Secret containing keys for various LLM providers. On subsequent `helm upgrade` cycles, the system overwrites this default Secret. Create a manual Kubernetes Secret to persist your credentials.
-====
-
-. Add the required keys to your secret based on your provider requirements:
+. Create a manual Kubernetes Secret to store your provider credentials by adding the required keys to your Secret based on your provider requirements:
 +
 include::snip-lightspeed-secret-keys.adoc[]
 +
 [NOTE]
 ====
-Vertex AI requires custom architecture mapping and has received limited testing.
+* By default, the Helm installation creates a temporary Kubernetes Secret containing keys for various LLM providers. On subsequent `helm upgrade` cycles, the system overwrites this default Secret. Create a manual Kubernetes Secret to persist your credentials.
+* Vertex AI requires custom architecture mapping and has received limited testing.
 ====
-
-. Optional: To filter and reject off-topic user queries, add validation guardrails to your manual Secret:
-* Set `ENABLE_VALIDATION` to `"true"`.
-* Set `VALIDATION_PROVIDER` to your enabled validation provider (for example, `openai`).
-* Set `VALIDATION_MODEL_NAME` to your specific verification model (for example, `gpt-4o-mini`).
++
+[TIP]
+====
+To filter and reject off-topic user queries, you can optionally configure query safety validation guardrails within this Secret by defining the `ENABLE_VALIDATION`, `VALIDATION_PROVIDER`, and `VALIDATION_MODEL_NAME` keys.
+====
 
 . Reference your manual secret inside the `values.yaml` file:
 +
@@ -44,7 +38,7 @@ global:
       name: "my-custom-secret"
 ----
 
-. Optional: To protect configuration files like `lightspeed-stack.yaml`, `config.yaml`, or `rhdh-profile.py` from being overwritten during updates, use a custom ConfigMap:
+. Optional: Configuration files such as `lightspeed-stack.yaml`, `config.yaml` and `rhdh-profile.py` are managed by the Helm deployment and overwrites changes on `Helm upgrade` runs. To protect changes to a file, create a custom config map and reference it in the `values.yaml` file:
 +
 [IMPORTANT]
 ====
