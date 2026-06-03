@@ -1,10 +1,10 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="exclude-or-include-scorecard-metrics-globally_{context}"]
-= Exclude or include scorecard metrics globally
+[id="disable-scorecard-metrics-globally_{context}"]
+= Disable scorecard metrics globally
 
 [role="_abstract"]
-You can exclude or include specific scorecard metrics across all catalog entities by adding configuration to your {product-very-short} application configuration file. This applies to metrics from any provider, including GitHub, Jira, and OpenSSF.
+You can disable specific scorecard metrics globally across all catalog entities, and control whether entity owners can disable additional metrics by using annotations.
 
 .Prerequisites
 
@@ -19,17 +19,24 @@ You can exclude or include specific scorecard metrics across all catalog entitie
 [source,yaml,subs="+quotes,+attributes"]
 ----
 scorecard:
-  excludeMetrics:
-    - openssf.code_review
-  includeMetrics:
+  disabledMetrics:
     - openssf.packaging
+  entityAnnotations:
+    disabledMetrics:
+      enabled: true
+      except:
+        - openssf.maintained
 ----
 +
 where:
 
-`excludeMetrics`:: Enter a list of metric IDs to exclude globally. For available values, see xref:available-scorecard-metric-ids_{context}[Available scorecard metric IDs].
-`includeMetrics`:: Enter a list of metric IDs to include. When set, only listed metrics are displayed.
+`disabledMetrics`:: Enter a list of metric IDs to disable globally. Metrics in this list are always skipped and cannot be overridden by entity annotations. For available values, see xref:available-scorecard-metric-ids_{context}[Available scorecard metric IDs].
+
+`entityAnnotations.disabledMetrics.enabled`:: Enter `true` to allow entity owners to disable metrics by using the `scorecard.io/disabled-metrics` annotation. Enter `false` to prevent entity owners from disabling metrics. Defaults to `true`.
+
+`entityAnnotations.disabledMetrics.except`:: Enter a list of metric IDs that entity owners cannot disable, even when `enabled` is `true`. Use this to ensure critical metrics always run.
 
 .Additional resources
 
+* {scorecard-plugin-book-link}#exclude-specific-scorecard-metrics-per-entity_{context}[Disable specific scorecard metrics per entity]
 * {scorecard-plugin-book-link}#ref-supported-scorecard-metrics-providers_{context}[Supported scorecard metrics providers]
