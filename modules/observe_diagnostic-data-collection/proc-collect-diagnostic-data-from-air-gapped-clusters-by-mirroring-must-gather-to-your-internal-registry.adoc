@@ -1,0 +1,161 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="collect-diagnostic-data-from-air-gapped-clusters-by-mirroring-must-gather-to-your-internal-registry_{context}"]
+= Collect diagnostic data from air-gapped clusters by mirroring must-gather to your internal registry
+
+[role="_abstract"]
+Mirror the must-gather image to your registry to enable diagnostic data collection from disconnected clusters.
+
+.Prerequisites
+
+* `skopeo` tool installed on the machine with registry access.
+* Access to an internal container registry.
+* For {ocp-short}: Cluster administrator access to update the global pull secret.
+* For Kubernetes: Ability to create secrets in target namespaces.
+
+.Procedure
+
+. Choose your mirroring workflow based on network access:
++
+--
+*Partially disconnected:*
+
+Your local machine can access both the internet and the internal registry.
+
+*Fully disconnected:*
+
+Requires a bastion host or approved file transfer method to move images.
+--
+
+. Mirror the must-gather image:
++
+--
+*For partially disconnected environments:*
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ skopeo copy \
+  docker://quay.io/rhdh-community/rhdh-must-gather:*_<version>_* \
+  docker://*_<internal-registry>_*/rhdh/rhdh-must-gather:*_<version>_*
+----
+
+*For fully disconnected environments:*
+
+On a machine with internet access, pull the must-gather image:
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ skopeo copy \
+  docker://quay.io/rhdh-community/rhdh-must-gather:*_<version>_* \
+  dir:./rhdh-must-gather-*_<version>_*
+----
+
+Pull the Helm chart:
+
+[source,terminal]
+----
+$ helm pull redhat-developer-hub-must-gather --repo https://charts.openshift.io
+----
+
+Transfer the image directory and the `redhat-developer-hub-must-gather-__<version>__.tgz` chart file to your bastion host. Push the image to the internal registry:
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ skopeo copy \
+  dir:./rhdh-must-gather-*_<version>_* \
+  docker://*_<internal-registry>_*/rhdh/rhdh-must-gather:*_<version>_*
+----
+--
++
+Replace `_<version>_` with the must-gather version that matches your {product-very-short} deployment and `_<internal-registry>_` with your internal registry hostname.
+
+. Configure image pull authentication:
++
+[NOTE]
+====
+If your internal registry requires authentication, you must configure image pull secrets before running must-gather. Without proper credentials, the must-gather pod fails with `ImagePullBackOff` errors.
+====
++
+--
+*On {ocp-short}:*
+
+Add your internal registry credentials to the cluster-wide pull secret.
+For instructions, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html/images/managing-images#images-update-global-pull-secret_using-image-pull-secrets[Updating the global cluster pull secret] in the {ocp-brand-name} documentation.
+
+*On Kubernetes:*
+
+Create a docker-registry secret:
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ kubectl create secret docker-registry must-gather-pull-secret \
+  --docker-server=*_<internal-registry>_* \
+  --docker-username=*_<username>_* \
+  --docker-password=*_<password>_* \
+  -n rhdh-diagnostics
+----
+--
+
+. Run must-gather using the mirrored image:
++
+--
+*On {ocp-short}:*
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ oc adm must-gather --image=*_<internal-registry>_*/rhdh/rhdh-must-gather:*_<version>_*
+----
+
+*On Kubernetes (partially disconnected):*
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ helm upgrade --install my-rhdh-must-gather redhat-developer-hub-must-gather \
+  --repo https://charts.openshift.io \
+  --namespace rhdh-diagnostics \
+  --create-namespace \
+  --set image.registry=*_<internal-registry>_* \
+  --set image.repository=rhdh/rhdh-must-gather \
+  --set image.tag=*_<version>_* \
+  --set imagePullSecrets[0].name=must-gather-pull-secret
+----
+
+*On Kubernetes (fully disconnected):*
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ helm upgrade --install my-rhdh-must-gather /path/to/redhat-developer-hub-must-gather-*_<version>_*.tgz \
+  --repo https://charts.openshift.io \
+  --namespace rhdh-diagnostics \
+  --create-namespace \
+  --set image.registry=*_<internal-registry>_* \
+  --set image.repository=rhdh/rhdh-must-gather \
+  --set image.tag=*_<version>_* \
+  --set imagePullSecrets[0].name=must-gather-pull-secret
+----
+--
+
+.Verification
+
+* Verify that the collection starts without `ImagePullBackOff` errors:
++
+[source,terminal]
+----
+$ oc get pods -n openshift-must-gather-<random>  # On OpenShift
+$ kubectl get pods -n rhdh-diagnostics           # On Kubernetes
+----
+
+.Troubleshooting
+
+*ImagePullBackOff errors:*
+
+Check that registry credentials are configured correctly and that the image path matches your registry structure.
+
+*Certificate errors:*
+
+If your internal registry uses self-signed certificates, configure certificate trust on the cluster.
+For {ocp-short}, see link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html/images/managing-images#images-configuration-registry-mirror_image-configuration[Configuring image registry repository mirroring] in the {ocp-brand-name} documentation.
+
+.Additional resources
+
+* link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html/images/managing-images#images-update-global-pull-secret_using-image-pull-secrets[Updating the global cluster pull secret in the {ocp-brand-name} documentation]

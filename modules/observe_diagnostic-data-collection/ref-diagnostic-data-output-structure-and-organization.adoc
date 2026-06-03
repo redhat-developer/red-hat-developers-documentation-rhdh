@@ -1,0 +1,105 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="diagnostic-data-output-structure-and-organization_{context}"]
+= Diagnostic data output structure and organization
+
+[role="_abstract"]
+The must-gather output directory organizes data by collector type, namespace, and resource type.
+
+== Top-level directory structure
+
+The must-gather output directory contains files and subdirectories organized by collection method and data type.
+The following table shows the top-level structure:
+
+[cols="1,3", options="header"]
+|===
+|Path
+|Contents
+
+|`version` and `must-gather.log`
+|Collection metadata including timestamps, must-gather version, collectors that ran, and collection parameters.
+
+|`sanitization-report.txt`
+|Data sanitization summary and details.
+
+|`all-routes.txt`
+|All {ocp-short} routes cluster-wide.
+
+|`all-ingresses.txt`
+|All Kubernetes ingresses cluster-wide.
+
+|`cluster-info/`
+|Cluster-wide information (only present if you specified `--cluster-info`).
+
+|`namespace-inspect/`
+|Deep namespace inspect data (collected by default).
+
+|`platform/`
+|Platform and infrastructure information.
+
+|`helm/`
+|Helm deployment data (native releases and standalone deployments). Only present if Helm-deployed {product-very-short} instances are detected.
+
+|`orchestrator/`
+|Orchestrator-flavored deployment data (if detected). Only present if Orchestrator components are detected.
+
+|`operator/`
+|Operator deployment data (if {product-very-short} operators found). Only present if {product-very-short} operators are detected.
+|===
+
+== Heap dump file locations
+
+When the tool collects heap dumps with the `--with-heap-dumps` flag, they appear within deployment-specific directories, not under `namespace-inspect/namespaces/`. The location depends on the installation method:
+
+Heap dump file paths by deployment type:
+
+* Helm releases: `helm/releases/ns=<namespace>/<release>/deployment/heap-dumps/...`
+* Helm standalone: `helm/standalone/ns=<namespace>/<workload>/deployment/heap-dumps/...`
+* Operator: `operator/backstage-crs/ns=<namespace>/<cr>/deployment/heap-dumps/...`
+
+Example:
+----
+helm/releases/ns=rhdh-prod/developer-hub/deployment/heap-dumps/pod=backstage-developer-hub-7d8f9c5b-xk2m4/container=backstage-backend/heapdump-20260430-143022.heapsnapshot
+----
+
+Analyze heap dump files using Chrome DevTools, Node.js heap analysis tools, or memory profilers.
+
+== Locating common diagnostic data
+
+The following table shows where to find frequently needed diagnostic information in the `must-gather` output:
+
+[cols="1,2", options="header"]
+|===
+|Diagnostic Data
+|Location
+
+|Backend pod logs
+|`namespace-inspect/namespaces/<namespace>/pods/<backstage-pod>/backstage-backend/logs/current.log`
+
+|PostgreSQL connection configuration
+|`namespace-inspect/namespaces/<namespace>/core/configmaps/<app-config-configmap>.yaml`
+
+|Operator logs
+|`operator/ns=<namespace>/logs.txt`
+
+|{product-custom-resource-type} custom resource definition
+|`operator/backstage-crs/<backstage-cr-name>.yaml`
+
+|Route or Ingress definitions
+|`all-routes.txt` ({ocp-short}) or `all-ingresses.txt` (Kubernetes)
+
+|Helm release values
+|`helm/releases/ns=<namespace>/<release-name>/values.yaml`
+
+|Deployment configurations
+|`namespace-inspect/namespaces/<namespace>/apps/deployments/<deployment-name>.yaml`
+
+|Service definitions
+|`namespace-inspect/namespaces/<namespace>/core/services/<service-name>.yaml`
+
+|Platform and cluster version
+|`platform/platform.json` or `platform/platform.txt`
+
+|Heap dumps for memory analysis
+|`helm/releases/ns=<namespace>/<release>/deployment/heap-dumps/` (Helm) or `operator/backstage-crs/ns=<namespace>/<cr>/deployment/heap-dumps/` (Operator)
+|===

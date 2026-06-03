@@ -1,0 +1,41 @@
+:_mod-docs-content-type: SNIPPET
+
+// Snippet: increase-liveness-probe-timeout
+[IMPORTANT]
+====
+{product-very-short} stops responding during heap dump collection while writing memory snapshots.
+Large memory footprints (1GB+) can take several seconds or minutes, causing containers to fail liveness probes and restart.
+Plan collection during maintenance windows or low-traffic periods.
+====
++
+--
+For Operator-based deployments, update the {backstage} custom resource:
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                livenessProbe:
+                  failureThreshold: 180
+----
+
+Apply the change with `oc apply -f backstage-cr.yaml`.
+
+For Helm-based deployments, update your Helm values:
+[source,yaml]
+----
+upstream:
+  backstage:
+    livenessProbe:
+      failureThreshold: 180
+----
+
+Apply the change with `helm upgrade`.
+
+Wait for the pods to restart with the new configuration before proceeding.
+--
