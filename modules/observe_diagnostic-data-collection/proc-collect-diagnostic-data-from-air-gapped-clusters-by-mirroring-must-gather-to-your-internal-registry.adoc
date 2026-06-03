@@ -18,7 +18,7 @@ Mirror the must-gather image to your internal registry to enable diagnostic data
 . Choose your mirroring workflow based on network access:
 +
 --
-*Partially disconnected (recommended):*
+*Partially disconnected:*
 
 Your local machine can access both the internet and the internal registry.
 
@@ -41,16 +41,18 @@ $ skopeo copy \
 
 *For fully disconnected environments:*
 
-On a machine with internet access:
+On a machine with internet access, pull the must-gather image and Helm chart:
 
 [source,terminal,subs="+attributes,+quotes"]
 ----
 $ skopeo copy \
   docker://quay.io/rhdh-community/rhdh-must-gather:*_<version>_* \
   dir:./rhdh-must-gather-*_<version>_*
+
+$ helm pull redhat-developer-hub-must-gather --repo https://charts.openshift.io
 ----
 
-Transfer the directory to your bastion host, then push to the internal registry:
+Transfer the image directory and the `redhat-developer-hub-must-gather-__<version>__.tgz` chart file to your bastion host, then push the image to the internal registry:
 
 [source,terminal,subs="+attributes,+quotes"]
 ----
@@ -60,7 +62,7 @@ $ skopeo copy \
 ----
 --
 +
-Replace `_<version>_` with the must-gather version that matches your {product-very-short} deployment and `_<internal-registry>_` with your internal registry hostname.
+Replace `_<version>_` with the must-gather version that matches your {product-very-short} deployment, `_<internal-registry>_` with your internal registry hostname, and `_<path-to-chart>_` with the directory containing the transferred Helm chart file.
 
 . Configure image pull authentication:
 +
@@ -99,12 +101,25 @@ $ kubectl create secret docker-registry must-gather-pull-secret \
 $ oc adm must-gather --image=*_<internal-registry>_*/rhdh/rhdh-must-gather:*_<version>_*
 ----
 
-*On Kubernetes:*
+*On Kubernetes (partially disconnected):*
 
 [source,terminal,subs="+attributes,+quotes"]
 ----
 $ helm upgrade --install my-rhdh-must-gather redhat-developer-hub-must-gather \
   --repo https://charts.openshift.io \
+  --namespace rhdh-diagnostics \
+  --create-namespace \
+  --set image.registry=*_<internal-registry>_* \
+  --set image.repository=rhdh/rhdh-must-gather \
+  --set image.tag=*_<version>_* \
+  --set imagePullSecrets[0].name=must-gather-pull-secret
+----
+
+*On Kubernetes (fully disconnected):*
+
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ helm upgrade --install my-rhdh-must-gather *_<path-to-chart>_*/redhat-developer-hub-must-gather-*_<version>_*.tgz \
   --namespace rhdh-diagnostics \
   --create-namespace \
   --set image.registry=*_<internal-registry>_* \
