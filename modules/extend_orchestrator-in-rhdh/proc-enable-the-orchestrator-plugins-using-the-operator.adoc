@@ -12,12 +12,14 @@ You can enable the Orchestrator plugins in {product-very-short} by configuring d
 
 .Procedure
 
-. To enable the Orchestrator plugins with default settings, set `disabled: false` for the corresponding packages:
+. To enable the Orchestrator plugins with default settings, set `disabled: false` for the corresponding packages.
++
+The `{{inherit}}` attribute in the package field automatically resolves to the default plugin version and configuration for your version of {product-very-short}.
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
- disabled: false
+  disabled: false
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}"
   disabled: false
   dependencies:
@@ -30,11 +32,11 @@ You can enable the Orchestrator plugins in {product-very-short} by configuring d
 +
 [NOTE]
 ====
-When you enable the plugins, the pre-loaded plugin configuration are used.
-Additionally, the `ref: sonataflow` field installs the OpenShift Serverless and OpenShift Serverless Logic resources. This happens automatically when you are using the Operator.
+If you need a specific plugin version, replace `{{inherit}}` with the version tag, such as `1.3.0`.
+When you use the Operator, the `ref: sonataflow` field installs the OpenShift Serverless and OpenShift Serverless Logic resources.
 ====
 +
-The following example shows a complete configuration of the Orchestrator plugin:
+The following example shows a complete configuration of the Orchestrator plugin `dynamic-plugins` config map:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -57,20 +59,11 @@ data:
           disabled: false
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}"
           disabled: false
----
-apiVersion: rhdh.redhat.com/v1alpha5
-kind: {product-custom-resource-type}
-metadata:
-  name: orchestrator
-spec:
-  application:
-    appConfig:
-      configMaps:
-        - name: app-config-rhdh
-    dynamicPluginsConfigMapName: orchestrator-plugin
 ----
 
-. Create a secret containing the `BACKEND_SECRET` value as shown in the following example:
+. (Optional) Configure backend authentication to allow Orchestrator components to communicate with the {product-very-short} API.
++
+This step is required only when your workflow definitions include API calls to {product-very-short} plugins, such as the notifications or scaffolding plugins.
 +
 [source,yaml,subs="attributes+"]
 ----
@@ -80,12 +73,6 @@ metadata:
   name: app-config-rhdh
 data:
   {my-app-config-file}: |-
-    auth:
-      environment: development
-      providers:
-        guest:
-          # using the guest user to query the '/api/dynamic-plugins-info/loaded-plugins' endpoint.
-          dangerouslyAllowOutsideDevelopment: true
     backend:
       auth:
         externalAccess:
@@ -99,13 +86,17 @@ kind: Secret
 metadata:
   name: backend-auth-secret
 stringData:
-  # generated with the command below (from https://backstage.io/docs/auth/service-to-service-auth/#setup):
+  # Run the following command to generate a secure random value:
   # node -p 'require("crypto").randomBytes(24).toString("base64")'
-  # notsecret
-  BACKEND_SECRET: "R2FxRVNrcmwzYzhhN3l0V1VRcnQ3L1pLT09WaVhDNUEK"
+  BACKEND_SECRET: "<GENERATED_VALUE>"
 ----
++
+[IMPORTANT]
+====
+Replace `<GENERATED_VALUE>` with a securely generated random token. Do not use example or placeholder values in production environments.
+====
 
-. Configure your {product-custom-resource-type} CR to update the secret name in the `extraEnvs` field as shown in the following example:
+. If you have configured backend authentication in the previous step, update your {product-custom-resource-type} CR to reference the secret:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -121,7 +112,6 @@ spec:
     dynamicPluginsConfigMapName: orchestrator-plugin
     extraEnvs:
       secrets:
-          # secret that contains the BACKEND_SECRET key
         - name: backend-auth-secret
 ----
 
