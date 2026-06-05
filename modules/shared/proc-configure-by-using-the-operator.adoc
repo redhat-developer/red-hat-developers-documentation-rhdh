@@ -1,0 +1,81 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-by-using-the-operator_{context}"]
+= Configure {ls-short} by using the Operator
+
+[role="_abstract"]
+Configure {ls-short} by updating your {backstage} custom resource (CR) to map environment variables, manage configurations, and set access rights.
+
+.Prerequisites
+* The {product-very-short} Operator is installed on your cluster.
+* You have cluster administrator privileges.
+
+.Procedure
+
+. Create an opaque Kubernetes Secret containing your operational credentials and query safety guardrails before applying the {backstage} CR. Refer to the following key definitions for required environment variables:
++
+include::snip-lightspeed-secret-keys.adoc[]
++
+The following code shows an example configuration Secret for vLLM with validation:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lightspeed-auth-secrets
+type: Opaque
+stringData:
+  ENABLE_VLLM: "true"
+  VLLM_URL: "https://<api_endpoint>/v1"
+  VLLM_API_KEY: "<api_key>"
+  ENABLE_VALIDATION: "true"
+  VALIDATION_PROVIDER: "vllm"
+  VALIDATION_MODEL_NAME: "llama3.1"
+----
+
+. Map your secret inside the `extraEnvs` section of the {backstage} CR to complete container provisioning:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: lightspeed-rhdh
+spec:
+  application:
+    extraEnvs:
+      secrets:
+        - name: lightspeed-auth-secrets
+          containers:
+            - lightspeed-core
+----
+
+. Optional: To protect settings such as Model Context Protocol (MCP) server additions from being overwritten during reconciliation loops, define a custom ConfigMap mapping in the `extraFiles` section of the CR:
++
+[source,yaml]
+----
+    extraFiles:
+      configMaps:
+        - name: "my-custom-config"
+          mountPath: /app-root
+          key: lightspeed-stack.yaml
+          containers:
+            - lightspeed-core
+----
+
+. Configure access rights by updating the RBAC policy inside your {backstage} CR:
++
+include::snip-rbac-policies.adoc[]
+
+. Apply the updated custom resource manifest to your cluster:
++
+[source,bash]
+----
+$ oc apply -f <backstage_cr_file>.yaml
+----
+
+.Verification
+. Log in to your console instance.
+. Verify that the *Open Lightspeed* floating action button (FAB) appears on the home page.
+. Select the FAB and confirm that the chat window initializes successfully.

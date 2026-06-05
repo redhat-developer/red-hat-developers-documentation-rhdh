@@ -1,0 +1,88 @@
+:_mod-docs-content-type: REFERENCE
+[id="servicenow-configuration-parameters_{context}"]
+= ServiceNow configuration parameters
+
+[role="_abstract"]
+The ServiceNow integration requires specific parameters in your configuration files to establish a connection between {product} and your ServiceNow instances. Use these parameters to define authentication methods, instance URLs, and UI layouts.
+
+== ServiceNow backend and frontend configuration
+Define the following parameters in the `app-config.yaml` file or the `dynamic-plugins.yaml` section of the `{product}` ConfigMap to enable the backend and frontend plugins.
+
+|===
+| Parameter | Description | Requirement
+
+| `instanceUrl`  | String | N/A | The base URL of your ServiceNow instance (e.g., `https://dev12345.service-now.com`). | Required
+| `basicAuth.username` | The service account username for Basic authentication. | Optional
+| `basicAuth.password` | The service account password for Basic authentication. | Optional
+| `oauth.grantType` | The OAuth 2.0 grant type. Supports `client_credentials` or `password`. | Optional
+| `oauth.clientId` | The client ID for OAuth authentication. | Optional
+| `oauth.clientSecret` | The client secret for OAuth authentication. | Optional
+|===
+
+== ServiceNow scaffolder configuration
+The ServiceNow Scaffolder module requires a separate configuration block. Note that this module uses `baseUrl` instead of `instanceUrl`.
+
+|===
+| Parameter | Description | Requirement
+
+| `baseUrl` | The base URL of your ServiceNow instance. | Required
+| `username` | The service account username. | Required for Basic Auth
+| `password` | The service account password. | Required for Basic Auth
+|===
+
+== Authentication examples
+The following examples demonstrate how to structure different authentication methods in your configuration.
+
+== Basic authentication example
+[source,yaml]
+----
+servicenow:
+  baseUrl: ${SERVICENOW_PROD_URL}
+  username: ${SERVICENOW_USER}
+  password: ${SERVICENOW_PASS}
+----
+
+== OAuth with Client Credentials
+[source,yaml]
+----
+servicenow:
+  instanceUrl: ${SERVICENOW_INSTANCE_URL}
+  oauth:
+    grantType: client_credentials
+    clientId: ${SERVICENOW_CLIENT_ID}
+    clientSecret: ${SERVICENOW_CLIENT_SECRET}
+----
+
+== OAuth with Password Grant
+[source,yaml]
+----
+servicenow:
+  instanceUrl: ${SERVICENOW_INSTANCE_URL}
+  oauth:
+    grantType: password
+    clientId: ${SERVICENOW_CLIENT_ID}
+    clientSecret: ${SERVICENOW_CLIENT_SECRET}
+    username: ${SERVICENOW_USER}
+    password: ${SERVICENOW_PASS}
+----
+
+== Frontend UI configuration
+The frontend plugin configuration defines how ServiceNow data appears on component entity pages.
+
+[source,yaml]
+----
+dynamicPlugins:
+  frontend:
+    backstage-community.plugin-servicenow:
+      entityTabs:
+        - path: /servicenow
+          title: ServiceNow
+          mountPoint: entity.page.servicenow
+      mountPoints:
+        - mountPoint: entity.page.servicenow/cards
+          importName: ServicenowPage
+          config:
+            layout:
+              gridColumn: 1 / -1
+              height: 75vh
+----
