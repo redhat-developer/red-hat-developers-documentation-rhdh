@@ -1,0 +1,75 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="run-must-gather-on-kubernetes-to-collect-diagnostic-data_{context}"]
+= Run must-gather on Kubernetes to collect diagnostic data
+
+[role="_abstract"]
+Collect diagnostic data from {product-very-short} deployments on supported Kubernetes platforms.
+
+.Prerequisites
+
+* You have deployed {product} on a supported Kubernetes platform.
+* Cluster administrator access or `RBAC` permissions for resource inspection.
+* Authenticated CLI: `kubectl` and `helm`.
+
+.Procedure
+
+. Install must-gather:
++
+[source,terminal]
+----
+$ helm upgrade --install my-rhdh-must-gather redhat-developer-hub-must-gather \
+  --repo https://charts.openshift.io \
+  --namespace rhdh-diagnostics \
+  --create-namespace
+----
++
+[NOTE]
+====
+The must-gather tool automatically detects and collects data from all {product-very-short} instances in the cluster, regardless of whether they were deployed using the Operator or Helm chart.
+
+For advanced scenarios, you can limit data collection using Helm values:
+
+. Skip Helm-based deployments: `--set gather.withHelm=false`
+. Skip Operator-based deployments: `--set gather.withOperator=false`
+====
+
+. Wait for collection:
++
+[source,terminal]
+----
+$ kubectl wait --for=condition=ready pod \
+  -l app.kubernetes.io/instance=my-rhdh-must-gather,app.kubernetes.io/component=gather \
+  --timeout=3600s -n rhdh-diagnostics
+----
+
+. Extract data:
++
+[source,terminal]
+----
+$ kubectl exec deploy/my-rhdh-must-gather -c data-holder -n rhdh-diagnostics -- \
+  tar czf - -C /must-gather . > rhdh-must-gather-output.tar.gz
+----
+
+. Clean up:
++
+[source,terminal]
+----
+$ helm uninstall my-rhdh-must-gather -n rhdh-diagnostics
+----
+
+.Verification
+
+* Confirm that the output archive contains diagnostic data:
++
+[source,terminal]
+----
+$ tar -tzf rhdh-must-gather-output.tar.gz
+----
++
+The archive contains subdirectories for each deployment method found:
++
+--
+* `operator/` - Data from Operator-based deployments
+* `helm/` - Data from Helm-based deployments
+--

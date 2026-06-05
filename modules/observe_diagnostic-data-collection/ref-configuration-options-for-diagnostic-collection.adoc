@@ -1,0 +1,188 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="configuration-options-for-diagnostic-collection_{context}"]
+= Configuration options for diagnostic collection
+
+[role="_abstract"]
+Reference tables for must-gather command-line flags, environment variables, and Helm chart values.
+
+== Command-line flags
+
+Command-line flags are available when running the gather script directly.
+On {ocp-short}, pass these flags after `-- /usr/bin/gather`.
+On Kubernetes, use the equivalent Helm chart values instead.
+
+[cols="1,2,1,2", options="header"]
+|===
+|Flag
+|Description
+|Default
+|Example
+
+|`--namespaces`
+|Comma-separated list of namespaces to collect data from.
+|All namespaces
+|`--namespaces rhdh-prod,rhdh-plugins`
+
+|`--cluster-info`
+|Include cluster-wide state information. Use only when requested by support.
+|Not included
+|`--cluster-info`
+
+|`--with-heap-dumps`
+|Trigger Node.js heap snapshots and collect heap dump files for memory analysis.
+|Not included
+|`--with-heap-dumps`
+
+|`--heap-dump-instances`
+|Comma-separated list of specific {product-very-short} instance names to collect heap dumps from. Supports exact match, prefix match, or contains match. Only applies when `--with-heap-dumps` is enabled.
+|All {product-very-short} instances
+|`--heap-dump-instances backstage-cr-1,helm-2`
+
+|`--heap-dump-method`
+|Method to trigger heap dumps. Valid values: `inspector` or `sigusr2`.
+|`inspector`
+|`--heap-dump-method sigusr2`
+
+|`--without-operator`
+|Exclude the Operator collector. Use for Helm-based deployments.
+|Operator collector included
+|`--without-operator`
+
+|`--without-helm`
+|Exclude the Helm collector. Use for Operator-based deployments.
+|Helm collector included
+|`--without-helm`
+
+|`--without-orchestrator`
+|Exclude the Orchestrator collector. Use when not using Orchestrator functionality.
+|Orchestrator collector included
+|`--without-orchestrator`
+
+|`--without-platform`
+|Exclude the platform collector.
+|Platform collector included
+|`--without-platform`
+
+|`--without-route`
+|Exclude the route collector ({ocp-short} routes).
+|Route collector included
+|`--without-route`
+
+|`--without-ingress`
+|Exclude the ingress collector (Kubernetes ingress resources).
+|Ingress collector included
+|`--without-ingress`
+
+|`--without-namespace-inspect`
+|Exclude the namespace-inspect collector. Not recommended as it aids support navigation.
+|Namespace-inspect collector included
+|`--without-namespace-inspect`
+|===
+
+== Environment variables
+
+Environment variables control must-gather operational behavior when running the gather script directly.
+When using the Helm chart, use the Helm chart values described in the next section instead of environment variables.
+
+[cols="1,2,1,2", options="header"]
+|===
+|Variable
+|Description
+|Default
+|Helm Chart Equivalent
+
+|`LOG_LEVEL`
+|Logging verbosity level. Valid values: `debug`, `info`, `trace`.
+|`info`
+|`gather.logLevel`
+
+|`CMD_TIMEOUT`
+|Timeout for individual kubectl and Helm commands (seconds).
+|`30`
+|`gather.cmdTimeout`
+
+|`MUST_GATHER_SINCE`
+|Relative time duration to limit log collection (for example, `1h`, `30m`).
+|Not set (collects all available logs)
+|`gather.since`
+
+|`MUST_GATHER_SINCE_TIME`
+|Absolute RFC3339 timestamp to limit log collection.
+|Not set (collects all available logs)
+|`gather.sinceTime`
+
+|`HEAP_DUMP_TIMEOUT`
+|Timeout in seconds for heap dump generation per pod.
+|`600` (10 minutes)
+|`gather.heapDump.timeout`
+|===
+
+== Helm chart values
+
+When deploying must-gather on Kubernetes platforms using the Helm chart, configure collection options using a values file.
+The following table shows key Helm values and their equivalent command-line flags or environment variables.
+
+[cols="1,2,2", options="header"]
+|===
+|Helm Value Path
+|Description
+|Equivalent Command-line Flag or Environment Variable
+
+|`gather.namespaces`
+|Array of namespaces to collect from.
+|`--namespaces`
+
+|`gather.clusterInfo`
+|Boolean to include cluster-wide state information. Use only when requested by support.
+|`--cluster-info`
+
+|`gather.heapDump.enabled`
+|Boolean to collect heap dumps from Node.js backend pods.
+|`--with-heap-dumps`
+
+|`gather.heapDump.instances`
+|Array of specific {product-very-short} instance names to collect heap dumps from.
+|`--heap-dump-instances`
+
+|`gather.heapDump.method`
+|Method to trigger heap dumps. Valid values: `inspector` or `sigusr2`.
+|`--heap-dump-method`
+
+|`gather.heapDump.timeout`
+|Timeout in seconds for heap dump collection.
+|`HEAP_DUMP_TIMEOUT`
+
+|`gather.withOperator`
+|Boolean to enable or disable the Operator collector. Set to `false` for Helm-based {product-very-short} deployments.
+|`--without-operator` (inverted logic)
+
+|`gather.withHelm`
+|Boolean to enable or disable the Helm collector. Set to `false` for Operator-based {product-very-short} deployments.
+|`--without-helm` (inverted logic)
+
+|`gather.withOrchestrator`
+|Boolean to enable or disable the Orchestrator collector. Set to `false` when not using Orchestrator.
+|`--without-orchestrator` (inverted logic)
+
+|`gather.logLevel`
+|Log level for must-gather operations. Valid values: `info`, `debug`, `trace`.
+|`LOG_LEVEL`
+
+|`gather.cmdTimeout`
+|Timeout in seconds for individual kubectl or helm commands.
+|`CMD_TIMEOUT`
+
+|`gather.since`
+|Relative time duration to limit log collection (for example, `1h`, `30m`).
+|`MUST_GATHER_SINCE`
+
+|`gather.sinceTime`
+|Absolute RFC3339 timestamp to limit log collection.
+|`MUST_GATHER_SINCE_TIME`
+|===
+
+[NOTE]
+====
+Helm boolean values use positive logic (`withX: true` means include), while command-line flags use negative logic (`--without-X` means exclude).
+====

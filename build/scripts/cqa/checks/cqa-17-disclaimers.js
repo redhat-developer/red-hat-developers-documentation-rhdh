@@ -5,6 +5,7 @@
  *   - Files mentioning "Technology Preview" must include the official disclaimer
  *   - Files mentioning "Developer Preview" must include the official disclaimer
  *   - Skip mentions inside source/listing blocks
+ *   - Skip mentions preceded by a `// cqa-17: suppress` comment (for external tool references)
  *
  * All violations are MANUAL — the correct snippet path varies by title.
  */
@@ -26,6 +27,8 @@ const DP_DISCLAIMER_RE = /include::.*snip[-_].*dev.*preview|include::.*snip[-_].
 // Inline disclaimer phrases (when disclaimer text is written directly, not via snippet)
 const TP_INLINE_RE = /technology preview feature only/i;
 const DP_INLINE_RE = /developer preview.*not supported|not supported.*developer preview/i;
+
+const SUPPRESS_RE = /^\s*\/\/\s*cqa-17:\s*suppress/i;
 
 export default class Cqa17Disclaimers extends Checker {
   id = '17';
@@ -87,6 +90,8 @@ function findMentionOutsideBlocks(lines, blockRanges, regex) {
     const line = lines[i];
     // Skip comment lines
     if (line.trimStart().startsWith('//')) continue;
+    // Skip lines preceded by a cqa-17: suppress comment
+    if (i > 0 && SUPPRESS_RE.test(lines[i - 1])) continue;
     if (regex.test(line) && !isInBlock(codeRanges, i + 1)) {
       return i + 1; // 1-based
     }
