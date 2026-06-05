@@ -445,7 +445,7 @@ generate_dynamic_plugins_table() {
   # Process temporary files
   # 1) Production
   temp_file="$TEMP_DIR/adoc.production.tmp"
-  out_file="${0/.sh/.ref-supported-plugins}"
+  out_file="${0/.sh/.ref-ga-supported-plugins}"
   rm -f "$out_file"
   count=0
   if [[ -f "$temp_file" ]]; then
@@ -511,7 +511,7 @@ generate_dynamic_plugins_table() {
   count=1
   index=0
   empties=0
-  for d in ref-supported-plugins ref-technology-preview-plugins ref-deprecated-plugins; do
+  for d in ref-ga-supported-plugins ref-technology-preview-plugins ref-deprecated-plugins; do
       (( index = count - 1 ))
       this_num_plugins=${num_plugins[$index]}
       echo -n -e "${green}[$count] Processing $d ${norm}..."
@@ -713,7 +713,7 @@ pushd "${SCRIPT_DIR}"/../.. >/dev/null || exit
     ref-community-supported-plugins.adoc \
     ref-deprecated-plugins.adoc \
     ref-other-installable-plugins.adoc \
-    ref-supported-plugins.adoc \
+    ref-ga-supported-plugins.adoc \
     ref-technology-preview-plugins.adoc \
     ; do
     if [[ -f "modules/extend_dynamic-plugins-reference/$d" ]]; then
