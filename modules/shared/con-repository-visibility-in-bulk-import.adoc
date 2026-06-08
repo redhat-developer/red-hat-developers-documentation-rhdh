@@ -1,0 +1,81 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="repository-visibility-in-bulk-import_{context}"]
+= Repository visibility in Bulk Import
+
+[role="_abstract"]
+View and bulk-import only the repositories you have permission to access and have not yet added to your catalog.
+
+== User-scoped repository access
+
+When you use Bulk Import, {product} retrieves the list of available repositories using your authenticated user credentials through OAuth. Repository and organization listing API calls use your OAuth token for each configured source code management (SCM) host, ensuring that results match your personal access permissions rather than server-wide integration credentials.
+
+This approach provides several benefits:
+
+User-scoped access:: You see only repositories you can access in GitHub or GitLab, matching your experience in those platforms.
+Enhanced security:: Import operations use your personal access token, maintaining audit trails tied to your user account.
+Permission alignment:: Repository visibility respects your organizational access policies and role-based permissions.
+
+This differs from catalog discovery providers, which use service account credentials to automatically discover and import repositories containing `catalog-info.yaml` files across an entire organization.
+
+== Technical implementation
+
+Bulk Import requires user authentication for all repository and organization listing operations. The following API endpoints require a valid OAuth token:
+
+* `GET /repositories` - List all accessible repositories
+* `GET /organizations/{org}/repositories` - List repositories in a specific organization
+
+These endpoints use the `X-SCM-Tokens` header to pass user OAuth tokens for GitHub and GitLab hosts. There is no fallback to server-wide integration credentials (GitHub App, PAT, or GitLab token) for these listing operations. Requests without valid user OAuth tokens are rejected with HTTP 401 Unauthorized.
+
+[IMPORTANT]
+====
+Deployments that previously relied on integration-only listing must configure SCM authentication providers for user authentication. See the Bulk Import plugin documentation for configuration details.
+====
+
+== Automatic filtering of imported repositories
+
+The Bulk Import interface automatically excludes repositories that are already present in your {product-short} catalog, showing only repositories that have not yet been imported. This filtering helps you:
+
+* Avoid duplicate catalog entries.
+* Focus on new repositories that need onboarding.
+* Identify which repositories remain to be imported from your Git provider.
+
+[NOTE]
+====
+If a repository is removed from the catalog, it will reappear in the Bulk Import repository list and can be imported again.
+====
+
+== Prerequisites for repository visibility
+
+User authentication with OAuth is a mandatory requirement for the Bulk Import feature. To view and import repositories through Bulk Import, you must:
+
+* Configure GitHub or GitLab authentication using one of the following approaches: 
+
+** As your primary authentication provider for {product-short}.                                                                           
+** As {authentication-book-link}#enabling-user-authentication-with-github-as-an-auxiliary-authentication-provider[an auxiliary              
+  authentication provider] if you use another primary provider, for example, OIDC or Red Hat build of Keycloak.  
+
+* Configure SCM authentication providers with OAuth support for your Git hosts
+* Have the `bulk.import` permission configured in RBAC policies.
+* Maintain an active OAuth session with your Git provider.
+
+[WARNING]
+====
+Repository and organization listing operations require user OAuth tokens. There is no fallback to server-wide integration credentials. Deployments without user authentication configured will receive HTTP 401 errors when accessing Bulk Import.
+====
+
+== Troubleshooting repository visibility
+
+If you cannot see expected repositories in the Bulk Import interface, verify the following:
+
+User access:: Your user account has access to those repositories in GitHub or GitLab
+Catalog status:: The repositories are not already imported into the {product-short} catalog
+Session validity:: Your {product-short} OAuth session has not expired
+Authentication configuration:: GitHub or GitLab authentication provider is correctly configured
+ScmAuthApi registration:: The `ScmAuthApi` is properly registered for your SCM hosts
+
+If you receive HTTP 401 Unauthorized errors when accessing the Bulk Import page, this indicates that user OAuth tokens are not available. Verify that:
+
+* You have authenticated to {product-short} using GitHub or GitLab as your authentication provider
+* Your authentication provider includes OAuth scopes required for repository access
+* The SCM authentication provider is configured and registered in your {product-short} deployment
