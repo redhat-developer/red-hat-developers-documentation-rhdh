@@ -112,13 +112,6 @@ fi
 fetch_catalog_index() {
   local index_tag="${BRANCH#release-}"
   local image="${CATALOG_INDEX_REGISTRY}/plugin-catalog-index:${index_tag}"
-  if [[ $DO_CLEAN -eq 1 ]]; then
-    rm -rf "$catalogindextmpdir"
-  fi
-  if [[ -d "$catalogindextmpdir/catalog-index/extend_dynamic-plugins-reference" ]]; then
-    debug "Reusing cached catalog index at $catalogindextmpdir"
-    return 0
-  fi
   if ! command -v skopeo >/dev/null 2>&1; then
     echo -e "${red}[ERROR] skopeo is required but not found.${norm}"
     exit 1
