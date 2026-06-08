@@ -151,6 +151,7 @@ generate_dynamic_plugins_table() {
     ref-technology-preview-plugins.adoc
     rhdh-supported-plugins.csv
   )
+  ls ${catalogindextmpdir}/catalog-index
   if [[ ! -d "$src" ]]; then
     echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}"
     exit 1
