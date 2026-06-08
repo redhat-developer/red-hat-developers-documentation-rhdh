@@ -56,7 +56,7 @@ By default, both repos are processed. Use --skip-tables or --skip-community-tabl
 
 Requires:
 * skopeo
-* podman
+* jq 1.6+
 * yq from https://pypi.org/project/yq/ - not the mikefarah version
 
 Usage:
