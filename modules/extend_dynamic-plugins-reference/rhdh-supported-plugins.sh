@@ -143,7 +143,7 @@ fetch_catalog_index() {
 
 generate_dynamic_plugins_table() {
   fetch_catalog_index
-  local src="${catalogindextmpdir}/catalog-index/extend_dynamic-plugins-reference"
+  local src="${catalogindextmpdir}/extend_dynamic-plugins-reference"
   local -a files=(
     con-preinstalled-dynamic-plugins.adoc
     ref-deprecated-plugins.adoc
@@ -151,7 +151,7 @@ generate_dynamic_plugins_table() {
     ref-technology-preview-plugins.adoc
     rhdh-supported-plugins.csv
   )
-  ls ${catalogindextmpdir}/catalog-index
+  ls ${catalogindextmpdir}
   if [[ ! -d "$src" ]]; then
     echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}"
     exit 1
