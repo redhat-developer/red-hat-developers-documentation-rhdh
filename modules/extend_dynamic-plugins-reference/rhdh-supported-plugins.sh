@@ -27,6 +27,9 @@ rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 
 INDEX_TAG="${BRANCH#release-}"
+if [[ $INDEX_TAG == "main" ]]; then
+  INDEX_TAG="next"
+fi
 CATALOG_INDEX_REGISTRY="${CATALOG_INDEX_REGISTRY:-quay.io/rhdh}"
 
 catalogindextmpdir="/tmp/plugin-catalog-index_${BRANCH}"
@@ -110,8 +113,7 @@ if [[ ! -d "$overlaystmpdir" ]]; then
 fi
 
 fetch_catalog_index() {
-  local index_tag="${BRANCH#release-}"
-  local image="${CATALOG_INDEX_REGISTRY}/plugin-catalog-index:${index_tag}"
+  local image="${CATALOG_INDEX_REGISTRY}/plugin-catalog-index:${INDEX_TAG}"
   if ! command -v skopeo >/dev/null 2>&1; then
     echo -e "${red}[ERROR] skopeo is required but not found.${norm}"
     exit 1
