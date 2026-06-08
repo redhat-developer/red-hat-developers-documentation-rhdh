@@ -1,0 +1,101 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="rhdh-configuration-files-overview_{context}"]
+= {product} configuration files overview
+
+[role="_abstract"]
+Overview of the configuration files and Kubernetes resources used to manage {product} instances across different deployment methods.
+
+{product-short} configuration files fall into two categories based on how they are consumed:
+
+Cluster-provisioned files:: Provisioned as Kubernetes resources, such as config maps or secrets, on the target cluster, typically by platform engineers. These files control the runtime behavior and deployment of your {product-very-short} instance. While the source files can be stored in a Git repository, they must be applied to the cluster to take effect.
+
+Application-consumed files:: Authored by developers and committed to source repositories. {product-very-short} reads these files directly from Git at runtime to populate the software catalog, execute templates, and build documentation.
+
+== Cluster-provisioned files
+
+The following table lists configuration files that platform engineers create and provision as Kubernetes resources on the target cluster.
+
+[cols="1,2,1,2,2", options="header", subs="+attributes"]
+|===
+| File
+| Purpose
+| Format
+| Operator provisioning
+| Helm chart provisioning
+
+| `{my-app-config-file}`
+| Main application configuration, including URLs, auth, catalog, database, plugin settings.
+| YAML
+a| Config map referenced in the `spec.application.appConfig.configMaps` field in the `{product-custom-resource-type}` custom resource.
+a| Inline through `upstream.backstage.appConfig` values, or external config map through `upstream.backstage.extraAppConfig`.
+
+| Secrets, such as, `my-rhdh-secrets`)
+| Authentication credentials, backend secret, database passwords, and other sensitive values.
+| Kubernetes secret
+a| Secret referenced in the `spec.application.extraEnvs.secrets` field in the `{product-custom-resource-type}` custom resource.
+a| Referenced through `upstream.backstage.extraEnvVarsSecrets` or `upstream.backstage.extraEnvVars` using a `secretKeyRef`.
+
+| `dynamic-plugins.yaml`
+| Enable, disable, and configure dynamic plugins.
+| YAML
+a| Config map referenced in the `spec.application.dynamicPluginsConfigMapName` field in the `{product-custom-resource-type}` custom resource.
+a| Inline through `global.dynamic.plugins` Helm values.
+
+| `rbac-policy.csv`
+| RBAC permission policies and role assignments (Casbin format).
+| CSV
+a| Config map mounted as file, path configured in `{my-app-config-file}` under `permission.rbac.policies-csv-file`.
+a| Same.
+
+| `rbac-conditional-policies.yaml`
+| RBAC conditional policies with criteria-based filtering.
+| YAML
+a| Config map mounted as file, path configured in `{my-app-config-file}` under `permission.rbac.conditionalPoliciesFile`.
+a| Same.
+
+| `{product-custom-resource-type}` custom resource
+| Operator-side deployment configuration that references config files, routes, database, replicas.
+| YAML Kubernetes custom resource
+a| Applied directly as a `{product-custom-resource-type}` custom resource.
+| N/A
+
+| Helm `values.yaml`
+| Helm-side deployment configuration, including image, replicas, resources, routes.
+| YAML
+| N/A
+a| Passed by using `helm install -f values.yaml` or the `--set` option.
+
+|===
+
+== Application-consumed files
+
+The following table lists configuration files that developers author and store in Git repositories. {product-very-short} reads these files directly from Git at runtime.
+
+[cols="1,2,1,1,2", options="header", subs="+attributes"]
+|===
+| File
+| Purpose
+| Format
+| Stored in
+| Consumed by
+
+| `catalog-info.yaml`
+| Entity descriptor that defines components, APIs, systems, and their metadata and annotations.
+| YAML
+| Root of a source repository.
+| Software Catalog through catalog locations or discovery providers.
+
+| `template.yaml`
+| Software template definition with scaffolding steps for creating new components.
+| YAML
+| Template repository.
+a| Software Templates (registered through `catalog.locations` URL in `{my-app-config-file}`).
+
+| `mkdocs.yml`
+| TechDocs configuration that controls how documentation is built from Markdown.
+| YAML
+| Alongside source repository docs.
+| TechDocs plugin.
+
+|===
