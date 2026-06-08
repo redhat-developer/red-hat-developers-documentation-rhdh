@@ -119,19 +119,26 @@ fetch_catalog_index() {
     debug "Reusing cached catalog index at $catalogindextmpdir"
     return 0
   fi
-  for cmd in skopeo podman; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-      echo -e "${red}[ERROR] $cmd is required but not found.${norm}"
-      exit 1
-    fi
-  done
+  if ! command -v skopeo >/dev/null 2>&1; then
+    echo -e "${red}[ERROR] skopeo is required but not found.${norm}"
+    exit 1
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo -e "${red}[ERROR] jq is required but not found.${norm}"
+    exit 1
+  fi
   echo -e "${green}Fetching $image...${norm}"
   rm -rf "$catalogindextmpdir"
   mkdir -p "$catalogindextmpdir"
-  skopeo copy "docker://${image}" "containers-storage:${image}"
-  cid=$(podman create "$image")
-  podman export "$cid" | tar xf - -C "$catalogindextmpdir"
-  podman rm "$cid"
+  local archive="${catalogindextmpdir}/image.tar"
+  local unpack="${catalogindextmpdir}/unpack"
+  skopeo copy "docker://${image}" "docker-archive:${archive}"
+  mkdir -p "$unpack"
+  tar xf "$archive" -C "$unpack"
+  for layer in $(jq -r '.[0].Layers[]' "$unpack/manifest.json"); do
+    tar xf "$unpack/$layer" -C "$catalogindextmpdir"
+  done
+  rm -rf "$unpack" "$archive"
 }
 
 generate_dynamic_plugins_table() {
