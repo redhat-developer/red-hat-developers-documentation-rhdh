@@ -1,0 +1,195 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="collect-heap-dumps-to-diagnose-memory-issues_{context}"]
+= Collect heap dumps to diagnose memory issues
+
+[role="_abstract"]
+Collect Node.js heap snapshots when you troubleshoot memory leaks, out-of-memory errors, or when support requests memory analysis.
+
+.Prerequisites
+
+* Sufficient storage for heap dump files (50 MB to 500 MB each).
+* For SIGUSR2 method: Node.js 12+ for `--heapsnapshot-signal` flag support.
+
+.Procedure
+
+. Choose the heap dump collection method:
++
+--
+*Inspector protocol (default):*
+
+* Works out of the box
+* Use unless your deployment sets `--disable-sigusr1` in `NODE_OPTIONS`
+
+*SIGUSR2 signal:*
+
+* Requires configuring `NODE_OPTIONS` in your deployment first
+* Use when the inspector protocol is not available
+--
+
+. If using SIGUSR2, configure `NODE_OPTIONS`:
++
+[NOTE]
+====
+Skip this step if using the inspector protocol (default method).
+====
++
+--
+*Operator deployments:*
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: {product-custom-resource-type}
+metadata:
+  name: my-rhdh
+spec:
+  application:
+    extraEnvs:
+      - name: NODE_OPTIONS
+        value: "--heapsnapshot-signal=SIGUSR2 --diagnostic-dir=/tmp"
+----
+
+Apply the change:
+
+[source,terminal]
+----
+$ oc apply -f backstage-cr.yaml
+----
+
+*Helm deployments:*
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraEnvVars:
+      - name: NODE_OPTIONS
+        value: "--heapsnapshot-signal=SIGUSR2 --diagnostic-dir=/tmp"
+----
+
+Update the release:
+
+[source,terminal]
+----
+$ helm upgrade my-rhdh redhat-developer-hub/backstage -f values.yaml -n <namespace>
+----
+
+Wait for pods to restart before proceeding.
+--
+
+. Increase the liveness probe timeout to prevent pod restarts:
++
+[IMPORTANT]
+====
+{product-very-short} stops responding during heap dump collection, and large memory footprints (1GB+) can cause liveness probe failures.
+Plan collection during maintenance windows or low-traffic periods.
+====
++
+--
+*Operator deployments:*
+
+Update the {backstage} custom resource to patch the deployment:
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha1
+kind: {product-custom-resource-type}
+metadata:
+  name: my-rhdh
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                livenessProbe:
+                  failureThreshold: 180
+----
+
+Apply the change:
+
+[source,terminal]
+----
+$ oc apply -f backstage-cr.yaml
+----
+
+*Helm deployments:*
+
+Update your Helm values:
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    livenessProbe:
+      failureThreshold: 180
+----
+
+Apply the change:
+
+[source,terminal]
+----
+$ helm upgrade my-rhdh redhat-developer-hub/backstage -f values.yaml -n <namespace>
+----
+
+Wait for pods to restart before proceeding.
+--
+
+. Run must-gather with heap dumps enabled:
++
+--
+*On {ocp-short}:*
+
+For inspector protocol (default):
+
+[source,terminal]
+----
+$ oc adm must-gather --image=registry.access.redhat.com/rhdh/rhdh-must-gather-rhel9:latest -- /usr/bin/gather --with-heap-dumps
+----
+
+For SIGUSR2 method:
+
+[source,terminal]
+----
+$ oc adm must-gather --image=registry.access.redhat.com/rhdh/rhdh-must-gather-rhel9:latest -- /usr/bin/gather --with-heap-dumps --heap-dump-method sigusr2
+----
+
+*On supported Kubernetes platforms:*
+
+For inspector protocol (default):
+
+[source,yaml]
+----
+gather:
+  heapDump:
+    enabled: true
+    method: "inspector"
+----
+
+For SIGUSR2 method:
+
+[source,yaml]
+----
+gather:
+  heapDump:
+    enabled: true
+    method: "sigusr2"
+----
+--
++
+Collection takes 5-15 minutes depending on pod count and memory size.
+
+.Verification
+
+Check for `.heapsnapshot` files:
+
+[source,terminal]
+----
+$ find must-gather.local.<timestamp> -name "*.heapsnapshot"  # On OpenShift
+$ tar -tzf rhdh-must-gather-output.tar.gz | grep heapsnapshot  # On Kubernetes
+----
+
+include::../../snippets/observe_diagnostic-data-collection/heap-dump-troubleshooting-timeout.adoc[]
