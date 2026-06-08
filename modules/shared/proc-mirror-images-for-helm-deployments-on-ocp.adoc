@@ -1,0 +1,48 @@
+:_mod-docs-content-type: PROCEDURE
+[id="mirror-images-for-helm-deployments-on-ocp_{context}"]
+= Mirror {ls-short} images for Helm deployments on {ocp-short}
+
+[role="_abstract"]
+Mirror the required {ls-short} container images to your local registry by using the `oc-mirror` plugin when deploying the Helm chart on an {ocp-short} cluster.
+
+.Prerequisites
+* You have a target mirror registry accessible to your disconnected {ocp-short} cluster.
+* You authenticated to the {rhcr} and your target mirror registry.
+* You have updated the cluster install secret (`pull-secret` in the `openshift-config` namespace) to include the authentication credentials for your mirror registry. The `kubelet` requires these credentials to pull the sidecar images. For more information, see {installing-on-eks-book-link}#provision-your-pull-secret-to-your-rhdh-instance-namespace_install-rhdh-on-by-using-the-operator[Provision your {rhcr} pull secret to your {product} instance namespace].
+
+.Procedure
+
+. Identify the initialization and sidecar container images from the default values file of the chart:
++
+[source,terminal,subs=attributes]
+----
+helm show values redhat-developer-hub --repo https://charts.openshift.io/ --version {product-chart-version} > values.default.yaml
+
+LS_RAG_IMAGE=$(yq '.global.lightspeed.initContainer.image | .registry + "/" + .repository' values.default.yaml)
+LS_RAG_DIGEST=$(yq '.global.lightspeed.initContainer.image.tag' values.default.yaml)
+LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
+LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
+----
+
+. Add these images to the `additionalImages` section of your `ImageSetConfiguration` file:
++
+[source,yaml,subs=+attributes]
+----
+apiVersion: mirror.openshift.io/v2alpha1
+kind: ImageSetConfiguration
+mirror:
+  additionalImages:
+    - name: ${LS_RAG_IMAGE}:${LS_RAG_DIGEST}
+    - name: ${LS_CORE_IMAGE}:${LS_CORE_DIGEST}
+  helm:
+    repositories:
+      - name: openshift-charts
+        url: https://charts.openshift.io
+        charts:
+          - name: redhat-developer-hub
+            version: "{product-version}"
+----
+
+.Additional resources
+* {installing-in-air-gap-book-link}[{installing-in-air-gap-book-title}]
+* {installing-and-viewing-plugins-book-link}#mirror-rhdh-dynamic-plugins-in-disconnected-environments_install-dynamic-plugins-in-rhdh[Mirroring {product} dynamic plugins in disconnected environments]

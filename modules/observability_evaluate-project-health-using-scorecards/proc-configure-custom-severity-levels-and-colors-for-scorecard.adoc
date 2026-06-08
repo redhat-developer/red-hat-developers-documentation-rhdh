@@ -1,0 +1,72 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-custom-severity-levels-and-colors-for-scorecard_{context}"]
+= Configure custom severity levels and colors for Scorecard
+
+[role="_abstract"]
+Customizing severity thresholds and color mappings in your Scorecard configuration allows you to visualize platform metrics using your organization's custom operational terminology.
+
+[NOTE]
+====
+Each custom severity threshold key requires both a corresponding icon configuration value and a color parameter configuration value. The scorecard plugin validates the YAML configuration files during application startup. Omitting either property or providing an invalid value causes an initialization failure, and the Scorecard plugin fails to function.
+====
+
+.Prerequisites
+* You have administrative access to the {product} configuration files.
+* You have added a custom application configuration file to your {product} deployment workspace.
+* You have installed Scorecard backend and frontend plugins, and at least one Scorecard plugin module.
+
+.Procedure
+
+. Open the {product-very-short} `app-config.yaml` file.
+
+. Navigate to the `scorecard.plugins` backend threshold definition block.
+
+. Define your custom severity threshold keys by adding a structured rule entry containing your custom key string, your boundary expression, your preferred color parameter format, and a supported icon string variable.
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    myDatasource:
+      myMetric:
+        thresholds:
+          rules:
+            - key: ideal
+              expression: '<10'
+              color: '#5CE65C'
+              icon: star
+            - key: warning
+              expression: '10-50'
+              color: 'rgb(233, 213, 2)'
+              icon: monitor
+            - key: critical
+              expression: '>50'
+              color: error.main
+              icon: scorecardErrorStatusIcon
+----
++
+where:
+
+`myDatasource`:: represents your specific scorecard data source, such as `jira` 
+`myMetric`:: represents the metric identifier, such as `open_issues`
++
+[NOTE]
+====
+Custom severity thresholds and color configurations are only functional for scorecard plugin modules that support custom rules. At this time, the `filecheck`, `openssf`, and `dependabot` modules do not support custom thresholds.
+====
+
+. Save the changes to the configuration file.
+
+. Restart your {product} instance to apply the new threshold rules.
+
+.Verification
+
+* Open the {product} UI, navigate to the Scorecard component, and verify that the custom severity levels display with the colors and icons you specified.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/latest/html/administration_guide_for_red_hat_developer_hub/assembly-add-custom-app-file-openshift_admin-rhdh[Adding a custom application configuration file to Red Hat OpenShift Container Platform]
+* link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/latest/html-single/evaluate_project_health_using_scorecards/index#enable-scorecards_set-up-scorecards-to-monitor-your-project-health[Enabling Scorecards]
+* link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/latest/html-single/evaluate_project_health_using_scorecards/index#install-and-configure-scorecards-to-view-metrics_evaluate-project-health-using-scorecards[Installing and configuring Scorecards to view metrics]
