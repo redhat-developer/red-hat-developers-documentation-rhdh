@@ -1,0 +1,71 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-by-using-the-helm-chart_{context}"]
+= Configure {ls-short} by using the Helm chart
+
+[role="_abstract"]
+Configure {ls-short} by using the Helm chart to manage large language model (LLM) providers, enable validation guardrails, and authorize custom role-based access control (RBAC) policies.
+
+.Prerequisites
+* You have access to a running {product-very-short} instance deployed with Helm.
+* You have operational credentials for your chosen LLM provider.
+
+.Procedure
+
+. Create a manual Kubernetes Secret to store your provider credentials by adding the required keys to your Secret based on your provider requirements:
++
+include::snip-lightspeed-secret-keys.adoc[]
++
+[NOTE]
+====
+* By default, the Helm installation creates a temporary Kubernetes Secret containing keys for various LLM providers. On subsequent `helm upgrade` cycles, the system overwrites this default Secret. Create a manual Kubernetes Secret to persist your credentials.
+* Vertex AI requires custom architecture mapping and has received limited testing.
+====
++
+[TIP]
+====
+To filter and reject off-topic user queries, you can optionally configure query safety validation guardrails within this Secret by defining the `ENABLE_VALIDATION`, `VALIDATION_PROVIDER`, and `VALIDATION_MODEL_NAME` keys.
+====
+
+. Reference your manual secret inside the `values.yaml` file:
++
+[source,yaml]
+----
+global:
+  lightspeed:
+    secret:
+      create: false
+      name: "my-custom-secret"
+----
+
+. Optional: Configuration files such as `lightspeed-stack.yaml`, `config.yaml` and `rhdh-profile.py` are managed by the Helm deployment and overwrites changes on `Helm upgrade` runs. To protect changes to a file, create a custom config map and reference it in the `values.yaml` file:
++
+[IMPORTANT]
+====
+Only modify the `create` and `nameOverride` fields. Keep the default mount paths and file configurations unchanged.
+====
++
+[source,yaml]
+----
+global:
+  lightspeed:
+    configMaps:
+      - name: stack
+        create: false
+        nameOverride: "my-custom-stack"
+        mountPath: /app-root/lightspeed-stack.yaml
+        subPath: lightspeed-stack.yaml
+        sourceFile: lightspeed-stack.yaml
+        optional: false
+----
+
+. Configure access rights by updating your RBAC definitions:
++
+include::snip-rbac-policies.adoc[]
+
+. Run the `helm upgrade` command to apply your configurations to the cluster.
+
+.Verification
+. Log in to your console instance.
+. Verify that the *Open Lightspeed* floating action button (FAB) appears on the home page.
+. Select the FAB and confirm that the chat window initializes successfully.
