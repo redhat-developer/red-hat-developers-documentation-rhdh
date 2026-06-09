@@ -115,11 +115,11 @@ fi
 fetch_catalog_index() {
   local image="${CATALOG_INDEX_REGISTRY}/plugin-catalog-index:${INDEX_TAG}"
   if ! command -v skopeo >/dev/null 2>&1; then
-    echo -e "${red}[ERROR] skopeo is required but not found.${norm}"
+    echo -e "${red}[ERROR] skopeo is required but not found.${norm}" >&2
     exit 1
   fi
   if ! command -v jq >/dev/null 2>&1; then
-    echo -e "${red}[ERROR] jq is required but not found.${norm}"
+    echo -e "${red}[ERROR] jq is required but not found.${norm}" >&2
     exit 1
   fi
   echo -e "${green}Fetching $image...${norm}"
@@ -134,6 +134,7 @@ fetch_catalog_index() {
     tar xf "$unpack/$layer" -C "$catalogindextmpdir"
   done
   rm -rf "$unpack" "$archive"
+  exit 0
 }
 
 generate_dynamic_plugins_table() {
@@ -148,12 +149,12 @@ generate_dynamic_plugins_table() {
   )
   ls ${catalogindextmpdir}
   if [[ ! -d "$src" ]]; then
-    echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}"
+    echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}" >&2
     exit 1
   fi
   for f in "${files[@]}"; do
     if [[ ! -f "$src/$f" ]]; then
-      echo -e "${red}[ERROR] Missing file in catalog index image: $src/$f${norm}"
+      echo -e "${red}[ERROR] Missing file in catalog index image: $src/$f${norm}" >&2
       exit 1
     fi
     cp "$src/$f" "${SCRIPT_DIR}/$f"
