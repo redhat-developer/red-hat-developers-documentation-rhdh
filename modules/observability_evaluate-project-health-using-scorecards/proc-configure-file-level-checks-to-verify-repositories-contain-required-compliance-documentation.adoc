@@ -1,0 +1,106 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-file-level-checks-to-verify-repositories-contain-required-compliance-documentation_{context}"]
+= Configure file-level checks to verify repositories contain required compliance documentation
+
+include::{docdir}/artifacts/snip-developer-preview-scorecard.adoc[]
+
+[role="_abstract"]
+You can configure the Scorecard filecheck module to verify that repositories contain required files such as `LICENSE`, `CODEOWNERS`, `CONTRIBUTING.md`, or any file that you have configured.
+Each configured file generates a boolean metric that reports whether the file is present or missing.
+
+.Prerequisites
+
+* You have {install-category-link}[installed your {product-very-short} instance].
+* You have xref:set-up-scorecards-to-monitor-your-project-health_evaluate-project-health-using-scorecards[set up the Scorecard plugin].
+* You have {configuring-book-link}[added a custom {product-short} application configuration].
+* Your catalog entities have the `backstage.io/source-location` annotation set. This annotation is usually added automatically during catalog ingestion.
+
+.Procedure
+
+. Enable the filecheck module: Add the following configuration to your {product-very-short} `dynamic-plugins-config.yaml` file:
++
+[source,yaml]
+----
+plugins:
+  - package: package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-filecheck:bs_1.49.4__0.1.8
+    disabled: false
+----
+
+. Configure the files to check: Define which files to verify in your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    filecheck:
+      files:
+        license: LICENSE
+        codeowners: CODEOWNERS
+        contributing: CONTRIBUTING.md
+        readme: README.md
+----
++
+where:
+
+`scorecard:plugins:filecheck:files`:: A map of file checks. Each key becomes a metric ID suffix (for example, `license` produces the `filecheck.license` metric) and each value is the relative file path to check within the repository.
++
+[IMPORTANT]
+====
+File paths must be relative. Do not use a leading `/`, `./`, or `../` prefix in the path. When no files are configured, no metrics are registered and the module is inactive.
+====
+
+. Optional: Customize the collection schedule: By default, the filecheck module collects metrics every hour. To override the schedule, add the following configuration to your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    filecheck:
+      schedule:
+        frequency:
+          cron: '0 6 * * *'
+        timeout:
+          minutes: 5
+        initialDelay:
+          seconds: 5
+----
++
+[NOTE]
+====
+All configured file checks share one schedule. The module fetches each entity's repository tree once per run and checks all configured paths in that single request.
+====
+
+. Verify the entity annotation: Confirm that your catalog entities have the `backstage.io/source-location` annotation set:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    backstage.io/source-location: url:https://github.com/myorg/my-service
+spec:
+  type: service
+  lifecycle: production
+  owner: _<your_team_name>_
+----
++
+where:
+
+`annotations:backstage.io/source-location`:: The entity source location. The filecheck module uses this annotation to resolve the source repository and read its file tree.
+`spec:owner`:: Your team name.
++
+[NOTE]
+====
+This annotation is usually added automatically during catalog ingestion. If your entities are already registered in the catalog, this annotation is likely already present.
+====
++
+[IMPORTANT]
+====
+Filecheck metrics use fixed boolean thresholds. Unlike GitHub and Jira metrics, you cannot customize these thresholds.
+
+exist:: File is present (success).
+missing:: File is absent (error).
+====

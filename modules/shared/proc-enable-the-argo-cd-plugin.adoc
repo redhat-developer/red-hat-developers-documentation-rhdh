@@ -6,9 +6,9 @@
 [role="_abstract"]
 The Argo CD plugin provides a visual overview of the application{apos}s status, deployment details, commit message, author of the commit, container image promoted to environment and deployment history.
 
-.Prerequisites
+.Procedure
 
-* Add Argo CD instance information to your `app-config.yaml` configmap as shown in the following example:
+. Add Argo CD instance information to your `app-config.yaml` configmap as shown in the following example:
 
 +
 [source,yaml]
@@ -28,10 +28,11 @@ argocd:
 ----
 +
 [NOTE]
+====
 Avoid using a trailing slash in the `url`, as it might cause unexpected behavior.
+====
 
-* Add the following annotation to the entity{apos}s `catalog-info.yaml` file to identify the Argo CD applications.
-
+. Add the following annotation to the entity{apos}s `catalog-info.yaml` file to identify the Argo CD applications.
 +
 [source,yaml]
 ----
@@ -42,8 +43,7 @@ annotations:
   argocd/app-selector: '${ARGOCD_LABEL_SELECTOR}'
 ----
 
-* (Optional) Add the following annotation to the entity{apos}s `catalog-info.yaml` file to switch between Argo CD instances as shown in the following example:
-
+. (Optional) Add the following annotation to the entity{apos}s `catalog-info.yaml` file to switch between Argo CD instances as shown in the following example:
 +
 [source,yaml]
 ----
@@ -60,29 +60,40 @@ annotations:
 If you do not set this annotation, the Argo CD plugin defaults to the first Argo CD instance configured in `app-config.yaml`.
 ====
 
-.Procedure
-
-* To enable the Argo CD plugin, set the `disabled` property to `false` in your `dynamic-plugins.yaml` file as follows:
+. To enable the Argo CD plugin, set the `disabled` property to `false` in your `dynamic-plugins.yaml` file as follows:
 +
+[IMPORTANT]
+====
+Argo CD contains multiple plugin options you can choose from for your Argo CD configuration:
+
+* Community Argo CD:
+** `@backstage-community/plugin-argocd`
+** `@backstage-community/plugin-argocd-backend`
+* Roadie Argo CD:
+** `@roadiehq/backstage-plugin-argo-cd`
+** `@roadiehq/backstage-plugin-argo-cd-backend`
+
+Community and Roadie plugins are comparable in functionality but have different features.
+For example, both versions feature scaffolder actions, however, their implementation is different:
+the Community version contains scaffolder actions by default, the Roadie version requires an additional plugin.
+
+The recommended combination is to use `@backstage-community/plugin-argocd` together with `@backstage-community/plugin-argocd-backend`.
+
+However,
+you can also combine `@roadiehq/backstage-plugin-argo-cd` together with `@roadiehq/backstage-plugin-argo-cd-backend`.
+
+Mixing Community and Roadie plugins is *not recommended*.
+====
++
+--
 [source,yaml,subs="+quotes"]
 ----
-<<<<<<< RHDHBUGS-521-plugin-enable-snippets
 plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/roadiehq-backstage-plugin-argo-cd-backend:__<tag>__
     disabled: false
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-argocd:__<tag>__
     disabled: false
-=======
-global:
-  dynamic:
-    includes:
-      - dynamic-plugins.default.yaml
-    plugins:
-      - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-argocd-backend:__<tag>__
-        disabled: false
-      - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-argocd:__<tag>__
-        disabled: false
->>>>>>> main
 ----
 
 include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+--

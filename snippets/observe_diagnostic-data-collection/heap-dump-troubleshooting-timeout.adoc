@@ -1,0 +1,65 @@
+:_mod-docs-content-type: SNIPPET
+
+// Snippet: heap-dump-troubleshooting-timeout
+If collection starts but times out before completing::
+You see progress messages but collection eventually times out before finishing.
+Check the `must-gather` logs for warnings about liveness probe settings:
++
+[source,terminal]
+----
+[WARN] Pod 'xxx' may restart during heap dump collection!
+[WARN]   Current: failureThreshold=3 × periodSeconds=10s = 30s before restart
+[WARN]   Required: at least 900s (HEAP_DUMP_TIMEOUT)
+----
++
+Set your liveness probe timeout longer than the collection time.
++
+For Operator-based deployments, update the {backstage} custom resource:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backstage-backend
+                livenessProbe:
+                  failureThreshold: 180
+----
++
+Apply with `oc apply -f backstage-cr.yaml`.
++
+For Helm-based deployments, patch the deployment directly:
++
+[source,terminal]
+----
+$ oc patch deployment <deployment-name> -n <namespace> \
+  -p '{"spec":{"template":{"spec":{"containers":[{"name":"backstage-backend","livenessProbe":{"failureThreshold":180}}]}}}}'
+----
++
+Wait for your pods to restart with the new configuration, then run heap dump collection again.
+
+If collection times out::
+Large memory footprints (multiple gigabytes) can take 10-15 minutes to snapshot.
+Increase the heap dump timeout to allow more time for collection.
++
+On {ocp-short}, set the timeout using an environment variable:
++
+[source,terminal]
+----
+$ oc adm must-gather --image=registry.access.redhat.com/rhdh/rhdh-must-gather-rhel9:latest \
+  -- /usr/bin/env HEAP_DUMP_TIMEOUT=1800 /usr/bin/gather --with-heap-dumps
+----
++
+On Kubernetes, set the timeout in your Helm values:
++
+[source,yaml]
+----
+gather:
+  heapDump:
+    enabled: true
+    timeout: "1800"
+----
