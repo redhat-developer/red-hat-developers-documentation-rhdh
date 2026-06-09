@@ -2,7 +2,7 @@
 
 The contents of this folder are updated by running the GH action in this repo against a specific branch
 
-https://github.com/Omar-AlJaljuli/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml
+https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml
 
 The action which will extract the generated content from the latest catalog index at https://quay.io/rhdh/plugin-catalog-index using the related branch (release-1.10 => `:1.10`, main => `:next`), then a pull request will be created that can be reviewed before merging.
 
