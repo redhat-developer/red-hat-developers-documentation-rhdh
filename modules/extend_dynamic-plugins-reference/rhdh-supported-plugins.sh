@@ -134,7 +134,6 @@ fetch_catalog_index() {
     tar xf "$unpack/$layer" -C "$catalogindextmpdir"
   done
   rm -rf "$unpack" "$archive"
-  exit 0
 }
 
 generate_dynamic_plugins_table() {
