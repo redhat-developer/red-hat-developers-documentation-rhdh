@@ -1,0 +1,71 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="create-standalone-documentation-in-techdocs_{context}"]
+= Create standalone documentation in TechDocs
+
+[role="_abstract"]
+You can create standalone documentation in TechDocs for content that is not tied to a specific codebase, such as onboarding guides, architecture overviews, or team runbooks.
+
+.Prerequisites
+
+* An administrator has configured the TechDocs plugin.
+* You have the `catalog.entity.create` and `catalog.location.create` permissions.
+
+.Procedure
+
+. Create a directory for your documentation project with the following structure:
++
+----
+my-documentation/
+  catalog-info.yaml
+  mkdocs.yml
+  docs/
+    index.md
+----
+
+. Create a `catalog-info.yaml` file that defines a documentation entity:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-documentation
+  description: Onboarding guide for new team members
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: documentation
+  lifecycle: production
+  owner: group:default/my-team
+----
+
+. Create an `mkdocs.yml` file to configure the documentation site:
++
+[source,yaml]
+----
+site_name: My Documentation
+nav:
+  - Home: index.md
+plugins:
+  - techdocs-core
+----
+
+. Create a `docs/` directory containing at least an `index.md` file with your documentation content in Markdown.
+
+. Commit and push the directory to a Git repository.
+
+. In your {product-short} instance, register the documentation entity:
+.. Click *Catalog > Self-service > Register Existing Component*.
+.. In the *Select URL* box, enter the URL to the `catalog-info.yaml` file in your repository.
+.. Click *Analyze*, then click *Finish*.
+
+.Verification
+
+. In the {product-short} navigation menu, click *Docs*.
+. Verify that your standalone documentation appears in the table on the *Documentation* page.
++
+[NOTE]
+====
+The documentation might not appear immediately. {product-short} refreshes catalog entities periodically, which can take up to 45 minutes. To trigger a refresh sooner, navigate to the entity in the software catalog and click the refresh button on the *Overview* tab.
+====
