@@ -4,18 +4,19 @@
  * For each .adoc (skip attributes.adoc, master.adoc):
  *   - PROCEDURE/ASSEMBLY(proc): title first word must be imperative (not gerund)
  *   - Gerunds after "and" are also fixed
- *   - ID must match title slug
- *   - Filename must match prefix+id
  *   - SNIPPET must not have a title
  *
- * Fix: update title, [id=], :context:, xrefs, include statements, git mv
+ * NOTE: IDs and filenames are NOT required to match the title slug.
+ * Changing titles must NOT cascade to ID or filename changes, to preserve
+ * URL stability for inbound links (AEM migration requirement).
+ * See CQA-14b for inbound link stability checks.
+ *
+ * Fix: update title text only (gerund → imperative)
  * Delegates to CQA-03 when no content type is found
  */
 
-import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, basename, dirname } from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { GIT } from '../lib/bin.js';
 import { Checker, autofix, manual, delegate } from '../lib/checker.js';
 import { repoRoot, collectTitle, getContentType, getLines } from '../lib/asciidoc.js';
 
@@ -214,7 +215,9 @@ function analyzeFile(root, file, attrLines) {
   const idLine = lines.find(l => /\[id=/.test(l));
   const currentId = idLine ? (/\[id=["']([^"'_]+)/.exec(idLine) ?? [])[1] ?? null : null;
 
-  const changed = fixedTitleRaw !== titleRaw || currentId !== expectedId || bn !== expectedFilename;
+  // Only flag changes for title gerund fixes — ID and filename mismatches
+  // are intentionally ignored to preserve URL stability (AEM migration).
+  const changed = fixedTitleRaw !== titleRaw;
 
   return {
     contentType: effectiveType,
@@ -318,12 +321,8 @@ function issuesFromResult(file, result) {
   if (result.titleChanged) {
     issues.push(autofix(file, `Title: ${result.titleRaw} -> ${result.fixedTitleRaw}`));
   }
-  if (result.currentId !== result.expectedId) {
-    issues.push(autofix(file, `ID: ${result.currentId ?? ''} -> ${result.expectedId}`));
-  }
-  if (result.currentFilename !== result.expectedFilename) {
-    issues.push(autofix(file, `File: ${result.currentFilename} -> ${result.expectedFilename}`));
-  }
+  // ID and filename alignment with titles is intentionally NOT checked.
+  // Changing IDs or filenames would break inbound URLs (AEM migration).
   return issues;
 }
 
@@ -338,50 +337,13 @@ function applyFix(root, file, attrLines) {
 
   let text = readFileSync(abs, 'utf8');
 
+  // Only fix title text (gerund → imperative). IDs and filenames are
+  // intentionally left unchanged to preserve URL stability.
   if (result.titleChanged) {
     text = text.replaceAll(`= ${result.titleRaw}`, `= ${result.fixedTitleRaw}`);
   }
 
-  if (result.currentId !== result.expectedId && result.currentId) {
-    const old = result.currentId;
-    const neo = result.expectedId;
-    text = text.replaceAll(new RegExp(String.raw`\[id="${old}(?:_\{context\})?"]`, 'g'), `[id="${neo}_{context}"]`);
-    text = text.replaceAll(new RegExp(String.raw`\[id='${old}(?:_\{context\})?']`, 'g'), `[id="${neo}_{context}"]`);
-    if (result.contentType === 'ASSEMBLY') {
-      text = text.replace(/^:context: .*$/m, `:context: ${neo}`);
-    }
-    writeFileSync(abs, text, 'utf8');
-    // Update xrefs
-    updateXrefs(root, old, neo);
-  } else {
-    writeFileSync(abs, text, 'utf8');
-  }
-
-  if (result.currentFilename !== result.expectedFilename) {
-    const newAbs = resolve(dirname(abs), result.expectedFilename);
-    try {
-      execFileSync(GIT, ['mv', abs, newAbs], { cwd: root });
-    } catch {
-      renameSync(abs, newAbs);
-    }
-    updateIncludes(root, result.currentFilename, result.expectedFilename);
-  }
-}
-
-function updateXrefs(root, oldId, newId) {
-  for (const f of findAdocFiles(root, ['assemblies', 'modules', 'titles'])) {
-    const text = readFileSync(f, 'utf8');
-    if (!text.includes(`xref:${oldId}_`)) continue;
-    writeFileSync(f, text.replaceAll(`xref:${oldId}_`, `xref:${newId}_`), 'utf8');
-  }
-}
-
-function updateIncludes(root, oldBn, newBn) {
-  for (const f of findAdocFiles(root, ['assemblies', 'modules', 'titles'])) {
-    const text = readFileSync(f, 'utf8');
-    if (!text.includes(oldBn)) continue;
-    writeFileSync(f, text.replaceAll(oldBn, newBn), 'utf8');
-  }
+  writeFileSync(abs, text, 'utf8');
 }
 
 function loadAttrLines(root, masterAdocPath) {
@@ -394,19 +356,3 @@ function loadAttrLines(root, masterAdocPath) {
   return f ? readFileSync(f, 'utf8').split('\n') : [];
 }
 
-function findAdocFiles(root, dirs) {
-  const result = [];
-  for (const dir of dirs) {
-    const abs = resolve(root, dir);
-    if (existsSync(abs)) collectAdoc(abs, result);
-  }
-  return result;
-}
-
-function collectAdoc(dir, result) {
-  for (const entry of readdirSync(dir)) {
-    const abs = resolve(dir, entry);
-    if (statSync(abs).isDirectory()) collectAdoc(abs, result);
-    else if (entry.endsWith('.adoc')) result.push(abs);
-  }
-}

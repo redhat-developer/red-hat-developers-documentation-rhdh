@@ -137,7 +137,10 @@ function classifyIssues(valeIssues) {
     if (vi.check.includes('ShortDescription')) {
       issues.push(delegate(vi.file, '08', msg, vi.line, false));
     } else if (vi.check.includes('DocumentId')) {
-      issues.push(delegate(vi.file, '10', msg, vi.line, false));
+      // DocumentId issues are informational only — CQA-10 no longer enforces
+      // ID/title alignment to preserve URL stability (AEM migration).
+      // ID stability is checked by CQA-14b instead.
+      issues.push(manual(vi.file, msg, vi.line));
     } else if (MANUAL_ONLY_CHECKS.has(vi.check)) {
       issues.push(manual(vi.file, msg, vi.line));
     } else {
