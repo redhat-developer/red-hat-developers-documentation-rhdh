@@ -1,0 +1,96 @@
+:_mod-docs-content-type: SNIPPET
+. Create a config map containing a `registries.conf` file that redirects the `install-dynamic-plugins` init container to your mirror registry:
++
+[source,yaml,subs="+quotes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rhdh-plugin-mirror-conf
+data:
+  rhdh-registries.conf: |
+    [[registry]]
+    prefix = "registry.access.redhat.com/rhdh"
+    location = "_<target_registry>_/rhdh"
+
+    [[registry]]
+    prefix = "quay.io/rhdh"
+    location = "_<target_registry>_/rhdh"
+----
++
+where:
++
+`_<target_registry>_`:: Enter the URL of your mirror registry, for example, `registry.example.com`.
+
+. Mount the config map in the `install-dynamic-plugins` init container by adding the following to your Helm values file:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      - name: rhdh-plugin-mirror-conf
+        configMap:
+          name: rhdh-plugin-mirror-conf
+    initContainers:
+      - name: install-dynamic-plugins
+        volumeMounts:
+          - name: rhdh-plugin-mirror-conf
+            mountPath: /etc/containers/registries.conf.d/rhdh-registries.conf
+            subPath: rhdh-registries.conf
+            readOnly: true
+----
++
+[IMPORTANT]
+====
+Because of Helm merge limitations, you must include all existing default volumes, volume mounts, and init container fields from the {product} Helm chart alongside your additions. Omitting the defaults overwrites them and can break the deployment.
+====
++
+[NOTE]
+====
+Cluster-level mirroring resources, such as `ImageDigestMirrorSet` or `ImageContentSourcePolicy`, do not apply to the `install-dynamic-plugins` init container because it uses `skopeo` directly to pull plugin artifacts.
+====
+
+. Optional: To enforce signature verification in production environments, create a `policy.json` config map and mount it in the `install-dynamic-plugins` init container:
++
+[source,yaml,subs="+quotes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rhdh-mirror-policy
+data:
+  policy.json: |
+    {
+      "transports": {
+        "docker": {
+          "_<target_registry>_/_<namespace>_": [
+            {
+              "type": "signedBy",
+              "keyType": "GPGKeys",
+              "keyPath": "_<path_to_gpg_key>_"
+            }
+          ]
+        }
+      }
+    }
+----
++
+Then add the following volumes and volume mount entries to your Helm values file:
++
+[source,yaml]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      - name: rhdh-mirror-policy
+        configMap:
+          name: rhdh-mirror-policy
+    initContainers:
+      - name: install-dynamic-plugins
+        volumeMounts:
+          - name: rhdh-mirror-policy
+            mountPath: /etc/containers/policy.json
+            subPath: policy.json
+            readOnly: true
+----
