@@ -82,7 +82,7 @@ function getFileAtBase(root, repoRelPath) {
 
   try {
     return execFileSync(GIT, ['show', `${base}:${repoRelPath}`], {
-      cwd: root, encoding: 'utf8',
+      cwd: root, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch {
     // File didn't exist at the merge-base commit
