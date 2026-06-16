@@ -87,7 +87,9 @@ function checkNavFile(file) {
 
   // First include must be a con_ file
   if (firstInclude) {
-    const includeTarget = firstInclude.replace(/^include::/, '').replace(/\[.*$/, '');
+    const raw = firstInclude.replace(/^include::/, '');
+    const bracketIdx = raw.indexOf('[');
+    const includeTarget = bracketIdx >= 0 ? raw.slice(0, bracketIdx) : raw;
     const targetBn = basename(includeTarget);
     if (!targetBn.startsWith('con_') && !targetBn.startsWith('con-')) {
       issues.push(manual(file,
