@@ -92,6 +92,7 @@ function detectContentType(lines, bn) {
   if (stem.startsWith('con-')) return 'CONCEPT';
   if (stem.startsWith('ref-')) return 'REFERENCE';
   if (stem.startsWith('snip-') || stem === 'attributes') return 'SNIPPET';
+  if (stem.startsWith('nav-')) return 'MAP';
 
   return null;
 }

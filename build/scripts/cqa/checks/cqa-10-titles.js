@@ -172,7 +172,7 @@ function titleToId(titleRaw) {
 
 // ── File analysis ─────────────────────────────────────────────────────────────
 
-const PREFIX = { PROCEDURE: 'proc-', CONCEPT: 'con-', REFERENCE: 'ref-', ASSEMBLY: 'assembly-', SNIPPET: 'snip-' };
+const PREFIX = { PROCEDURE: 'proc-', CONCEPT: 'con-', REFERENCE: 'ref-', ASSEMBLY: 'assembly-', SNIPPET: 'snip-', MAP: 'nav-' };
 
 function analyzeFile(root, file, attrLines) {
   const bn = basename(file);
@@ -180,7 +180,7 @@ function analyzeFile(root, file, attrLines) {
   const stem = bn.replace(/\.adoc$/, '');
 
   // Skip files with no content type and no known prefix
-  const knownPrefixes = ['proc-', 'con-', 'ref-', 'assembly-', 'snip-'];
+  const knownPrefixes = ['proc-', 'con-', 'ref-', 'assembly-', 'snip-', 'nav-'];
   if (!contentType && !knownPrefixes.some(p => stem.startsWith(p))) return null;
 
   const lines = getLines(file);
@@ -284,7 +284,7 @@ export default class Cqa10Titles extends Checker {
 
       const contentType = getContentType(file);
       const stem = bn.replace(/\.adoc$/, '');
-      const knownPrefixes = ['proc-', 'con-', 'ref-', 'assembly-', 'snip-'];
+      const knownPrefixes = ['proc-', 'con-', 'ref-', 'assembly-', 'snip-', 'nav-'];
       const hasKnownPrefix = knownPrefixes.some(p => stem.startsWith(p));
       if (!contentType) {
         if (hasKnownPrefix) {
@@ -292,6 +292,7 @@ export default class Cqa10Titles extends Checker {
         }
         continue;
       }
+      if (contentType === 'MAP') continue; // Nav files have no ID requirement
 
       const result = analyzeFile(root, file, attrLines);
       if (!result?.changed) continue;
