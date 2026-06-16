@@ -5,7 +5,8 @@
  *   - Must have :_mod-docs-content-type: MAP
  *   - Must contain only a title and include:: directives (no body text)
  *   - First include must be a con- (concept) file
- *   - Comments (// ...) and blank lines are allowed
+ *   - Comments (// ...), blank lines, attribute lines (:key: value),
+ *     and ID lines ([id="..."]) are allowed
  *
  * No autofix — structural issues require manual correction.
  */
@@ -61,6 +62,8 @@ function checkNavFile(file) {
     if (trimmed.startsWith('//')) continue;
     // Skip attribute lines (:key: value)
     if (/^:[a-zA-Z_]/.test(trimmed)) continue;
+    // Skip ID lines ([id="..."])
+    if (trimmed.startsWith('[id=')) continue;
     // Title line
     if (trimmed.startsWith('= ')) {
       hasTitle = true;
