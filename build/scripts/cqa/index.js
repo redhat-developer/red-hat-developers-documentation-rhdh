@@ -39,7 +39,9 @@ const CHECKS_IN_ORDER = [
   'cqa-12-grammar.js',
   'cqa-17-disclaimers.js',
   'cqa-14-no-broken-links.js',
+  'cqa-14b-inbound-link-stability.js',
   'cqa-15-redirects.js',
+  'jtbd-01-navigation.js',
 ];
 
 const VALE_CHECK_IDS = new Set(['01', '12', '16']);
@@ -276,7 +278,7 @@ function printHelp() {
   console.log(`Usage: node build/scripts/cqa/index.js [OPTIONS] [titles/<title>/master.adoc ...]
 
 Content Quality Assessment for Red Hat Developer Hub documentation.
-Runs 19 automated checks for modular docs compliance.
+Runs 21 automated checks for modular docs compliance.
 
 Options:
   --all          Run all checks against all titles in the repository
@@ -301,7 +303,8 @@ Checks (in workflow order):
   07   TOC depth (max 3 levels)      16  Official product names
   01   Vale AsciiDoc DITA            12  Grammar and style (Vale)
   17   Legal disclaimers             14  No broken links
-  15   Redirects
+  14b  Inbound link stability        15  Redirects
+  JTBD-01  Navigation MAP structure
 
 Output markers:
   [AUTOFIX]       Auto-fixable with --fix
