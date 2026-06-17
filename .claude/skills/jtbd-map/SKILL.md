@@ -13,8 +13,8 @@ This skill populates the JTBD (Jobs To Be Done) navigation map files under `titl
 
 ## Arguments
 
-The skill accepts one of:
-- A **Jira ticket** ID (e.g., `RHIDP-14636`) -- fetches ticket content to identify the category, job, or topic
+The skill accepts one or more of:
+- **Jira ticket** IDs (e.g., `RHIDP-14636` or `RHIDP-14545 RHIDP-14546 RHIDP-14547`) -- fetches ticket content to identify the category, job, or topic
 - A **category name** (e.g., `Secure`, `Install`) -- maps the entire category
 - A **job or topic name** (e.g., `Configure authentication providers`) -- maps a specific job
 
@@ -72,6 +72,7 @@ For each nav file in scope:
    include::modules/<subdirectory>/<module>.adoc[leveloffset=+1,navtitle="<nav title>"]
    ```
 4. Keep any existing includes that are already populated
+5. If a nav file would contain only one module include (besides the mandatory concept file), collapse it: delete the nav+con pair and include the module directly in the parent nav file with a `navtitle` override
 
 ### Step 5: Populate concept files
 
@@ -98,7 +99,19 @@ When the content you are migrating (modules or concept body text) contains `xref
 3. Use the TOC mapping reference (`.claude/skills/jtbd-map/jtbd-toc-mapping.tsv`) to determine the correct JTBD category and job for the missing content
 4. Create or populate the corresponding nav file and concept file in the correct category directory, adding the module includes that provide the missing ID
 5. Use hardcoded IDs (e.g., `[id="permission-policies-reference_authorization-in-rhdh"]`) when the xrefs use hardcoded context values instead of `_{context}`
-6. Repeat until all xref targets in the migrated scope are resolvable within the `product_product` build
+6. When a module defines `[id="module-id_{context}"]` and existing xrefs use a hardcoded old context value (e.g., `xref:module-id_old-assembly-context[...]`), temporarily set `:context:` to the old value before the module include and restore it after:
+   ```asciidoc
+   // Temporarily set old context for backward-compatible module IDs
+   :context: old-assembly-context
+   include::modules/<subdirectory>/<module>.adoc[leveloffset=+1]
+   :context: current-nav-context
+   ```
+7. For assembly-level IDs (e.g., `xref:old-assembly-id_old-context[...]`), add a backward-compatible anchor before the concept include in the nav file:
+   ```asciidoc
+   // Backward-compatible anchor for xrefs using the old assembly context
+   [id="old-assembly-id_old-context"]
+   ```
+8. Repeat until all xref targets in the migrated scope are resolvable within the `product_product` build
 
 This ensures the ccutil build passes with 0 "Unknown ID" errors.
 
@@ -113,35 +126,24 @@ For each modified nav file, verify:
 2. **Cross-reference attributes** are defined where needed:
    - `:secrets-context:` for authentication-related nav files (needed by 9 modules using `{secrets-context}` in xrefs)
    - `:import-context:` for authentication nav files (needed by PingFederate module)
-3. **Platform attributes** for non-OCP install nav files. Each hyperscaler section must set all 8 platform attributes before its includes and restore OCP defaults after:
+3. **Platform attributes** for non-OCP install nav files. Each hyperscaler section must include the corresponding platform attribute file before its includes and restore OCP defaults after. The platform attribute files are at `titles/product_product/platform-{ocp,eks,gke,aks}.adoc`, each defining 8 attributes (`:platform-id:`, `:platform-long:`, `:platform:`, `:platform-cli:`, `:platform-cli-link:`, `:platform-cli-name:`, `:a-platform-generic:`, `:namespace:`).
 
-   **EKS override:**
    ```asciidoc
-   :platform-id: eks
-   :platform-long: {eks-brand-name} ({eks-short})
-   :platform: {eks-short}
-   :platform-cli: kubectl
-   :platform-cli-link: link:https://kubernetes.io/docs/reference/kubectl/[Kubernetes CLI ('kubectl')]
-   :platform-cli-name: Kubernetes CLI ('kubectl')
-   :a-platform-generic: a Kubernetes
-   :namespace: namespace
-   ```
+   // EKS: override platform attributes
+   include::../../platform-eks.adoc[]
 
-   **GKE override:** Same as EKS but with `:platform-id: gke`, `:platform-long: {gke-brand-name} ({gke-short})`, `:platform: {gke-short}`.
+   // ... EKS content includes ...
 
-   **AKS override:** Same as EKS but with `:platform-id: aks`, `:platform-long: {aks-brand-name} ({aks-short})`, `:platform: {aks-short}`.
-
-   **OCP restore** (required after each hyperscaler section):
-   ```asciidoc
    // Restore platform attributes to OCP defaults
-   :platform-id: ocp
-   :platform-long: {ocp-brand-name} ({ocp-very-short})
-   :platform: {ocp-short}
-   :platform-cli: oc
-   :platform-cli-link: {ocp-docs-link}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}]
-   :platform-cli-name: {ocp-brand-name} CLI ('oc')
-   :a-platform-generic: an OpenShift
-   :namespace: project
+   include::../../platform-ocp.adoc[]
+
+   // GKE: override platform attributes
+   include::../../platform-gke.adoc[]
+
+   // ... GKE content includes ...
+
+   // Restore platform attributes to OCP defaults
+   include::../../platform-ocp.adoc[]
    ```
 
 ### Step 8: Validate
@@ -168,6 +170,11 @@ titles/<category>_<title>/
 ```
 titles/product_product/
   master.adoc                              # Product entry point
+  title-attributes.adoc                    # Title, subtitle, abstract, context
+  platform-ocp.adoc                        # OCP platform defaults (8 attributes)
+  platform-eks.adoc                        # EKS platform overrides
+  platform-gke.adoc                        # GKE platform overrides
+  platform-aks.adoc                        # AKS platform overrides
   category-maps/
     <category>.adoc                        # Category MAP (includes concept + job navs)
     <category>/
