@@ -1,6 +1,35 @@
 :_mod-docs-content-type: CONCEPT
 
+[id="create-a-persistent-volume-claim-overview_{context}"]
 = Create a persistent volume claim
 
 [role="_abstract"]
-TODO: Replace this placeholder with an overview of Create a persistent volume claim.
+A persistent volume claim (PVC) provides the persistent storage that the dynamic plugins cache requires to preserve cached plugin installations across pod restarts and replica scaling events.
+
+== Why a PVC is required
+
+The dynamic plugins cache stores downloaded plugin packages in the `dynamic-plugins-root` directory. By default, this directory uses ephemeral storage that does not persist beyond the lifecycle of a single pod. Creating a PVC ensures that:
+
+* Cached plugins survive pod restarts, eliminating redundant downloads
+* New replicas created during scaling events can access previously cached plugins
+* Platform boot time remains consistently fast regardless of restart frequency
+
+== Deployment-specific PVC creation
+
+The method for creating and attaching a PVC depends on your deployment type:
+
+Operator deployments::
+You must manually create the PVC and replace the default `dynamic-plugins-root` volume in your `{product-custom-resource-type}` custom resource using the `$patch: replace` directive. The Operator does not automatically create this PVC.
+
+Helm chart deployments::
+You must create the PVC separately and configure the Helm chart to use it by adding the PVC to the `extraVolumes` section. When configuring `extraVolumes`, you must also include the volumes defined in the default Helm chart values.
+
+== Access mode considerations
+
+Choose the PVC access mode based on your scaling requirements:
+
+`ReadWriteOnce`::
+Restricts the PVC to a single node. Suitable for single-replica deployments or when all replicas run on the same node.
+
+`ReadWriteMany`::
+Allows multiple nodes to mount the PVC simultaneously. Required when running multiple replicas across different nodes, which is the typical configuration for high availability deployments.

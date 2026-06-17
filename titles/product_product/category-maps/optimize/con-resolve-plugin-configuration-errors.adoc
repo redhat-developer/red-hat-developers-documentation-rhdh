@@ -1,0 +1,37 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="resolve-plugin-configuration-errors-overview_{context}"]
+= Resolve plugin configuration errors
+
+[role="_abstract"]
+Plugin configuration errors prevent dynamic plugins from loading correctly, which degrades platform functionality and can block backend startup. Understanding common error patterns and their causes helps you restore plugin operation quickly.
+
+== Common plugin configuration errors
+
+The following errors can occur when configuring or updating dynamic plugins in {product-short}:
+
+Pod startup failure after enabling a plugin::
+The backend pod fails to start because a newly enabled plugin requires environment variables or configuration values that are not defined. Pod logs display an error message indicating a missing required config value. To resolve this error, inspect the pod logs, identify the required variables from the `dynamic-plugins.default.yaml` file, and set the missing values by using a secret.
+
+404 errors after updating cached plugin configuration::
+When multiple {product-short} replicas share a single dynamic plugins cache PVC, updating plugin configurations can trigger temporary 404 errors. This occurs because replicas access inconsistent cache states during the update process before all replicas have synchronized. To resolve this error, configure an individual cache per pod by using a `StatefulSet` deployment.
+
+Configuration schema validation errors::
+Plugins that do not export a `config.d.ts` file in their `package.json` can cause configuration schema validation errors during plugin integration. Verify that the plugin package includes the configuration schema export.
+
+== Diagnosing plugin errors
+
+To identify the cause of a plugin configuration error:
+
+. Check the backend pod logs for error messages that indicate which plugin failed and why:
++
+[source,terminal]
+----
+$ oc logs -f deployment/<product-deployment-name> -c backstage-backend
+----
+
+. Look for messages that reference specific plugin names, missing configuration values, or startup failures.
+
+. Inspect the `dynamic-plugins.default.yaml` file to verify that all required environment variables for the affected plugin are defined.
+
+. Verify that the dynamic plugins cache PVC is accessible and has sufficient storage.
