@@ -188,7 +188,7 @@ async function buildTitle(title, branch, repoRoot, verbose) {
     'ccutil', 'compile',
     '--format', 'html-single',
     '--lang', 'en-US',
-    '--doctype', 'article',
+    '--doctype', 'book',
   ];
 
   const { code, duration, output } = await spawnCapture('podman', podmanArgs, {
