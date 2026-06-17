@@ -3,4 +3,59 @@
 = Plan production scaling using high availability architecture
 
 [role="_abstract"]
-TODO: Replace this placeholder with an overview of Plan production scaling using high availability architecture.
+High availability architecture enables {product-short} to handle growing user demand and concurrent platform access while maintaining responsive page load times and preventing service degradation. Planning your production scaling strategy before implementation ensures you allocate appropriate resources, configure optimal replica counts, and establish performance targets aligned with your organization's traffic patterns.
+
+== Why plan for scale with high availability
+
+As your development organization grows, {product-short} must handle increasing concurrent users, catalog queries, plugin operations, and workflow executions. Without proper planning, performance degradation manifests as:
+
+* Slow page load times during peak usage hours
+* Timeout errors when multiple teams access the catalog simultaneously
+* Delayed plugin responses under high load
+* Service interruptions during traffic spikes
+
+High availability architecture addresses scale challenges through horizontal scaling and load distribution, not just failover capabilities. By distributing requests across multiple backend replicas, {product-short} maintains consistent response times even as traffic increases.
+
+== Architecture patterns for different scale levels
+
+Your scaling strategy depends on your organization's size, usage patterns, and growth trajectory.
+
+Small-scale deployments (100-500 concurrent users)::
+Suitable for small development teams or pilot programs. A minimal HA configuration with 2-3 backend replicas provides load distribution and basic redundancy without over-provisioning resources.
+
+Medium-scale deployments (500-2000 concurrent users)::
+Appropriate for mid-sized organizations with multiple development teams. Requires 3-5 backend replicas, dedicated database resources, and plugin caching to maintain sub-second page load times during business hours.
+
+Large-scale deployments (2000+ concurrent users)::
+Designed for enterprise environments with global development teams and 24/7 platform usage. Demands 5+ backend replicas, horizontally scaled database clusters, distributed caching layers, and optimized resource allocation to handle sustained high traffic and traffic spikes.
+
+== Planning considerations before implementation
+
+Before configuring high availability, assess these capacity planning factors:
+
+Expected concurrent users::
+Estimate peak concurrent users, not total user count. A 5000-person organization might have 500 concurrent users during peak hours. Monitor authentication patterns and catalog access to establish baselines.
+
+Traffic patterns and peak usage::
+Identify when developers access the platform most heavily—typically during work hours in your primary time zones. Global teams require capacity planning for overlapping peak periods across regions.
+
+Plugin and workflow intensity::
+Some plugins consume more resources than others. Scaffolder operations, TechDocs builds, and orchestrator workflows generate higher backend load than simple catalog browsing. Catalog the plugins your teams use and estimate their concurrent execution frequency.
+
+Database and cache performance requirements::
+The database layer must handle concurrent read/write operations from all backend replicas. External PostgreSQL instances with connection pooling prevent database bottlenecks. Cache layers reduce database load for frequently accessed catalog data.
+
+Resource allocation per replica::
+Each backend replica requires CPU, memory, and storage. Undersized replicas cause performance degradation even with proper replica counts. Start with recommended resource allocations and adjust based on monitoring data.
+
+== Performance targets for scaled deployments
+
+Establish measurable performance targets to validate your scaling plan:
+
+* *Page load time*: Initial catalog page load under 2 seconds at 90th percentile
+* *Concurrent request handling*: Support target concurrent users without timeout errors
+* *Plugin response time*: Scaffolder template execution completes within expected duration under load
+* *Failover impact*: Less than 5 seconds of elevated response time during replica failure
+* *Search latency*: Catalog search returns results under 1 second for typical queries
+
+Monitor these metrics after implementation to validate your scaling plan and identify when additional scaling is required.

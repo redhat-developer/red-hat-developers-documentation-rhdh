@@ -3,4 +3,40 @@
 = Configure the dynamic plugins cache
 
 [role="_abstract"]
-TODO: Replace this placeholder with an overview of Configure the dynamic plugins cache.
+The dynamic plugins cache reduces platform boot time by storing already-installed plugins and eliminating redundant downloads when configuration remains unchanged. Enabling the cache improves performance during scaling operations by ensuring new backend replicas become available quickly without re-downloading plugins from remote registries.
+
+== How dynamic plugins cache improves performance
+
+When you scale {product-short} to handle growing traffic, new backend replicas must initialize before serving requests. Without caching, each new replica downloads all configured plugins from remote registries during startup, which:
+
+* Delays replica availability during scaling events
+* Increases network traffic to plugin registries
+* Extends the time between detecting load and serving it with additional capacity
+
+The dynamic plugins cache eliminates these delays by preserving plugin installations across pod restarts and new replica creation.
+
+== Cache behavior
+
+When you enable dynamic plugins cache:
+
+Checksum-based validation::
+The system calculates a checksum of each plugin's YAML configuration (excluding `pluginConfig` changes). This checksum is stored in `dynamic-plugin-config.hash` within each plugin's directory.
+
+Download skip logic::
+During boot, if a plugin's package reference and checksum match the cached version, the system skips the download and uses the cached installation. This reduces startup time from minutes to seconds for plugin-heavy deployments.
+
+Automatic cleanup::
+The system removes cached plugins that no longer appear in the configuration, preventing stale plugins from consuming storage.
+
+Configuration change detection::
+Changes to plugin package versions or references trigger fresh downloads, ensuring the cache never serves outdated plugin code.
+
+== Storage requirements
+
+The dynamic plugins cache requires persistent storage:
+
+* The `dynamic-plugins-root` directory must reside on a persistent volume
+* All backend replicas must share access to the same persistent volume
+* Storage size must accommodate all configured plugins (typically 1-5 GB depending on plugin count)
+
+Without persistent storage, the cache cannot function because pod restarts would lose cached data.

@@ -3,4 +3,53 @@
 = Configure high availability to maintain performance
 
 [role="_abstract"]
-TODO: Replace this placeholder with an overview of Configure high availability to maintain performance.
+Configuring high availability distributes incoming traffic across multiple {product-short} backend replicas, ensuring consistent response times during traffic spikes and maintaining service availability when individual instances fail. Proper HA configuration prevents performance bottlenecks by balancing load and provides seamless failover to preserve user productivity.
+
+== How HA configuration maintains performance
+
+{product-short} uses a stateless backend design that supports horizontal scaling for performance. When you configure multiple backend replicas:
+
+Load distribution prevents bottlenecks::
+Platform-provided load balancers (OpenShift Routes, Kubernetes Ingress, or cloud provider load balancers) distribute incoming requests across all available backend instances. No single instance becomes overwhelmed during high-traffic periods.
+
+Session portability enables any-instance routing::
+PostgreSQL stores session data, allowing any backend replica to serve any request. This eliminates session affinity requirements and maximizes load distribution efficiency.
+
+Health-based routing maintains capacity::
+Load balancer health checks automatically detect failed instances and remove them from rotation. Remaining replicas continue serving traffic without manual intervention, and performance remains consistent.
+
+Quick scaling response::
+Adding new replicas during traffic growth takes effect immediately once health checks pass. The stateless design ensures new instances can serve production traffic without warm-up delays.
+
+== Supported platforms
+
+{product-short} supports HA deployments on:
+
+* {ocp-brand-name}
+* {aks-name}
+* {eks-name}
+* {gke-brand-name}
+
+All platforms provide load balancing capabilities required for HA operation.
+
+== Configuration methods
+
+Configure high availability by adjusting replica counts in your deployment configuration:
+
+Operator-based deployments::
+Set the `replicas` value in your `{product-custom-resource-type}` custom resource. The Operator manages backend pod scaling and integrates with platform load balancing automatically.
+
+Helm chart deployments::
+Configure the `replicaCount` parameter in your Helm values file. The Helm chart creates the appropriate number of backend pods and configures service routing.
+
+Both methods produce identical runtime behavior. Choose the method that matches your deployment approach.
+
+== Database and cache requirements
+
+HA backend configuration requires properly configured data layers:
+
+Database high availability::
+PostgreSQL must handle concurrent connections from all backend replicas. Configure connection pooling and ensure the database itself runs in HA mode (primary-replica replication) to prevent database outages from affecting platform availability.
+
+Optional cache configuration::
+Redis shared cache improves performance when multiple backend instances serve the same users. All replicas access cached TechDocs rendering, processed catalog data, and other computed results. Cache failure degrades performance but does not prevent operation.

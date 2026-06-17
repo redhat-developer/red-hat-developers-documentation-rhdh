@@ -1,0 +1,64 @@
+:_mod-docs-content-type: CONCEPT
+
+= Enable the plugin assets cache
+
+[role="_abstract"]
+The plugin assets cache stores frequently accessed plugin resources in Redis, reducing network traffic and accelerating asset loading times. Enabling this cache improves page rendering performance for users and reduces the load on backend services during high-traffic periods.
+
+== How plugin assets cache improves performance
+
+When users access {product-short}, their browsers load various plugin assets—JavaScript bundles, stylesheets, images, and other resources. Without caching:
+
+* Each request fetches assets from the backend, increasing response times
+* Network latency affects every asset load operation
+* Backend services spend CPU cycles serving static assets instead of handling dynamic requests
+* Repeated access to the same pages downloads identical assets multiple times
+
+The plugin assets cache stores these assets in Redis where:
+
+Fast retrieval reduces latency::
+Redis serves cached assets with sub-millisecond response times, dramatically faster than fetching from storage or remote sources.
+
+Reduced backend load::
+Cached assets bypass backend processing, freeing resources for catalog operations, plugin execution, and workflow processing.
+
+Network traffic optimization::
+Users' browsers load assets from the cache rather than downloading from original sources, reducing bandwidth consumption.
+
+Shared cache across replicas::
+When running multiple backend replicas, all instances share the same Redis cache. An asset cached by one replica is immediately available to all others, preventing redundant work.
+
+== Cache scope and coverage
+
+The plugin assets cache primarily benefits:
+
+TechDocs assets::
+Rendered documentation pages, images, and stylesheets cache according to configured TTL values. Frequently accessed documentation loads nearly instantly after initial caching.
+
+Plugin static resources::
+Supported plugins can cache their assets. Check individual plugin documentation to determine cache support.
+
+Unsupported content::
+Dynamic content generated per-request does not cache. User-specific data, real-time metrics, and authentication responses always come from live sources.
+
+== Performance and reliability benefits
+
+Enabling the cache provides measurable improvements:
+
+* *Page load time*: Reduces initial page render time by 30-50% for cached content
+* *Concurrent user capacity*: Decreases backend load per user, allowing more concurrent users on the same infrastructure
+* *Network resilience*: Cached assets remain available even during temporary network issues to origin servers
+* *Scaling efficiency*: New backend replicas immediately benefit from existing cache content without warm-up period
+
+== Storage and availability considerations
+
+Redis cache configuration affects performance characteristics:
+
+Time-to-live (TTL) settings::
+Configure how long assets remain cached. Longer TTL reduces cache misses but may serve stale content after updates. Shorter TTL ensures freshness but increases cache miss rate.
+
+Redis availability::
+If Redis becomes unavailable, {product-short} continues functioning but falls back to non-cached asset retrieval. Performance degrades but the platform remains operational.
+
+Cache size planning::
+Redis memory allocation must accommodate your asset volume. Monitor cache hit rates and eviction metrics to ensure adequate sizing.
