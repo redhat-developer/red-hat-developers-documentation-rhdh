@@ -42,6 +42,7 @@ const CHECKS_IN_ORDER = [
   'cqa-14b-inbound-link-stability.js',
   'cqa-15-redirects.js',
   'jtbd-01-navigation.js',
+  'jtbd-02-orphans.js',
 ];
 
 const VALE_CHECK_IDS = new Set(['01', '12', '16']);
@@ -238,6 +239,15 @@ function printAllChecksReport(sortedChecks, results, fixMode) {
   }
 
   printFinalSummary({ checksPass, checksFail, totalAutofixable, totalManual, totalDelegated, totalFixed, fixMode });
+
+  // Append informational reports from checks that define getReport()
+  for (const checker of sortedChecks) {
+    if (typeof checker.getReport === 'function') {
+      const report = checker.getReport();
+      if (report) console.log(report);
+    }
+  }
+
   return { checksPass, checksFail };
 }
 
@@ -278,7 +288,7 @@ function printHelp() {
   console.log(`Usage: node build/scripts/cqa/index.js [OPTIONS] [titles/<title>/master.adoc ...]
 
 Content Quality Assessment for Red Hat Developer Hub documentation.
-Runs 21 automated checks for modular docs compliance.
+Runs 22 automated checks for modular docs compliance.
 
 Options:
   --all          Run all checks against all titles in the repository
@@ -303,8 +313,9 @@ Checks (in workflow order):
   07   TOC depth (max 3 levels)      16  Official product names
   01   Vale AsciiDoc DITA            12  Grammar and style (Vale)
   17   Legal disclaimers             14  No broken links
-  14b  Inbound link stability        15  Redirects
+   14b  Inbound link stability        15  Redirects
   JTBD-01  Navigation MAP structure
+  JTBD-02  Modules not in product_product (informational)
 
 Output markers:
   [AUTOFIX]       Auto-fixable with --fix
