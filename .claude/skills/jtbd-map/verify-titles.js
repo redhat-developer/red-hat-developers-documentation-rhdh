@@ -28,20 +28,41 @@ function parseTSV() {
       currentCategory = cols[0].trim();
     }
 
+    // Find the "Is a job?" value - it might be in different columns depending on the level
+    let isJobValue = false;
+    let navtitleValue = '';
+
+    // Look for TRUE/FALSE values in the expected positions
+    for (let colIndex = 7; colIndex <= 10; colIndex++) {
+      const colValue = cols[colIndex]?.trim().toUpperCase();
+      if (colValue === 'TRUE' || colValue === 'FALSE') {
+        isJobValue = (colValue === 'TRUE');
+        // Navtitle is typically the next column after the job indicator
+        navtitleValue = cols[colIndex + 1]?.trim() || '';
+        break;
+      }
+    }
+
     const entry = {
       lineNumber: i + 1,
       category: currentCategory,  // Use tracked category, not just the column value
-      level2: cols[1]?.trim() || '',
-      level3: cols[2]?.trim() || '',
-      level4: cols[3]?.trim() || '',
-      topicH2: cols[4]?.trim() || '',  // Column 5 "Topic (H2)"
-      topicH3: cols[5]?.trim() || '',  // Column 6 "H3"
-      filePath: cols[6]?.trim() || '', // Column 7 "Full .adoc file path"
-      // Note: Columns 8-9 appear shifted in actual data vs header
-      // Actual data has "Is a job?" at column 10, not column 8
-      isJob: (cols[9]?.trim().toUpperCase() === 'TRUE') || (cols[7]?.trim().toUpperCase() === 'TRUE'),
-      navtitle: cols[8]?.trim() || '',
+      level2: cols[1]?.trim() || '',  // Column 2: "Level 2 (Jobs)"
+      level3: cols[2]?.trim() || '',  // Column 3: "Level 3 (Jobs or Topics)"
+      level4: cols[3]?.trim() || '',  // Column 4: "Level 4 (Jobs or Topics)"
+      topicH2: cols[4]?.trim() || '', // Column 5: "Topic (H2)"
+      topicH3: cols[5]?.trim() || '', // Column 6: "H3"
+      filePath: cols[6]?.trim() || '', // Column 7: "Full .adoc file path"
+      isJob: isJobValue,              // Detected from scanning columns 8-11
+      navtitle: navtitleValue,        // Column after the job indicator
+      jira: cols[9]?.trim() || '',    // Column 10: "Jira" (may shift)
+      assignee: cols[10]?.trim() || '', // Column 11: "Assignee" (may shift)
     };
+
+    // Skip empty or category-only rows that don't represent actual content
+    if (!entry.level2 && !entry.level3 && !entry.level4 && !entry.topicH2 && !entry.topicH3) {
+      continue;
+    }
+
     entries.push(entry);
   }
 
@@ -55,28 +76,54 @@ function kebabCase(str) {
     .replace(/^-+|-+$/g, '');
 }
 
+function getEntryType(entry) {
+  // Determine what type of entry this is in the hierarchy
+  if (entry.topicH3) return 'Topic H3';
+  if (entry.topicH2) return 'Topic H2';
+  if (entry.level4) return entry.isJob ? 'Job L4' : 'Topic L4';
+  if (entry.level3) return entry.isJob ? 'Job L3' : 'Topic L3';
+  if (entry.level2) return entry.isJob ? 'Job L2' : 'Topic L2';
+  return 'Unknown';
+}
+
+function shouldHaveNavFile(entry) {
+  // Determine if this entry should have a nav+con file pair
+  // Jobs always get nav files, regardless of level
+  if (entry.isJob) return true;
+
+  // Level 2 entries typically get nav files (parent jobs)
+  if (entry.level2 && !entry.level3 && !entry.level4) return true;
+
+  // Level 3 entries get nav files if they have children (level 4 or H2/H3 topics)
+  if (entry.level3 && !entry.level4) return true;
+
+  // Level 4 entries might get nav files if they have H2/H3 topics as children
+  if (entry.level4) return true;
+
+  return false;
+}
+
 function getExpectedTitle(entry) {
   // Determine which level this entry represents
-  // Return the first non-empty value from the hierarchy
-  if (entry.level4) {
-    return entry.level4;
+  // Priority order: Level 4 > Level 3 > Level 2 > H3 > H2
+  // This determines the title for the nav/con file at this specific level
+
+  // For jobs (is a job = TRUE), use the job level title
+  if (entry.isJob) {
+    if (entry.level4) return entry.level4;
+    if (entry.level3) return entry.level3;
+    if (entry.level2) return entry.level2;
   }
-  if (entry.level3) {
-    return entry.level3;
-  }
-  if (entry.level2) {
-    return entry.level2;
-  }
-  if (entry.topicH3) {
-    return entry.topicH3;
-  }
-  if (entry.topicH2) {
-    return entry.topicH2;
-  }
-  // Category-only entries (no L2/L3/L4/H2/H3) return the category
-  if (entry.category && !entry.level2 && !entry.level3 && !entry.level4 && !entry.topicH2 && !entry.topicH3) {
-    return entry.category;
-  }
+
+  // For non-jobs (leaf topics), use H3 first, then H2, then fall back to job levels
+  if (entry.topicH3) return entry.topicH3;
+  if (entry.topicH2) return entry.topicH2;
+
+  // Fall back to job levels for topics that don't have H2/H3
+  if (entry.level4) return entry.level4;
+  if (entry.level3) return entry.level3;
+  if (entry.level2) return entry.level2;
+
   return null;
 }
 
@@ -144,7 +191,7 @@ function verifyCategory(categoryName, entries) {
 
   if (!fs.existsSync(categoryDir)) {
     console.log(`Category directory not found: ${categoryDir}`);
-    return { mismatches: [], missing: [], navtitleMismatches: [], missingTopics: [] };
+    return { mismatches: [], missing: [], navtitleMismatches: [], missingTopics: [], hierarchyIssues: [] };
   }
 
   const categoryEntries = entries.filter(e =>
@@ -155,6 +202,7 @@ function verifyCategory(categoryName, entries) {
   const missing = [];
   const navtitleMismatches = [];
   const missingTopics = [];
+  const hierarchyIssues = [];
 
   // Build a map of expected titles for navtitle verification
   // This includes both job-level entries (L2/L3/L4) and leaf topics (H2/H3)
@@ -165,7 +213,11 @@ function verifyCategory(categoryName, entries) {
       const key = kebabCase(expectedTitle);
       // Store if not already present (first occurrence wins)
       if (!topicTitleMap.has(key)) {
-        topicTitleMap.set(key, { title: expectedTitle, lineNumber: entry.lineNumber });
+        topicTitleMap.set(key, {
+          title: expectedTitle,
+          lineNumber: entry.lineNumber,
+          entryType: getEntryType(entry)
+        });
       }
     }
   }
@@ -210,6 +262,16 @@ function verifyCategory(categoryName, entries) {
           lineNumber: entry.lineNumber,
           expected: expectedTitle,
           actual: actualTitle,
+          entryType: getEntryType(entry),
+          tsvHierarchy: {
+            category: entry.category,
+            level2: entry.level2,
+            level3: entry.level3,
+            level4: entry.level4,
+            topicH2: entry.topicH2,
+            topicH3: entry.topicH3,
+            isJob: entry.isJob
+          }
         });
       }
 
@@ -226,6 +288,7 @@ function verifyCategory(categoryName, entries) {
             lineNumber: expected.lineNumber,
             expected: expected.title,
             actual: navtitle,
+            entryType: expected.entryType || 'Unknown'
           });
         }
       }
@@ -245,11 +308,13 @@ function verifyCategory(categoryName, entries) {
             continue;
           }
 
+          // If there's a navtitle, add it
           if (navtitle) {
             includedTitles.add(kebabCase(navtitle));
           }
-          // Also extract the title from the module file if no navtitle
-          if (!navtitle && modulePath.startsWith('modules/')) {
+
+          // Always extract and add the module's actual title too
+          if (modulePath.startsWith('modules/')) {
             const moduleFullPath = path.join(categoryDir, modulePath);
             const moduleTitle = extractTitleFromFile(moduleFullPath);
             if (moduleTitle) {
@@ -290,6 +355,16 @@ function verifyCategory(categoryName, entries) {
           lineNumber: entry.lineNumber,
           expected: expectedTitle,
           actual: actualTitle,
+          entryType: getEntryType(entry),
+          tsvHierarchy: {
+            category: entry.category,
+            level2: entry.level2,
+            level3: entry.level3,
+            level4: entry.level4,
+            topicH2: entry.topicH2,
+            topicH3: entry.topicH3,
+            isJob: entry.isJob
+          }
         });
       }
     } else if (entry.isJob || entry.level2 || entry.level3 || entry.level4) {
@@ -302,11 +377,35 @@ function verifyCategory(categoryName, entries) {
     }
   }
 
-  return { mismatches, missing, navtitleMismatches, missingTopics };
+  return { mismatches, missing, navtitleMismatches, missingTopics, hierarchyIssues };
+}
+
+function showTSVHierarchy(entries, categoryName) {
+  console.log(`\n=== TSV Hierarchy for ${categoryName} ===`);
+
+  const categoryEntries = entries.filter(e =>
+    e.category.toLowerCase() === categoryName.toLowerCase()
+  );
+
+  for (const entry of categoryEntries) {
+    console.log(`\nLine ${entry.lineNumber}:`);
+    console.log(`  Entry type: ${getEntryType(entry)}`);
+    console.log(`  Category: "${entry.category}"`);
+    if (entry.level2) console.log(`  L2: "${entry.level2}"`);
+    if (entry.level3) console.log(`  L3: "${entry.level3}"`);
+    if (entry.level4) console.log(`  L4: "${entry.level4}"`);
+    if (entry.topicH2) console.log(`  H2: "${entry.topicH2}"`);
+    if (entry.topicH3) console.log(`  H3: "${entry.topicH3}"`);
+    console.log(`  Is Job: ${entry.isJob}`);
+    if (entry.navtitle) console.log(`  Navtitle: "${entry.navtitle}"`);
+    console.log(`  Expected file title: "${getExpectedTitle(entry)}"`);
+    console.log(`  Expected file prefix: "${getFilePrefix(entry)}"`);
+  }
 }
 
 function main() {
   const categoryArg = process.argv[2];
+  const showHierarchy = process.argv.includes('--hierarchy') || process.argv.includes('-h');
 
   const entries = parseTSV();
 
@@ -323,22 +422,41 @@ function main() {
     process.exit(1);
   }
 
+  // If --hierarchy flag is provided, show TSV hierarchy and exit
+  if (showHierarchy) {
+    for (const category of categoriesToCheck) {
+      showTSVHierarchy(entries, category);
+    }
+    return;
+  }
+
   let totalMismatches = 0;
   let totalMissing = 0;
   let totalNavtitleMismatches = 0;
   let totalMissingTopics = 0;
+  let totalHierarchyIssues = 0;
 
   for (const category of categoriesToCheck) {
     console.log(`\n=== Checking category: ${category} ===`);
-    const { mismatches, missing, navtitleMismatches, missingTopics } = verifyCategory(category, entries);
+    const { mismatches, missing, navtitleMismatches, missingTopics, hierarchyIssues } = verifyCategory(category, entries);
 
     if (mismatches.length > 0) {
       console.log(`\nTitle mismatches (${mismatches.length}):`);
       for (const m of mismatches) {
         console.log(`\n  File: ${path.relative(process.cwd(), m.file)}`);
         console.log(`  TSV line: ${m.lineNumber}`);
-        console.log(`  Expected: "${m.expected}"`);
-        console.log(`  Actual:   "${m.actual}"`);
+        console.log(`  Entry type: ${m.entryType || 'Unknown'}`);
+        console.log(`  TSV hierarchy:`);
+        if (m.tsvHierarchy) {
+          if (m.tsvHierarchy.level2) console.log(`    L2: "${m.tsvHierarchy.level2}"`);
+          if (m.tsvHierarchy.level3) console.log(`    L3: "${m.tsvHierarchy.level3}"`);
+          if (m.tsvHierarchy.level4) console.log(`    L4: "${m.tsvHierarchy.level4}"`);
+          if (m.tsvHierarchy.topicH2) console.log(`    H2: "${m.tsvHierarchy.topicH2}"`);
+          if (m.tsvHierarchy.topicH3) console.log(`    H3: "${m.tsvHierarchy.topicH3}"`);
+          console.log(`    Is job: ${m.tsvHierarchy.isJob}`);
+        }
+        console.log(`  Expected title: "${m.expected}"`);
+        console.log(`  Actual title:   "${m.actual}"`);
       }
       totalMismatches += mismatches.length;
     }
@@ -349,6 +467,7 @@ function main() {
         console.log(`\n  File: ${path.relative(process.cwd(), m.file)}`);
         console.log(`  Module: ${m.modulePath}`);
         console.log(`  TSV line: ${m.lineNumber}`);
+        console.log(`  Entry type: ${m.entryType || 'Unknown'}`);
         console.log(`  Expected navtitle: "${m.expected}"`);
         console.log(`  Actual navtitle:   "${m.actual}"`);
       }
@@ -379,6 +498,8 @@ function main() {
     if (mismatches.length === 0 && missing.length === 0 && navtitleMismatches.length === 0 && missingTopics.length === 0) {
       console.log(`✓ All titles match TSV and all topics are included`);
     }
+
+    totalHierarchyIssues += hierarchyIssues.length;
   }
 
   console.log(`\n=== Summary ===`);
@@ -386,8 +507,17 @@ function main() {
   console.log(`Total navtitle mismatches: ${totalNavtitleMismatches}`);
   console.log(`Total missing files: ${totalMissing}`);
   console.log(`Total missing topic includes: ${totalMissingTopics}`);
+  console.log(`Total hierarchy issues: ${totalHierarchyIssues}`);
 
-  process.exit((totalMismatches + totalNavtitleMismatches + totalMissingTopics) > 0 ? 1 : 0);
+  const totalIssues = totalMismatches + totalNavtitleMismatches + totalMissingTopics + totalHierarchyIssues;
+
+  if (totalIssues === 0) {
+    console.log(`\n✅ All verification checks passed! TSV hierarchy matches file structure.`);
+  } else {
+    console.log(`\n❌ Found ${totalIssues} issues that need to be fixed.`);
+  }
+
+  process.exit(totalIssues > 0 ? 1 : 0);
 }
 
 main();
