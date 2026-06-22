@@ -52,11 +52,17 @@ For each topic in the scope, find the corresponding assembly file first, then de
 3. If still no match, search all `assemblies/*/` subdirectories (catches content that moved categories, such as reference and troubleshooting content originating in other directories)
 4. Read the found assembly's `include::` directives -- these give the module file paths to use in the nav file
 5. Read the assembly's body content (abstract, paragraphs, admonitions, snippet includes, additional resources) -- this content goes into the concept file
+6. **Verify the topic title from the TSV**:
+   - Extract the expected topic title from the TSV (from L2/L3/L4 job columns OR H2/H3 topic columns)
+   - Read the module's actual title (the `= Title` line)
+   - If the module title does NOT match the TSV topic title exactly, you MUST use a `navtitle` attribute override
+   - The `navtitle` value MUST match the TSV topic title exactly (including capitalization and punctuation)
 
 If no assembly is found for a topic, fall back to searching modules directly:
 1. Search `modules/<category>_*/`
 2. If no match, search `modules/shared/`
 3. If still no match, search all `modules/*/` subdirectories
+4. **Apply the same navtitle verification** as described above
 
 ### Step 4: Populate nav files
 
@@ -67,10 +73,15 @@ For each nav file in scope:
    include::modules/<subdirectory>/<module>.adoc[leveloffset=+1]
    ```
    Where `<subdirectory>` is the actual directory the module lives in (e.g., `shared`, `configure_configuring-rhdh`, `extend_orchestrator-in-rhdh`), accessed through the `modules` symlink in the category directory.
-3. Add `navtitle` only when the TSV's Navtitle column (column 9) has an explicit value, or when the module's internal `= Title` heading does not match the desired navigation title:
+3. **Add `navtitle` when the module title does not match the TSV topic title**:
+   - First, check if the TSV's Navtitle column (column 9) has an explicit value - if so, use that
+   - Otherwise, extract the topic title from the appropriate TSV column (L2/L3/L4 for jobs, H2/H3 for leaf topics)
+   - Read the module's actual `= Title` line
+   - If they don't match exactly, add a `navtitle` attribute with the TSV topic title:
    ```
-   include::modules/<subdirectory>/<module>.adoc[leveloffset=+1,navtitle="<nav title>"]
+   include::modules/<subdirectory>/<module>.adoc[leveloffset=+1,navtitle="<exact TSV topic title>"]
    ```
+   - **The `navtitle` value MUST match the TSV exactly** (same capitalization, punctuation, and spacing)
 4. Keep any existing includes that are already populated
 5. If a nav file would contain only one module include (besides the mandatory concept file), collapse it: delete the nav+con pair and include the module directly in the parent nav file with a `navtitle` override
 
@@ -146,7 +157,61 @@ For each modified nav file, verify:
    include::../../platform-ocp.adoc[]
    ```
 
-### Step 8: Validate
+### Step 8: Verify titles and navtitles match TSV exactly
+
+For each nav and con file in scope, verify that:
+1. The `= Title` line in nav/con files matches the TSV title exactly
+2. The `navtitle` attribute values in module includes match the TSV topic titles exactly
+
+**Automated verification script:**
+
+Use the provided verification script to check both titles and navtitles:
+
+```bash
+# Check a specific category
+node .claude/skills/jtbd-map/verify-titles.js "Category Name"
+
+# Check all categories
+node .claude/skills/jtbd-map/verify-titles.js
+```
+
+The script will:
+1. Parse the TSV to extract the expected title for each level based on the hierarchy:
+   - Category (L1): Column 1 "Category (L1)"
+   - Jobs (L2-L4): Columns 2-4 "Level 2 (Jobs)", "Level 3 (Jobs or Topics)", "Level 4 (Jobs or Topics)"
+   - Topics that are jobs (when column 9 "Is a job?" = TRUE): Use the corresponding L3/L4 column value
+   - Topics (H2/H3): Columns 6-7 "Topic (H2)", "H3"
+
+2. For each nav and con file:
+   - Extract the actual title from the `= Title` line in the file
+   - Compare against the expected title from the TSV
+   - Report any mismatches
+
+3. For each `navtitle` attribute in module includes:
+   - Extract the navtitle value from includes like `include::...adoc[...,navtitle="..."]`
+   - Compare against the expected topic title from the TSV
+   - Report any mismatches showing:
+     - File path
+     - Module path
+     - Current navtitle value
+     - Expected navtitle from TSV
+     - TSV row number for reference
+
+4. Exit with code 0 if all titles and navtitles match, code 1 if mismatches are found
+
+**Manual verification steps:**
+
+When the script reports mismatches, fix them by:
+1. For title mismatches:
+   - Read the nav and con files with reported mismatches
+   - Update the `= Title` line to match exactly what's in the TSV
+2. For navtitle mismatches:
+   - Read the nav file with the mismatch
+   - Update the `navtitle="..."` attribute value to match exactly what's in the TSV
+3. Ensure capitalization, punctuation, and spacing match exactly
+4. Re-run the verification script to confirm fixes
+
+### Step 9: Validate
 
 1. Run CQA checks: `node build/scripts/cqa/index.js titles/product_product/master.adoc`
 2. Run full build: `build/scripts/build-ccutil.sh`
