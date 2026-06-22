@@ -1,0 +1,125 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="application-drawers_{context}"]
+= Application drawers
+
+[role="_abstract"]
+Use the application drawer system to create and customize persistent side drawers.
+Multiple drawer plugins can coexist and {product} automatically manages which drawer is displayed.
+
+[NOTE]
+====
+Only one application drawer is visible at a time.
+When you open a drawer, any previously opened drawer is automatically closed.
+====
+
+== Architecture overview
+
+[IMPORTANT]
+====
+The `application/internal/drawer-state` and `application/internal/drawer-content` mount points are for internal use only and are subject to change. These will be updated with the introduction of the new frontend system.
+====
+
+The drawer system uses three key mount points defined in the `app-config.yaml` file.
+
+application/provider::
+Wraps the application and manages the drawer's full internal state. This is a standard React context provider.
+
+application/internal/drawer-state::
+Reads from the plugin's context and exposes the minimal drawer state to {product-very-short}.
+The component receives `onStateChange` callback from {product-very-short} and exposes following properties:
++
+* `id`: Unique drawer identifier.
+* `isDrawerOpen`: Current state of the drawer (opened or closed).
+* `drawerWidth`: Current drawer width measured in pixels.
+* `setDrawerWidth`: Function for updating the drawer's width.
+* `closeDrawer`: Function for closing the drawer.
+
+The component returns `null`: it doesn't render anything and only acts as a bridge.
+
+[NOTE]
+====
+{product-very-short} detects state transitions (closed to open, open to closed) automatically. When a drawer opens, {product-very-short} closes other open drawers by calling their `closeDrawer`. function.
+====
+
+application/internal/drawer-content::
+Specifies the content to be rendered inside the drawer. The component uses following properties:
++
+* `id`: (required) Unique identifier that must match the `id` in the provider's context.
+* `props.resizable`: (optional) Boolean enabling a resize handle on the drawer (managed by the `setDrawerWidth` function).
+
+Example of a configured application drawer::
+[source,yaml]
+----
+# app-config.yaml
+dynamicPlugins:
+  frontend:
+    <package_name>: # plugin package name
+      mountPoints:
+        - mountPoint: application/provider
+          importName: MyDrawerProvider
+
+        - mountPoint: application/internal/drawer-state
+          importName: MyDrawerStateExposer
+
+        - mountPoint: application/internal/drawer-content
+          importName: MyDrawerContent
+          config:
+            id: my-drawer # Unique identifier matching the context id
+            props:
+              resizable: true # Enable resize handle (optional, default: false)
+----
+
+== Automatic drawer coordination
+
+{product-very-short} automatically manages drawer visibility through state transition detection. Opening a drawer initiates the following workflow:
+
+. The plugin's internal state changes (`isDrawerOpen` is set to `true`).
+. State exposer detects the change and calls `onStateChange`.
+. {product-very-short} receives the state update and sets the drawer as active.
+. {product-very-short} automatically calls `closeDrawer` on any previously opened drawer.
+
+Example scenario::
+[source,yaml]
+----
+# Both plugins configured, but only one drawer visible at a time
+red-hat-developer-hub.backstage-plugin-quickstart:
+  mountPoints:
+    - mountPoint: application/provider
+      importName: QuickstartDrawerProvider
+    - mountPoint: application/internal/drawer-state
+      importName: QuickstartDrawerStateExposer
+    - mountPoint: application/internal/drawer-content
+      importName: QuickstartDrawerContent
+      config:
+        id: quickstart
+    - mountPoint: global.header/help
+      importName: QuickstartButton
+      config:
+        priority: 100
+
+
+
+red-hat-developer-hub.backstage-plugin-test-drawer:
+  mountPoints:
+    - mountPoint: application/provider
+      importName: TestDrawerProvider
+    - mountPoint: application/internal/drawer-state
+      importName: TestDrawerStateExposer
+    - mountPoint: application/internal/drawer-content
+      importName: TestDrawerContent
+      config:
+        id: test-drawer
+    - mountPoint: global.header/help
+      importName: TestButton
+
+# Flow: User opens Quickstart → Quickstart drawer shows
+#       User opens Test Drawer → Quickstart auto-closes, Test drawer shows
+#       User opens Quickstart → test drawer auto-closes, Quickstart shows
+----
+
+
+
+
+
+
