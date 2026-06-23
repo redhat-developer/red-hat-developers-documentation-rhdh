@@ -60,6 +60,61 @@ where:
 ====
 The script can take several minutes to complete as it copies many images to the mirror registry.
 ====
++
+. Configure authentication to allow the `kubelet` to pull all {product} images from your mirror registry.
++
+For {ocp-short}, update the cluster pull secret:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc get secret pull-secret -n openshift-config -o json | \
+  jq -r '.data.".dockerconfigjson"' | base64 -d | \
+  jq --arg registry "<mirror_registry>" \
+     --arg auth "$(echo -n '<username>:<password>' | base64)" \
+     '.auths[$registry] = {"auth": $auth}' | \
+  oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=/dev/stdin
+----
++
+--
+where:
+
+`<mirror_registry>` :: Enter the hostname and port of your mirror registry, for example, `registry.example.com:5000`.
+
+`<username>:<password>` :: Enter the credentials for authenticating to your mirror registry.
+--
++
+[NOTE]
+====
+Wait for all machine config pools to finish updating before proceeding.
+====
++
+For supported Kubernetes platforms, create a pull secret and add it to the service account:
++
+[source,terminal,subs="+quotes"]
+----
+$ kubectl create secret docker-registry rhdh-pull-secret \
+    --docker-server=<mirror_registry> \
+    --docker-username=<username> \
+    --docker-password=<password> \
+    --namespace=<target_namespace>
+
+$ kubectl patch serviceaccount default \
+    --namespace=<target_namespace> \
+    --type='json' \
+    --patch='[{"op":"add","path":"/imagePullSecrets/-","value":{"name":"rhdh-pull-secret"}}]'
+----
++
+--
+where:
+
+`<mirror_registry>` :: Enter the hostname and port of your mirror registry.
+
+`<username>` :: Enter the username for authenticating to your mirror registry.
+
+`<password>` :: Enter the password for authenticating to your mirror registry.
+
+`<target_namespace>` :: Enter the namespace where the Operator will deploy {product} instances, for example, `rhdh`.
+--
 
 include::../shared/snip-mirror-dynamic-plugins-partially-disconnected.adoc[]
 
