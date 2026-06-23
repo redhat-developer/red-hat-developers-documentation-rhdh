@@ -66,6 +66,71 @@ If no assembly is found for a topic, fall back to searching modules directly:
 3. If still no match, search all `modules/*/` subdirectories
 4. **Apply the same navtitle verification** as described above
 
+### Step 3.5: Handle subsections in reference modules (CRITICAL PATTERN)
+
+**IMPORTANT**: When the TSV lists multiple H2/H3 topics under a single job, but those topics don't have corresponding separate module files, they may be **subsections within a larger reference module**. This is a common pattern in troubleshooting and reference content.
+
+**Detection**: You will encounter this pattern when:
+1. The TSV shows multiple consecutive H2/H3 topics (e.g., 8 topics listed)
+2. The existing nav file includes fewer modules than expected (e.g., only 6 includes)
+3. A single reference module is included multiple times with different `navtitle` overrides
+4. A reference module contains multiple H2 (`==`) sections that match TSV topic titles
+
+**Example from Troubleshoot category:**
+```
+TSV lists 8 topics:
+- Troubleshoot login failed errors
+- Diagnose specific login failures  
+- Troubleshoot catalog provider errors
+- Resolve malformed LDAP entity envelopes
+
+But only 2 modules exist:
+- ref-troubleshoot-login-failed-errors.adoc (contains 3 H2 sections)
+- ref-troubleshoot-catalog-provider-errors.adoc (contains 3 H2 sections)
+```
+
+**Solution - Extract subsections into granular modules:**
+
+1. **Identify the parent module**: Find the reference module that contains multiple H2 sections matching TSV topics
+   ```bash
+   grep -n "^==" modules/path/to/ref-module.adoc
+   ```
+
+2. **Create separate granular modules**: For each H2 section that the TSV lists as a separate topic:
+   - Extract the section content into a new module file
+   - Use the appropriate module type prefix (`proc-`, `ref-`, `con-`)
+   - Ensure the new module's title matches the TSV topic title exactly
+   - Include the `[role="_abstract"]` paragraph
+   - Preserve all content from that section only
+
+3. **Convert parent module to overview**: Update the original reference module to:
+   - Keep the title and abstract
+   - Add a brief overview or list of common causes
+   - Add `xref:` links to the newly created granular modules
+   - Remove the detailed subsection content (now in separate modules)
+
+4. **Update nav file**: Replace the single include (or duplicate includes with navtitles) with separate includes for each granular module:
+   ```asciidoc
+   include::modules/shared/ref-parent-overview.adoc[leveloffset=+1]
+   include::modules/shared/proc-specific-task-1.adoc[leveloffset=+1]
+   include::modules/shared/proc-specific-task-2.adoc[leveloffset=+1]
+   include::modules/shared/proc-specific-task-3.adoc[leveloffset=+1]
+   ```
+
+5. **Update related assemblies**: If an assembly exists that includes the parent module, add the new granular modules to it as well.
+
+**Verification**: After extraction:
+- Run the verification script: `node .claude/skills/jtbd-map/verify-titles.js "Category"`
+- Ensure all TSV topics are now represented by separate module includes
+- No module should be included multiple times with different navtitles
+- Each module should focus on a single task or concept
+
+**Why this matters**: JTBD architecture requires **granular, task-focused topics** rather than large multi-section reference documents. This enables:
+- Better topic reuse across different jobs
+- Clearer user task completion
+- More accurate analytics on topic usage
+- Easier maintenance and updates
+
 ### Step 4: Populate nav files
 
 For each nav file in scope:
@@ -261,6 +326,20 @@ When the verification script reports issues, use these debugging approaches:
    - Check that parent nav files include all expected child topics
    - Look for missing `include::` directives or incorrect file paths
 
+6. **Subsections treated as separate topics** (CRITICAL):
+   - **Symptom**: TSV lists N topics, but nav file includes fewer than N modules, OR the same module appears multiple times with different navtitles
+   - **Root cause**: Multiple TSV topics are subsections (H2 `==`) within a single reference module
+   - **Detection**: 
+     ```bash
+     # Check for duplicate includes in nav file
+     grep "include::" nav-file.adoc | sort | uniq -c | grep -v "^ *1 "
+     
+     # Check H2 sections in suspected module
+     grep -n "^==" modules/path/to/ref-module.adoc
+     ```
+   - **Solution**: See Step 3.5 - Extract subsections into granular modules
+   - **Example**: `ref-troubleshoot-login-failed-errors.adoc` had 3 H2 sections but was included once with navtitle, when TSV expected 3 separate topics. Solution: Extract each H2 into separate `proc-*.adoc` files.
+
 ### Step 9: Validate
 
 1. Run CQA checks: `node build/scripts/cqa/index.js titles/product_product/master.adoc`
@@ -359,3 +438,51 @@ Each level in the TSV hierarchy can correspond to either a MAP file (nav + con p
 ## Categories (16)
 
 Discover, Get started, Plan, Install, Upgrade, Migrate, Administer, Develop, Configure, Secure, Observe, Integrate, Optimize, Extend, Troubleshoot, Reference
+
+## Real-world examples and lessons learned
+
+### Troubleshoot category: Extracting subsections into granular modules (2026-06-23)
+
+**Problem**: The Troubleshoot category had mapping issues where TSV topics didn't match the actual nav file includes.
+
+**Specific issues found:**
+
+1. **Authentication troubleshooting** (`nav-troubleshoot-authentication-issues.adoc`):
+   - TSV listed 8 H2 topics
+   - Nav file only included 6 modules
+   - Two reference modules contained subsections being treated as single topics with navtitle overrides:
+     - `ref-troubleshoot-login-failed-errors.adoc` had 3 H2 subsections
+     - `ref-troubleshoot-catalog-provider-errors.adoc` had 3 H2 subsections
+
+2. **AI Connector troubleshooting** (`nav-troubleshoot-ai-connector-functionality.adoc`):
+   - The same module `ref-troubleshoot-connector-functionality.adoc` was included 4 times with different navtitles
+   - This created duplicate content instead of granular topics
+   - The reference module had 3 H2 subsections that should have been separate modules
+
+**Solution applied:**
+
+1. **Created granular modules** by extracting H2 subsections:
+   - `ref-diagnose-specific-login-failures.adoc` - Extracted from login errors reference
+   - `proc-resolve-malformed-ldap-entity-envelopes.adoc` - Extracted from catalog provider errors
+   - `proc-verify-dynamic-plugin-status.adoc` - Extracted from AI connector reference  
+   - `proc-inspect-plugin-logs.adoc` - Extracted from AI connector reference
+   - `proc-inspect-the-openshift-ai-connector.adoc` - Extracted from AI connector reference
+
+2. **Converted parent modules to overviews**:
+   - `ref-troubleshoot-login-failed-errors.adoc` - Now an overview with xrefs to detailed topics
+   - `ref-troubleshoot-catalog-provider-errors.adoc` - Removed LDAP section (now separate)
+   - `ref-troubleshoot-connector-functionality.adoc` - Now an overview with xrefs
+
+3. **Updated nav files** to include all granular modules separately (no duplicate includes)
+
+4. **Updated assemblies**:
+   - `assembly-troubleshoot-authentication-issues.adoc` - Added new module includes
+
+**Results:**
+- ✅ All 8 authentication troubleshooting topics now have separate modules
+- ✅ All 4 AI connector troubleshooting topics now have separate modules  
+- ✅ No duplicate module includes
+- ✅ Verification script passes: 0 title mismatches, 0 navtitle mismatches, 0 missing topics
+- ✅ Build completes successfully
+
+**Key lesson**: When TSV topic counts don't match module include counts, look for H2 subsections within reference modules that should be extracted into granular, task-focused modules. This pattern is common in troubleshooting and reference content where a single reference module was created with multiple subsections before the JTBD migration.
