@@ -30,19 +30,32 @@ import { repoRoot, collectTitle, getLines } from '../lib/asciidoc.js';
 const ID_RE = /\[id=["']([^"']+)["']\]/;
 
 /**
- * Extract the base document ID (without _{context} suffix) from file lines.
+ * Extract all document IDs (without _{context} suffix) from file lines.
+ * Files may carry multiple [id="..."] attributes (e.g. a canonical ID plus
+ * an alias for backward-compatible URLs).
  * @param {string[]} lines
- * @returns {string | null}
+ * @returns {string[]}
  */
-function extractBaseId(lines) {
+function extractAllIds(lines) {
+  const ids = [];
   for (const line of lines) {
     const m = ID_RE.exec(line);
     if (m) {
       // Strip _{context} or _<literal-context> suffix
-      return m[1].replace(/_{[^}]+}$/, '').replace(/_[a-z][a-z0-9-]*$/, '');
+      ids.push(m[1].replace(/_{[^}]+}$/, '').replace(/_[a-z][a-z0-9-]*$/, ''));
     }
   }
-  return null;
+  return ids;
+}
+
+/**
+ * Extract the first (primary) document ID from file lines.
+ * @param {string[]} lines
+ * @returns {string | null}
+ */
+function extractBaseId(lines) {
+  const ids = extractAllIds(lines);
+  return ids.length > 0 ? ids[0] : null;
 }
 
 // ── Git helpers ──────────────────────────────────────────────────────────────
@@ -121,25 +134,26 @@ export default class Cqa14bInboundLinkStability extends Checker {
 }
 
 function checkFile(root, file) {
-  // Get the current ID
+  // Get all IDs from the current file (supports double-ID alias pattern)
   const currentLines = getLines(file);
-  const currentId = extractBaseId(currentLines);
-  if (!currentId) return null; // No ID in current file — nothing to protect
+  const currentIds = extractAllIds(currentLines);
+  if (currentIds.length === 0) return null; // No ID in current file — nothing to protect
 
   // Get the file content from the merge-base
   const baseContent = getFileAtBase(root, file);
   if (!baseContent) return null; // New file — any ID is acceptable
 
-  // Extract the ID from the base version
+  // Extract the primary ID from the base version
   const baseLines = baseContent.split('\n');
   const baseId = extractBaseId(baseLines);
   if (!baseId) return null; // File existed but had no ID — nothing to compare
 
-  // Compare IDs
-  if (currentId !== baseId) {
+  // The base ID is preserved if it appears anywhere in the current file's IDs
+  // (e.g. as a secondary alias [id="old-id"] kept for backward compatibility).
+  if (!currentIds.includes(baseId)) {
     return manual(
       file,
-      `ID changed: "${baseId}" -> "${currentId}" — ` +
+      `ID changed: "${baseId}" -> "${currentIds[0]}" — ` +
       `reverting to "${baseId}" is required to preserve inbound URLs. ` +
       `If this is intentional, a redirect must be set up.`
     );
