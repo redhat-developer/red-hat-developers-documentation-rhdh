@@ -79,6 +79,11 @@ export default class Cqa03Modularization extends Checker {
 function detectContentType(lines, bn) {
   const stem = bn.replace(/\.adoc$/, '');
 
+  // MAP files take priority — nav- prefix or declared MAP type is definitive
+  if (stem.startsWith('nav-')) return 'MAP';
+  const declaredType = lines[0]?.startsWith(CONTENT_TYPE_ATTR) ? lines[0].slice(CONTENT_TYPE_ATTR.length).trim() : null;
+  if (declaredType === 'MAP') return 'MAP';
+
   // Content-based: includes proc-/ref-/con- → ASSEMBLY
   const hasIncludes = lines.some(l => l.startsWith('include::'));
   if (hasIncludes && lines.some(l => PROC_MODULE_RE.test(l))) return 'ASSEMBLY';

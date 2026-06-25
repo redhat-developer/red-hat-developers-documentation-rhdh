@@ -104,7 +104,7 @@ export function collectTitle(masterAdocPath) {
 // ── Content type ────────────────────────────────────────────────────────────
 
 const CONTENT_TYPE_RE = /^:_mod-docs-content-type:\s*(\S+)/;
-const VALID_TYPES = new Set(['ASSEMBLY', 'PROCEDURE', 'CONCEPT', 'REFERENCE', 'SNIPPET']);
+const VALID_TYPES = new Set(['ASSEMBLY', 'PROCEDURE', 'CONCEPT', 'REFERENCE', 'SNIPPET', 'MAP']);
 
 /**
  * @param {string} filePath  absolute or repo-relative

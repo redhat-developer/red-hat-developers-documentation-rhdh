@@ -27,7 +27,7 @@ export default class Cqa09ShortDescriptionFormat extends Checker {
       if (!existsSync(resolve(root, file))) continue;
 
       const contentType = getContentType(file);
-      if (!contentType || contentType === 'SNIPPET') continue;
+      if (!contentType || contentType === 'SNIPPET' || contentType === 'MAP') continue;
 
       issues.push(...checkFile(file));
     }
