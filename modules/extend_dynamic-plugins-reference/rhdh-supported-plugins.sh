@@ -26,6 +26,14 @@ SKIP_COMMUNITY_TABLE=0
 rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 
+INDEX_TAG="${BRANCH#release-}"
+if [[ $INDEX_TAG == "main" ]]; then
+  INDEX_TAG="next"
+fi
+CATALOG_INDEX_REGISTRY="${CATALOG_INDEX_REGISTRY:-quay.io/rhdh}"
+
+catalogindextmpdir="/tmp/plugin-catalog-index_${BRANCH}"
+
 debug() {
   if [[ $QUIET -eq 0 ]]; then
     echo -e "${orange}[DEBUG] $1${norm}"
@@ -43,13 +51,14 @@ debug() {
 usage() {
   cat <<EOF
 
-Generate an updated table of dynamic plugins from content in the following two repos, for the specified branch:
-* $rhdhRepo
-* $overlaysRepo
+Generate an updated table of dynamic plugins from content in:
+* $CATALOG_INDEX_REGISTRY/plugin-catalog-index:${INDEX_TAG}
+* $overlaysRepo:${OVERLAYS_BRANCH}
 
 By default, both repos are processed. Use --skip-tables or --skip-community-table to skip either.
 
 Requires:
+* skopeo
 * jq 1.6+
 * yq from https://pypi.org/project/yq/ - not the mikefarah version
 
@@ -93,22 +102,7 @@ done
 if [[ ! $BRANCH ]]; then usage; exit 1; fi
 
 # Set temp directory paths based on BRANCH
-rhdhtmpdir="/tmp/rhdh_$BRANCH" # for DPDY file
 overlaystmpdir="/tmp/rhdh-plugin-export-overlays_$BRANCH" # for catalog metadata
-
-if [[ $DO_CLEAN -eq 1 ]]; then
-    rm -fr /tmp/plugin-versions_"${BRANCH}".txt "${rhdhtmpdir}" "${overlaystmpdir}"
-fi
-
-# fetch rhdh repo - not needed when regenerating community table
-if [[ $SKIP_TABLES -eq 0 ]]; then
-    if [[ ! -d "${rhdhtmpdir}" ]]; then
-        echo -e "${green}Cloning $rhdhRepo (branch: $BRANCH)...${norm}"
-        pushd /tmp >/dev/null || exit
-            git clone "$rhdhRepo" --depth 1 -b "$BRANCH" "rhdh_$BRANCH" --quiet
-        popd >/dev/null || exit
-    fi
-fi
 
 # need this for BOTH the community table generation AND the dynamic plugin tables generation
 if [[ ! -d "$overlaystmpdir" ]]; then
@@ -118,33 +112,63 @@ if [[ ! -d "$overlaystmpdir" ]]; then
     popd >/dev/null || exit
 fi
 
-# thanks to https://stackoverflow.com/questions/42925485/making-a-script-that-transforms-sentences-to-title-case
-# shellcheck disable=SC2048 disable=SC2086
-titlecase() {
-    for f in ${*} ; do \
-        case $f in
-            aap) echo -n "Ansible Automation Platform (AAP) ";;
-            # UPPERCASE these exceptions
-            acr|cd|ocm|rbac) echo -n "$(echo "$f" | tr '[:lower:]' '[:upper:]') ";;
-            # MixedCase exceptions
-            argocd) echo -n "Argo CD ";;
-            github) echo -n "GitHub ";;
-            gitlab) echo -n "GitLab ";;
-            jfrog) echo -n "JFrog ";;
-            msgraph) echo -n "MS Graph ";;
-            pagerduty) echo -n "PagerDuty ";;
-            servicenow) echo -n "ServiceNow ";;
-            sonarqube) echo -n "SonarQube ";;
-            techdocs) echo -n "TechDocs ";;
-            # Uppercase the first letter
-            *)
-                first_char=$(echo "$f" | cut -c1 | tr '[:lower:]' '[:upper:]')
-                rest_chars=$(echo "$f" | cut -c2-)
-                echo -n "${first_char}${rest_chars} "
-                ;;
-        esac;
-    done; echo;
+fetch_catalog_index() {
+  local image="${CATALOG_INDEX_REGISTRY}/plugin-catalog-index:${INDEX_TAG}"
+  if ! command -v skopeo >/dev/null 2>&1; then
+    echo -e "${red}[ERROR] skopeo is required but not found.${norm}" >&2
+    exit 1
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo -e "${red}[ERROR] jq is required but not found.${norm}" >&2
+    exit 1
+  fi
+  echo -e "${green}Fetching $image...${norm}"
+  rm -rf "$catalogindextmpdir"
+  mkdir -p "$catalogindextmpdir"
+  local archive="${catalogindextmpdir}/image.tar"
+  local unpack="${catalogindextmpdir}/unpack"
+  skopeo copy "docker://${image}" "docker-archive:${archive}"
+  mkdir -p "$unpack"
+  tar xf "$archive" -C "$unpack"
+  for layer in $(jq -r '.[0].Layers[]' "$unpack/manifest.json"); do
+    tar xf "$unpack/$layer" -C "$catalogindextmpdir"
+  done
+  rm -rf "$unpack" "$archive"
 }
+
+generate_dynamic_plugins_table() {
+  fetch_catalog_index
+  local src="${catalogindextmpdir}/extend_dynamic-plugins-reference"
+  local -a files=(
+    con-preinstalled-dynamic-plugins.adoc
+    ref-deprecated-plugins.adoc
+    ref-ga-plugins.adoc
+    ref-technology-preview-plugins.adoc
+    rhdh-supported-plugins.csv
+  )
+  ls ${catalogindextmpdir}
+  if [[ ! -d "$src" ]]; then
+    echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}" >&2
+    exit 1
+  fi
+  for f in "${files[@]}"; do
+    if [[ ! -f "$src/$f" ]]; then
+      echo -e "${red}[ERROR] Missing file in catalog index image: $src/$f${norm}" >&2
+      exit 1
+    fi
+    cp "$src/$f" "${SCRIPT_DIR}/$f"
+    echo -e "${green}Copied $f from catalog index${norm}"
+  done
+}
+
+# Call function if not skipped
+if [[ $SKIP_TABLES -eq 0 ]]; then
+    generate_dynamic_plugins_table
+fi
+
+# ============================================================================
+# Generate ref-community-supported-plugins.adoc from rhdh-plugin-export-overlays
+# ============================================================================
 
 # Extract ${VAR_NAME} placeholders from spec.appConfigExamples[0].content for docs tables.
 get_required_variables() {
@@ -162,401 +186,6 @@ get_required_variables() {
     printf '%s' "$Required_Variables"
 }
 
-
-generate_dynamic_plugins_table() {
-  # generate a list of plugin:version mapping from the following files
-  # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
-  # * packages/app/package.json#.dependencies
-  # * packages/backend/package.json#.dependencies
-  pluginVersFile=/tmp/plugin-versions_"${BRANCH}".txt
-  if [[ -f "${rhdhtmpdir}"/dynamic-plugins/imports/package.json ]]; then
-      jq -r '.peerDependencies' "${rhdhtmpdir}"/dynamic-plugins/imports/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," > "$pluginVersFile"
-  fi
-  jq -r '.dependencies' "${rhdhtmpdir}"/packages/{app,backend}/package.json | grep -E -v "\"\*\"|\{|\}" | grep "@" | tr -d "," >> "$pluginVersFile"
-  # Use LC_ALL=C for consistent sorting across different locales
-  LC_ALL=C sort -u "$pluginVersFile" > "$pluginVersFile".out; mv -f "$pluginVersFile".out "$pluginVersFile"
-
-  rm -fr /tmp/warnings_"${BRANCH}".txt
-
-  # create temporary files instead of associative arrays
-  TEMP_DIR="/tmp/rhdh-processing_${BRANCH}"
-  mkdir -p "$TEMP_DIR"
-  rm -f "$TEMP_DIR"/*.tmp
-
-  # process YAML files from overlays/workspaces/*/metadata/*.yaml
-  yamls=$(find "${overlaystmpdir}"/workspaces/*/metadata/ -maxdepth 1 -name "*.yaml")
-  c=0
-  tot=0
-  for y in $yamls; do
-      [[ $(basename "$y") == "all.yaml" ]] && continue
-      (( tot++ )) || true
-  done
-
-  # string listing the enabled-by-default plugins to add to con-preinstalled-dynamic-plugins.template.adoc
-  ENABLED_PLUGINS="/tmp/ENABLED_PLUGINS_${BRANCH}.txt"; rm -f "$ENABLED_PLUGINS"; touch "$ENABLED_PLUGINS"
-
-  for y in $yamls; do
-      [[ $(basename "$y") == "all.yaml" ]] && continue
-      (( c++ )) || true
-      echo -e "${green}[$c/$tot] Processing $y${norm}"
-      Required_Variables=""
-
-      # extract content from YAML
-      Name=$(yq -r '.metadata.name' "$y")
-
-      # Use .spec.packageName, or if not set use .metadata.name
-      Plugin=$(yq -r '.spec.packageName // .metadata.name' "$y")
-
-      debug ".spec.packageName | .metadata.name: $Plugin"
-
-      # skip plugins for which there is metadata but which we don't include in default.packages.yaml
-      if [[ $(yq -r '.packages.enabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "" ]] && \
-         [[ $(yq -r '.packages.disabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "" ]]; then
-          debug "${red}Skip[0] Plugin = $Plugin not found in default.packages.yaml\n"; continue;
-      fi
-
-      # If Plugin is still not a proper npm package name, try to construct it
-      if [[ $Plugin != "@"* ]] && [[ $Plugin == "$Name" ]]; then
-          Plugin="$(echo "${Plugin}" | sed -r -e 's/([^-]+)-(.+)/\@\1\/\2/' \
-              -e 's|janus/idp-|janus-idp/|' \
-              -e 's|red/hat-developer-hub-|red-hat-developer-hub/|' \
-              -e 's|backstage/community-|backstage-community/|')"
-      fi
-
-      # Extract lifecycle and path from YAML spec
-      Lifecycle=$(yq -r '.spec.lifecycle // "unknown"' "$y")
-
-      # Use the actual dynamicArtifact path from YAML
-      Path=$(yq -r '.spec.dynamicArtifact // ""' "$y")
-
-      # Fallback to constructed path if not found
-      if [[ ! $Path || $Path == "null" ]]; then
-          Path="$(echo "${Plugin/@/}" | tr "/" "-")"
-          Path="./dynamic-plugins/dist/${Path}-dynamic"
-          # remove dupe suffixes
-          Path="${Path/-dynamic-dynamic/-dynamic}"
-      fi
-
-      debug "Got: Path = $Path"
-      # DEPRECATED :: Filter 0: Only dynamic plugin artifacts under dist root (frontend or backend) or @redhat NRRC registry
-      # Accept both patterns:
-      #  - Frontend: ./dynamic-plugins/dist/<name>
-      #  - Backend:  ./dynamic-plugins/dist/<name>-dynamic
-      #  - NRRC registry: @redhat/<package>@version (applies to Orchestrator plugins from 1.8 and earlier)
-      #  this change was made since FE plugins were not being included in the .csv file
-      [[ $Path == ./dynamic-plugins/dist/* ]] || [[ $Path == "@redhat"* ]] || \
-
-      # Filter 1: Include quay and r.a.r.c references to RHDH dynamic plugins
-      [[ $Path == "oci://quay.io/rhdh/"* ]] || [[ $Path == "oci://registry.access.redhat.com/rhdh/"* ]] || \
-        { debug "Skip[1] Path = $Path\n"; continue; }
-
-      # Filter 2: Exclude oci://ghcr.io/ community paths;
-      [[ $Path == "oci://ghcr.io/"* ]] && \
-        { debug "Skip[2] Path = $Path\n"; continue; }
-
-      # DEPRECATED :: Filter 3: Handle @redhat packages - exclude unless they have dynamicArtifact from NRRC registry
-      # Plugin = @red-hat-developer-hub/backstage-plugin-orchestrator
-      # .spec.dynamicArtifact = oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend-module-loki@sha256:779f888d47a9b87ad81a13897e171fe4a6a67498a937d7560026dd081361a3b2
-      [[ $Plugin == "@redhat"* ]] && [[ $(yq -r '.spec.dynamicArtifact // ""' "$y") == "@redhat"* ]] && \
-        { debug "Skip[3] Plugin = $Plugin\n"; continue; }
-
-      # For extensions YAML files, skip the default config check for inclusion
-      if [[ "$y" == *"/metadata/"* ]]; then
-          # Process extensions packages regardless of default config
-          debug "Processing extensions package: $Name"
-      elif [[ ! $Path ]]; then
-          continue
-      fi
-
-      if [[ $Path ]] || [[ "$y" == *"/metadata/"* ]]; then
-          # Extract role and version from YAML - updated paths
-          Role=$(yq -r '.spec.backstage.role // "unknown"' "$y")
-          VersionJQ=$(yq -r '.spec.version // "0.0.0"' "$y")
-          # check this version against other references to the plugin in
-          # * dynamic-plugins/imports/package.json#.peerDependencies or .dependencies
-          # * packages/app/package.json#.dependencies
-          # * packages/backend/package.json#.dependencies
-          # echo "[DEBUG] Check version of $Name is really $VersionJQ (from Path = $Path)..."
-          # shellcheck disable=SC2086
-          match=$(grep "\"$Name\": \"" $pluginVersFile || true)
-          Version=$VersionJQ
-          if [[ $match ]]; then
-              Version=$(echo "${match}" | sed -r -e "s/.+\": \"([0-9.]+)\"/\1/")
-              if [[ "$Version" != "$VersionJQ" ]]; then
-                  echo -e "${blue}[WARN] ! Using $pluginVersFile version = $Version, not $VersionJQ from $Path ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
-              fi
-          fi
-
-          # check if there's a newer version at npmjs.com and warn if so
-          # for tags and associated repo digests (git head)
-          # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.versions[]|(.version+", "+.gitHead)' | LC_ALL=C sort -uV
-          # for timestamp when tag is created
-          # curl -sSLko- https://registry.npmjs.org/@janus-idp%2fcli | jq -r '.time' | grep -v -E "created|modified|{|}" | LC_ALL=C sort -uV
-          # echo "Searching for ${Plugin/\//%2f} at npmjs.org..."
-          allVersionsPublished="$(curl -sSLko- "https://registry.npmjs.org/${Plugin/\//%2f}" | jq -r '.versions[].version')"
-          # echo "Found $allVersionsPublished"
-          # clean out any pre-release versions
-          latestXYRelease="$(echo "$allVersionsPublished" | grep -v -E -- "next|alpha|-" | grep -E "^${Version%.*}" | LC_ALL=C sort -u | tail -1)"
-          # echo "[DEBUG] Latest x.y version at https://registry.npmjs.org/${Plugin/\//%2f} : $latestXYRelease"
-          if [[ "$latestXYRelease" != "$Version" ]]; then
-              echo -e "${blue}[WARN] Can upgrade $Version to https://www.npmjs.com/package/$Plugin/v/$latestXYRelease ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
-              # echo | tee -a /tmp/warnings_"${BRANCH}".txt
-          fi
-
-          # Extract support level from YAML metadata
-          Support_Level="Community Support"
-          # Check for Red Hat authorship and support level
-          author=$(yq -r '.spec.author // "unknown"' "$y")
-          support=$(yq -r '.spec.support // "unknown"' "$y")
-
-          # only RH authoried content should show up as GA
-          # exception for the Roadie http-request scaffolder, too
-          if [[ $author == "Red Hat"* ]] || [[ $Plugin == "@roadiehq/scaffolder-backend-module-http-request" ]]; then
-              if [[ $support == "production"* ]] || [[ $support == "generally-available"* ]]; then
-                  Support_Level="Production"
-              elif [[ $support == "tech-preview"* ]]; then
-                  Support_Level="Red Hat Tech Preview"
-              elif [[ $support == "community"* ]] || [[ $support == "dev-preview"* ]]; then
-                  Support_Level="Community Support"
-              else
-                echo -e "${blue}[WARN] Could not compute support level for Path = $Path, Plugin = $Plugin" | tee -a "${ENABLED_PLUGINS}.errors"
-              fi
-          fi
-
-          # compute Default (enabled or disabled status) from default.packages.yaml
-          # shellcheck disable=SC2016
-          Default="Enabled"
-          if [[ $(yq -r '.packages.disabled[]|select(.package == "'"$Plugin"'")|.package' "${rhdhtmpdir}"/default.packages.yaml) == "$Plugin" ]]; then
-            Default="Disabled"
-          fi
-          # debug "Using Plugin = $Plugin got Default = $Default"
-          # null or false == enabled by default
-          if [[ $Default == "Enabled" ]]; then
-              if [[ $Support_Level == "Production" ]]; then
-                  # see https://issues.redhat.com/browse/RHIDP-3187 - only Production-level support (GA) plugins should be enabled by default
-                  echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
-              elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
-                  # as discussed in RHDH SOS on Jul 14, we are now opening the door for TP plugins to be on by default.
-                  # PM (Ben) and Support (Tim) are cool with this as long as the docs clearly state
-                  # what is TP, and how to disable the TP content
-                  echo -e "${blue}[WARN] $Plugin is enabled by default but is only $Support_Level ${norm}" | tee -a "${ENABLED_PLUGINS}.errors"
-                  echo "* \`${Plugin}\`" >> "$ENABLED_PLUGINS"
-              else
-                  echo -e "${red}[ERROR] $Plugin should not be enabled by default as its support level is $Support_Level${norm}" | tee -a "${ENABLED_PLUGINS}.errors"
-              fi
-          fi
-
-          # compute Required_Variables from appConfigExamples in YAML
-          Required_Variables=$(get_required_variables "$y")
-          Required_Variables_CSV=$(echo -e "$Required_Variables" | tr -s "\n" ";")
-          # not currently used due to policy and support concern with upstream content linked from downstream doc
-          # URL="https://www.npmjs.com/package/$Plugin"
-
-          # Build a human-readable name from the package
-          # Start with package name without scope (e.g., "backstage-plugin-quickstart")
-          pkg_no_scope="${Plugin#@}"
-          pkg_no_scope="${pkg_no_scope#*/}"
-
-          # Special cases for specific plugins
-          case "$Plugin" in
-              *pagerduty*) PrettyName="PagerDuty" ;;
-              *redhat-argocd*) PrettyName="Argo CD (Red Hat)" ;;
-              *scaffolder-backend-argocd*) PrettyName="Argo CD" ;;
-              *notifications-backend-module-email*) PrettyName="Notifications" ;;
-              *)
-                  # Strip common vendor/prefix tokens and backend suffix
-                  ProcessedName=$(echo "$pkg_no_scope" | sed -r \
-                      -e 's@^backstage-community-@@' \
-                      -e 's@^red-hat-developer-hub-@@' \
-                      -e 's@^redhat-@@' \
-                      -e 's@^roadiehq-@@' \
-                      -e 's@^immobiliarelabs-@@' \
-                      -e 's@^parfuemerie-douglas-@@' \
-                      -e 's@^backstage-plugin-@@' \
-                      -e 's@^plugin-@@' \
-                      -e 's@^catalog-backend-module-@@' \
-                      -e 's@^plugin-catalog-backend-module-@@' \
-                      -e 's@^scaffolder-backend-module-@@' \
-                      -e 's@-backend$@@' \
-                  )
-                  PrettyName="$(titlecase "${ProcessedName//-/ }")"
-                  ;;
-          esac
-          # Trim trailing whitespace from PrettyName
-          PrettyName="$(echo -e "$PrettyName" | sed -E 's/[[:space:]]+$//')"
-
-          # useful console output
-          if [[ $QUIET -eq 0 ]]; then
-            for col in Name PrettyName Role Plugin Version Support_Level Lifecycle Path Required_Variables Default; do
-                debug " * $col = ${!col}"
-            done
-          fi
-
-          # save in an array sorted by name, then role, with frontend before backend plugins (for consistency with 1.1 markup)
-          RoleSort=1; if [[ $Role != *"front"* ]]; then RoleSort=2; Role="Backend"; else Role="Frontend"; fi
-          if [[ $Plugin == *"scaffolder"* ]]; then RoleSort=3; fi
-
-          # Use temporary files to allow sorting later
-          key="$PrettyName-$RoleSort-$Role-$Plugin"
-          if [[ $Path ]]; then
-            # shellcheck disable=SC1087
-            adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\`$Path\`\n\n$Required_Variables"
-          else
-            # TODO this error should never happen!
-            echo -e "${red}[ERROR] ! Path not found for $Plugin $Version ${norm}" | tee -a /tmp/warnings_"${BRANCH}".txt
-            # shellcheck disable=SC1087
-            adoc_content="|$PrettyName |\`https://npmjs.com/package/$Plugin/v/$Version[$Plugin]\` |$Version \n|\n\n$Required_Variables"
-          fi
-          csv_content="\"$PrettyName\",\"$Plugin\",\"$Role\",\"$Version\",\"$Support_Level\",\"$Lifecycle\",\"$Path\",\"${Required_Variables_CSV}\",\"$Default\""
-
-          # split into three tables based on support level
-          if [[ ${Lifecycle} == "deprecated" ]]; then
-              echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.deprecated.tmp"
-          elif [[ ${Support_Level} == "Production" ]]; then
-              echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.production.tmp"
-          elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
-              echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.tech-preview.tmp"
-          # else
-          #     echo "$key|$adoc_content" >> "$TEMP_DIR/adoc.community.tmp"
-          fi
-
-          # Group CSV by support level
-          SupportSort=3
-          if [[ ${Lifecycle} == "deprecated" ]]; then
-              SupportSort=4
-          elif [[ ${Support_Level} == "Production" ]]; then
-              SupportSort=1
-          elif [[ ${Support_Level} == "Red Hat Tech Preview" ]]; then
-              SupportSort=2
-          fi
-          csv_key="$SupportSort-$PrettyName-$RoleSort-$Role-$Plugin"
-          echo "$csv_key|$csv_content" >> "$TEMP_DIR/csv.tmp"
-      fi
-      echo
-  done
-
-  c=0
-  debug "Creating .csv ..."
-
-  # create .csv file with header
-  echo -e "\"Name\",\"Plugin\",\"Role\",\"Version\",\"Support Level\",\"Lifecycle\",\"Path\",\"Required Variables\",\"Default\"" > "${0/.sh/.csv}"
-
-  num_plugins=()
-  # Process temporary files
-  # 1) Production
-  temp_file="$TEMP_DIR/adoc.production.tmp"
-  out_file="${0/.sh/.ref-ga-plugins}"
-  rm -f "$out_file"
-  count=0
-  if [[ -f "$temp_file" ]]; then
-      LC_ALL=C sort "$temp_file" | while IFS='|' read -r key content; do
-          (( count = count + 1 ))
-          debug " * [$count] $key [ ${out_file##*/} ]"
-          echo -e "$content" >> "$out_file"
-      done
-      count=$(wc -l < "$temp_file")
-  fi
-  # shellcheck disable=SC2206
-  num_plugins+=($count)
-
-  # 2) Tech Preview
-  temp_file="$TEMP_DIR/adoc.tech-preview.tmp"
-  out_file="${0/.sh/.ref-technology-preview-plugins}"
-  rm -f "$out_file"
-  count=0
-  if [[ -f "$temp_file" ]]; then
-      LC_ALL=C sort "$temp_file" | while IFS='|' read -r key content; do
-          (( count = count + 1 ))
-          debug " * [$count] $key [ ${out_file##*/} ]"
-          echo -e "$content" >> "$out_file"
-      done
-      count=$(wc -l < "$temp_file")
-  fi
-  # shellcheck disable=SC2206
-  num_plugins+=($count)
-
-
-  # 3) Deprecated
-  temp_file="$TEMP_DIR/adoc.deprecated.tmp"
-  out_file="${0/.sh/.ref-deprecated-plugins}"
-  rm -f "$out_file"
-  count=0
-  if [[ -f "$temp_file" ]]; then
-      LC_ALL=C sort "$temp_file" | while IFS='|' read -r key content; do
-          (( count = count + 1 ))
-          debug " * [$count] $key [ ${out_file##*/} ]"
-          echo -e "$content" >> "$out_file"
-      done
-      count=$(wc -l < "$temp_file")
-  fi
-  # shellcheck disable=SC2206
-  num_plugins+=($count)
-
-  # Process CSV: LC_ALL=C sort by SupportLC_ALL=C sort (1,2,3,4) then PrettyName, and omit techdocs
-  if [[ -f "$TEMP_DIR/csv.tmp" ]]; then
-      debug
-      LC_ALL=C sort -t '|' -k1,1 -k2,2 "$TEMP_DIR/csv.tmp" | while IFS='|' read -r key content; do
-          # RHIDP-4196 omit techdocs plugins from the .csv
-          if [[ $key != *"techdocs"* ]]; then
-              echo -e "$content" >> "${0/.sh/.csv}"
-          else
-              debug "Omit plugin $key from .csv file"
-          fi
-      done
-  fi
-
-  debug
-
-  # merge the content from the 3 .adocX files into the .template.adoc file, replacing the TABLE_CONTENT markers
-  count=1
-  index=0
-  empties=0
-  for d in ref-ga-plugins ref-technology-preview-plugins ref-deprecated-plugins; do
-      (( index = count - 1 ))
-      this_num_plugins=${num_plugins[$index]}
-      echo -n -e "${green}[$count] Processing $d ${norm}..."
-      adocfile="${0/.sh/.${d}}"
-      if [[ $this_num_plugins -gt 0 ]]; then
-        sed -e "/%%TABLE_CONTENT_${count}%%/{r $adocfile" -e 'd;}' \
-            -e "s/\%\%COUNT_${count}\%\%/$this_num_plugins/" \
-            "${0/rhdh-supported-plugins.sh/${d}.template.adoc}" > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
-      elif [[ $d == ref-deprecated-plugins ]]; then
-
-        echo -e "${blue} no plugins to include: ${d}.adoc table removed.${norm}"
-        (( empties = empties + 1 ))
-        # Only ref-deprecated-plugins can be empty; print through [role="_abstract"], then fixed sentence ({product} etc. resolve at book build).
-        {
-          sed -n '1,/^\[role="_abstract"\]$/p' "${0/rhdh-supported-plugins.sh/${d}.template.adoc}"
-          printf '%s\n' 'There are no deprecated plugins in this release of {product} ({product-very-short})'
-        } > "${0/rhdh-supported-plugins.sh/${d}.adoc}"
-      fi
-      rm -f "$adocfile"
-      echo ""
-      (( count = count + 1 ))
-  done
-
-  # LC_ALL=C sort the list of enabled plugins
-  LC_ALL=C sort -uV "$ENABLED_PLUGINS" > "$ENABLED_PLUGINS".sorted; mv -f "$ENABLED_PLUGINS".sorted "$ENABLED_PLUGINS"
-
-  # shellcheck disable=SC2002
-  COUNT_ENABLED_PLUGINS=$(cat "$ENABLED_PLUGINS" | wc -l ) # if we use wc by itself we get the count AND the filename; only want the count
-  # count enabled plugins
-  echo "Got COUNT_ENABLED_PLUGINS = $COUNT_ENABLED_PLUGINS preinstalled plugins"
-
-  # inject ENABLED_PLUGINS into con-preinstalled-dynamic-plugins.template.adoc, and the counter
-  sed -r -e "/%%ENABLED_PLUGINS%%/{r $ENABLED_PLUGINS" -e 'd;}' \
-      -e "s/%%COUNT_ENABLED_PLUGINS%%/$COUNT_ENABLED_PLUGINS/" \
-      "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.template.adoc}" > "${0/rhdh-supported-plugins.sh/con-preinstalled-dynamic-plugins.adoc}"
-}
-
-# Call function if not skipped
-if [[ $SKIP_TABLES -eq 0 ]]; then
-    generate_dynamic_plugins_table
-fi
-
-# ============================================================================
-# Generate ref-community-supported-plugins.adoc from rhdh-plugin-export-overlays
-# ============================================================================
 generate_community_table() {
     if [[ ! -d "$overlaystmpdir" ]]; then
         echo -e "${red}[ERROR] Overlays repo not found: $overlaystmpdir${norm}"
@@ -732,7 +361,6 @@ popd >/dev/null || exit
 # cleanup
 rm -f "$ENABLED_PLUGINS" "${ENABLED_PLUGINS}.errors"
 rm -rf "$TEMP_DIR"
-# rm -fr "${rhdhtmpdir}"
 
 warnings=$(grep -c "WARN" "/tmp/warnings_${BRANCH}.txt" 2>/dev/null || echo "0")
 if [[ $warnings -gt 0 ]]; then
