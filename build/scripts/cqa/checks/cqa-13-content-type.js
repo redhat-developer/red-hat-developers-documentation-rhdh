@@ -17,7 +17,7 @@ import { GIT } from '../lib/bin.js';
 import { Checker, autofix, manual } from '../lib/checker.js';
 import { repoRoot, collectTitle, getContentType, getLines } from '../lib/asciidoc.js';
 
-const PREFIX = { PROCEDURE: 'proc-', CONCEPT: 'con-', REFERENCE: 'ref-', ASSEMBLY: 'assembly-' };
+const PREFIX = { PROCEDURE: 'proc-', CONCEPT: 'con-', REFERENCE: 'ref-', ASSEMBLY: 'assembly-', MAP: 'nav-' };
 
 export default class Cqa13ContentType extends Checker {
   id = '13';
@@ -52,7 +52,7 @@ function checkFile(root, file) {
   if (!existsSync(resolve(root, file))) return [];
 
   const contentType = getContentType(file);
-  if (!contentType || contentType === 'SNIPPET') return [];
+  if (!contentType || contentType === 'SNIPPET' || contentType === 'MAP') return [];
 
   const lines = getLines(file);
   const issues = [];

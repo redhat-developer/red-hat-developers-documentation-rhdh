@@ -230,6 +230,7 @@ function checkFile(file) {
   const isMaster = basename(file) === 'master.adoc';
 
   if (contentType === 'SNIPPET') return checkSnippet(file, lines);
+  if (contentType === 'MAP') return []; // Nav files have no ID requirement
 
   const issues = checkGeneral(file, lines, isMaster, contentType);
 
