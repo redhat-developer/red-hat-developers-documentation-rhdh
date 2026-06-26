@@ -82,6 +82,7 @@ function findOrphansInSubdir(subdirPath, includedFiles) {
   for (const file of walkAdocFiles(subdirPath)) {
     const bn = basename(file);
     if (!MODULE_PREFIXES.some(p => bn.startsWith(p))) continue;
+    if (bn.endsWith('.template.adoc')) continue;
 
     const relPath = repoRelative(file);
     if (!includedFiles.has(relPath)) {
