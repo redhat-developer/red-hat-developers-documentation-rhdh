@@ -1,0 +1,71 @@
+// Module included in the following assemblies:
+// * titles/upgrade_upgrade-rhdh/master.adoc
+
+:_mod-docs-content-type: PROCEDURE
+[id="rollback-a-plugin-to-a-previous-version_{context}"]
+= Rolling back a dynamic plugin to a previous version
+
+[role="_abstract"]
+If a dynamic plugin update causes issues after a z-stream update, you can roll back the plugin by replacing the `{{inherit}}` tag or the current version reference with a pinned OCI image digest. This procedure applies to any plugin packaged as an OCI image.
+
+.Prerequisites
+
+* You have administrator access to your {product-short} instance.
+* You have the `skopeo` and `jq` CLI tools installed.
+* You have network access to the container registry hosting the plugin image.
+
+.Procedure
+
+. In your `dynamic-plugins.yaml` file, identify the plugin entry that uses the `{{inherit}}` tag or the version you want to roll back.
+
+. List the available version tags for the plugin image:
++
+[source,terminal]
+----
+$ skopeo list-tags docker://<plugin_image>
+----
++
+where:
+
+`<plugin_image>`:: The OCI image path without the tag or digest. For example, `registry.access.redhat.com/rhdh/backstage-community-plugin-topology` or `ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tech-radar`.
+
+. Get the SHA256 digest for the version tag you want to roll back to:
++
+--
+[source,terminal]
+----
+$ skopeo inspect docker://<plugin_image>:<tag> | jq '.Digest'
+----
+
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+--
+
+. In your `dynamic-plugins.yaml` file, replace the `{{inherit}}` tag or current version with the pinned digest:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://<plugin_image>@<digest>
+    disabled: false
+----
++
+where:
+
+`<digest>`:: The SHA256 digest value returned by the `skopeo inspect` command. For example, `sha256:28036abec4dffc714394e4ee433f16a59493db8017795049c831be41c02eb5dc`.
+
+. Apply the configuration change:
++
+.. If you deployed {product-very-short} by using the Operator, update your `{product-custom-resource-type}` custom resource (CR).
+.. If you deployed {product-very-short} by using the Helm chart, update your Helm chart values and run the `helm upgrade` command.
+
+. Restart the {product-very-short} application.
+
+.Verification
+
+. Check the {product-short} application logs to confirm the plugin loaded at the expected version.
+. Verify the plugin behavior in the {product-short} web console.
+
+[role="_additional-resources"]
+.Additional resources
+* {installing-and-viewing-plugins-book-link}#load-a-plugin-packaged-as-an-oci-image_install-plugins-in-rhdh[Update deployment configurations for OCI registry container images]
+* {dynamic-plugins-reference-book-link}#red-hat-supported-plugins[Red Hat supported plugins]
