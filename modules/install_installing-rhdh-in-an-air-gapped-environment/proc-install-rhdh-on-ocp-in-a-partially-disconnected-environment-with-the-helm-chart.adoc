@@ -95,6 +95,28 @@ where:
 
 `<results_directory>` :: Enter the name of your results directory, for example, `results-1738070846`.
 --
+. Update the cluster pull secret to allow the `kubelet` to pull all {product} images from your mirror registry:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc get secret pull-secret -n openshift-config -o json | \
+  jq -r '.data.".dockerconfigjson"' | base64 -d | \
+  jq --arg registry "<mirror_registry>" \
+     --arg auth "$(echo -n '<username>:<password>' | base64)" \
+     '.auths[$registry] = {"auth": $auth}' | \
+  oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=/dev/stdin
+----
++
+where:
++
+`<mirror_registry>` :: Enter the hostname and port of your mirror registry, for example, `registry.example.com:5000`.
++
+`<username>:<password>` :: Enter the credentials for authenticating to your mirror registry.
++
+[NOTE]
+====
+Wait for all machine config pools to finish updating before proceeding.
+====
 . In your air-gapped environment, deploy the Helm chart to the namespace that you want to use by running the `helm install` command with `namespace` and `set` options. For example:
 +
 [source,terminal,subs="+quotes"]

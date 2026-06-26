@@ -67,6 +67,32 @@ _<postgresql_repo_name>_ :: Specifies the name of the PostgreSQL repository, for
 
 _<rhdh_repo_name>_ :: Specifies the name of the {product} repository, for example, `rhdh/rhdh-hub-rhel9`.
 +
+. Create a pull secret to allow the `kubelet` to pull all {product} images from your mirror registry:
++
+[source,terminal,subs="+quotes"]
+----
+$ kubectl create secret docker-registry rhdh-pull-secret \
+    --docker-server=<mirror_registry> \
+    --docker-username=<username> \
+    --docker-password=<password> \
+    --namespace=<target_namespace>
+
+$ kubectl patch serviceaccount default \
+    --namespace=<target_namespace> \
+    --type='json' \
+    --patch='[{"op":"add","path":"/imagePullSecrets/-","value":{"name":"rhdh-pull-secret"}}]'
+----
++
+where:
++
+`<mirror_registry>` :: Enter the hostname and port of your mirror registry, for example, `registry.example.com:5000`.
++
+`<username>` :: Enter the username for authenticating to your mirror registry.
++
+`<password>` :: Enter the password for authenticating to your mirror registry.
++
+`<target_namespace>` :: Enter the namespace where you will deploy {product}, for example, `rhdh`.
+
 . Create a `values.yaml` file for the Kubernetes platform that you want to use and add the following image references to the file to reflect local use:
 +
 [source,yaml,subs="attributes+"]
