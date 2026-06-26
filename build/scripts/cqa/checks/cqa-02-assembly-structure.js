@@ -19,7 +19,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { Checker, autofix, manual, delegate } from '../lib/checker.js';
-import { repoRoot, collectTitle, getLines } from '../lib/asciidoc.js';
+import { repoRoot, collectTitle, getLines, getContentType } from '../lib/asciidoc.js';
 
 const CONTENT_TYPE_ATTR = ':_mod-docs-content-type:';
 const CONTEXT_SAVE = 'ifdef::context[:parent-context: {context}]';
@@ -42,6 +42,7 @@ export default class Cqa02AssemblyStructure extends Checker {
     for (const file of files) {
       if (!isAssemblyFile(file)) continue;
       if (!existsSync(resolve(root, file))) continue;
+      if (getContentType(file) === 'MAP') continue; // Nav files have no ID requirement
       issues.push(...checkFile(root, file));
     }
 
