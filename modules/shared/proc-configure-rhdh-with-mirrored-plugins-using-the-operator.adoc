@@ -1,0 +1,34 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-rhdh-with-mirrored-plugins-using-the-operator_{context}"]
+= Configure {product-short} with mirrored plugins using the Operator
+
+[role="_abstract"]
+Update your {backstage} custom resource to mount the registry mirroring configuration files in the `install-dynamic-plugins` init container.
+
+.Procedure
+. Update your {backstage} custom resource to mount the configuration files:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: my-rhdh
+spec:
+  application:
+    extraFiles:
+      configMaps:
+        - name: my-rhdh-mirror-conf
+          key: rhdh-registries.conf
+          mountPath: /etc/containers/registries.conf.d
+          containers: [ install-dynamic-plugins ]
+
+        # OPTIONAL: if you need a policy file
+        # - name: my-mirror-policy
+        #   key: policy.json
+        #   mountPath: /etc/containers
+        #   containers: [ install-dynamic-plugins ]
+----
+
+. Save the custom resource and wait for the {product-short} Operator to reconcile the changes.

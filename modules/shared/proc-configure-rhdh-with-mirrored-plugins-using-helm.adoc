@@ -1,0 +1,47 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-rhdh-with-mirrored-plugins-using-helm_{context}"]
+= Configure {product-short} with mirrored plugins using Helm
+
+[role="_abstract"]
+Update your Helm values file to mount the registry mirroring configuration files in the `install-dynamic-plugins` init container.
+
+.Procedure
+. Update your Helm values file to include the registry mirroring configuration:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+upstream:
+  backstage:
+    extraVolumes:
+      # IMPORTANT: Due to a Helm limitation, you also need to include all the
+      # extra volumes from the {product-very-short} chart, then add the following volumes
+      - name: my-rhdh-mirror-conf
+        configMap:
+          name: my-rhdh-mirror-conf
+      # OPTIONAL: if you need a policy file
+      # - name: my-mirror-policy
+      #   configMap:
+      #     name: my-mirror-policy
+
+    initContainers:
+      # IMPORTANT: Due to a Helm limitation, ensure the install-dynamic-plugins
+      # container has all the other fields defined in the {product-very-short} chart
+      - name: install-dynamic-plugins
+        volumeMounts:
+          # IMPORTANT: Due to a Helm limitation, ensure all the default init
+          # container's volume mounts defined in the {product-very-short} chart are also
+          # included in this list, then add the following volumes
+          - name: my-rhdh-mirror-conf
+            mountPath: /etc/containers/registries.conf.d/rhdh-registries.conf
+            subPath: rhdh-registries.conf
+            readOnly: true
+
+          # OPTIONAL: if you need a policy file
+          # - name: my-mirror-policy
+          #   mountPath: /etc/containers/policy.json
+          #   subPath: policy.json
+          #   readOnly: true
+----
+
+. Redeploy {product-short} using your updated values file.
