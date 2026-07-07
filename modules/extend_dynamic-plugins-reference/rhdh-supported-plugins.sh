@@ -22,7 +22,6 @@ BRANCH=main
 SKIP_TABLES=0
 SKIP_COMMUNITY_TABLE=0
 
-rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 
 CATALOG_INDEX_REGISTRY="${CATALOG_INDEX_REGISTRY:-quay.io/rhdh}"
@@ -145,7 +144,7 @@ generate_dynamic_plugins_table() {
     ref-technology-preview-plugins.adoc
     rhdh-supported-plugins.csv
   )
-  ls ${catalogindextmpdir}
+  ls "${catalogindextmpdir}"
   if [[ ! -d "$src" ]]; then
     echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}" >&2
     exit 1
