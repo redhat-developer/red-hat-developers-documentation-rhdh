@@ -17,7 +17,6 @@ red="\033[1;31m"
 orange="\033[1;35m"
 
 QUIET=1; # suppress debug output
-DO_CLEAN=0
 
 BRANCH=main
 SKIP_TABLES=0
@@ -82,7 +81,6 @@ if [[ "$#" -lt 1 ]]; then usage; exit 1; fi
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    '--clean') DO_CLEAN=1;;
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
     '--skip-tables') SKIP_TABLES=1;;
     '--skip-community-table') SKIP_COMMUNITY_TABLE=1;;
@@ -135,7 +133,6 @@ fetch_catalog_index() {
     tar xf "$unpack/$layer" -C "$catalogindextmpdir"
   done
   rm -rf "$unpack" "$archive"
-  exit 0
 }
 
 generate_dynamic_plugins_table() {
