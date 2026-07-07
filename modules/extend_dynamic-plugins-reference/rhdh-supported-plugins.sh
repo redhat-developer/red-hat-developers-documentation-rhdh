@@ -26,13 +26,7 @@ SKIP_COMMUNITY_TABLE=0
 rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 
-INDEX_TAG="${BRANCH#release-}"
-if [[ $INDEX_TAG == "main" ]]; then
-  INDEX_TAG="next"
-fi
 CATALOG_INDEX_REGISTRY="${CATALOG_INDEX_REGISTRY:-quay.io/rhdh}"
-
-catalogindextmpdir="/tmp/plugin-catalog-index_${BRANCH}"
 
 debug() {
   if [[ $QUIET -eq 0 ]]; then
@@ -100,6 +94,13 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [[ ! $BRANCH ]]; then usage; exit 1; fi
+
+catalogindextmpdir="/tmp/plugin-catalog-index_${BRANCH}"
+
+INDEX_TAG="${BRANCH#release-}"
+if [[ $INDEX_TAG == "main" ]]; then
+  INDEX_TAG="next"
+fi
 
 # Set temp directory paths based on BRANCH
 overlaystmpdir="/tmp/rhdh-plugin-export-overlays_$BRANCH" # for catalog metadata
