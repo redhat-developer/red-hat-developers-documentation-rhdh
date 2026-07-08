@@ -253,7 +253,7 @@ generate_community_table() {
             Required_Variables=$(get_required_variables "$metadata_file")
 
             # Skip if not a community plugin or no dynamic artifact
-            [[ "$support" != "community" ]] && continue
+            [[ "$support" != "community" && "$support" != "dev-preview" ]] && continue
             [[ -z "$dynamic_artifact" || "$dynamic_artifact" == "null" ]] && continue
             [[ "$dynamic_artifact" != "oci://ghcr.io"* ]] && continue
 
