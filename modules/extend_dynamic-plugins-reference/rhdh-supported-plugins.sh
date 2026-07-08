@@ -22,7 +22,6 @@ BRANCH=main
 SKIP_TABLES=0
 SKIP_COMMUNITY_TABLE=0
 
-rhdhRepo="https://github.com/redhat-developer/rhdh"
 overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 
 CATALOG_INDEX_REGISTRY="${CATALOG_INDEX_REGISTRY:-quay.io/rhdh}"
