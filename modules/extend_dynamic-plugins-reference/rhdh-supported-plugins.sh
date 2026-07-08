@@ -17,7 +17,6 @@ red="\033[1;31m"
 orange="\033[1;35m"
 
 QUIET=1; # suppress debug output
-DO_CLEAN=0
 
 BRANCH=main
 SKIP_TABLES=0
@@ -64,7 +63,6 @@ Options:
   -b, --ref-branch          : Branch against which plugin versions should be incremented, like release-1.y; default: main
   --skip-tables             : Skip re-generating dynamic plugin tables and .csv
   --skip-community-table    : Skip re-generating the community plugins table
-  --clean                   : Force a clean GH checkout (do not reuse files on disk)
   -v                        : more verbose output
   -h, --help                : Show this help
 
@@ -82,7 +80,6 @@ if [[ "$#" -lt 1 ]]; then usage; exit 1; fi
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    '--clean') DO_CLEAN=1;;
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
     '--skip-tables') SKIP_TABLES=1;;
     '--skip-community-table') SKIP_COMMUNITY_TABLE=1;;
@@ -147,7 +144,7 @@ generate_dynamic_plugins_table() {
     ref-technology-preview-plugins.adoc
     rhdh-supported-plugins.csv
   )
-  ls ${catalogindextmpdir}
+  ls "${catalogindextmpdir}"
   if [[ ! -d "$src" ]]; then
     echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}" >&2
     exit 1
@@ -298,8 +295,8 @@ generate_community_table() {
     # LC_ALL=C sort the community table by plugin title and format for adoc
     COMMUNITY_TABLE_SORTED="/tmp/community_table_sorted_${BRANCH}.txt"
     if [[ -f "$COMMUNITY_TABLE_FILE" ]]; then
-        LC_ALL=C sort -t '|' -k1,1 "$COMMUNITY_TABLE_FILE" | while IFS='||' read -r key content; do
-            echo -e "$content\n" >> "$COMMUNITY_TABLE_SORTED"
+        LC_ALL=C sort -t '|' -k1,1 "$COMMUNITY_TABLE_FILE" | while read -r line; do
+            echo -e "${line#*||}\n" >> "$COMMUNITY_TABLE_SORTED"
         done
     fi
 
