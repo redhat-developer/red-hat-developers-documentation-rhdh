@@ -259,7 +259,7 @@ generate_community_table() {
                 continue
             fi
 
-            # only include this plugin if its metadata matches the entry we're looking for 
+            # only include this plugin if its metadata matches the entry we're looking for
             echo "$plugin_name" >> "$PROCESSED_PLUGINS_FILE"
 
 
@@ -282,7 +282,7 @@ generate_community_table() {
 
             # Add to community table (sorted by title)
             # shellcheck disable=SC2028
-            echo "${display_title}||*${display_title}*\n|${plugin_version}|\`${new_path}\`\n\n${Required_Variables}\`" >> "$COMMUNITY_TABLE_FILE"
+            echo "|*${display_title}*\n|${plugin_version}|\`${new_path}\`\n\n${Required_Variables}\`" >> "$COMMUNITY_TABLE_FILE"
 
             community_count=$((community_count + 1))
         done
