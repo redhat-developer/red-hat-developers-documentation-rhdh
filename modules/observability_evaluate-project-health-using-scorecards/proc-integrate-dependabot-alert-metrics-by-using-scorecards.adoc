@@ -1,0 +1,102 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="integrate-dependabot-alert-metrics-by-using-scorecards_{context}"]
+= Integrate Dependabot alert metrics by using Scorecards
+
+include::{docdir}/artifacts/snip-developer-preview-scorecard.adoc[]
+
+[role="_abstract"]
+You can configure the Dependabot Scorecard module to display GitHub Dependabot alert metrics in your {product-very-short} catalog. The module provides four severity-based metrics (critical, high, medium, and low) that score entities based on open Dependabot alerts.
+
+.Prerequisites
+
+* You have {install-category-link}[installed your {product-very-short} instance].
+* You have {scorecard-plugin-book-link}#set-up-scorecards-to-monitor-your-project-health_{context}[set up the Scorecard plugin].
+* You have {configuring-book-link}[added a custom {product-short} application configuration].
+* You have configured a GitHub integration with a token or GitHub App that has the `security_events` permission (or Dependabot read scope).
+
+.Procedure
+
+. Add the following configuration to your {product-very-short} `dynamic-plugins-config.yaml` file to enable the Dependabot Scorecard module:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-dependabot:<tag>
+    disabled: false
+----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+
+. Edit the `catalog-info.yaml` file for your {product-very-short} entity to link a component to the Dependabot data source by adding the required annotations as shown in the following code:
++
+[source,yaml,subs="+quotes"]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    github.com/project-slug: _<owner>_/_<repository>_
+    github.com/dependabot: 'true'
+spec:
+  type: service
+  lifecycle: production
+  owner: _<your_team_name>_
+----
++
+where:
+
+`_<owner>_`:: Specifies the GitHub organization or user account that owns the repository.
+`_<repository>_`:: Specifies the name of the GitHub repository.
+`annotations:github.com/project-slug`:: Specifies the GitHub repository in `owner/repository` format.
+`annotations:github.com/dependabot`:: Enables Dependabot alert collection for the entity. The value must be the exact string `'true'`.
+`spec:owner`:: Specifies your team name or username.
+
+. Add the location of your `catalog-info.yaml` to the `catalog.locations` section in your {product-very-short} `{my-app-config-file}` file to ingest the catalog entity:
++
+[source,yaml,subs="+quotes"]
+----
+catalog:
+  locations:
+    - type: url
+      target: https://github.com/_<owner>_/_<repository>_/catalog-info.yaml
+----
+
+. Optional: Define custom threshold rules for the Dependabot alert metrics in your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dependabot:
+      alerts_critical:
+        thresholds:
+          rules:
+            - key: success
+              expression: '<1'
+            - key: warning
+              expression: '1-7'
+            - key: error
+              expression: '>7'
+----
++
+where:
+
+`scorecard:plugins:dependabot:alerts_critical:thresholds`:: Specifies the threshold values for the critical-severity Dependabot alert metric. Replace `alerts_critical` with `alerts_high`, `alerts_medium`, or `alerts_low` to customize thresholds for the other severity levels.
+
++
+[NOTE]
+====
+Dependabot metrics use the following default thresholds for all four severity levels:
+
+* *Success*: Fewer than 1 open alert.
+* *Warning*: Between 1 and 7 open alerts.
+* *Error*: More than 7 open alerts.
+
+You can customize these thresholds in your {product-very-short} `{my-app-config-file}` file. For more information, see xref:scorecard-metric-thresholds_evaluate-project-health-using-scorecards[Scorecard metric thresholds].
+====
+
+.Verification
+
+* In your {product-very-short} application, navigate to the catalog page for your component and confirm that the Dependabot metrics are displayed in the Scorecard view.
