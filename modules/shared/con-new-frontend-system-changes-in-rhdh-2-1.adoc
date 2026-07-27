@@ -1,0 +1,43 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="front-end-system-changes-that-affect-your-upgrade_{context}"]
+= Front-end system changes that affect your {product} upgrade
+
+[role="_abstract"]
+{product} {product-version} uses the new front-end system exclusively. {product-version} removes the old front-end system, and you must migrate all custom plugins and configuration before upgrading. Plugins that have not been migrated are not loaded and do not appear in the application.
+
+The following changes affect your upgrade:
+
+Red Hat plugins:: All Red Hat-provided plugins use extension blueprints. You do not need to take any action for these plugins.
+
+Community plugins:: Community plugins that already use the new front-end system work without changes. Check each community plugin for an `/alpha` export to confirm compatibility.
+
+Custom plugins:: You must migrate custom plugins that use the old front-end system to extension blueprints before upgrading. Plugins without an `/alpha` export do not load in {product} {product-version}.
++
+--
+If an unmigrated plugin remains in the `dynamic-plugins-root` directory, check the backend logs for the missing-manifest error:
+
+* `Could not find manifest for frontend plugin <plugin_name>`
+
+If the plugin loads remotely but still does not appear, check the browser console for the following debug-level message:
+
+* `Skipping dynamic plugin remote module '...' since it doesn't export a new 'FrontendFeature' as default export`
+--
+
+Application configuration:: The `app.extensions` section in your `{my-app-config-file}` file replaces the `dynamicPlugins.frontend` configuration section, including `dynamicRoutes`, `mountPoints`, `entityTabs`, `appIcons`, `menuItems`, and `routeBindings`.
+
+{product} {product-version} removes the following configuration options and environment variables, which have no effect:
+
+* `APP_CONFIG_app_packageName`
+* `ENABLE_STANDARD_MODULE_FEDERATION`
+* `DISABLE_STANDARD_MODULE_FEDERATION`
+* Scalprum-specific fields in `package.json` (`scalprum.name`, `scalprum.exposedModules`)
+* The `dist-scalprum` build output directory
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-config-to-new-frontend-system.md[{product-short} configuration migration guide]
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-plugins-to-new-frontend-system.md[{product-short} plugin migration guide]
+* link:https://backstage.io/docs/frontend-system/building-plugins/migrating/[Upstream plugin migration guide]
+* link:https://backstage.io/docs/frontend-system/building-apps/migrating/[Upstream application migration guide]

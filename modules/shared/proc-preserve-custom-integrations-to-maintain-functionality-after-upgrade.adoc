@@ -1,12 +1,12 @@
 :_mod-docs-content-type: PROCEDURE
 
-[id="preserve-custom-integrations-when-migrating-to-the-front-end-system_{context}"]
-= Preserve custom integrations when migrating to the front-end system
+[id="preserve-custom-integrations-to-maintain-functionality-after-upgrade_{context}"]
+= Preserve custom integrations to maintain functionality after upgrade
 
 [role="_abstract"]
-Migrate your mount points and custom components from the Scalprum-based system to {product} extension-based front-end system by converting YAML-based mount points to extension blueprints.
+Convert your YAML-based mount points to extension blueprints before upgrading to {product} {product-version}. {product-version} removes the old front-end system, and all custom integrations must use the extension-based front-end system.
 
-Your existing mount points for entity pages, application headers, search filters, and admin pages map to specific extension attachment points in the front-end system. The extension tree resolves attachments by matching extension outputs to parent inputs. Blueprints provide typed patterns for common extension types including pages, navigation items, and entity content.
+Your existing mount points for entity pages, application headers, search filters, and admin pages map to specific extension attachment points. The extension tree resolves attachments by matching extension outputs to parent inputs. Blueprints provide typed patterns for common extension types including pages, navigation items, and entity content.
 
 Available entity page mount points:
 
@@ -27,9 +27,8 @@ Available entity page mount points:
 
 .Prerequisites
 
-* You have access to the `packages/app/src/App.tsx` file.
 * You have access to your `{my-app-config-file}` file.
-* You understand your current mount point configuration in the `dynamicPlugins.frontend` section.
+* You have identified your current mount point configuration in the `dynamicPlugins.frontend` section.
 
 .Procedure
 
@@ -57,12 +56,12 @@ dynamicPlugins:
 | Previous mount point | Current extension attachment | Blueprint to use
 
 | `entity.page.overview/cards`
-| `page:catalog/entity` with input `contents`
-| `EntityContentBlueprint` or `EntityCardBlueprint`
+| `entity-content:catalog/overview` with input `cards`
+| `EntityCardBlueprint`
 
 | `entity.page.*/cards`
-| `page:catalog/entity` with input `contents`
-| `EntityContentBlueprint`
+| `entity-content:catalog/<tab>` with input `cards`
+| `EntityCardBlueprint`
 
 | `application/header`
 | `app/root` with custom attachment
@@ -124,20 +123,14 @@ const myTab = EntityContentBlueprint.make({
 });
 ----
 
-. To activate the migrated plugin, update your `packages/app/src/App.tsx` file to import it:
+. Export the migrated plugin as a dynamic plugin by using the {product-very-short} CLI:
 +
-[source,typescript]
+[source,bash]
 ----
-import { createApp } from '@backstage/frontend-defaults';
-import myPlugin from '@my-org/backstage-plugin-my-plugin/alpha';
-
-export default createApp({
-  features: [
-    myPlugin,
-    // Additional plugins
-  ],
-});
+npx @red-hat-developer-hub/cli plugin export
 ----
++
+Extensions from the installed plugin are auto-discovered and loaded by default. If you need to disable, reorder, or override extension configuration, use the `app.extensions` section of your `{my-app-config-file}` file.
 
 . To complete the migration, remove the previous mount point configuration from your `{my-app-config-file}` file after verifying the migration works.
 
