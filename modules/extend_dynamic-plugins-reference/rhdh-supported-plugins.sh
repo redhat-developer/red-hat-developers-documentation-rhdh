@@ -612,7 +612,7 @@ generate_migration_table() {
             [[ "$dynamic_artifact" != "oci://ghcr.io"* ]] && continue
 
             # Skip if already processed (avoid duplicates)
-            if grep -qF "$plugin_name" "$PROCESSED_PLUGINS_FILE" 2>/dev/null; then
+            if grep -qxF "$plugin_name" "$PROCESSED_PLUGINS_FILE" 2>/dev/null; then
                 continue
             fi
             echo "$plugin_name" >> "$PROCESSED_PLUGINS_FILE"
