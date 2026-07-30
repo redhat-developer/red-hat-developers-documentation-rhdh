@@ -8,7 +8,7 @@ Add a standard scorecard summary card to your homepage using default, out-of-the
 
 .Prerequisites
 
-* The scorecard plugin is installed and configured in your {product} instance.
+* You have installed and configured Scorecard backend and frontend plugins, and at least one Scorecard plugin module.
 
 * You have administrator permissions to update application configuration files.
 
@@ -17,23 +17,37 @@ Add a standard scorecard summary card to your homepage using default, out-of-the
 
 . Navigate to your scorecard card block under the `home.page/cards` mount point.
 
-. Update the configuration to use the `aggregationId` property with an established system metric name:
+. Add a new item to the `mountPoints` array under the `scorecard` plugin configuration, setting `aggregationId` to your preferred metric ID.
++
+NOTE: The following example shows how to configure the mount point for a read-only homepage. For customizable homepage configuration, see xref:configure-portfolio-health-on-a-customizable-home-page_configure-scorecard-cards-on-the-homepage[Configure portfolio health on a customizable home page].
 +
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: ScorecardHomepageCard
-  config:
-    props:
-      aggregationId: "github.open_prs"
-    layouts:
-      xl: { w: 3, h: 6, x: 3 }
-      lg: { w: 4, h: 6, x: 4 }
-      md: { w: 6, h: 6, x: 6 }
-      sm: { w: 12, h: 6 }
-      xs: { w: 12, h: 6 }
-      xxs: { w: 12, h: 6 }
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard:<tag>
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          red-hat-developer-hub.backstage-plugin-scorecard:
+            mountPoints:
+              - mountPoint: home.page/cards
+                importName: ScorecardHomepageCard
+                config:
+                  props:
+                    aggregationId: "github.open_prs"
+                  layouts:
+                    xl: { w: 3, h: 6, x: 3 }
+                    lg: { w: 4, h: 6, x: 4 }
+                    md: { w: 6, h: 6, x: 6 }
+                    sm: { w: 12, h: 6 }
+                    xs: { w: 12, h: 6 }
+                    xxs: { w: 12, h: 6 }
 ----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
++
+`aggregationId`:: The aggregation identifier used in the mount point configuration. For default aggregations, this value must match the `metricId` from your installed Scorecard module. For more information, see xref:available-scorecard-metric-providers-and-metric-ids_evaluate-project-health-using-scorecards[Available scorecard metric providers and metric IDs].
 
 . Save the modified configuration file and restart your {product} instance.
 
