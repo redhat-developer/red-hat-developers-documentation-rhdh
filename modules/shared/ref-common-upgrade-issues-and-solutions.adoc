@@ -1,0 +1,116 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="common-upgrade-issues-and-solutions_{context}"]
+= Common upgrade issues and solutions
+
+[role="_abstract"]
+The following sections describe common issues that can occur when upgrading {product} and how to resolve them.
+
+== Custom Helm values lose mandatory defaults after upgrade
+
+----
+install-dynamic-plugins: error: volume "extensions-catalog" not found
+----
+
+This issue occurs when custom `values.yaml` overrides replace mandatory default values during an upgrade from version 1.8 or earlier.
+The `install-dynamic-plugins` init container fails because required volume mounts and volumes are missing from the merged configuration.
+
+To resolve this issue:
+
+* Before upgrading, manually merge the new mandatory defaults into your custom `values.yaml` file.
+Compare your custom values with the default values in the target version and add any missing entries for `upstream.backstage.extraVolumeMounts`, `upstream.backstage.extraVolumes`, and `upstream.backstage.initContainers`.
++
+For detailed steps, see {upgrading-book-link}#upgrade-rhdh-from-1-8-to-using-the-helm-chart_upgrade-rhdh[Upgrade {product-short} from 1.8 by using the Helm chart].
+
+== Quicklinks and starred items missing after upgrade
+
+This issue occurs when upgrading from {product-short} version 1.6 or earlier.
+The global header renders without the star icon or the Quicklinks matrix because the global header plugin and its required mount point components are not enabled by default in older configurations.
+
+To resolve this issue:
+
+* Manually enable the global header plugin and add the required mount point components in your configuration.
++
+For detailed steps, see {configuring-book-link}#enable-quicklinks-and-starred-items-after-an-upgrade_customize-the-home-page[Enable quicklinks and starred items after an upgrade].
+
+== Deprecated janus-idp Helm template references
+
+----
+Error: template: rhdh/templates/deployment.yaml: parse error: function "janus-idp" not defined
+----
+
+This issue occurs when Helm templates reference the deprecated `janus-idp` chart names instead of the current `rhdh` equivalents.
+Helm rendering fails or produces silent misconfiguration because the old template references no longer resolve.
+
+To resolve this issue:
+
+* Rename all `janus-idp` Helm template references to their `rhdh` equivalents in your custom templates and values files.
+
+== Front-end system migration from Scalprum to extension blueprints
+
+This issue occurs when upgrading to a version that uses the extension-based front-end system.
+Mount point configuration from the Scalprum-based system is not compatible with the new extension blueprints, causing custom entity page cards, tabs, or header components to stop rendering.
+
+To resolve this issue:
+
+* Convert your YAML-based mount point definitions to extension blueprints.
++
+For the mapping table and conversion steps, see {configuring-book-link}#preserve-custom-integrations-when-migrating-to-the-front-end-system_configuring-rhdh[Preserve custom integrations when migrating to the front-end system].
+
+== OCI plugin image paths change between versions
+
+----
+install-dynamic-plugins: error: failed to pull plugin image: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/...: not found
+----
+
+This issue occurs when plugin OCI image paths, tags, or SHA digests change between {product-short} versions.
+The `install-dynamic-plugins` init container fails to pull plugin images, and pods remain in `Init:Error` state.
+
+To resolve this issue:
+
+* Update the OCI paths and tags in your dynamic plugin configuration to match the target version.
+Check the {dynamic-plugins-reference-book-link}[Dynamic plugins reference] for current package paths.
+
+== Single-database deployments fail with permission errors
+
+----
+backend error: plugin "catalog" startup failed: error: permission denied for CREATE DATABASE
+----
+
+This issue occurs when a single-database deployment uses a restricted database user that does not have `CREATEDB` privileges.
+By default, each backend plugin attempts to create its own database, which fails when the database user lacks the required permissions.
+
+To resolve this issue:
+
+* Set `pluginDivisionMode: schema` in the `backend.database` section of your `{my-app-config-file}` file.
+This mode creates a separate schema for each plugin within the existing database instead of creating new databases.
+The database user needs `CREATE SCHEMA` privileges instead of `CREATEDB`.
++
+For detailed configuration steps, see {configuring-book-link}#configure-schema-based-plugin-isolation-to-simplify-single-database-provisioning_configuring-rhdh[Configure schema-based plugin isolation to simplify single-database provisioning].
+
+== Orchestrator plugin configuration fails after Operator upgrade from 1.7
+
+This issue occurs when upgrading the {product-short} Operator from version 1.7.
+After approving the Operator install plan, the deployment fails because the Orchestrator plugin configuration format changed between versions.
+
+To resolve this issue:
+
+* Manually update the Orchestrator plugin configuration after approving the install plan.
++
+For detailed steps, see the important notice in {upgrading-book-link}#upgrade-the-rhdh-operator_upgrade-rhdh[Upgrade the {product-short} Operator].
+
+== PostgreSQL DateStyle incompatibility with external database
+
+This issue occurs when an external PostgreSQL instance uses a non-ISO `DateStyle` setting.
+Catalog scheduling tasks fail and catalog items do not refresh because the date format is incompatible with the expected ISO format.
+
+To resolve this issue:
+
+* Configure the external PostgreSQL database to use the ISO `DateStyle` by running the following SQL command:
++
+[source,sql]
+----
+ALTER DATABASE <database_name> SET DateStyle = 'ISO, MDY';
+----
++
+For more information about external database configuration, see {configuring-book-link}#migrate-local-databases-to-an-external-database-server-using-the-operator_configuring-rhdh[Migrate local databases to an external database server by using the Operator].
