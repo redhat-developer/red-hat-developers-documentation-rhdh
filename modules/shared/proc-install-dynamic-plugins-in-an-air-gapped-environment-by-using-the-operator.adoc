@@ -6,6 +6,13 @@
 [role="_abstract"]
 To install external dynamic plugins in an air-gapped environment, configure a custom NPM registry by mounting a secret into the {product-short} Operator.
 
+[IMPORTANT]
+====
+When you install {product-short} by using the Operator, you must configure the secret in the `spec.application.extraFiles.secrets` field of  your {product-custom-resource-type} custom resource. Helm chart installations detect the secret automatically when you follow a specific naming convention, but Operator installations require you to reference the secret in the custom resource manually, regardless of the name you choose.
+`{product-custom-resource-type}` custom resource. Unlike Helm chart installations where the secret name follows a specific naming
+convention, Operator installations require manual configuration in the custom resource regardless of the secret name used.
+====
+
 .Prerequisites
 
 * An {ocp-short} administrator has installed the {product} Operator.
@@ -20,13 +27,17 @@ To install external dynamic plugins in an air-gapped environment, configure a cu
 apiVersion: v1
 kind: Secret
 metadata:
-  name: dynamic-plugins-npmrc
+  name: developer-hub-dynamic-plugins-npmrc
 type: Opaque
 stringData:
   .npmrc: |
     registry=https://_<your_internal_registry>_
     //_<your_internal_registry>_:_authToken=_<your_auth_token>_
 ----
++
+where:
+
+`name: developer-hub-dynamic-plugins-npmrc`:: The secret name can be any valid name. You will reference this name in the custom resource configuration.
 
 . Apply the secret to your namespace:
 +
@@ -47,11 +58,17 @@ spec:
   application:
     extraFiles:
       secrets:
-        - name: dynamic-plugins-npmrc
+        - name: developer-hub-dynamic-plugins-npmrc
           mountPath: /opt/app-root/src/.npmrc.dynamic-plugins
           containers:
             - install-dynamic-plugins
 ----
++
+where:
++
+`- name: developer-hub-dynamic-plugins-npmrc`:: The secret name must match the secret created in step 1.
+`mountPath: /opt/app-root/src/.npmrc.dynamic-plugins`:: The mount path must be `/opt/app-root/src/.npmrc.dynamic-plugins` for the init container to read the configuration.
+`- install-dynamic-plugins`:: The secret must be mounted to the `install-dynamic-plugins` init container.
 +
 The `install-dynamic-plugins` init container reads the `.npmrc` file from `/opt/app-root/src/.npmrc.dynamic-plugins/.npmrc` to resolve plugin packages from your internal registry.
 
