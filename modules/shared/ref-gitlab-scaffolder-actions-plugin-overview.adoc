@@ -1,101 +1,26 @@
 = GitLab scaffolder actions plugin overview
 
-Use the `gitlab-scaffolder-actions` plugin to customize your scaffolder template with various GitLab-specific actions. By configuring the actions, you can utilize them in many different scenarios.
+Use the `gitlab-scaffolder-actions` plugin to customize your scaffolder template with various GitLab-specific actions.
 
-publish::
-* Initializes a git repository with the content in the workspace, and publishes it to GitLab with the default configuration.
-* Adds a description.
-* Initializes a repository with an initial commit message (if not set, the message defaults to `initial commit`).
-* Initializes a repository with additional settings.
-* Initializes a repository with fast forward merge and "always squash" settings.
-* Initializes a repository with branch settings.
-* Initializes a repository with environment variables.
-* Initializes a repository with pipeline must succeed and allow merge on skipped pipeline settings.
-* Initializes a repository with setting to require all threads (discussions) on merge request to be resolved before merging.
-* Initializes a repository with the default `README` file and no files from workspace (only if this repository does not exist yet).
-* Initializes a repository with a custom project title that differs from the repository slug.
-* Initializes a repository and adds a specific user as project owner.
+Following actions are available:
 
-gitlabGroup::
-* Creates a group at the top level, with a description.
-* Creates a group nested within another group.
-* Creates a group nested within multiple other groups.
-* Creates a group in dry run mode.
-* Creates a group nested within another group using objects.
-* Creates a group nested within another group using path and objects.
+* `publish:gitlab`
+* `gitlab:group:ensureExists`
+* `gitlab:group:access`
+* `gitlabIssue`
+* `gitlab:issue:edit`
+* `publish:gitlab:merge-request`
+* `gitlab:pipeline:trigger`
+* `gitlab:projectAccessToken:create`
+* `gitlab:projectDeployToken:create`
+* `gitlab:group:migrate`
+* `gitlab:projectVariable:create`
+* `gitlab:repo:push`
+* `gitlab:user:info`
 
-gitlabGroupAccess::
-* Adds users to a group using numeric group ID.
-* Adds users to a group using string path.
-* Removes users from a group.
-* Shares or unshares a group.
+By configuring the actions through required and optional inputs, you can utilize them in many different scenarios, such as creating a GitLab project with multiple branches, defining a GitLab group's access to a project, creating project access and project deploy tokens or retrieving user information.
 
-gitlabIssue::
-* Creates or edits an issue.
-* Creates or edits an issue with assignees and date options.
-* Creates an issue with a token.
-* Creates or edits an issue with a specific milestone and weight.
-* Creates an issue to resolve a discussion in a merge request.
-* Edits the state of an issue.
-* Edits issue type.
-* Edits issue labels.
-* Locks discussion in an issue.
-* Makes an issue confidential.
-
-createMergeRequest::
-* Creates a merge request with a target branch.
-* Creates a merge request with a specific assignee.
-* Creates a merge request with automatic removal of source branch after merge.
-* Creates a merge request with the *create*, *delete* or *update* commit actions.
-
-triggerPipeline::
-* Triggers a Project pipeline without variables.
-* Triggers a Project pipeline with single or multiple variables.
-
-createAccessToken::
-* Creates a project access token with minimal options.
-* Creates a project access token with multiple options.
-* Creates a project access token with custom scopes.
-* Creates a project access token with a specified name.
-* Creates a project access token with a numeric project ID.
-* Creates a project access token with a specified expiration date.
-* Creates a project access token with a specified access level.
-* Creates a project access token with a token for authorization.
-* Creates a project access token with read-only scope.
-* Creates a project access token for a specific GitLab instance.
-
-createDeployToken::
-* Creates a project deploy token with minimal options.
-* Creates a project deploy token with many custom scopes.
-* Creates a project deploy token with a specified name.
-* Creates a project deploy token with a numeric project ID.
-* Creates a project deploy token with a custom username.
-
-importGitLabRepo::
-* Imports a repository from a remote GitLab instance.
-
-createVariable::
-* Creates an `env_var` project variable.
-* Creates a `file` project variable.
-* Creates a project variable that is protected.
-* Creates a project variable with masked flag `true`.
-* Creates a project variable that is expandable.
-* Creates a project variable with a specific environment scope.
-* Creates a project variable with a wildcard environment scope.
-
-pushChanges::
-* Pushes changes to a repository with minimal changes.
-* Pushes changes to a repository with a specific source and target path.
-* Pushes changes to a repository with a specific commit action.
-* Pushes an empty commit to a repository (available from GitLab version 18.8).
-
-gitlabUserInfo::
-* Retrieves current authenticated user information.
-* Retrieves user information by user ID.
-* Retrieves user information with a custom token.
-* Retrieves user information from a self-hosted GitLab instance.
-
-.Example of a GitLab fetch and group actions in a Scaffolder template
+.Example of a fetched scaffolder template with a GitLab action to initialize a GitLab repository with optional `settings` inputs: fast-forward merge and squash set to `always`.
 [source,yaml]
 ----
   steps:
@@ -107,14 +32,260 @@ gitlabUserInfo::
         values:
           name: ${{ parameters.name }}
 
-    - id: createGitlabGroup
-      name: Ensure Gitlab group exists
-      action: gitlab:group:ensureExists
-      input:
-        repoUrl: ${{ parameters.repoUrl }}
-        path:
-          - path
-          - to
-          - group
-
+    - id: 'publish',
+          action: 'publish:gitlab',
+          name: 'Publish to GitLab',
+          input: {
+            repoUrl: 'gitlab.com?repo=project_name&owner=group_name',
+            settings: {
+              merge_method: 'ff',
+              squash_option: 'always'
 ----
+
+publish:gitlab::
+Creates a GitLab project and publishes workspace content. The outputs are `remoteUrl`, `repoContentsUrl`, `projectId`, `commitHash`, and `created`.
+
+Use following required and commonly used optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`description`|optional| Project description.
+|`defaultBranch`|optional| Default branch (defaults to `master`).
+|`gitCommitMessage`|optional| Initial commit message (defaults to `initial commit`).
+|`sourcePath`|optional| Workspace subdirectory to publish (`false` creates an empty repository).
+|`skipExisting`|optional| Skips publishing if the project already exists.
+|`ownerUsername`|optional| Adds a specific GitLab user as project owner.
+|`settings`|optional| Project settings such as `name`, `visibility`, `merge_method`, `squash_option`, and merge-gate flags.
+|`branches`|optional|Additional branches to create and protect.
+|`projectVariables`|optional| CI/CD variables to create in the new project.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:group:ensureExists::
+Checks the path of groups and creates any missing segments, so that nested namespaces exist before publishing a project. Supports dry run. The output is `groupId`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`path`|required| Non-empty array of group segments. Each segment is either a string slug/path, or an object `{ name, slug }`.
+|`description`|optional| Description applied to the innermost (last) group when it is created.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:group:access::
+Adds or removes users and shares or unshares groups with other groups. Supports dry run. The outputs are `userIds`, `groupIds`, `path`, and `accessLevel`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`path`|required| Numeric group ID or string group path.
+|`userIds`|optional| User IDs to be added or removed.
+|`groupIds`|optional| Group IDs to be shared with or unshared from the target group.
+|`action`|optional| Adds or removes a group (default value is `add`).
+|`accessLevel`|optional| Numeric or string access level. Supported numeric levels include `10` (Guest), `15` (Planner), `20` (Reporter), `30` (Developer), `40` (Maintainer), and `50` (Owner). Defaults to `30`.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlabIssue::
+Creates a new issue in a GitLab project. Outputs are `issueUrl`, `issueId`, and `issueIid`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`projectId`|required| Project ID.
+|`title`|required| Title of the issue.
+|`description`|optional| Description of the issue.
+|`assignees`|optional| The IDs of users assigned to solve the issue.
+|`confidential`|optional| Sets the confidentiality of the issue (default set to `false`).
+|`createdAt`|optional| Time when the issue was created in YYYY-MM-DD format.
+|`dueDate`|optional| Time when the issue is due in YYYY-MM-DD format.
+|`labels`|optional| Comma-separated label names for an issue. If a label does not already exist, this input creates a new project label and assigns it to the issue.
+|`issueType`|optional| Adds an issue type (`issue`, `task`, `incident` or `test_case`).
+|`milestoneId`|optional| Adds a milestone.
+|`weight`|optional| Adds issue weight.
+|`epicId`|optional| Adds an epic.
+|`mergeRequestToResolveDiscussionsOf`|optional| Creates a Merge Request to resolve a discussion. Used together with the `discussionToResolve` input.
+|`discussionToResolve`|optional| Closes a discussion. Used together with the `mergeRequestToResolveDiscussionsOf` input.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:issue:edit::
+Updates an existing project issue. The outputs are `issueUrl`, `projectId`, `issueId`, `issueIid`, `state`, `title`, and `updatedAt`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`projectId`|required| Project ID.
+|`issueIid`|required| The internal ID of a project's issue.
+|`title`|required| Title of the issue.
+|`description`|optional| Description of the issue.
+|`assignees`|optional| The IDs of users assigned to solve the issue.
+|`confidential`|optional| Sets the confidentiality of the issue (default set to `false`).
+|`dueDate`|optional| Time when the issue is due (uses the YYYY-MM-DD format).
+|`updatedAt`|optional| Time when the issue was updated (uses the YYYY-MM-DD format).
+|`labels`|optional| Comma-separated label names for an issue. If a label does not already exist, this input creates a new project label and assigns it to the issue.
+|`addLabels`|optional| Adds labels to the issue.
+|`removeLabels`|optional| Removes labels from the issue.
+|`issueType`|optional| Adds an issue type (`issue`, `task`, `incident` or `test_case`).
+|`milestoneId`|optional| Adds a milestone.
+|`weight`|optional| Adds issue weight.
+|`epicId`|optional| Adds an epic.
+|`stateEvent`|optional| State event of the issue. To close the issue, use `close`, and to reopen it, use `reopen`.
+|`discussionLocked`|optional| Locks the discussion.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+publish:gitlab:merge-request::
+Commits workspace files to a branch and opens a merge request against a target branch. The outputs are `mergeRequestUrl`, `targetBranchName`, `projectId`, and `projectPath`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`title`|required| Title of the merge request.
+|`branchName`|required| The source branch name of the merge request.
+|`description`|optional| The description of the merge request.
+|`targetBranchName`|optional| The target branch of the merge request. Defaults to the repository's default branch).
+|`sourcePath`|optional| Subdirectory of working directory to copy changes from. For backward compatibility, missing or incorrect path is replaced by `targetPath` input.
+|`targetPath`|optional| Subdirectory of repository to apply changes to.
+|`commitAction`|optional| The action to be used for `git commit`. Defaults to the custom `auto` action which uses additional API calls to detect whether to use `create`, `update` or `skip` for each source file separately.
+|`removeSourceBranch`| optional| Removes source branch of the merge request after successful merge.
+|`assignee`|optional| The ID of the user assigned to the merge request.
+|`reviewers`|optional| The ID of users assigned to review the merge request.
+|`assignReviewersFromApprovalRules`|optional| Automatically assign reviewers from the approval rules of the merge requests (includes the codeowners).
+|`labels`|optional| Comma-separated label names for the merge request.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:pipeline:trigger::
+Creates a temporary pipeline trigger token, triggers a pipeline on the given branch (with optional variables), then deletes the trigger token. The output is `pipelineUrl`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`projectId`|required| Project ID.
+|`tokenDescription`|required| Pipeline token description.
+|`branch`|required| Project branch.
+|`variables`|optional| An object or record of key-valued strings containing the pipeline variables.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+
+gitlab:projectAccessToken:create::
+Creates a project access token and returns the token value for use in later template steps. The output is `access_token`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`projectId`|required| Project ID.
+|`name`|optional| Name of the project access token. Defaults to `tokenname`.
+|`scopes`|optional| Scope of project access token. Defaults to `['read_repository']`.
+|`accessLevel`|optional| Numeric or string access level. Supported numeric levels include `10` (Guest), `15` (Planner), `20` (Reporter), `30` (Developer), `40` (Maintainer), and `50` (Owner). Defaults to `40`.
+|`expiresAt`|optional| Expiration date of the project access token in YYYY-MM-DD format. If the input is empty, the expiration date is set to maximum length of 365 days.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:projectDeployToken:create::
+Creates a deploy token for a project. The outputs are `deploy_token` and `user`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`projectId`|required| Project ID.
+|`name`|required| Name of the project deploy token.
+|`scopes`|required| Scope of project deploy token. Defaults to `['read_repository']`.
+|`username`|optional| Name of the user.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:group:migrate::
+Imports a project from a source GitLab instance into a destination GitLab group or namespace, including across instances. The outputs are `importedRepoUrl` and `migrationId`.
+
+Use following required and inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`destinationUrl`|required| The target GitLab instance.
+|`destinationAccessToken`|required| The token to be used for authorization to the target GitLab.
+|`sourceUrl`|required| The source GitLab instance.
+|`sourceFullPath`|required| Full path to the project in the source Gitlab instance.
+|`sourceAccessToken`|required| The token to be used for authorization to the source GitLab.
+|===
+
+gitlab:projectVariable:create::
+Creates a CI/CD variable in a GitLab project. Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`projectId`|required| Project ID.
+|`key`|required| The key of the variable with maximum length of 255 characters. Only A-Z, a-z, 0-9, and `_` characters are allowed.
+|`value`|required| The value of the variable.
+|`variableType`|required| The type of variable: `env_var` or `file`.
+|`variableProtected`|optional| Configures the variable as protected. Defaults to `false`.
+|`masked`|optional| Configures the variable as masked. Defaults to `false`.
+|`maskedAndHidden`|optional| Configures the variable as masked and protected. Defaults to `false`.
+|`raw`|optional| Configures the variable as expandable. Defaults to `false`.
+|`environmentScope`|optional| The environment scope of the variable. Defaults to `*`.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:repo:push::
+Commits workspace files directly to a branch on an existing GitLab project, without opening a merge request. The outputs are `projectid`, `projectPath`, and `commitHash`.
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`branchName`|required| The branch name for the commit.
+|`commitMessage`|required| Commit message.
+|`sourcePath`|optional| Subdirectory of repository to copy changes from.
+|`targetPath`|optional| Subdirectory of repository to commit changes to.
+|`commitAction`|optional| The action to be used for `git commit`: `create`, `update`, `delete`, or `auto`. Defaults to `create`.
+|`allowEmpty`|optional| Allow an empty commit. Supported from GitLab version 18.8 and up.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+gitlab:user:info::
+Retrieves profile information for the current authenticated user, or for a specific user ID. The outputs are `id`, `username`, `name`, `state`, `webUrl`, `email`, `publicEmail`, and `createdAt` (when available).
+
+Use following required and optional inputs to customize the action:
+
+[cols='1, 1, 1']
+|===
+|input name|type|description
+|`repoUrl`|required| GitLab host (for example, `gitlab.com`).
+|`userId`|optional| ID of the user. If the input is left empty,the action returns information on the current authenticated user.
+|`token`|optional| The token to be used for authorization to GitLab.
+|===
+
+
