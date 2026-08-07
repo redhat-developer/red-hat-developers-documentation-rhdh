@@ -66,11 +66,23 @@ backend:
       - scaffolder
 ----
 
+** As a least-privilege best practice, enable only the plugin sources required for your use case. For example, if scaffolder tools are not needed:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  actions:
+    pluginSources:
+      - software-catalog
+      - techdocs-mcp-extras
+      # - scaffolder  # uncomment if scaffolder tools are needed
+----
+
 ** If you are using OpenAI models with the {product-very-short} MCP server, add the following configuration to your `{my-app-config-file}` file to disable namespaced toolnames:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
-mcpActions: 
+mcpActions:
   namespacedToolNames: false
 ----
 
@@ -110,3 +122,41 @@ backend:
 signInPage: oidc
 ----
 
+. Apply an action filter to limit which MCP tools are exposed to AI clients. Red Hat recommends exposing only read-only tools by default to minimize risk:
++
+[source,yaml]
+----
+backend:
+  actions:
+    filter:
+      include:
+        - attributes:
+            readOnly: true
+----
++
+If your use case requires write-enabled or potentially destructive tools, you must explicitly configure them:
++
+[source,yaml]
+----
+backend:
+  actions:
+    filter:
+      include:
+        - attributes:
+            readOnly: false
+            destructive: true
+----
++
+The following table lists the tools that are not read-only and their risk level:
++
+[cols="30%,35%,17%,18%",options="header"]
+|===
+|Tool |Plugin source |readOnly |destructive
+|`scaffolder-execute-template` |`scaffolder-mcp-extras` |`false` |`true`
+|`catalog-register-tool` |`software-catalog-mcp-extras` |`false` |`false`
+|`catalog-unregister-tool` |`software-catalog-mcp-extras` |`false` |`true`
+|`scaffolder-execute-template` (upstream) |`scaffolder` |`false` |`true`
+|===
+
+.Additional resources
+* link:https://github.com/redhat-ai-dev/rhdh-mcp-eval[rhdh-mcp-eval] — MCP evaluation results for {product-short} AI integrations (see the `evaluation-result/` directory).
