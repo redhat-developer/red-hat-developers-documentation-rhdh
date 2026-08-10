@@ -1,0 +1,76 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="package-a-byok-rag-container-image_{context}"]
+= Package a BYOK RAG container image
+
+[role="_abstract"]
+Build a container image that bundles your generated vector database so that it can be deployed as an init container in your {product} ({product-very-short}) cluster.
+
+The init container copies the vector database files to a shared volume before {lcs-name} ({lcs-short}) starts. {lcs-short} then reads the data from the shared volume at the path declared in `lightspeed-stack.yaml`.
+
+.Prerequisites
+* You have generated a FAISS vector database as described in xref:generate-a-vector-database-for-byok-rag_{context}[Generate a vector database for BYOK RAG].
+* You have `podman` installed.
+* You have write access to a container registry accessible to your cluster.
+
+.Procedure
+
+. Create a `Containerfile` in the directory that contains your `vector_db` output:
++
+[source,dockerfile]
+----
+FROM registry.redhat.io/lightspeed-core/rag-tool-rhel9:latest AS builder  <1>
+
+WORKDIR /rag-content
+
+COPY ./custom_docs /rag-content/custom_docs
+COPY ./custom_processor.py /rag-content/custom_processor.py
+
+RUN python ./custom_processor.py \
+    --output /rag/vector_db/custom_docs/1.0 \  <2>
+    --folder ./custom_docs/1.0/ \
+    --model-dir "" \
+    --model-name sentence-transformers/all-mpnet-base-v2 \
+    --index custom-docs-1_0 \
+    --vector-store-type llamastack-faiss
+
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest  <3>
+COPY --from=builder /rag /rag  <4>
+CMD ["cp", "-r", "/rag/.", "/byok-data/"]  <5>
+----
++
+<1>:: The builder stage uses the Red Hat RAG Tool image to generate embeddings during the image build.
+<2> Output path inside the builder container. This path structure is preserved in the final image.
+<3> The final stage uses a minimal base image to keep the image size small.
+<4> Copies only the generated vector database files from the builder stage.
+<5> Default command copies all RAG data to a shared volume mount at `/byok-data/` when the init container runs.
++
+[NOTE]
+====
+If you already generated the vector database in a separate step, you can skip the builder stage and use a simpler Containerfile:
+
+[source,dockerfile]
+----
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+COPY ./vector_db /rag/vector_db
+CMD ["cp", "-r", "/rag/.", "/byok-data/"]
+----
+====
+
+. Build the container image:
++
+[source,terminal]
+----
+$ podman build -t <registry>/<namespace>/byok-custom-docs:1.0 .
+----
+
+. Push the image to your container registry:
++
+[source,terminal]
+----
+$ podman push <registry>/<namespace>/byok-custom-docs:1.0
+----
+
+.Next steps
+* xref:configure-byok-rag-by-using-the-helm-chart_{context}[Configure BYOK RAG by using the Helm chart]
+* xref:configure-byok-rag-by-using-the-operator_{context}[Configure BYOK RAG by using the Operator]

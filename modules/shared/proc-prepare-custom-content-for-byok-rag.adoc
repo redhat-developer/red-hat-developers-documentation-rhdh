@@ -1,0 +1,76 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="prepare-custom-content-for-byok-rag_{context}"]
+= Prepare custom content for BYOK RAG
+
+[role="_abstract"]
+Organize your internal documentation into a directory structure and supported file format before generating the vector database.
+
+The vector database generator accepts the following input formats:
+
+[cols="1,2,2",options="header"]
+|===
+| `--document-type` value | Input file extensions | Processing method
+
+| `text` (default)
+| `.txt`
+| Read as plain text.
+
+| `markdown`
+| `.md`
+| Read as Markdown; chunked on headings.
+
+| `html`
+| `.html`, `.htm`
+| Converted to Markdown by docling, then chunked.
+
+| `pdf`
+| `.pdf`
+| Converted to Markdown by docling, then chunked.
+|===
+
+[NOTE]
+====
+Scanned or image-only PDFs contain no embedded text and produce empty or near-empty output. Run such files through a separate OCR step before ingestion.
+====
+
+.Procedure
+
+. Create a versioned directory for your documentation:
++
+[source,terminal]
+----
+mkdir -p ./custom_docs/<version>/
+----
++
+Replace `<version>` with a string that identifies your content version, for example `1.0`.
+
+. Copy or generate your documentation files into the versioned directory. Use a single `--document-type` value per directory — mix formats by running the vector database generator multiple times against separate directories and using different index IDs.
+
+. Optional: Add YAML frontmatter to Markdown files to set document metadata:
++
+[source,markdown]
+----
+---
+title: My Custom Page Title
+url: https://docs.example.com/my-page
+---
+
+# Content starts here
+----
++
+The following frontmatter fields are recognized:
++
+[cols="1,3",options="header"]
+|===
+| Field | Description
+
+| `title`
+| Document title. Overrides extraction from the first heading line.
+
+| `url`
+| Source URL. Appears in {ls-short} citations. Takes priority over the URL returned by the `url_function` in your processing script.
+|===
+
+.Next steps
+* xref:generate-a-vector-database-for-byok-rag_{context}[Generate a vector database for BYOK RAG]
