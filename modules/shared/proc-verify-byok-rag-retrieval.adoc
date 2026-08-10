@@ -1,0 +1,42 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="verify-byok-rag-retrieval_{context}"]
+= Verify BYOK RAG retrieval
+
+[role="_abstract"]
+Confirm that {ls-short} retrieves content from your custom knowledge source and returns citations in chat responses.
+
+.Prerequisites
+* You have completed either xref:configure-byok-rag-by-using-the-helm-chart_{context}[Configure BYOK RAG by using the Helm chart] or xref:configure-byok-rag-by-using-the-operator_{context}[Configure BYOK RAG by using the Operator].
+* You have access to a running {product-very-short} instance.
+
+.Procedure
+
+. Confirm the init container completed successfully by checking its status:
++
+[source,terminal]
+----
+$ kubectl get pods -l app=developer-hub \
+    -o jsonpath='{.items[*].status.initContainerStatuses[*]}'
+----
++
+The `init-byok-custom-docs` container must show `"state": {"terminated": {"reason": "Completed"}}`. If the init container is in an error state, see xref:ref-byok-rag-troubleshooting_{context}[Troubleshooting BYOK RAG].
+
+. Confirm the shared volume contains the vector database by opening a shell in the `lightspeed-core` container:
++
+[source,terminal]
+----
+$ kubectl exec -it <pod-name> -c lightspeed-core -- \
+    ls /app-root/byok-data/rag/vector_db/custom_docs/1.0/
+----
++
+The `faiss_store.db` file must be present.
+
+. Open the {ls-short} chat interface by selecting the *Open Lightspeed* floating action button (FAB) on the {product-very-short} home page.
+
+. Send a query that matches content in your custom documentation.
+
+. Verify that the response includes citations referencing your documentation source. Citations appear as expandable source links below the AI response when the model retrieves content from a BYOK knowledge source.
+
+.Additional resources
+* xref:ref-byok-rag-troubleshooting_{context}[Troubleshooting BYOK RAG]
