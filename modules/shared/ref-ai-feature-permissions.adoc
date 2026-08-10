@@ -1,0 +1,128 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ai-feature-permissions_{context}"]
+= AI feature permissions
+
+[role="_abstract"]
+Configure role-based access control (RBAC) policies for AI features in {product} by using the permission identifiers in the following tables.
+
+Each permission uses a behavior-linked name that describes the capability it grants. Permissions follow the pattern `_<feature>_._<resource>_._<verb>_`, where the verb is one of the following:
+
+`access`:: View or open the feature interface.
+`use`:: Actively interact with the feature, such as sending a chat message.
+`manage`:: Administer resources within the feature, such as deleting chat history.
+
+== {ls-short} chat permissions
+
+[cols="2,1,3",options="header"]
+|===
+| Permission | Action | What it grants
+
+| `intelligent-assistant.chat.access`
+| `use`
+| Access to the {ls-short} chat interface. Required to open the chat window.
+
+| `intelligent-assistant.chat.use`
+| `use`
+| Send messages to {ls-short} and start chat conversations.
+
+| `intelligent-assistant.chat.manage`
+| `use`
+| Edit and delete chat history entries.
+|===
+
+== {ls-short} Notebooks permissions
+
+[cols="2,1,3",options="header"]
+|===
+| Permission | Action | What it grants
+
+| `intelligent-assistant.notebooks.use`
+| `update`
+| Access the Notebooks feature in {ls-short}. Create, view, and interact with Notebooks.
+|===
+
+== Model Context Protocol (MCP) permissions
+
+[cols="2,1,3",options="header"]
+|===
+| Permission | Action | What it grants
+
+| `intelligent-assistant.mcp.read`
+| `read`
+| List configured MCP servers and view their status.
+
+| `intelligent-assistant.mcp.manage`
+| `update`
+| Add, edit, delete, and validate MCP server configurations.
+|===
+
+== Saved prompts permissions
+
+[cols="2,1,3",options="header"]
+|===
+| Permission | Action | What it grants
+
+| `intelligent-assistant.saved-prompts.manage`
+| `update`
+| List, create, and delete saved prompts. Read saved prompts configuration.
+|===
+
+== Example RBAC policy
+
+The following example grants a team full access to all AI features:
+
+[source,text,subs="+quotes"]
+----
+p, role:default/_<team>_, intelligent-assistant.chat.access, use, allow
+p, role:default/_<team>_, intelligent-assistant.chat.use, use, allow
+p, role:default/_<team>_, intelligent-assistant.chat.manage, use, allow
+p, role:default/_<team>_, intelligent-assistant.mcp.read, read, allow
+p, role:default/_<team>_, intelligent-assistant.mcp.manage, update, allow
+p, role:default/_<team>_, intelligent-assistant.notebooks.use, update, allow
+p, role:default/_<team>_, intelligent-assistant.saved-prompts.manage, update, allow
+----
+
+To grant read-only chat access without history management or MCP configuration, grant only `intelligent-assistant.chat.access` and `intelligent-assistant.chat.use`.
+
+== Migration from previous permission names
+
+If you are upgrading from {product-short} 1.x, update your RBAC policies to use the new permission identifiers. The old CRUD-based permission names are removed in version 2.1.
+
+[cols="2,2,1",options="header"]
+|===
+| Old permission (1.x) | New permission (2.1) | Action
+
+| `lightspeed.chat.read, read`
+| `intelligent-assistant.chat.access, use`
+| Changed
+
+| `lightspeed.chat.create, create`
+| `intelligent-assistant.chat.use, use`
+| Changed
+
+| `lightspeed.chat.delete, delete`
+| `intelligent-assistant.chat.manage, use`
+| Changed
+
+| `lightspeed.chat.update, update`
+| `intelligent-assistant.chat.manage, use`
+| Merged into `manage`
+
+| `lightspeed.notebooks.use, update`
+| `intelligent-assistant.notebooks.use, update`
+| Renamed
+
+| `lightspeed.mcp.read, read`
+| `intelligent-assistant.mcp.read, read`
+| Renamed
+
+| `lightspeed.mcp.manage, update`
+| `intelligent-assistant.mcp.manage, update`
+| Renamed
+|===
+
+[IMPORTANT]
+====
+This is a breaking change. The old permission names are not supported in {product-short} 2.1. Update all RBAC policies, conditional rules, and automation scripts that reference the old `lightspeed.*` permission identifiers before upgrading.
+====
