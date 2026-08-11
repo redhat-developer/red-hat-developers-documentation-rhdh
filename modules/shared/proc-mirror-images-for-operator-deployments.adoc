@@ -24,11 +24,13 @@ podman cp $CONTAINER_ID:/manifests/rhdh-flavour-lightspeed-config_v1_configmap.y
 podman rm $CONTAINER_ID
 ----
 
-. Identify the initialization and sidecar container image tags from the extracted configuration file:
+// TODO (RHIDP-16107): Confirm the exact OKP sidecar container name in the operator bundle
+// (replacing the old "init-rag-data" init container). Update <okp-container-name> below.
+. Identify the OKP and {lcs-short} sidecar container image tags from the extracted configuration file:
 +
 [source,terminal]
 ----
-LS_RAG_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.initContainers[] | select(.name == "init-rag-data") | .image')
+LS_OKP_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.containers[] | select(.name == "<okp-container-name>") | .image')
 LS_CORE_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.containers[] | select(.name == "lightspeed-core") | .image')
 ----
 
@@ -36,7 +38,7 @@ LS_CORE_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec
 +
 [source,terminal]
 ----
-skopeo copy docker://${LS_RAG_IMAGE} docker://<mirror_registry>/<ls_rag_repo>@<digest>
+skopeo copy docker://${LS_OKP_IMAGE} docker://<mirror_registry>/<ls_okp_repo>@<digest>
 skopeo copy docker://${LS_CORE_IMAGE} docker://<mirror_registry>/<ls_core_repo>@<digest>
 ----
 
