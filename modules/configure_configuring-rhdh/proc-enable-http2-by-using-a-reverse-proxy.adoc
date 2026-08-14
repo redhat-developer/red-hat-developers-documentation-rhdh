@@ -1,0 +1,51 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-http2-by-using-a-reverse-proxy_{context}"]
+= Enable HTTP/2 by using a reverse proxy
+
+[role="_abstract"]
+You can deploy a reverse proxy in front of {product-very-short} to enable HTTP/2 without requiring cluster-wide configuration changes.
+
+// TODO: RHIDP-15712 — Replace this stub with tested procedure after engineering delivers the officially supported reverse proxy setup.
+// Pending details:
+// - Officially supported reverse proxy image (Caddy UBI rebuild or alternative)
+// - Kubernetes manifests (Deployment, Service, ConfigMap for proxy config)
+// - OCP passthrough Route configuration
+// - Vanilla Kubernetes Ingress configuration with TLS passthrough
+// - app-config.yaml base URL updates (app.baseUrl, backend.baseUrl, backend.cors.origin)
+// - HTTP/1.1 fallback verification steps
+
+.Prerequisites
+
+* You have a valid TLS certificate and key for the {product-very-short} route hostname.
+* You have an existing {product-very-short} deployment.
+
+.Procedure
+
+// This procedure is pending the completion of engineering validation (RHIDP-15712).
+
+. Deploy a reverse proxy as a separate Deployment in the same namespace as {product-very-short}.
+. Configure TLS termination on the reverse proxy with your certificate.
+. Create a passthrough Route (on {ocp-short}) or an Ingress with TLS passthrough (on Kubernetes) that points to the reverse proxy Service.
+. Update the `{my-app-config-file}` to set `app.baseUrl`, `backend.baseUrl`, and `backend.cors.origin` to the new reverse proxy URL.
+
+.Verification
+
+. Verify that the {product-very-short} UI loads through the reverse proxy URL.
+. Verify HTTP/2 negotiation by running:
++
+[source,terminal]
+----
+$ curl -vso /dev/null --http2 https://<reverse_proxy_route_url> 2>&1 | grep ALPN
+----
++
+If HTTP/2 is active, the output includes:
++
+[source,terminal]
+----
+* ALPN: server accepted h2
+----
+
+.Additional resources
+
+* xref:http2-tls-requirements-and-connection-coalescing-caveats_{context}[HTTP/2 TLS requirements and connection coalescing caveats]
