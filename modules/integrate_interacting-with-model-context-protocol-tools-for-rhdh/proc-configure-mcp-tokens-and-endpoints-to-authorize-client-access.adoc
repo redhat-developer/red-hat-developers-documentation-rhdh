@@ -66,11 +66,23 @@ backend:
       - scaffolder
 ----
 
+** As a least-privilege best practice, enable only the plugin sources required for your use case. For example, if scaffolder tools are not needed:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+backend:
+  actions:
+    pluginSources:
+      - software-catalog-mcp-extras
+      - techdocs-mcp-extras
+      # - scaffolder-mcp-extras
+----
+
 ** If you are using OpenAI models with the {product-very-short} MCP server, add the following configuration to your `{my-app-config-file}` file to disable namespaced toolnames:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
-mcpActions: 
+mcpActions:
   namespacedToolNames: false
 ----
 
@@ -110,3 +122,49 @@ backend:
 signInPage: oidc
 ----
 
+. Apply an action filter to limit which MCP tools are exposed to AI clients. {company-name} recommends exposing only read-only tools by default to minimize risk:
++
+[source,yaml]
+----
+backend:
+  actions:
+    filter:
+      include:
+        - attributes:
+            readOnly: true
+----
++
+When a tool is excluded by the action filter, MCP clients do not see it in the tool list and cannot call it. No error is returned; the tool is simply absent.
++
+If your use case requires write-enabled or potentially destructive tools, replace the previous filter with the following. Each item in the `include` list is evaluated with OR logic, so a tool matching either condition is included:
++
+[source,yaml]
+----
+backend:
+  actions:
+    filter:
+      include:
+        - attributes:
+            readOnly: false
+        - attributes:
+            destructive: true
+----
++
+The following table lists the tools that are not read-only and their risk level:
++
+[cols="30%,35%,17%,18%",options="header"]
+|===
+|Tool |Plugin source |readOnly |destructive
+|`scaffolder-execute-template` |`scaffolder-mcp-extras` |`false` |`true`
+|`catalog-register-tool` |`software-catalog-mcp-extras` |`false` |`false`
+|`catalog-unregister-tool` |`software-catalog-mcp-extras` |`false` |`true`
+|`scaffolder-execute-template` |`scaffolder` |`false` |`true`
+|===
++
+[NOTE]
+====
+`scaffolder-execute-template` appears under both `scaffolder-mcp-extras` and `scaffolder` because both plugin sources expose this tool. Use the source that matches your installation. {company-name} recommends `scaffolder-mcp-extras`, as the upstream `scaffolder` source is deprecated.
+====
+
+.Additional resources
+* link:https://github.com/redhat-ai-dev/rhdh-mcp-eval[rhdh-mcp-eval: MCP evaluation results for {product-short} AI integrations]
