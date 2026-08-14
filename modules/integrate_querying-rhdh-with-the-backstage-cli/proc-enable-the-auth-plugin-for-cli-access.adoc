@@ -1,0 +1,50 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-the-auth-plugin-for-cli-access_{context}"]
+= Enable the auth plugin for CLI access
+
+[role="_abstract"]
+To allow the {backstage} CLI to authenticate with your {product} instance, enable the auth front-end plugin and configure the OAuth2 endpoints that the CLI relies on for secure token-based access.
+
+.Prerequisites
+
+* You have administrator access to your {product-very-short} instance configuration.
+
+.Procedure
+
+. Add the `backstage-plugin-auth` dynamic plugin to your `dynamic-plugins.yaml` file by replacing `_<tag>_` with the appropriate version tag from the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays] registry:
++
+[source,yaml]
+----
+plugins:
+  - package: "oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-auth:<tag>"
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          backstage.plugin-auth:
+            dynamicRoutes:
+              - path: /oauth2/*
+                importName: Router
+----
+
+. Enable the OAuth2 server endpoints in your `app-config.yaml` or `app-config.local.yaml` file:
++
+[source,yaml]
+----
+auth:
+  experimentalClientIdMetadataDocuments:
+    enabled: true
+  experimentalRefreshToken:
+    enabled: true
+----
+
+. Restart your {product-very-short} instance to apply the changes.
+
+.Verification
+
+Check the {product-very-short} pod logs and verify that the `backstage.plugin-auth` plugin entry appears without errors.
+
+// TODO: Confirm that the experimentalClientIdMetadataDocuments and
+// experimentalRefreshToken flags are still the correct configuration
+// for the target RHDH version. These are marked experimental upstream.

@@ -1,0 +1,59 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="troubleshoot-backstage-cli-issues_{context}"]
+= Troubleshoot {backstage} CLI issues
+
+[role="_abstract"]
+If the {backstage} CLI fails to authenticate, install, or return expected results from {product}, use the following resolutions to diagnose and fix common issues.
+
+.404 error on OAuth2 authorize endpoint
+[%collapsible]
+====
+Symptom:: `backstage-cli auth login` fails with a `404` error on `/oauth2/authorize`.
+Cause:: The `@backstage/plugin-auth` front-end plugin is not loaded in your {product-very-short} instance.
+Resolution:: Verify that `backstage-plugin-auth` is configured in `dynamic-plugins.yaml` and check pod logs for plugin loading errors. For details, see xref:enable-the-auth-plugin-for-cli-access_{context}[].
+====
+
+.npm peer dependency conflict during installation
+[%collapsible]
+====
+Symptom:: Running `npm install -g @backstage/cli` fails with an `ERESOLVE` error about conflicting `jsdom` peer dependencies.
+Cause:: The `@backstage/cli` package has optional peer dependencies that conflict when installed outside a {backstage} project directory.
+Resolution:: Install with legacy peer dependency resolution:
++
+[source,terminal]
+----
+NPM_CONFIG_LEGACY_PEER_DEPS=true npm install -g @backstage/cli
+----
+====
+
+// TODO: Remove the npm peer dependency section if RHIDP-14128 (standalone execution) lands
+// and eliminates the peer dependency issue.
+
+.Plugin source returns 404
+[%collapsible]
+====
+Symptom:: `backstage-cli actions list` reports a warning that a plugin source returned `404`.
+Cause:: A configured plugin source does not expose the actions endpoint.
+Resolution:: The CLI returns partial results from sources that responded successfully. Remove unavailable sources if needed:
++
+[source,terminal]
+----
+backstage-cli actions sources remove <source_name>
+----
+====
+
+// TODO: Verify whether RHIDP-15085 (auto-discovery of plugin sources)
+// eliminates the need for manual source management.
+
+.Authentication token expired
+[%collapsible]
+====
+Symptom:: Commands fail with an authentication error after a period of inactivity.
+Resolution:: Re-authenticate:
++
+[source,terminal]
+----
+backstage-cli auth login --backend-url <rhdh_url>
+----
+====
