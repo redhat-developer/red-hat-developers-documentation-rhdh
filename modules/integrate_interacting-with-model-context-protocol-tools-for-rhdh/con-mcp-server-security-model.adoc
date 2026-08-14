@@ -8,12 +8,9 @@ The {product-short} MCP server enforces a Zero Trust security model, validating 
 
 The {product-very-short} MCP server does not grant any implicit trust to connecting clients. Every inbound request must carry a valid authentication token, and every tool invocation is verified against the calling user's permissions before any action is executed. This model ensures that platform engineers retain centralized control over access to Internal Developer Platform capabilities, regardless of which MCP client is used.
 
-== Supported authentication schemes
-
 The MCP server implements the standard MCP Security Specification for authorization. When a client connects, the server performs an MCP initialization handshake that requires the client to present a valid bearer token.
 
-The following table describes the authentication schemes supported by the {product-very-short} MCP server:
-
+.Supported authentication schemes
 [cols="20%,45%,35%",options="header"]
 |===
 |Scheme |Description |Recommended use
@@ -32,8 +29,6 @@ The following table describes the authentication schemes supported by the {produ
 If a client presents a token that cannot be resolved to a valid {backstage} identity, the server rejects the request and no tools are executed.
 ====
 
-== Identity resolution
-
 When the MCP server receives a request, it passes the bearer token to the {backstage} `IdentityApi` to resolve it to a `{backstage}Identity`. This identity contains the user's entity reference and the ownership claims for their groups.
 
 * A static token resolves to the configured service subject.
@@ -41,10 +36,9 @@ When the MCP server receives a request, it passes the bearer token to the {backs
 
 The resolved identity is used for all subsequent permission checks within the request.
 
-== Permission policy enforcement
+For every tool invocation, the MCP server calls the {backstage} `PermissionEvaluator` with the specific permission that the requested action requires.
 
-For every tool invocation, the MCP server calls the {backstage} `PermissionEvaluator` with the specific permission that the requested action requires. The following table lists the permission required for each tool:
-
+.Required permission for each tool
 [cols="35%,30%,35%",options="header"]
 |===
 |Tool |Plugin |Required permission
@@ -63,8 +57,6 @@ If the `PermissionEvaluator` returns `DENY`, the MCP server returns a standard `
 ====
 Because the MCP server enforces permissions using the existing {backstage} Permission Framework, you do not need to define separate permission rules for MCP. Any RBAC policy you configure in {product-very-short} applies equally to MCP tool calls.
 ====
-
-== Context propagation
 
 When a tool performs downstream actions (for example, fetching a file from a connected source control system), the MCP server passes the user's credentials through the request context. This On Behalf Of (OBO) pattern ensures that downstream systems receive requests authorized as the calling user, not as a privileged system account. The MCP server never substitutes its own credentials when acting on a user's behalf.
 
