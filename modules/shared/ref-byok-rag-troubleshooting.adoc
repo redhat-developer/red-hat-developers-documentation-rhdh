@@ -1,0 +1,125 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-byok-rag-troubleshooting_{context}"]
+= Troubleshooting BYOK RAG
+
+[role="_abstract"]
+Resolve common errors that occur when configuring or using a Bring Your Own Knowledge (BYOK) RAG knowledge source with {ls-short}.
+
+== Chat responses do not reference custom documentation
+
+*Symptom*: Queries that should match content in your custom documentation return no citations or retrieve content only from the default knowledge source.
+
+*Cause*: The `rag_id` is not listed in the `rag.tool` or `rag.inline` section of `lightspeed-stack.yaml`, or the `ConfigMap` containing the updated configuration was not applied.
+
+*Resolution*:
+
+. Confirm the `rag_id` value in `byok_rag` matches an entry in `rag.tool` or `rag.inline`.
+. Verify the `ConfigMap` is mounted and contains the expected content:
++
+[source,terminal]
+----
+$ kubectl exec -it <pod-name> -c lightspeed-core -- \
+    cat /app-root/lightspeed-stack.yaml
+----
+. Restart the pod if the `ConfigMap` was updated after the pod started.
+
+== Init container fails with a file not found error
+
+*Symptom*: The `init-byok-custom-docs` init container exits with an error indicating a source path does not exist.
+
+*Cause*: The source path inside the init container image does not match the `cp` command specified in the container spec.
+
+*Resolution*:
+
+. Inspect the actual file structure inside the BYOK container image:
++
+[source,terminal]
+----
+$ podman run --rm --entrypoint "" \
+    <registry>/<namespace>/byok-custom-docs:1.0 \
+    find /rag -type f
+----
+. Update the init container `command` in your Helm `values.yaml` or `{backstage}` CR to match the actual path inside the image.
+
+== Vector database path mismatch
+
+*Symptom*: {lcs-name} ({lcs-short}) logs show an error loading the FAISS index, or the `faiss_store.db` file is missing from the expected location.
+
+*Cause*: The `db_path` in `lightspeed-stack.yaml` does not match the path where the init container copies data.
+
+*Resolution*:
+
+. Verify the file is present at the expected location:
++
+[source,terminal]
+----
+$ kubectl exec -it <pod-name> -c lightspeed-core -- \
+    ls -la /app-root/byok-data/
+----
+. Ensure the `db_path` in `lightspeed-stack.yaml` matches the full path to `faiss_store.db` inside the `lightspeed-core` container after the init container runs.
+
+== Empty search results after deployment
+
+*Symptom*: The knowledge source is configured and citations appear, but retrieved content is empty or unrelated.
+
+*Cause*: The vector database was generated with an incorrect `--vector-store-type`, or the content files were empty or unreadable.
+
+*Resolution*:
+
+. Confirm the vector database was generated with `--vector-store-type llamastack-faiss`.
+. Inspect the content of the vector database:
++
+[source,terminal]
+----
+$ podman run --rm \
+    -v ./vector_db:/rag-content/vector_db:Z \
+    registry.redhat.io/lightspeed-core/rag-tool-rhel9:latest \
+    python inspect_vector_db.py \
+      -p /rag-content/vector_db/custom_docs/1.0 \
+      --sample 3
+----
+. Rebuild the vector database if the output shows zero chunks or unexpected content.
+
+== Embedding model mismatch error
+
+*Symptom*: {lcs-short} logs an error when loading the vector database, citing an incompatible embedding model.
+
+*Cause*: The `embedding_model` value in `lightspeed-stack.yaml` does not match the model used during vector database generation.
+
+*Resolution*:
+
+. Check the `embedding_model` field in the generated `lightspeed-stack.yaml` snippet from your vector database output directory.
+. Update the `embedding_model` field in your deployed `lightspeed-stack.yaml` `ConfigMap` to match exactly.
+
+== `vector_db_id` not found
+
+*Symptom*: {lcs-short} fails to initialize the vector store and logs a message indicating the `vector_db_id` is unknown.
+
+*Cause*: The `vector_db_id` in `lightspeed-stack.yaml` was entered manually instead of being copied from the generated output.
+
+*Resolution*: Copy the `vector_db_id` value directly from the `byok_rag` section of the `lightspeed-stack.yaml` file generated in the vector database output directory. Do not create or modify this value manually.
+
+== Embedding model not found at runtime (portability issue)
+
+*Symptom*: {lcs-short} fails to load the embedding model at runtime with a path not found error.
+
+*Cause*: The vector database was generated with a local `--model-dir` path. The OGX Faiss backend writes that absolute path into the database metadata. If the path is not available inside the `lightspeed-core` container, the model cannot be loaded.
+
+*Resolution*: Regenerate the vector database with `--model-dir ""` (empty string) and `--model-name <model-id>`. An empty `--model-dir` instructs OGX to use the HuggingFace model ID instead of an absolute path, making the database fully portable.
+
+[source,terminal]
+----
+$ podman run --rm \
+  -v ./custom_docs:/rag-content/custom_docs:Z \
+  -v ./vector_db:/rag-content/vector_db:Z \
+  -v ./custom_processor.py:/rag-content/custom_processor.py:Z \
+  registry.redhat.io/lightspeed-core/rag-tool-rhel9:latest \
+  python ./custom_processor.py \
+    --output ./vector_db/custom_docs/1.0 \
+    --folder ./custom_docs/1.0/ \
+    --model-dir "" \
+    --model-name sentence-transformers/all-mpnet-base-v2 \
+    --index custom-docs-1_0 \
+    --vector-store-type llamastack-faiss
+----

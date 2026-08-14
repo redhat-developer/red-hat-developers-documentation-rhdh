@@ -1,0 +1,46 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="bring-your-own-knowledge-base-for-lightspeed_{context}"]
+= Bring Your Own Knowledge (BYOK) for {ls-short}
+
+[role="_abstract"]
+Extend {ls-short} with your organization's internal documentation by configuring a custom retrieval-augmented generation (RAG) knowledge source that {lcs-name} ({lcs-short}) searches during chat queries.
+
+By default, {ls-short} grounds AI responses in {product} ({product-very-short}) product documentation. With Bring Your Own Knowledge (BYOK), you can add additional knowledge sources — such as internal runbooks, architecture guides, or custom API references — so that {ls-short} can cite and retrieve content specific to your organization.
+
+[NOTE]
+====
+BYOK knowledge sources are cluster-wide and managed by Platform Engineers. Per-session, developer-managed file uploads use a separate mechanism and are not affected by BYOK configuration.
+====
+
+== Workflow overview
+
+The BYOK workflow involves the following steps:
+
+. *Prepare content*: Organize your documentation into a supported input format (text, Markdown, HTML, or PDF).
+. *Generate a vector database*: Use the {product} RAG Tool container image to embed your content and produce a FAISS vector database.
+. *Package a container image*: Bundle the vector database into a container image that can run as an init container in your deployment.
+. *Deploy the container*: Add the init container to your {product-very-short} deployment using the Helm chart or Operator.
+. *Configure `lightspeed-stack.yaml`*: Declare the BYOK source in the `byok_rag` section and activate it in the `rag` section.
+. *Verify*: Confirm that {ls-short} returns citations from your custom documentation.
+
+== Library mode and configuration scope
+
+{product-very-short} runs {lcs-short} in _library mode_ (`use_as_library_client: true`). In this mode, {lcs-short} and Llama Stack share the same container process. The `enrich_byok_rag()` function in {lcs-short} automatically generates all required Llama Stack configuration (vector I/O providers, storage backends, vector stores, and embedding models) from the `byok_rag` section of `lightspeed-stack.yaml`.
+
+As a result, you only need to edit `lightspeed-stack.yaml`. Do not edit `run.yaml` — that file applies to service mode deployments and is not used in {product-very-short}.
+
+== Init container pattern
+
+Custom knowledge content is delivered to {lcs-short} through an init container:
+
+* An init container runs before {lcs-short} starts and copies the vector database files to a shared `EmptyDir` volume.
+* The {lcs-short} container mounts the shared volume and reads the vector database from the path specified in `db_path` inside `lightspeed-stack.yaml`.
+
+== Multi-source configuration
+
+You can configure multiple BYOK sources simultaneously. Each source is declared as a separate entry in the `byok_rag` list. Use the `score_multiplier` field to control the relative ranking weight of results from each source when {lcs-short} merges results across sources.
+
+.Additional resources
+* xref:ref-byok-rag-configuration-fields-for-lightspeed-stack_{context}[BYOK RAG configuration fields for `lightspeed-stack.yaml`]
+* xref:solve-project-specific-challenges-with-notebooks_{context}[Solve project-specific challenges with notebooks]
