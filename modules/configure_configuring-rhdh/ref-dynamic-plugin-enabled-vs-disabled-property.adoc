@@ -1,0 +1,141 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="dynamic-plugin-enabled-vs-disabled-property_{context}"]
+= Enabled and disabled field comparison
+
+[role="_abstract"]
+This reference compares the `enabled` and `disabled` fields for dynamic plugin configuration.
+You can use this comparison to understand which field to use in your configuration and how the fields interact when both are present.
+
+== Field comparison
+
+The following table compares the `enabled` and `disabled` fields:
+
+[cols="1,2,2", options="header"]
+|===
+|Aspect
+|enabled field
+|disabled field
+
+|Status
+|Preferred ({product-short} 2.1.0 and later)
+|Legacy (supported for backward compatibility)
+
+|Semantics
+|`enabled: true` activates the plugin
+|`disabled: false` activates the plugin
+
+|Cognitive load
+|Positive logic (intuitive)
+|Double-negative logic (`disabled: false` to activate a plugin) requires careful reading and is more error-prone than positive logic
+
+|Alignment
+|Matches upstream {backstage} conventions
+|{product-short}-specific historical syntax
+
+|Recommendation
+|Use for new configurations
+|Maintain in existing configurations
+|===
+
+== Precedence rules
+
+When both the `enabled` and `disabled` fields are present in a plugin configuration, the `enabled` field takes precedence.
+
+.Decision tree for field precedence
+----
+Does the plugin configuration have an enabled field?
+├─ Yes → Use the enabled field value
+└─ No  → Use the disabled field value
+----
+
+.Precedence scenarios
+[source,yaml]
+----
+# Scenario 1: enabled only (plugin active)
+- package: example-plugin
+  enabled: true
+
+# Scenario 2: disabled only (plugin active - legacy syntax)
+- package: example-plugin
+  disabled: false
+
+# Scenario 3: both present, enabled takes precedence (plugin active)
+- package: example-plugin
+  enabled: true
+  disabled: true  # ignored
+
+# Scenario 4: both present, enabled takes precedence (plugin inactive)
+- package: example-plugin
+  enabled: false
+  disabled: false  # ignored
+
+# Scenario 5: neither field present (inherits from dynamic-plugins.default.yaml)
+- package: example-plugin
+  # enabled and disabled fields omitted
+  # Plugin state determined by dynamic-plugins.default.yaml entry
+----
+
+== Migration guidance
+
+No breaking changes exist.
+The `disabled` field continues to work in all {product-short} versions, including 2.1.0 and later.
+
+The following recommendations apply when migrating configurations:
+
+* New configurations should use the `enabled` field for clarity.
+* Existing configurations that use the `disabled` field can remain unchanged.
+* You can use mixed configurations where some plugins use `enabled` and others use `disabled` within the same `dynamic-plugins.yaml` file.
+* Gradual migration minimizes risk and is preferable to bulk updates.
+
+No automated migration tools are provided.
+Review each plugin configuration manually to ensure it is updated correctly.
+
+== Real-world examples
+
+The following examples show equivalent configurations by using both fields.
+
+.Enable the Argo CD plugin
+[source,yaml]
+----
+# Preferred syntax ({product-very-short} 2.1.0+)
+- package: ./dynamic-plugins/dist/backstage-plugin-argo-cd
+  enabled: true
+
+# Legacy syntax (backward compatible)
+- package: ./dynamic-plugins/dist/backstage-plugin-argo-cd
+  disabled: false
+----
+
+Disable a plugin that `dynamic-plugins.default.yaml` enables by default
+[source,yaml]
+----
+# Preferred syntax ({product-very-short} 2.1.0+)
+- package: ./dynamic-plugins/dist/example-default-plugin
+  enabled: false
+
+# Legacy syntax (backward compatible)
+- package: ./dynamic-plugins/dist/example-default-plugin
+  disabled: true
+----
+
+.Helm values syntax using enabled field
+[source,yaml]
+----
+global:
+  dynamic:
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: oci://registry.access.redhat.com/rhdh/backstage-community-plugin-analytics-provider-segment:{{inherit}}
+        enabled: true
+        pluginConfig:
+          analytics:
+            segment:
+              writeKey: ${SEGMENT_WRITE_KEY}
+----
+
+[role="_additional-resources"]
+.Additional resources
+* xref:dynamic-plugins-yaml-field-reference_{context}[Dynamic plugins configuration field reference]
+* xref:dynamic-plugins-configuration-file_{context}[Dynamic plugins configuration file]
