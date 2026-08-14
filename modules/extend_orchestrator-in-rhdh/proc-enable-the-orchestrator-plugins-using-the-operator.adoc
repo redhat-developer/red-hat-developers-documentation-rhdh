@@ -8,26 +8,27 @@ You can enable the Orchestrator plugins in {product-very-short} by configuring d
 
 .Prerequisites
 * You have installed {product-very-short} on {ocp-short}.
-* You have access to edit or create ConfigMaps in the namespace where the {product-custom-resource-type} CR is deployed.
+* You have the `edit` or `admin` role in the namespace, or have been granted RBAC permissions to create and update ConfigMaps (`kubectl create configmap`, `kubectl apply -f`).
 
 .Procedure
 
-. To enable the Orchestrator plugins with default settings, set `disabled: false` for the corresponding packages.
+. To enable the Orchestrator plugins with default settings, set `enabled: true` for the corresponding packages.
 +
-The `{{inherit}}` attribute in the package field automatically resolves to the default plugin version and configuration for your version of {product-very-short}.
+The `{{inherit}}` attribute resolves to the default plugin version *and default configuration* for your version of {product-short}.
+Configuration specified in `pluginConfig` will override these defaults.
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
-  disabled: false
+  enabled: true
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}"
-  disabled: false
+  enabled: true
   dependencies:
     - ref: sonataflow
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator:{{inherit}}"
-  disabled: false
+  enabled: true
 - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}"
-  disabled: false
+  enabled: true
 ----
 +
 [NOTE]
@@ -50,15 +51,15 @@ data:
         - dynamic-plugins.default.yaml
       plugins:
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator:{{inherit}}"
-          disabled: false
+          enabled: true
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend:{{inherit}}"
-          disabled: false
+          enabled: true
           dependencies:
             - ref: sonataflow
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator:{{inherit}}"
-          disabled: false
+          enabled: true
         - package: "oci://registry.access.redhat.com/rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets:{{inherit}}"
-          disabled: false
+          enabled: true
 ----
 
 . (Optional) Configure backend authentication to allow Orchestrator components to communicate with the {product-very-short} API.
@@ -114,6 +115,19 @@ spec:
       secrets:
         - name: backend-auth-secret
 ----
++
+[NOTE]
+====
+If plugins fail to load, check that the ConfigMap name matches exactly (case-sensitive) and that the ConfigMap exists in the same namespace: `oc get configmap orchestrator-plugin -n <namespace>`.
+====
 
 .Verification
-* In the {product-very-short} console, confirm that the Orchestrator frontend and backend features are available.
+. Navigate to the {product-short} console.
+. In the left sidebar, verify that the *Orchestrator* menu item appears.
+. Click *Orchestrator* and confirm that the workflow list page loads without errors.
+. Check the pod logs to confirm all Orchestrator plugins loaded successfully:
++
+[source,shell]
+----
+oc logs -n <namespace> deployment/<rhdh-deployment-name> -c backstage | grep orchestrator
+----

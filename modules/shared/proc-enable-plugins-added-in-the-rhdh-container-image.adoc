@@ -50,22 +50,33 @@ Alternatively, you can use an `oci://` plugin reference, and the special `{{inhe
 .Procedure
 . Start your {product-very-short} application and access the logs of the `install-dynamic-plugins` init container within the {product-very-short} pod.
 . Identify the {dynamic-plugins-reference-book-link}#red-hat-supported-plugins[Red Hat supported plugins] that the system disables by default.
-. If you need to provide additional configuration for the plugin, other than enabling it, copy the package configuration from the `dynamic-plugins.default.yaml` file you extracted above. For plugins which require no configuration, you can simply reference the plugin and set it to `disabled:false` as in the example below.
+. If you need to provide additional configuration for the plugin, other than enabling it, copy the package configuration from the `dynamic-plugins.default.yaml` file you extracted above (refer to the IMPORTANT callout at the start of this procedure). For plugins which require no configuration, you can simply reference the plugin and set it to `enabled: true` as in the example below.
 . To use the latest compatible plugin version, use the special tag `{{inherit}}`; this will also load the default configuration, which you can then override.
 . Open the plugin configuration file (Custom Resource or ConfigMap) and locate the plugin entry you want to enable.
 +
 The location of the plugin configuration file varies based on the deployment method. For more details, see {installing-and-viewing-plugins-book-link}[{installing-and-viewing-plugins-book-title}].
-. Change the `disabled` field to `false` and add the package name as follows:
+. Set the `enabled` field to `true` and add the package name as follows:
++
+[NOTE]
+====
+The `enabled` field requires {product-short} 2.1.0 or later. For earlier versions, use `disabled: false`.
+====
 +
 --
 [source,yaml]
 ----
 plugins:
   - package: oci://registry.access.redhat.com/rhdh/backstage-community-plugin-analytics-provider-segment:{{inherit}}
-    disabled: false
+    enabled: true
 ----
 +
 include::snip-inherit-tag-rollback-warning.adoc[lines=2..-1]
++
+[NOTE]
+====
+Use OCI URLs (`oci://registry...`) for plugins pulled from container registries.
+Use file paths (`./dynamic-plugins/dist/...`) for plugins preloaded in the container image wrapper format.
+====
 
 or using the deprecated wrapper syntax:
 
@@ -73,6 +84,15 @@ or using the deprecated wrapper syntax:
 ----
 plugins:
   - package: './dynamic-plugins/dist/backstage-community-plugin-analytics-provider-segment'
+    enabled: true
+----
+
+For backward compatibility, you can also use the legacy `disabled: false` syntax:
+
+[source,yaml]
+----
+plugins:
+  - package: oci://registry.access.redhat.com/rhdh/backstage-community-plugin-analytics-provider-segment:{{inherit}}
     disabled: false
 ----
 
@@ -81,4 +101,10 @@ For more information about how to configure dynamic plugins in {product-short}, 
 
 .Verification
 . Restart the {product-very-short} application and verify that the plugin is successfully activated and configured.
-. Verify the application logs for confirmation and ensure the plugin is functioning as expected.
+. Check the `install-dynamic-plugins` init container logs for successful plugin installation:
++
+[source,shell]
+----
+oc logs <pod-name> -c install-dynamic-plugins | grep "Successfully loaded plugin"
+----
+. Verify the plugin appears in the {product-short} UI (location varies by plugin type).
