@@ -1,0 +1,86 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="dynamic-plugins-yaml-field-reference_{context}"]
+= Dynamic plugins configuration field reference
+
+[role="_abstract"]
+This reference describes all available configuration fields for plugin entries in the `dynamic-plugins.yaml` file.
+You can use these fields to control plugin activation, specify package locations, verify package integrity, and provide plugin-specific configuration settings.
+
+.Plugin configuration fields
+[cols="1,1,1,2,2,1", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+|Valid values
+|Default
+
+|`package`
+|string
+|Yes
+|Specifies the plugin package location. This can be an OCI image URL, a file path, or an npm package name.
+|OCI URL (`oci://registry.example.com/plugin:tag`), file path (`./dynamic-plugins/dist/plugin-name`), or npm package (`@scope/package-name`)
+|N/A
+
+|`enabled`
+|boolean
+|No
+|Activates (`true`) or deactivates (`false`) the plugin. This field provides more intuitive semantics than the legacy `disabled` field. Available in {product-short} 2.1.0 and later.
+|`true`, `false`
+|Inherits from `dynamic-plugins.default.yaml`
+
+|`disabled`
+|boolean
+|No
+|Legacy field that deactivates (`true`) or activates (`false`) the plugin. Supported for backward compatibility. When both `enabled` and `disabled` fields are present, `enabled` takes precedence.
+|`true`, `false`
+|Inherits from `dynamic-plugins.default.yaml`
+
+|`integrity`
+|string
+|No
+|Provides a SHA-512 checksum for package verification. When specified, the plugin installation process verifies the downloaded package against this checksum.
+|SHA-512 hash string
+|None
+
+|`pluginConfig`
+|object
+|No
+|Contains plugin-specific configuration that is merged into the application configuration (`app-config.yaml`). The structure and required fields vary by plugin.
+|YAML object conforming to the plugin's configuration schema
+|`{}`
+|===
+
+== Field precedence rules
+
+When both the `enabled` and `disabled` fields are present in a plugin configuration, the `enabled` field takes precedence.
+This means the plugin activation state is determined solely by the `enabled` field value, and the `disabled` field is ignored.
+
+.Precedence behavior example
+[source,yaml]
+----
+plugins:
+  - package: example-plugin
+    enabled: true
+    disabled: true  # ignored - enabled takes precedence, plugin is active
+----
+
+In this example, the plugin is active because `enabled: true` takes precedence over `disabled: true`.
+
+== Migration from disabled to enabled field
+
+Existing configurations by using the `disabled` field continue to work without modification.
+The `disabled` field remains supported for backward compatibility.
+
+For new configurations, use the `enabled` field for clarity and to align with upstream {backstage} conventions.
+The `enabled` field uses positive logic (`enabled: true` to activate) instead of the double-negative logic required by the `disabled` field (`disabled: false` to activate).
+
+You can migrate existing configurations gradually.
+Mixed usage is supported at the file level, where some plugin entries use `enabled` and others use `disabled`.
+You should not specify both fields in the same plugin entry.
+
+[role="_additional-resources"]
+.Additional resources
+* xref:dynamic-plugin-enabled-vs-disabled-property_{context}[Enabled and disabled field comparison]
