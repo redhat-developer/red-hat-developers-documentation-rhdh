@@ -1,0 +1,96 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-catalog-entity-picker-for-orchestrator-workflows_{context}"]
+= Configure a catalog entity picker for Orchestrator workflows
+
+[role="_abstract"]
+To allow users to select a target entity and receive navigation links on the template completion page after running a workflow, configure a scaffolder template with a catalog entity picker and output links for the `orchestrator:workflow:run` action.
+
+.Prerequisites
+
+* You have enabled the `scaffolder-backend-module-orchestrator` plugin. For more information, see xref:configure-orchestrator-plugins_{context}[].
+* You have deployed a serverless workflow and it is available in the Orchestrator.
+* The target catalog entities exist in the {product-short} catalog.
+
+.Procedure
+
+. In your scaffolder template, add an `EntityPicker` parameter field to the `parameters` section:
++
+[source,yaml]
+----
+spec:
+  parameters:
+    - title: Select target entity
+      properties:
+        targetEntity:
+          title: Target Entity
+          type: string
+          description: Select the catalog entity to associate with this workflow run.
+          ui:field: EntityPicker
+----
++
+The `EntityPicker` field renders a searchable dropdown that lists available catalog entities.
++
+The selected value is returned as a catalog entity reference string (for example, `component:default/my-service`), which you can pass directly to the `target_entity` input (for example, `${{ parameters.targetEntity }}` or `${{ parameters.target_entity }}`).
++
+Optionally, use `ui:options.catalogFilter` to limit which catalog entities users can select:
++
+[source,yaml]
+----
+targetEntity:
+  title: Target Entity
+  type: string
+  description: Select the catalog entity to associate with this workflow run.
+  ui:field: EntityPicker
+  ui:options:
+    catalogFilter:
+      kind: Component
+----
+
+. In the `steps` section, pass the selected entity to the `target_entity` input of the `orchestrator:workflow:run` action:
++
+[source,yaml]
+----
+  steps:
+    - id: runWorkflow
+      name: Run the workflow
+      action: orchestrator:workflow:run
+      input:
+        workflow_id: <your_workflow_id>
+        target_entity: ${{ parameters.targetEntity }}
+        parameters:
+          name: ${{ parameters.name }}
+----
++
+where:
++
+`workflow_id`::: Replace `<your_workflow_id>` with the ID of the serverless workflow to run.
+`target_entity`::: The action resolves this value from the entity picker selection. Use a catalog entity reference in `kind:namespace/name` format (for example, `component:default/my-service`). Other formats can produce incorrect output URLs.
++
+[NOTE]
+====
+If you do not provide the `target_entity` input, the output links default to using the template's own entity reference.
+====
+
+. In the `output` section, add links that reference the action's output variables:
++
+[source,yaml]
+----
+  output:
+    links:
+      - title: Open workflow run
+        url: ${{ steps.runWorkflow.output.instanceUrl }}
+      - title: Open Workflows tab
+        url: ${{ steps.runWorkflow.output.catalogEntityUrl }}
+      - title: View all workflows
+        url: ${{ steps.runWorkflow.output.orchestratorWorkflowsUrl }}
+----
++
+These links appear on the template completion page after the workflow finishes. For more information about the available output variables, see xref:orchestrator-workflow-run-action-outputs_{context}[].
+
+.Verification
+
+. In {product-short}, navigate to *Create* and select your scaffolder template.
+. Use the entity picker to select a target entity and complete the template form.
+. On the completion page, verify that the output links are displayed and navigate to the correct pages.
+
