@@ -1,0 +1,179 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="configuration-key-mapping-from-old-to-new-front-end-system_{context}"]
+= Configuration key mapping from old to new front-end system
+
+[role="_abstract"]
+{product} {product-version} replaces the `dynamicPlugins.frontend` configuration with the `app.extensions` section. Use the old-to-new mapping to convert your existing plugin configuration during an upgrade.
+
+[id="page-route-configuration_{context}"]
+== Page route configuration
+
+Old `dynamicRoutes` configuration (removed in {product-version}):
+
+[source,yaml,subs="+quotes"]
+----
+dynamicPlugins:
+  frontend:
+    my-plugin-package:
+      dynamicRoutes:
+        - path: /my-page
+          importName: MyPluginPage
+          menuItem:
+            icon: dashboard
+            text: My Page
+----
+
+Page extensions are auto-discovered and loaded by default. Sidebar navigation entries are inferred automatically from `page:*` extensions. Use `app.extensions` to disable or override configuration if needed:
+
+[source,yaml]
+----
+app:
+  extensions:
+    - page:my-plugin/my-page:
+        config:
+          path: /my-page
+          title: My Page
+----
+
+[id="entity-page-card-configuration_{context}"]
+== Entity page card configuration
+
+Old `mountPoints` configuration (removed in {product-version}):
+
+[source,yaml,subs="+quotes"]
+----
+dynamicPlugins:
+  frontend:
+    my-plugin-package:
+      mountPoints:
+        - mountPoint: entity.page.overview/cards
+          importName: MyComponent
+          config:
+            if:
+              isKind: component
+            layout:
+              xs: { w: 12, h: 4 }
+----
+
+Entity card extensions are auto-discovered and loaded by default. Use `app.extensions` to disable or override configuration if needed. The legacy `config.if` filter maps to `config.filter` in the new system. The `config.layout` grid positioning is not available in `app.extensions`; card layout is determined by the card type (`info` for sidebar, `content` for main area) or by the plugin component.
+
+[source,yaml]
+----
+app:
+  extensions:
+    - entity-card:my-plugin/my-component:
+        config:
+          filter: kind:Component
+----
+
+[id="entity-page-tab-configuration_{context}"]
+== Entity page tab configuration
+
+Old `entityTabs` configuration (removed in {product-version}):
+
+[source,yaml,subs="+quotes"]
+----
+dynamicPlugins:
+  frontend:
+    my-plugin-package:
+      entityTabs:
+        - path: /my-tab
+          title: My Tab
+          mountPoint: entity.page.my-tab
+----
+
+Entity content extensions are auto-discovered and loaded by default. Use `app.extensions` to disable or override configuration if needed:
+
+[source,yaml]
+----
+app:
+  extensions:
+    - entity-content:my-plugin/my-tab:
+        config:
+          path: /my-tab
+          title: My Tab
+----
+
+[id="route-binding-configuration_{context}"]
+== Route binding configuration
+
+Old `routeBindings` configuration (removed in {product-version}):
+
+[source,yaml,subs="+quotes"]
+----
+dynamicPlugins:
+  frontend:
+    my-plugin-package:
+      routeBindings:
+        targets:
+          - importName: catalogPlugin
+        bindings:
+          - bindTarget: catalogPlugin.externalRoutes
+            bindMap:
+              viewTechDoc: techdocsPlugin.routes.docRoot
+----
+
+Equivalent `app.routes.bindings` configuration:
+
+[source,yaml]
+----
+app:
+  routes:
+    bindings:
+      catalog.viewTechDoc: techdocs.docRoot
+----
+
+Most plugins resolve route bindings automatically through the extension tree. Use `app.routes.bindings` only when you need to override a default binding.
+
+[id="icon-registration_{context}"]
+== Icon registration
+
+Old `appIcons` configuration (removed in {product-version}):
+
+[source,yaml,subs="+quotes"]
+----
+dynamicPlugins:
+  frontend:
+    my-plugin-package:
+      appIcons:
+        - name: myIcon
+          importName: MyIcon
+----
+
+Plugins register icons by using `IconBundleBlueprint` in their `/alpha` export. You do not need to add any `{my-app-config-file}` configuration.
+
+[id="summary-of-removed-configuration-keys_{context}"]
+== Summary of removed configuration keys
+
+[cols="1,1"]
+|===
+|Removed key|Replacement
+
+|`dynamicPlugins.frontend.<plugin>.dynamicRoutes`
+|`app.extensions` with `page:` entries (sidebar navigation is inferred automatically)
+
+|`dynamicPlugins.frontend.<plugin>.mountPoints`
+|`app.extensions` with `entity-card:` or `entity-content:` entries
+
+|`dynamicPlugins.frontend.<plugin>.entityTabs`
+|`app.extensions` with `entity-content:` entries
+
+|`dynamicPlugins.frontend.<plugin>.appIcons`
+|`IconBundleBlueprint` in plugin `/alpha` export
+
+|`dynamicPlugins.frontend.<plugin>.menuItems`
+|Sidebar entries are inferred from `page:*` extensions; use `app.extensions` ordering to control priority
+
+|`dynamicPlugins.frontend.<plugin>.routeBindings`
+|`app.routes.bindings` (most resolve automatically)
+
+|`dynamicPlugins.frontend.<plugin>.apiFactories`
+|`ApiBlueprint` in plugin `/alpha` export
+
+|`dynamicPlugins.frontend.<plugin>.scaffolderFieldExtensions`
+|`ScaffolderFieldExtensionBlueprint` in plugin `/alpha` export
+
+|`dynamicPlugins.frontend.<plugin>.translationResources`
+|`TranslationBlueprint` in plugin `/alpha` export
+|===

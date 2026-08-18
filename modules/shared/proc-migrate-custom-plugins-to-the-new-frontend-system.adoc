@@ -1,0 +1,95 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-custom-plugins-to-ensure-compatibility-after-upgrade_{context}"]
+= Migrate custom plugins to ensure compatibility after upgrade
+
+[role="_abstract"]
+Migrate your custom front-end plugins to the new front-end system by adding an `/alpha` export with extension blueprints before upgrading to {product} {product-version}. Plugins without an `/alpha` export do not load in {product} {product-version}.
+
+.Prerequisites
+
+* You have a custom front-end plugin that uses the old front-end system.
+* You have access to the plugin source code.
+* You have installed the required {product} CLI (`@red-hat-developer-hub/cli`).
+
+.Procedure
+
+. Identify the plugin features that require migration by reviewing your `dynamicPlugins.frontend` configuration for the plugin. Note which wiring types the plugin uses, such as `dynamicRoutes`, `mountPoints`, `entityTabs`, or `appIcons`.
+
+. Add the required blueprint dependencies to your plugin's `package.json` file:
++
+[source,bash]
+----
+yarn add @backstage/frontend-plugin-api
+----
++
+If your plugin adds entity page content, also add:
++
+[source,bash]
+----
+yarn add @backstage/plugin-catalog-react
+----
+
+. Create an `/alpha` export file in your plugin's `src` directory (for example, `src/alpha.ts` or `src/alpha/index.ts`). Define your extensions by using the appropriate blueprint for each feature:
++
+[source,typescript]
+----
+import { createFrontendPlugin } from '@backstage/frontend-plugin-api';
+import { EntityCardBlueprint } from '@backstage/plugin-catalog-react/alpha';
+
+const myEntityCard = EntityCardBlueprint.make({
+  name: 'my-component',
+  params: {
+    filter: entity => entity.kind === 'Component',
+    loader: () => import('./components/MyComponent').then(m => <m.MyComponent />),
+  },
+});
+
+export default createFrontendPlugin({
+  pluginId: 'my-plugin',
+  extensions: [myEntityCard],
+});
+----
+
+. Add the `/alpha` export to your plugin's `package.json` file:
++
+[source,json]
+----
+{
+  "name": "@my-org/backstage-plugin-my-plugin",
+  "exports": {
+    ".": "./src/index.ts",
+    "./alpha": "./src/alpha.ts"
+  }
+}
+----
+
+. Export the plugin as a dynamic plugin by using the {product-very-short} CLI:
++
+[source,bash]
+----
+npx @red-hat-developer-hub/cli plugin export
+----
+
+. Remove the old `dynamicPlugins.frontend` wiring configuration for this plugin from your `{my-app-config-file}` file.
+
+. Verify that the plugin extensions load. Extensions from an installed plugin are auto-discovered and loaded by default. If you need to disable, reorder, or override extension configuration, use the `app.extensions` section of your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+app:
+  extensions:
+    - entity-card:my-plugin/my-component:
+        config:
+          filter: kind:Component
+----
+
+.Verification
+
+. Start your {product} instance with the migrated plugin.
+. Verify that the plugin features appear in the expected locations.
+. Confirm that conditional rendering, such as entity kind filtering, works as expected.
+
+.Troubleshooting
+
+If a plugin does not load after migration, check the browser console for extension resolution errors. Verify the `/alpha` export and that extension IDs in `app.extensions` use the same `pluginId` declared in `createFrontendPlugin`. The `pluginId` is the short frontend-system identifier (for example, `my-plugin`), not the npm package name (for example, `@my-org/backstage-plugin-my-plugin`).
