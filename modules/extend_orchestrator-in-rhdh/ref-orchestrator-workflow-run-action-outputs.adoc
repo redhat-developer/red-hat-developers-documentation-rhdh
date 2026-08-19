@@ -1,0 +1,65 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="orchestrator-workflow-run-action-outputs_{context}"]
+= Orchestrator scaffolder action outputs
+
+[role="_abstract"]
+The `orchestrator:workflow:run` scaffolder action provides three output variables that you can reference in template output links. After a workflow runs, the template completion page displays links to the workflow run, the catalog entity page, and the Orchestrator workflows list.
+
+The following table describes the output variables:
+
+[cols="1,1,2", options="header"]
+|===
+| Output variable
+| URL pattern
+| Description
+
+| `orchestratorWorkflowsUrl`
+| `/orchestrator/workflows`
+| A static link to the Orchestrator workflows list page. This URL remains the same regardless of which entity or workflow you run.
+
+| `catalogEntityUrl`
+| `/catalog/_<namespace>_/_<kind>_/_<name>_/workflows`
+| A dynamic link to the *Workflows* tab on the catalog entity page for the target entity. The action resolves the URL segments from the target entity reference.
+
+| `instanceUrl`
+| `/orchestrator/entity/_<namespace>_/_<kind>_/_<name>_/_<workflow_id>_/_<instance_id>_`
+| A dynamic link to the specific workflow run instance page. The action resolves the URL segments from the target entity reference, workflow ID, and run instance ID.
+|===
+
+The `catalogEntityUrl` and `instanceUrl` outputs construct their URLs from a target entity reference. The action resolves the target entity as follows:
+
+. If the template step specifies the `target_entity` input parameter, the action uses that entity reference.
+. If the step does not provide `target_entity`, the action falls back to the template's own entity reference.
+
+The action parses the entity reference string, for example `component:default/my-service`, to extract the kind, namespace, and name segments for the URL.
+
+The following scaffolder template excerpt shows how to reference all three output variables as links on the template completion page:
+
+[source,yaml]
+----
+spec:
+  steps:
+    - id: runWorkflow
+      name: Run the workflow
+      action: orchestrator:workflow:run
+      input:
+        workflow_id: my-workflow
+        target_entity: ${{ parameters.targetEntity }}
+        parameters:
+          name: ${{ parameters.name }}
+  output:
+    links:
+      - title: Open workflow run
+        url: ${{ steps.runWorkflow.output.instanceUrl }}
+      - title: Open Workflows tab
+        url: ${{ steps.runWorkflow.output.catalogEntityUrl }}
+      - title: View all workflows
+        url: ${{ steps.runWorkflow.output.orchestratorWorkflowsUrl }}
+----
+
+For example, if the target entity is `component:default/my-service`, the workflow ID is `greeting`, and the instance ID is `instance-123`, the resolved URLs are:
+
+* `orchestratorWorkflowsUrl`: `/orchestrator/workflows`
+* `catalogEntityUrl`: `/catalog/default/component/my-service/workflows`
+* `instanceUrl`: `/orchestrator/entity/default/component/my-service/greeting/instance-123`
