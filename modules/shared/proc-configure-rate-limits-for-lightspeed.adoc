@@ -1,0 +1,58 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-rate-limits-for-the-intelligent-assistant_{context}"]
+= Configure rate limits for the {ia-short}
+
+[role="_abstract"]
+Configure per-user rate limits for the {ia-short} to prevent abuse, control large language model (LLM) inference costs, and protect backend resources.
+
+Rate limiting is active by default. Requests are tracked per authenticated user entity reference within a fixed 1-minute window. When a user exceeds the configured limit, the server returns an HTTP `429 Too Many Requests` response with a `Retry-After` header and a JSON error body containing a `RateLimitExceeded` error type.
+
+The {ia-short} applies rate limits by tier:
+
+Expensive (default: 25 requests/min/user):: Applies to `POST /v1/query` (LLM inference), notebook document uploads, and Retrieval Augmented Generation (RAG) queries.
+General (default: 200 requests/min/user):: Applies to all other authenticated endpoints, including conversation listing, Model Context Protocol (MCP) server management, feedback, and notebook session create, read, update, and delete operations.
+Excluded (no limit):: Applies to health check endpoints (`/health`, `/notebooks/health`).
+
+.Prerequisites
+
+* You have deployed and configured the {ia-short} instance.
+* You have administrative access to the {product-very-short} host platform filesystem.
+
+.Procedure
+
+. In your `{my-app-config-file}` file, add or modify the `rateLimit` block under the `lightspeed` section:
++
+[source,yaml]
+----
+lightspeed:
+  rateLimit:
+    expensive:
+      max: 25
+    general:
+      max: 200
+----
++
+`expensive.max`:: Maximum requests per minute per user for expensive endpoints such as LLM inference. Set to `0` to disable rate limiting for this tier.
+`general.max`:: Maximum requests per minute per user for general endpoints. Set to `0` to disable rate limiting for this tier.
++
+The following example shows a tightened configuration for a small deployment with limited LLM resources:
++
+[source,yaml]
+----
+lightspeed:
+  rateLimit:
+    expensive:
+      max: 10
+    general:
+      max: 50
+----
+
+. Save the file.
+
+. Restart the {product-very-short} service to apply the updated configuration.
+
+.Verification
+
+. Log in to {product-very-short} and submit requests to the {ia-short} chat interface that exceed the configured `expensive` limit.
+. Confirm that the server returns an HTTP `429 Too Many Requests` response with a `Retry-After` header indicating when to retry.
