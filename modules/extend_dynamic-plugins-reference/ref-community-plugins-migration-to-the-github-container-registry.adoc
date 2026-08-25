@@ -6,7 +6,9 @@
 = Community plugins migration to the GitHub Container Registry
 
 [role="_abstract"]
-Starting with {product} 1.9, community-supported plugins are no longer distributed as bundled wrappers in the {product-short} container image. Update your dynamic plugins configuration to use the new GitHub Container Registry paths.
+Starting with {product} 1.9, community-supported plugins are no longer distributed as bundled wrappers in the {product-short} container image.
+Your existing configuration contains the backend configuration for these plugins, however, you must now explicitly add the frontend configuration that was previously bundled implicitly.
+Update your dynamic plugins configuration to use the new GitHub Container Registry paths and add the required frontend configuration.
 
 [IMPORTANT]
 ====
@@ -14,21 +16,28 @@ Starting with {product} 1.9, community-supported plugins are no longer distribut
 
 These plugins are now built using GitHub Actions and published exclusively to the GitHub Container Registry (ghcr.io).
 
-If you use the plugins listed in this section, you must update your dynamic plugins configuration (in `dynamic-plugins-default.yaml`, your ConfigMap or CustomResource) to use the new `oci://ghcr.io/...` paths.
+If you use the plugins listed in this section, you must:
+
+* Update package paths from `./dynamic-plugins/dist/...` to `oci://ghcr.io/...`
+* Add explicit frontend configuration under `pluginConfig:` for each plugin (previously bundled implicitly)
+
+Without both changes, plugins will fail to load or frontend features will not function correctly.
 ====
 
 == What changed
 
 In {product-short} 1.8 and earlier, community plugins were:
 
-* Wrapped and bundled in the {product-short} container image.
-* Referenced by using local paths, such as `./dynamic-plugins/dist/<plugin-name>`.
+* Wrapped and bundled in the {product-short} container image
+* Referenced by using local paths, such as `./dynamic-plugins/dist/<plugin-name>`
+* Configured with implicit frontend configuration included in the bundle
 
 Starting with {product-short} 1.9, community plugins are:
 
-* Built using GitHub Actions from the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays] repository.
-* Published to `ghcr.io/redhat-developer/rhdh-plugin-export-overlays`.
-* Referenced by using OCI registry paths, such as `oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<oci-artifact-name>:<tag>`.
+* Built using GitHub Actions from the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[rhdh-plugin-export-overlays] repository
+* Published to `ghcr.io/redhat-developer/rhdh-plugin-export-overlays`
+* Referenced by using OCI registry paths, such as `oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/<oci-artifact-name>:<tag>`
+* Requiring explicit frontend configuration under `pluginConfig:` for each plugin
 +
 include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
 
@@ -37,22 +46,56 @@ include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
 To migrate your configuration:
 
 . Identify plugins in your ConfigMap or CustomResource that use local paths starting with `./dynamic-plugins/dist/`.
-. Find the corresponding `ghcr.io` path in the following migration table:
-+
+
+. For each identified plugin, retrieve its frontend configuration:
+.. Navigate to the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[{product-short} Overlay Repository]
+.. Locate the plugin's metadata directory: `workspaces/__<plugin-name>__/metadata/__<package-name>__/`
+.. Find `appConfigExamples[0].content` — this contains the frontend configuration that goes under `pluginConfig:`
+.. Copy this configuration to add to your plugin entry
+
+. Find the corresponding `ghcr.io` OCI path in the migration table below.
+
+. Update your configuration with both the new OCI path and the explicit frontend configuration.
+
+== Migration example
+
+The following example shows the complete migration for the Jenkins plugin:
+
 [source,yaml]
 ----
 # Before ({product-very-short} 1.8 and earlier)
+# Frontend configuration was implicit in the bundled plugin
 plugins:
   - package: ./dynamic-plugins/dist/backstage-community-plugin-jenkins
     disabled: false
 
 # After ({product-very-short} 1.9+)
+# Frontend configuration MUST be explicit
 plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
     disabled: false
+    pluginConfig:
+      # Frontend configuration from appConfigExamples[0].content
+      # Found in: workspaces/jenkins/metadata/backstage-community-plugin-jenkins/
+      dynamicPlugins:
+        frontend:
+          backstage-community.plugin-jenkins:
+            mountPoints:
+              - mountPoint: entity.page.ci/cards
+                importName: EntityJenkinsContent
+                config:
+                  layout:
+                    gridColumn: 1 / -1
+                  if:
+                    allOf:
+                      - isJenkinsAvailable
 ----
 
-. Update your configuration to use the new OCI registry path.
+[NOTE]
+====
+The exact frontend configuration structure varies by plugin.
+Always copy the configuration from `appConfigExamples[0].content` in the overlay repository for the specific plugin you are migrating.
+====
 
 
 == Understanding the tag format
@@ -281,13 +324,24 @@ The following plugins remain bundled in 1.9 while transitioning to `ghcr.io` dis
 
 == Troubleshooting
 
+*Plugin loads but UI features do not work*
+
+If a plugin appears in the loaded plugins list but frontend features (UI components, pages, or dashboards) do not display:
+
+. Verify that you added the `pluginConfig` section with frontend configuration from `appConfigExamples[0].content` in the overlay repository
+. Check the browser console for JavaScript errors related to the plugin
+. Review {product-short} logs to confirm the plugin loaded successfully
+
+Frontend configuration is required for all community plugins in {product-very-short} 1.9+.
+Without this configuration, backend functionality may work but UI features will fail.
+
 *Plugin not loading after migration*
 
-If a plugin fails to load, perform the following checks:
+If a plugin fails to load completely, perform the following checks:
 
-. Verify the `ghcr.io` path is correct and the image tag or digest exists.
-. Confirm your cluster has network access to `ghcr.io`.
-. Review {product-short} logs for OCI pull errors.
+. Verify the `ghcr.io` path is correct and the image tag or digest exists
+. Confirm your cluster has network access to `ghcr.io`
+. Review {product-short} logs for OCI pull errors
 
 include::{docdir}/artifacts/snip-tag-for-sha256-tip.adoc[]
 
@@ -318,4 +372,4 @@ Go to the link:https://github.com/orgs/redhat-developer/packages?tab=packages&q=
 
 == Additional resources
 
-* link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[{product-very-short} Plugin Export Overlays GitHub repository]
+* link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[{product-very-short} Plugin Export Overlays GitHub repository] — contains frontend configuration examples in `appConfigExamples[0].content` for each plugin
