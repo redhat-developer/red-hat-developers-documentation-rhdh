@@ -10,10 +10,7 @@ Run the {product-very-short} Upgrade Helper skill to produce a prioritised repor
 
 * You have link:https://docs.anthropic.com/en/docs/claude-code/getting-started[Claude Code] installed and authenticated.
 * You have cloned or installed the link:https://github.com/redhat-developer/rhdh-users-skill-pack[`rhdh-users-skill-pack`] repository, or you have added the skill pack to your Claude Code configuration.
-* You have access to your current {product-very-short} configuration files:
-** `app-config.yaml` — the {product} application runtime configuration file.
-** Your dynamic plugins configuration YAML — the file that controls plugin enablement, versions, and overrides.
-* Optional: You have a file containing your runtime environment variable values (for example, a `.env` file) that affect {product-very-short} behaviour.
+* You have access to your current {product-very-short} configuration files, such as your application configuration YAML, Helm values file, dynamic plugins YAML, or {backstage} CR file.
 
 [IMPORTANT]
 ====
@@ -24,42 +21,64 @@ Do not include API keys, passwords, tokens, or other credentials in any files yo
 
 . Open a terminal and change to the directory that contains your {product-very-short} configuration files.
 
-. Run the skill by starting Claude Code with the `rhdh-users-skill-pack` active and invoking the upgrade helper skill:
+. Start the upgrade helper as a Claude Code slash command. Provide each configuration file with a separate `--config` flag. The skill auto-detects the file type from the file content, so Helm values files, `app-config` files, dynamic plugins files, and {backstage} CR files all use the same `--config` flag:
 +
 [source,terminal]
 ----
-$ claude --skill rhdh-upgrade-helper \
+/rhdh-upgrade-helper \
   --from <current_version> \
   --to <target_version> \
   --config app-config.yaml \
-  --plugins dynamic-plugins.yaml
+  --config dynamic-plugins.yaml
 ----
 +
 Replace `<current_version>` with your installed {product-very-short} version (for example, `1.8`) and `<target_version>` with the version you are upgrading to (for example, `1.10`).
 
-. Optional: Provide your environment variable file to include runtime configuration in the analysis:
+. Optional: If your configuration files are collected in a directory, use `--config-path` to scan all files in that directory at once:
 +
 [source,terminal]
 ----
-$ claude --skill rhdh-upgrade-helper \
+/rhdh-upgrade-helper \
   --from <current_version> \
   --to <target_version> \
-  --config app-config.yaml \
-  --plugins dynamic-plugins.yaml \
-  --env .env
+  --config-path ./my-configs/
 ----
 
-. Optional: If you have additional configuration files relevant to your deployment, provide them using repeated `--config` flags:
+. Optional: If you have additional individual configuration files relevant to your deployment, provide them by repeating the `--config` flag:
 +
 [source,terminal]
 ----
-$ claude --skill rhdh-upgrade-helper \
+/rhdh-upgrade-helper \
   --from 1.5 \
   --to 1.9 \
   --config app-config.yaml \
   --config app-config.production.yaml \
-  --plugins dynamic-plugins.yaml
+  --config dynamic-plugins.yaml
 ----
+
+. Optional: To avoid re-entering flags on every run, create a `.rhdh-upgrade-helper.yaml` file in your working directory and define all inputs there:
++
+[source,yaml]
+----
+from: "1.8"
+to: "1.10"
+configs:
+  - ./values.yaml
+  - ./app-config.yaml
+  - ./dynamic-plugins.yaml
+----
++
+When this file is present, run the skill with no flags:
++
+[source,terminal]
+----
+/rhdh-upgrade-helper
+----
++
+[NOTE]
+====
+If you run `/rhdh-upgrade-helper` without passing `--config` or `--config-path` flags and without a `.rhdh-upgrade-helper.yaml` file in the current directory, the skill enters interactive mode and asks intake questions to build an environment profile. Providing configuration files is therefore optional; you can rely on interactive mode if you prefer.
+====
 
 . Review the predicted-issues report that the skill writes to your terminal. The report lists each issue in priority order. Address the issues listed before starting the upgrade.
 

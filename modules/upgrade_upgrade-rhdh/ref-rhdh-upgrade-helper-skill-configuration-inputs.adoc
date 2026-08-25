@@ -4,39 +4,19 @@
 = {product-very-short} Upgrade Helper skill flags and inputs
 
 [role="_abstract"]
-The {product-very-short} Upgrade Helper skill requires specific configuration files to analyze your {product} deployment. The following tables describe the required and optional inputs, and the available command-line flags.
+The {product-very-short} Upgrade Helper skill accepts command-line flags and an optional configuration file as inputs. The following tables describe the required and optional flags.
 
-== Required inputs
+== Required flags
 
-[cols="1,2,2",options="header"]
+[cols="1,2",options="header"]
 |===
-|Input |Flag |Description
+|Flag |Description
 
-|Application configuration
-|`--config <path>`
-|Path to your `app-config.yaml` file. This file contains the {product} application runtime configuration. You can specify this flag more than once to include additional configuration files, such as environment-specific overlays.
-
-|Dynamic plugins configuration
-|`--plugins <path>`
-|Path to your dynamic plugins configuration YAML file. This file controls which plugins are enabled, their versions, and any overrides applied to your deployment.
+|`--to <version>`
+|The {product-very-short} version you intend to upgrade to. For example, `1.10` or `2.1`. You can omit this flag only if you define `to:` in a `.rhdh-upgrade-helper.yaml` file in your working directory.
 |===
 
-== Optional inputs
-
-[cols="1,2,2",options="header"]
-|===
-|Input |Flag |Description
-
-|Environment variables
-|`--env <path>`
-|Path to a file containing runtime environment variable values (for example, a `.env` file). Include only variables that affect {product-very-short} behaviour. Do not include secrets.
-
-|Additional configuration files
-|`--config <path>` (repeated)
-|Path to any additional configuration files relevant to your deployment, such as production overlays or custom backend configuration files.
-|===
-
-== Version flags
+== Optional flags
 
 [cols="1,2",options="header"]
 |===
@@ -45,8 +25,11 @@ The {product-very-short} Upgrade Helper skill requires specific configuration fi
 |`--from <version>`
 |The {product-very-short} version currently installed in your environment. For example, `1.8`.
 
-|`--to <version>`
-|The {product-very-short} version you intend to upgrade to. For example, `1.10` or `2.1`.
+|`--config <path>`
+|Path to a configuration file to analyze. The skill auto-detects the file type from the file content, so Helm values files, `app-config` files, dynamic plugins files, and {backstage} CR files all use this flag. You can specify this flag more than once to include multiple files.
+
+|`--config-path <dir>`
+|Path to a directory containing configuration files. The skill scans the directory and analyzes all recognized configuration files it finds. Use instead of, or in addition to, repeated `--config` flags.
 |===
 
 When you use `--from` and `--to` to specify a range that skips multiple minor versions, the skill produces a cumulative report covering all breaking changes, configuration changes, and plugin compatibility issues across every skipped release.
@@ -57,5 +40,5 @@ The skill checks all provided input files for content that appears to contain se
 
 [IMPORTANT]
 ====
-Do not provide configuration files or environment variable exports that contain live secret values. The skill warns against including secrets, but you are responsible for ensuring that sensitive data is not present in any files you provide.
+Do not provide configuration files that contain live secret values. The skill warns against including secrets, but you are responsible for ensuring that sensitive data is not present in any files you provide.
 ====
