@@ -1,0 +1,63 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="inspect-kubernetes-resources-by-using-mcp-tools_{context}"]
+= Inspect live Kubernetes resources from an AI client by using MCP tools
+
+[role="_abstract"]
+Use the Kubernetes Model Context Protocol (MCP) tools, provided by the `kubernetes-mcp-extras` overlay plugin, so that an MCP client can discover the registered Kubernetes clusters and fetch the live Kubernetes resources for a catalog entity.
+
+include::{docdir}/artifacts/snip-developer-preview-mcp.adoc[]
+
+The Kubernetes plugin (`@backstage/plugin-kubernetes-backend`) must be installed and configured in the target backend. No new {product-very-short} or {backstage} permissions are introduced by these tools. Each tool forwards the caller's own on-behalf-of token to the `kubernetes-backend` plugin, so results are governed by whatever the caller's credentials already allow against the existing Kubernetes plugin API and cluster configuration.
+
+The following table lists the available Kubernetes MCP tools:
+
+[cols="1,2", options="header"]
+|===
+| Tool | Description
+| `get-kubernetes-clusters` | Lists all Kubernetes clusters registered with this {backstage} instance.
+| `get-kubernetes-resources-for-entity` | Fetches all Kubernetes resources associated with a catalog entity across all registered clusters.
+|===
+
+[id="kubernetes-get-clusters_{context}"]
+== Get Kubernetes clusters (get-kubernetes-clusters)
+
+Lists all Kubernetes clusters registered with this {backstage} instance. Each entry includes its internal name (the identifier used in other tools and in configuration), an optional human-readable title, and an optional `dashboardUrl`. Use this tool to discover which clusters exist before you look up resources on a specific cluster. This tool takes no input parameters.
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `clusters[]` | List of all registered Kubernetes clusters. | `[{"name": "production", "title": "Production Cluster"}, {"name": "staging", "title": "Staging Cluster", "dashboardUrl": "https://dashboard.staging.example.com"}]`
+| `clusters[].name` | Unique internal name of the cluster, used as an identifier in other tools. | `"production"`
+| `clusters[].title` | Human-readable display name for the cluster, if configured. | `"Production Cluster"`
+| `clusters[].dashboardUrl` | URL to the Kubernetes dashboard for this cluster. | `"https://dashboard.staging.example.com"`
+|===
+
+[id="kubernetes-get-resources-for-entity_{context}"]
+== Get Kubernetes resources for entity (get-kubernetes-resources-for-entity)
+
+Fetches all Kubernetes resources associated with a catalog entity across all registered clusters, grouped by cluster. Each entry includes the cluster info, resources grouped by type (for example, deployments, pods, and services), pod metrics (if the metrics-server is installed), and any errors. Use this tool to inspect the live Kubernetes state of a service, such as rollout status, pod health, or replica counts.
+
+The following table describes the input parameters:
+
+[cols="1,2,1", options="header"]
+|===
+| Parameter | Description | Example
+| `name` | The name of the catalog entity. | `"my-service"`
+| `kind` | The kind of the catalog entity. Defaults to `Component` if omitted. | `"Component"`
+| `namespace` | The namespace of the catalog entity. Defaults to `default` if omitted. | `"default"`
+|===
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `items[]` | List of `ClusterObjects`, one per cluster. Each entry has cluster info, resources grouped by type, pod metrics, and any errors. | `[{"cluster": {"name": "production"}, "resources": [{"type": "deployments", "resources": [...]}]}]`
+| `items[].cluster` | Identity info for the cluster that this entry belongs to. | `{"name": "production"}`
+| `items[].resources` | Resources for this entity on this cluster, grouped by resource type. | `[{"type": "deployments", "resources": [...]}]`
+| `items[].podMetrics` | Pod CPU and memory metrics, if the metrics-server is installed on the cluster. | `[]`
+| `items[].errors` | Any errors encountered while fetching resources for this cluster. | `[]`
+|===

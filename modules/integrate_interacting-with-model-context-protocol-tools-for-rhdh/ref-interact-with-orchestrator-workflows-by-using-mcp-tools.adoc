@@ -1,0 +1,166 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="interact-with-orchestrator-workflows-by-using-mcp-tools_{context}"]
+= Run and track workflows from an AI client by using Orchestrator MCP tools
+
+[role="_abstract"]
+Use the Orchestrator Model Context Protocol (MCP) tools, provided by the `orchestrator-backend` plugin, so that an MCP client can discover workflow definitions, fetch a workflow input schema, run workflows, and list or inspect workflow runs.
+
+include::{docdir}/artifacts/snip-developer-preview-mcp.adoc[]
+
+These tools call the internal Orchestrator service directly and enforce the same permissions as the Orchestrator REST API. No new permissions are introduced: the tools reuse the existing RBAC logic, including conditional policies and the deprecated per-workflow permission fallback.
+
+The following table lists the available Orchestrator MCP tools:
+
+[cols="1,2", options="header"]
+|===
+| Tool | Description
+| `list-workflows` | Lists the workflow definitions visible to the caller.
+| `get-workflow-schema` | Fetches the input JSON schema for a workflow definition.
+| `execute-workflow` | Starts a new run of a workflow with the given inputs.
+| `list-instances` | Lists workflow runs visible to the caller.
+| `get-instance` | Fetches a single workflow run by its instance ID.
+|===
+
+[id="orchestrator-list-workflows_{context}"]
+== List workflows (list-workflows)
+
+Lists the workflow definitions visible to the caller, optionally filtered by name (case-insensitive substring match) or by the workflow's last run status. Pagination is supported through the `limit` and `offset` parameters.
+
+The following table describes the input parameters:
+
+[cols="1,2,1", options="header"]
+|===
+| Parameter | Description | Example
+| `name` | Filters workflows whose name contains this substring (case-insensitive). | `"onboarding"`
+| `status` | Filters workflows by their last run's status. | `"COMPLETED"`
+| `limit` | Maximum number of workflows to return (1–100, default 50). | `20`
+| `offset` | Number of workflows to skip, for paging through results (default 0). | `0`
+|===
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `workflows[]` | List of workflow definitions visible to the caller. | `[{"workflowId": "onboard-employee", "name": "Onboard New Employee", "status": "COMPLETED"}]`
+| `workflows[].workflowId` | The workflow definition ID. | `"onboard-employee"`
+| `workflows[].name` | The human-readable workflow name. | `"Onboard New Employee"`
+| `workflows[].status` | The workflow's last run status. | `"COMPLETED"`
+|===
+
+[id="orchestrator-get-workflow-schema_{context}"]
+== Get workflow input schema (get-workflow-schema)
+
+Fetches the input JSON schema, including required and optional parameters, for a workflow definition. Call this tool before `execute-workflow` to learn which inputs the workflow accepts.
+
+The following table describes the input parameters:
+
+[cols="1,2,1", options="header"]
+|===
+| Parameter | Description | Example
+| `workflowId` | The workflow definition ID to fetch the schema for. | `"onboard-employee"`
+|===
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `workflowId` | The workflow definition ID. | `"onboard-employee"`
+| `inputSchema` | The workflow's input JSON schema, or an empty object (`{}`) if the workflow does not declare one. | `{"type": "object", "properties": {"employeeName": {"type": "string"}}, "required": ["employeeName"]}`
+|===
+
+[id="orchestrator-execute-workflow_{context}"]
+== Execute workflow (execute-workflow)
+
+Starts a new run of a workflow with the given inputs. Inputs are validated against the workflow's own input schema before execution. This tool requires the `orchestrator.workflow.use` permission.
+
+The following table describes the input parameters:
+
+[cols="1,2,1", options="header"]
+|===
+| Parameter | Description | Example
+| `workflowId` | The workflow definition ID to execute. | `"onboard-employee"`
+| `inputs` | The workflow's input parameters, validated against its input schema. See <<orchestrator-get-workflow-schema_{context},Get workflow input schema (get-workflow-schema)>>. | `{"employeeName": "Jane Doe", "team": "platform"}`
+|===
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `instanceId` | The new workflow instance ID. | `"b8e7f2a1-3c4d-4e6f-8a9b-0c1d2e3f4a5b"`
+| `status` | The instance status immediately after execution. This is a best-effort lookup and falls back to `"PENDING"` if the instance is not yet indexed. | `"PENDING"`
+|===
+
+[id="orchestrator-list-instances_{context}"]
+== List workflow instances (list-instances)
+
+Lists workflow runs visible to the caller, optionally filtered by status. Callers without the `orchestrator.instanceAdminView` permission see only the instances that they initiated. Pagination is supported through the `limit` and `offset` parameters.
+
+The following table describes the input parameters:
+
+[cols="1,2,1", options="header"]
+|===
+| Parameter | Description | Example
+| `status` | Filters instances by their current status. | `"ACTIVE"`
+| `limit` | Maximum number of instances to return (1–100, default 50). | `25`
+| `offset` | Number of instances to skip, for paging through results (default 0). | `0`
+|===
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `instances[]` | List of workflow instances visible to the caller. | `[{"instanceId": "b8e7f2a1-...", "workflowId": "onboard-employee", "status": "ACTIVE"}]`
+| `instances[].instanceId` | The workflow instance ID. | `"b8e7f2a1-3c4d-4e6f-8a9b-0c1d2e3f4a5b"`
+| `instances[].workflowId` | The workflow definition ID. | `"onboard-employee"`
+| `instances[].workflowName` | The human-readable workflow name. | `"Onboard New Employee"`
+| `instances[].status` | The instance status. | `"ACTIVE"`
+| `instances[].startTime` | When the instance started, as an ISO timestamp. | `"2026-07-27T14:22:03.000Z"`
+| `instances[].endTime` | When the instance ended, as an ISO timestamp. | `"2026-07-27T14:25:41.000Z"`
+|===
+
+[id="orchestrator-get-instance_{context}"]
+== Get workflow instance (get-instance)
+
+Fetches a single workflow instance by its instance ID, returning its workflow name, status, start and end times, and output data. This tool enforces the same ownership check as `list-instances`: the `orchestrator.instanceAdminView` permission is required to view an instance that you did not initiate.
+
+The following table describes the input parameters:
+
+[cols="1,2,1", options="header"]
+|===
+| Parameter | Description | Example
+| `instanceId` | The workflow instance (process) ID to fetch. | `"b8e7f2a1-3c4d-4e6f-8a9b-0c1d2e3f4a5b"`
+|===
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `instanceId` | The workflow instance ID. | `"b8e7f2a1-3c4d-4e6f-8a9b-0c1d2e3f4a5b"`
+| `workflowId` | The workflow definition ID. | `"onboard-employee"`
+| `workflowName` | The human-readable workflow name. | `"Onboard New Employee"`
+| `status` | The instance status. | `"COMPLETED"`
+| `startTime` | When the instance started, as an ISO timestamp. | `"2026-07-27T14:22:03.000Z"`
+| `endTime` | When the instance ended, as an ISO timestamp. | `"2026-07-27T14:25:41.000Z"`
+| `output` | The workflow output data, as a key-value map. | `{"ticketUrl": "https://issues.example.com/ONBOARD-123"}`
+|===
+
+[id="orchestrator-mcp-permissions-summary_{context}"]
+== Orchestrator MCP tool permissions
+
+The following table summarizes the permission that each Orchestrator MCP tool enforces:
+
+[cols="1,2", options="header"]
+|===
+| Tool | Permission enforced
+| `list-workflows` | `orchestrator.workflow`, filtered per-workflow by conditional policies.
+| `get-workflow-schema` | `orchestrator.workflow` for the specific workflow.
+| `execute-workflow` | `orchestrator.workflow.use` for the specific workflow.
+| `list-instances` | `orchestrator.workflow`. The `orchestrator.instanceAdminView` permission is required to see instances initiated by other users.
+| `get-instance` | `orchestrator.workflow` for the instance's workflow, plus an instance-ownership check unless `orchestrator.instanceAdminView` is granted.
+|===
