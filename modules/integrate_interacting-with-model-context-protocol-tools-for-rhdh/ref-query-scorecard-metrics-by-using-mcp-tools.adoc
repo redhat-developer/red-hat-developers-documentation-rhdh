@@ -1,0 +1,82 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="query-scorecard-metrics-by-using-mcp-tools_{context}"]
+= Check project health from an AI client by using Scorecard MCP tools
+
+[role="_abstract"]
+Use the Scorecard Model Context Protocol (MCP) tools, provided by the `scorecard-backend` plugin, so that an MCP client can discover the available metrics and fetch the latest scored metric values for a catalog entity.
+
+include::{docdir}/artifacts/snip-developer-preview-mcp.adoc[]
+
+These tools enforce the same permissions as the Scorecard REST API. No new permissions are introduced.
+
+The following table lists the available Scorecard MCP tools:
+
+[cols="1,2", options="header"]
+|===
+| Tool | Description
+| `list-metrics` | Lists all available scorecard metrics and their datasources.
+| `get-entity-metrics` | Returns the latest scorecard metric values for a catalog entity.
+|===
+
+[id="scorecard-list-metrics_{context}"]
+== List metrics (list-metrics)
+
+Lists all available scorecard metrics and their datasources. Results are filtered by any conditional `HAS_METRIC_ID` RBAC policy applied to `scorecard.metric.read`. This tool takes no input parameters.
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `metrics[]` | List of available scorecard metrics. | `[{"id": "github.openPRs", "title": "GitHub open PRs", "description": "Count of open Pull Requests in GitHub", "type": "number"}]`
+| `metrics[].id` | Metric identifier. | `"github.openPRs"`
+| `metrics[].title` | Display title. | `"GitHub open PRs"`
+| `metrics[].description` | What the metric measures. | `"Count of open Pull Requests in GitHub"`
+| `metrics[].type` | Value type: `number` or `boolean`. | `"number"`
+| `metrics[].unit` | Optional display unit. | `"%"`
+| `metrics[].history` | Whether historical time-series data is available for this metric. | `true`
+| `metrics[].defaultVisualization` | Suggested visualization: `value` or `sparkline`. | `"sparkline"`
+| `metrics[].collectorIds` | Collector IDs used as data sources, for composite metrics. | `["github:deployments"]`
+|===
+
+[id="scorecard-get-entity-metrics_{context}"]
+== Get entity metrics (get-entity-metrics)
+
+Returns the latest scorecard metric values for a catalog entity. Provide the entity reference to retrieve all scored metrics with their current values, thresholds, and statuses. This tool requires `catalog.entity.read` for the entity in addition to `scorecard.metric.read`.
+
+The following table describes the input parameters:
+
+[cols="1,2,1", options="header"]
+|===
+| Parameter | Description | Example
+| `entityRef` | Entity reference in `kind:namespace/name` format. | `"component:default/my-service"`
+|===
+
+The following table describes the output fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Output field | Description | Example
+| `metrics[]` | List of metric results for the entity. | See the following rows.
+| `metrics[].id` | Metric identifier. | `"github.openPRs"`
+| `metrics[].status` | Overall metric calculation status: `success` or `error`. | `"success"`
+| `metrics[].metadata` | Metric metadata: `title`, `description`, `type`, `unit`, `history`, `defaultVisualization`, and `collectorIds`. | `{"title": "GitHub open PRs", "type": "number"}`
+| `metrics[].result.value` | The latest computed value. | `8`
+| `metrics[].result.timestamp` | When the value was calculated, as an ISO timestamp. | `"2026-07-28T22:55:00.000Z"`
+| `metrics[].result.thresholdResult.status` | Threshold evaluation status: `success` or `error`. | `"success"`
+| `metrics[].result.thresholdResult.evaluation` | The matched threshold category. | `"warning"`
+| `metrics[].error` | Error message, present only when `status` is `error`. | `"Failed to reach GitHub API"`
+|===
+
+[id="scorecard-mcp-permissions-summary_{context}"]
+== Scorecard MCP tool permissions
+
+The following table summarizes the permission that each Scorecard MCP tool enforces:
+
+[cols="1,2", options="header"]
+|===
+| Tool | Permission enforced
+| `list-metrics` | `scorecard.metric.read`, with conditional `HAS_METRIC_ID` policies applied to filter the result set.
+| `get-entity-metrics` | `catalog.entity.read` for the requested `entityRef`, and `scorecard.metric.read`.
+|===
