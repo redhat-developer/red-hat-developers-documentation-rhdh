@@ -1,0 +1,37 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="transition-from-the-sidecar-connector_{context}"]
+= Transition from the sidecar connector
+
+[role="_abstract"]
+Earlier {developer-preview} versions of the connector used a sidecar-based architecture that integrated with the Kubeflow Model Registry. The {kserve-kubeflow-connector-name} replaces this with a standalone backend plugin. Remove the old sidecar configuration and add the new plugin configuration.
+
+include::{docdir}/artifacts/snip-developer-preview-kserve-kubeflow.adoc[]
+
+The previous sidecar-based deployment ran three containers (`location`, `storage-rest`, and `rhoai-normalizer`) alongside the {product-very-short} backend container. The standalone connector runs inside the {product-very-short} backend container instead.
+
+[IMPORTANT]
+====
+Migration of data from the sidecar-based deployment is not provided. After you install the standalone connector, it rediscovers your model servers directly from KServe `InferenceService` resources. Any data that was cached by the previous deployment, such as the `bac-import-model` config map, is not reused.
+====
+
+.Prerequisites
+
+* You have cluster-admin access to the cluster where the sidecar-based connector was deployed.
+
+.Procedure
+
+. Remove the `location`, `storage-rest`, and `rhoai-normalizer` sidecar containers from your {product-very-short} deployment:
+.. If you installed {product-very-short} by using the Operator, remove the sidecar containers from your {product-very-short} custom resource (CR).
+.. If you installed {product-very-short} by using the Helm chart, remove the sidecar containers from the *Deployment* specification.
+. Remove the configuration that was specific to the sidecar deployment:
+.. The provider configuration that pointed to the local sidecar, for example the `modelCatalog` provider with `baseUrl: http://localhost:9090`.
+.. The sidecar-specific `ServiceAccount`, `ClusterRole`, `ClusterRoleBinding`, `Role`, `RoleBinding`, and token `Secret`.
+.. The `RoleBinding` in the Kubeflow Model Registry namespace that granted the connector read access to the model registry.
+.. The `bac-import-model` config map that cached the model metadata.
+. Install the standalone connector and its companion plugins, and create the new Kubernetes RBAC resources. For more information, see xref:install-the-kserve-kubeflow-connector_{context}[Install the {kserve-kubeflow-connector-name}].
+. Add the new connector configuration, including the cluster access mode and, optionally, the Kubeflow Model Catalog URL. For more information, see xref:configure-the-kserve-kubeflow-connector_{context}[Configure the {kserve-kubeflow-connector-name}].
+
+.Verification
+
+* Restart your {product-very-short} instance and confirm that your model servers appear in the {product-very-short} Catalog as `AiModelServerAPI` entities, and that no sidecar containers remain in the {product-very-short} pod.

@@ -1,0 +1,47 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="troubleshoot-connector-functionality_{context}"]
+= Troubleshooting connector functionality
+
+[role="_abstract"]
+The {kserve-kubeflow-connector-name} runs as a set of dynamic plugins inside the {product-very-short} backend container. To diagnose connector issues, verify that the plugins are installed and inspect the plugin logs in the `backstage-backend` container.
+
+The actual contents of the diagnostic data are not part of any product guaranteed specification, and can change at any time.
+
+== Verify dynamic plugin status
+
+Validate that the connector dynamic plugins are successfully installed into your {product-very-short} pod by using the following command:
+
+[source,bash,subs=+attributes]
+----
+$ oc logs -c install-dynamic-plugins deployment/<your {product-very-short} deployment>
+----
+
+In the `install-dynamic-plugins` logs, check that the following plugins installed successfully:
+
+* `red-hat-developer-hub-backstage-plugin-kserve-kubeflow-connector-backend`
+* `red-hat-developer-hub-backstage-plugin-catalog-backend-module-ai-model-server`
+* `red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog`
+* `red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend`
+
+== Inspect plugin logs
+
+View the connector plugin logs in the `backstage-backend` container. Look for messages that indicate the connector is watching KServe `InferenceService` resources and that the entity provider is discovering model servers.
+
+To enable debug logging, set the `LOG_LEVEL` environment variable to `debug` on the `backstage-backend` container. For more information, see {monitoring-and-logging-book-link}[{monitoring-and-logging-book-title}].
+
+== Verify connector REST routes
+
+The connector exposes {backstage}-authenticated REST routes that the companion plugins consume:
+
+* `GET /list` returns all discovered model servers and models.
+* `GET /models/{blank}pass:[<model>]/{blank}pass:[<version>]` returns metadata for a specific model version.
+* `GET /modelcard/{blank}pass:[<sourceId>]/{blank}pass:[<path>]` returns the model-card Markdown for TechDocs generation.
+
+If model servers do not appear in the catalog, confirm the following:
+
+* The `ServiceAccount` that the connector uses has `get`, `list`, and `watch` permissions on `serving.kserve.io` `InferenceService` resources.
+* The cluster connection is configured correctly, including the `url`, `serviceAccountToken`, and TLS fields. For more information, see xref:configure-tls-for-the-connector_{context}[Configuring TLS for the connector].
+* The `AiModelServerAPI` kind is allowed in your catalog rules.
+
+If model cards do not appear as TechDocs, confirm that the `InferenceService` resources are annotated with `rhdh.io/catalog-source` and `rhdh.io/catalog-model`, and that the Kubeflow Model Catalog URL is reachable from the {product-very-short} backend.
