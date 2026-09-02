@@ -6,6 +6,11 @@
 [role="_abstract"]
 Import GitLab users and groups to the {product} software catalog.
 
+[IMPORTANT]
+====
+The configuration is only provided for `GitlabDiscoveryEntityProvider`. Legacy `GitLabDiscoveryProcessor` is not supported.
+====
+
 .Prerequisites
 * You have xref:share-secrets-with-gitlab_{secrets-context}[shared secrets with GitLab].
 
@@ -41,6 +46,38 @@ integrations:
     - host: $\{GITLAB_HOST}
       token: $\{GITLAB_TOKEN}
 ----
+* Optional: To import multiple groups, use the following configuration:
++
+[source,yaml]
+----
+catalog:
+  providers:
+    gitlab:
+      group1:
+        host: ${GITLAB_HOST}
+        orgEnabled: true
+        group: group1
+        restrictUsersToGroup: true
+        schedule:
+          frequency: { minutes: 1 }
+          timeout: { minutes: 15 }
+      group2:
+        host: ${GITLAB_HOST}
+        orgEnabled: true
+        group: group2
+        restrictUsersToGroup: true
+        schedule:
+          frequency: { minutes: 1 }
+          timeout: { minutes: 15 }
+      group3:
+        host: ${GITLAB_HOST}
+        orgEnabled: true
+        group: group3
+        restrictUsersToGroup: true
+        schedule:
+          frequency: { minutes: 1 }
+          timeout: { minutes: 15 }
+----
 
 `host`::
 Enter your GitLab instance address: pass:c,a,q[`${GITLAB_HOST}`].
@@ -50,6 +87,11 @@ Set to `true` to enable the ingestion of GitLab organizational data, such as use
 
 `group`::
 Enter your configured link:https://docs.gitlab.com/user/group/[GitLab parent group]: `${GITLAB_PARENT_ORG}`.
+
+[IMPORTANT]
+====
+When importing multiple groups, there should be one provider per root level parent group, because each one is scoped to a single root group.
+====
 
 `relations`::
 Optional. Specify the types of group memberships to include during ingestion. You can use the following values:
@@ -63,10 +105,10 @@ Optional. Includes members of any descendant groups as members of the current gr
 Optional. Includes members of any invited groups as members of the current group.
 
 `groupPattern`::
-Optional. Filters found groups based on provided pattern. Defaults to `[\s\S]*`, which means to not filter anything.
+Optional. Filters found groups based on provided pattern. Only targets the subgroups found within the specified root level group in the organization. Defaults to `[\s\S]*`, which means to not filter anything.
 
 `restrictUsersToGroup`::
-Set to `true` to import only users who are direct members of the configured group.
+Set to `true` to import only users who are direct members of all ingested groups.
 
 `includeUsersWithoutSeat`::
 Set to `true` to include users who do not occupy a paid seat. This setting applies only to GitLab SaaS.
