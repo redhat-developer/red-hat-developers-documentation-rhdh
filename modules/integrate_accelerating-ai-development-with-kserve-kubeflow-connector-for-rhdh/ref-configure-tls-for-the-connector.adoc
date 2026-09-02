@@ -1,0 +1,98 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="configure-tls-for-the-connector_{context}"]
+= Configuring TLS for the connector
+
+[role="_abstract"]
+When the connector communicates with the cluster API server with TLS verification enabled, it needs the certificate authority (CA) certificate that signed the API server external serving certificate. This CA is not necessarily the one that is mounted inside pods for internal cluster communication.
+
+The connector `caData` field, like the {backstage} Kubernetes plugin, expects a base64-encoded PEM CA bundle. This is the same format as the `certificate-authority-data` field in a kubeconfig file. For general {product-very-short} TLS configuration in Kubernetes, see the {configuring-book-link}#configure-an-rhdh-instance-with-a-tls-connection-in-kubernetes_configuring-rhdh[{configuring-book-title}] guide.
+
+== Clusters with a publicly trusted certificate
+
+If the cluster API server presents a publicly trusted certificate, for example a cluster that uses a Let's Encrypt certificate, you do not need to provide `caData`. The certificate chain is already trusted by the default certificate store. Set `skipTLSVerify` to `false` and omit `caData`:
+
+[source,yaml]
+----
+catalog:
+  providers:
+    modelCatalog:
+      kserve-kubeflow-connector:
+        cluster-1:
+          name: my-cluster
+          url: '${K8S_CLUSTER_URL}'
+          serviceAccountToken: '${K8S_SA_TOKEN}'
+          skipTLSVerify: false
+          # caData is not required when the API server uses a publicly trusted certificate
+----
+
+To confirm that the API server presents a publicly trusted certificate, run the following command and check that the issuer is a public CA:
+
+[source,bash]
+----
+$ echo | openssl s_client -connect api.my-cluster.example.com:6443 -showcerts 2>/dev/null | openssl x509 -noout -issuer -subject
+----
+
+== Clusters with a self-signed or internal CA
+
+If the cluster API server uses a self-signed or internally signed certificate, provide the CA bundle in the `caData` field:
+
+[source,yaml]
+----
+catalog:
+  providers:
+    modelCatalog:
+      kserve-kubeflow-connector:
+        cluster-1:
+          name: my-cluster
+          url: '${K8S_CLUSTER_URL}'
+          serviceAccountToken: '${K8S_SA_TOKEN}'
+          skipTLSVerify: false
+          caData: '${K8S_CA_DATA}' # base64-encoded PEM CA bundle
+----
+
+You can obtain the base64-encoded CA bundle in several ways:
+
+* From a kubeconfig file, extract the `certificate-authority-data` value, which is already base64-encoded:
++
+[source,bash]
+----
+$ oc config view --raw -o jsonpath='{.clusters[?(@.name=="<cluster-name>")].cluster.certificate-authority-data}'
+----
+
+* From the cluster CA config map, when you are already logged in:
++
+[source,bash]
+----
+$ oc get configmap kube-root-ca.crt -n openshift-config -o jsonpath='{.data.ca\.crt}' | base64 -w0
+----
+
+* From the API server directly, when you have network access:
++
+[source,bash]
+----
+$ echo | openssl s_client -connect api.my-cluster.example.com:6443 -showcerts 2>/dev/null | awk '/BEGIN CERT/,/END CERT/' | base64 -w0
+----
+
+== Skipping TLS verification for development
+
+For a local development cluster, you can skip TLS verification instead of providing `caData`:
+
+[source,yaml]
+----
+catalog:
+  providers:
+    modelCatalog:
+      kserve-kubeflow-connector:
+        cluster-1:
+          name: my-dev-cluster
+          url: '${K8S_CLUSTER_URL}'
+          serviceAccountToken: '${K8S_SA_TOKEN}'
+          skipTLSVerify: true
+          # caData is not required when TLS verification is skipped
+----
+
+[IMPORTANT]
+====
+The `skipTLSVerify` field applies only to the Kubernetes API calls that the connector makes through the Kubernetes client, such as the `InferenceService` informer. Calls that fetch model cards from the Kubeflow Model Catalog route perform their own TLS validation and ignore `skipTLSVerify`. To make the connector trust a self-signed CA for all of its HTTPS calls, set the `NODE_EXTRA_CA_CERTS` environment variable on the {product-very-short} backend container to the path of the CA PEM bundle. Do not disable TLS verification for all calls in production.
+====
