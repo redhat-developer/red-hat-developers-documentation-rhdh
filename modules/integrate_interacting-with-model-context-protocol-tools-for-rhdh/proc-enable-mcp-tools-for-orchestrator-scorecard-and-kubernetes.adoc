@@ -1,0 +1,71 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-mcp-tools-for-orchestrator-scorecard-and-kubernetes_{context}"]
+= Enable AI clients to work with Orchestrator, Scorecard, and Kubernetes data
+
+[role="_abstract"]
+Install the plugins that expose Orchestrator, Scorecard, and Kubernetes capabilities as Model Context Protocol (MCP) tools, and register each plugin as an action source so that MCP clients can discover and run its tools.
+
+include::{docdir}/artifacts/snip-developer-preview-mcp.adoc[]
+
+Each of these tools is registered with the {backstage} Actions Registry and enforces the same role-based access control (RBAC) permissions as the corresponding plugin's REST API. No new permissions are introduced.
+
+.Prerequisites
+
+* Your {product-very-short} instance is installed and running.
+* The `mcp-actions-backend` plugin is installed and updated to version `0.1.14` or later, which is the version that registers these tools. See xref:install-mcp-server-plugins[Install MCP server plugins].
+* To use the Orchestrator MCP tools, the Orchestrator plugin is installed and configured. See link:{orchestrator-book-link}[{orchestrator-book-title}].
+* To use the Scorecard MCP tools, the Scorecard plugin is installed and configured. See link:{scorecard-plugin-book-link}[{scorecard-plugin-book-title}].
+* To use the Kubernetes MCP tools, the Kubernetes plugin (`@backstage/plugin-kubernetes-backend`) is installed and configured with at least one cluster.
+
+.Procedure
+
+. In your dynamic plugins ConfigMap (for example, `dynamic-plugins-rhdh.yaml`), install the plugins whose tools you want to expose:
++
+--
+* Orchestrator backend:
++
+[source,yaml]
+----
+- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-orchestrator-backend:<tag>
+  disabled: false
+----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+* Scorecard backend:
++
+[source,yaml]
+----
+- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend:<tag>
+  disabled: false
+----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+* Kubernetes MCP extras:
++
+[source,yaml]
+----
+- package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-kubernetes-mcp-extras:<tag>
+  disabled: false
+----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+--
+
+. Register each plugin whose tools you want to expose in the action registry by adding it to `backend.actions.pluginSources` in your `app-config.yaml` file:
++
+[source,yaml]
+----
+backend:
+  actions:
+    pluginSources:
+      - orchestrator
+      - scorecard
+      - kubernetes-mcp-extras
+----
+
+. Save the configuration and restart your {product-very-short} instance to apply the changes.
+
+.Verification
+
+* Confirm that the plugins are active by checking the {product-very-short} logs for `loaded` status messages, or by verifying that the corresponding MCP tools appear in your MCP client's tool registry.
