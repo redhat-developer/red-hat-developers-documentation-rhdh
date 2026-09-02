@@ -1,0 +1,137 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="dynamic-plugins-values_{context}"]
+= Dynamic plugins values
+
+[role="_abstract"]
+You can configure the dynamic plugins system, including plugin includes, the plugin list, volume settings for the plugins root directory, and the init container that installs plugins at startup. You can also configure the catalog index for plugin discovery in the Extensions UI.
+
+[cols="1m, 1, 1, 1m"]
+|===
+d|*Key* |*Description* |*Type* d|*Default*
+
+|dynamicPlugins
+|Dynamic plugins system configuration.
+|object
+e|See child keys
+
+|dynamicPlugins.includes
+a|Array of YAML files listing dynamic plugins to include. Relative paths are resolved from the working directory of the init container (`/opt/app-root/src`).
+|list
+|["dynamic-plugins.default.yaml"]
+
+|dynamicPlugins.plugins
+|List of dynamic plugins. Every item defines the plugin `package` as an NPM package spec or OCI reference.
+|list
+|[]
+
+|dynamicPlugins.maxEntrySize
+|Maximum uncompressed size (in bytes) of a single dynamic plugin entry.
+|integer
+|40000000
+
+|dynamicPlugins.volume
+|Volume configuration for the dynamic plugins root directory.
+|object
+e|See child keys
+
+|dynamicPlugins.volume.type
+a|Volume type: `ephemeral` (auto-provisioned PVC per pod), `emptyDir` (scratch space, lost on pod restart), or `pvc` (pre-existing PersistentVolumeClaim).
+|string
+|"ephemeral"
+
+|dynamicPlugins.volume.ephemeral.storageClassName
+|StorageClass for the ephemeral volume. When empty, uses `defaultStorageClass` or the cluster default.
+|string
+|""
+
+|dynamicPlugins.volume.ephemeral.accessModes
+|Access modes for the ephemeral PVC.
+|list
+|["ReadWriteOnce"]
+
+|dynamicPlugins.volume.ephemeral.resources.requests.storage
+|Storage request for the ephemeral PVC.
+|string
+|"5Gi"
+
+|dynamicPlugins.volume.emptyDir
+|Raw Kubernetes emptyDir volume spec. Used when type is `emptyDir`.
+|object
+|{}
+
+|dynamicPlugins.volume.pvc.claimName
+|Name of the PersistentVolumeClaim to use. Used when type is `pvc`.
+|string
+|""
+
+|dynamicPlugins.initContainer
+|Configuration for the `install-dynamic-plugins` init container.
+|object
+e|See child keys
+
+|dynamicPlugins.initContainer.commandOverride
+|Override the default command.
+|list
+|[]
+
+|dynamicPlugins.initContainer.argsOverride
+|Override the default arguments.
+|list
+|[]
+
+|dynamicPlugins.initContainer.extraArgs
+|Extra arguments appended after the default arguments. Ignored when `argsOverride` is set.
+|list
+|[]
+
+|dynamicPlugins.initContainer.extraEnv
+|Extra environment variables appended after the system env vars.
+|list
+|[]
+
+|dynamicPlugins.initContainer.extraVolumeMounts
+|Additional volume mounts appended after the system mounts.
+|list
+|[]
+
+|dynamicPlugins.initContainer.resources
+a|Resource requests and limits. Defaults: requests cpu=250m, memory=256Mi; limits cpu=1000m, memory=2.5Gi, ephemeral-storage=5Gi.
+|object
+e|See description
+
+|dynamicPlugins.initContainer.securityContext
+|Security context for the init container. Defaults to the value of `containerSecurityContext`.
+|object
+|{}
+
+|catalogIndex
+|Plugin catalog index image configuration for plugin discovery in the Extensions UI.
+|object
+e|See child keys
+
+|catalogIndex.image.registry
+|Catalog index image registry.
+|string
+|"quay.io"
+
+|catalogIndex.image.repository
+|Catalog index image repository.
+|string
+|"rhdh/plugin-catalog-index"
+
+|catalogIndex.image.tag
+|Catalog index image tag.
+|string
+|"next"
+
+|catalogIndex.image.digest
+|Overrides the image tag with an image digest.
+|string
+|""
+
+|catalogIndex.extraImages
+a|Extra catalog index images for additional plugin discovery. Each item must include `registry`, `repository`, and `tag` fields; `name` and `digest` are optional. Only catalog entities are extracted from extra images.
+|list
+|[]
+|===
