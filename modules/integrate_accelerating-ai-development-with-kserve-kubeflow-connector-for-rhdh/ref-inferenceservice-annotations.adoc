@@ -1,0 +1,77 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="inferenceservice-annotations_{context}"]
+= KServe InferenceService annotations reference
+
+[role="_abstract"]
+The connector reads `rhdh.io/` annotations from KServe `InferenceService` resources to control how it builds the generated `AiModelServerAPI` catalog entities and associates Kubeflow Model Catalog model cards. Add these annotations to an `InferenceService` to adjust the resulting entity.
+
+== Annotations that control entity generation
+
+Use the following annotations to adjust how the model server metadata is built when the connector imports an `InferenceService` into the catalog.
+
+|===
+|Annotation |Entity field populated |Description
+
+|`rhdh.io/system`
+|`spec.system`
+|Links the generated entity to a parent {backstage} System entity.
+
+|`rhdh.io/serverType`
+|`spec.serverType`
+|Overrides the detected model serving protocol or platform type, for example `openai-v1` or `grpc`.
+
+|`rhdh.io/owner`
+|`spec.owner`
+|Overrides the entity owner. When omitted, the connector uses the configured `default-owner`.
+
+|`rhdh.io/lifecycle`
+|`spec.lifecycle`
+|Overrides the entity lifecycle, for example `production` or `experimental`. When omitted, the connector uses the configured `default-lifecycle`.
+
+|`rhdh.io/default`
+|`spec.models`
+|Sets the default model for the model server.
+
+|`rhdh.io/model-*`
+|`spec.models`
+|Creates multiple model objects from a single `InferenceService`. Add one annotation for each model that the server exposes.
+|===
+
+== Annotations that associate a model card
+
+To import a model card from the Kubeflow Model Catalog as {product-very-short} TechDocs, annotate the `InferenceService` with the catalog source and model that identify the model card. When both annotations are present, the connector fetches the model card and makes it available for TechDocs generation.
+
+|===
+|Annotation |Description
+
+|`rhdh.io/catalog-source`
+|Identifies the Kubeflow Model Catalog source that contains the model card.
+
+|`rhdh.io/catalog-model`
+|Identifies the model within the catalog source whose model card is imported.
+|===
+
+== Example annotated InferenceService
+
+The following example shows an `InferenceService` that sets the owner, lifecycle, and server type, and references a model card in the Kubeflow Model Catalog:
+
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: my-model-server
+  namespace: my-models
+  annotations:
+    rhdh.io/owner: my-team
+    rhdh.io/lifecycle: production
+    rhdh.io/serverType: openai-v1
+    rhdh.io/catalog-source: my-catalog-source
+    rhdh.io/catalog-model: my-model
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: pytorch
+----

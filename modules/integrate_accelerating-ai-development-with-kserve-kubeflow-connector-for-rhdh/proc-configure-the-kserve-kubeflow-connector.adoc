@@ -1,0 +1,110 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-the-kserve-kubeflow-connector_{context}"]
+= Configure the {kserve-kubeflow-connector-name}
+
+[role="_abstract"]
+Configure the {kserve-kubeflow-connector-name} with access to the cluster that hosts your KServe `InferenceService` resources. The connector supports two modes for cluster access: reuse a cluster already configured for the {backstage} Kubernetes plugin, or supply the connection details directly.
+
+The connector integrates with the following API versions:
+
+* KServe `serving.kserve.io/v1beta1` `InferenceService` resources.
+* Kubeflow Model Catalog `v1alpha1` model card sources.
+
+.Prerequisites
+
+* You have installed the {kserve-kubeflow-connector-name-short} and its companion plugins. For more information, see xref:install-the-kserve-kubeflow-connector_{context}[Install the {kserve-kubeflow-connector-name}].
+* You have the URL of the cluster API server, and a `ServiceAccount` token with the required permissions.
+
+.Procedure
+
+. Configure cluster access by using one of the following modes.
++
+--
+* *Mode 1: Reuse the {backstage} Kubernetes plugin cluster*
++
+If the {backstage} Kubernetes plugin is already configured with access to the cluster that hosts KServe, point the connector at that cluster by using the `kubernetesPluginRef` field. Add the following configuration to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+kubernetes:
+  serviceLocatorMethod:
+    type: 'multiTenant'
+  clusterLocatorMethods:
+    - type: 'config'
+      clusters:
+        - name: my-k8s-cluster
+          url: '${K8S_CLUSTER_URL}'
+          serviceAccountToken: '${K8S_SA_TOKEN}'
+          authProvider: serviceAccount
+          skipTLSVerify: false
+          caData: '${K8S_CA_DATA:-}'
+catalog:
+  providers:
+    modelCatalog:
+      kserve-kubeflow-connector:
+        cluster-1:
+          name: my-k8s-cluster
+          kubernetesPluginRef: my-k8s-cluster
+          default-owner: '${OWNER:-default-owner}'
+          default-lifecycle: '${LIFECYCLE:-production}'
+----
++
+For more information about configuring cluster access for the {backstage} Kubernetes plugin, see the {configuring-book-link}[{configuring-book-title}] guide.
+
+* *Mode 2: Direct cluster connection*
++
+If the {backstage} Kubernetes plugin is not installed, or it does not define the target cluster, supply the connection fields directly on the connector cluster entry. Add the following configuration to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+catalog:
+  providers:
+    modelCatalog:
+      kserve-kubeflow-connector:
+        cluster-1:
+          name: my-k8s-cluster
+          url: '${K8S_CLUSTER_URL:-}'
+          serviceAccountToken: '${K8S_SA_TOKEN:-}'
+          skipTLSVerify: false
+          caData: '${K8S_CA_DATA:-}'
+          default-owner: '${OWNER:-default-owner}'
+          default-lifecycle: '${LIFECYCLE:-production}'
+----
+--
++
+where:
++
+`cluster-1`:: A unique key that identifies the cluster entry. You can define multiple cluster entries.
+`name`:: The display name of the cluster.
+`kubernetesPluginRef`:: In Mode 1, the name of the cluster that is defined under `kubernetes.clusterLocatorMethods`.
+`url`:: In Mode 2, the URL of the cluster API server.
+`serviceAccountToken`:: In Mode 2, the `ServiceAccount` token that the connector uses to authenticate to the cluster.
+`skipTLSVerify`:: Whether to skip TLS verification of the cluster API server certificate. Set this to `false` in production.
+`caData`:: The base64-encoded PEM certificate authority (CA) bundle for the cluster API server. For more information, see xref:configure-tls-for-the-connector_{context}[Configuring TLS for the connector].
+`default-owner`:: The default owner that is applied to generated entities when an `InferenceService` does not specify an owner.
+`default-lifecycle`:: The default lifecycle that is applied to generated entities when an `InferenceService` does not specify a lifecycle.
+
+. Optional: To import model cards from the Kubeflow Model Catalog, configure the model catalog URL by adding the `kubeflow-model-catalog-url` field to the cluster entry:
++
+[source,yaml]
+----
+catalog:
+  providers:
+    modelCatalog:
+      kserve-kubeflow-connector:
+        cluster-1:
+          name: my-k8s-cluster
+          kubernetesPluginRef: my-k8s-cluster
+          default-owner: my-team
+          default-lifecycle: production
+          kubeflow-model-catalog-url: https://model-catalog.apps.example.com
+----
++
+where:
++
+`kubeflow-model-catalog-url`:: The URL of the Kubeflow Model Catalog service. When you omit this field, the connector attempts to discover the model catalog route automatically on the cluster.
+
+.Verification
+
+* Restart your {product-very-short} instance and confirm that model servers from your cluster appear in the {product-very-short} Catalog as `AiModelServerAPI` entities.
