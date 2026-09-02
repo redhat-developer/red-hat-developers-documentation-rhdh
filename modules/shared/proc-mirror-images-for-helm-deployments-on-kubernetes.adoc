@@ -12,14 +12,17 @@ Isolate image references, copy them manually to your internal registry, and upda
 
 .Procedure
 
+// OKP is deployed as a standalone service (image: registry.redhat.io/offline-knowledge-portal/rhokp-rhel9),
+// not a sidecar or init container. Helm values key confirmed against rhdh-chart PR 500 (pending merge).
+// On non-OpenShift platforms, OKP is opt-in: the chart deploys it only when you set an Ingress host.
 . Extract the image references from the default values file of the chart:
 +
 [source,terminal,subs=+attributes]
 ----
 $ helm show values redhat-developer-hub --repo https://charts.openshift.io/ --version {product-chart-version} > values.default.yaml
 
-LS_RAG_IMAGE=$(yq '.global.lightspeed.initContainer.image | .registry + "/" + .repository' values.default.yaml)
-LS_RAG_DIGEST=$(yq '.global.lightspeed.initContainer.image.tag' values.default.yaml)
+LS_OKP_IMAGE=$(yq '.global.lightspeed.okp.image | .registry + "/" + .repository' values.default.yaml)
+LS_OKP_DIGEST=$(yq '.global.lightspeed.okp.image.tag' values.default.yaml)
 LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
 LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
 ----
@@ -28,7 +31,7 @@ LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
 +
 [source,terminal]
 ----
-skopeo copy --all docker://${LS_RAG_IMAGE}:${LS_RAG_DIGEST} docker://<mirror_registry_name>/<ls_rag_repo_name>:${LS_RAG_DIGEST}
+skopeo copy --all docker://${LS_OKP_IMAGE}:${LS_OKP_DIGEST} docker://<mirror_registry_name>/<ls_okp_repo_name>:${LS_OKP_DIGEST}
 skopeo copy --all docker://${LS_CORE_IMAGE}:${LS_CORE_DIGEST} docker://<mirror_registry_name>/<ls_core_repo_name>:${LS_CORE_DIGEST}
 ----
 
@@ -38,11 +41,11 @@ skopeo copy --all docker://${LS_CORE_IMAGE}:${LS_CORE_DIGEST} docker://<mirror_r
 ----
 global:
   lightspeed:
-    initContainer:
+    okp:
       image:
         registry: "<mirror_registry_name>"
-        repository: <ls_rag_repo_name>
-        tag: "${LS_RAG_DIGEST}"
+        repository: <ls_okp_repo_name>
+        tag: "${LS_OKP_DIGEST}"
     sidecar:
       image:
         registry: "<mirror_registry_name>"

@@ -12,14 +12,16 @@ Mirror the required {ls-short} container images to your local registry by using 
 
 .Procedure
 
-. Identify the initialization and sidecar container images from the default values file of the chart:
+// OKP is deployed as a standalone service (image: registry.redhat.io/offline-knowledge-portal/rhokp-rhel9),
+// not a sidecar or init container. Helm values key confirmed against rhdh-chart PR 500 (pending merge).
+. Identify the OKP and {lcs-short} container images from the default values file of the chart:
 +
 [source,terminal,subs=attributes]
 ----
 helm show values redhat-developer-hub --repo https://charts.openshift.io/ --version {product-chart-version} > values.default.yaml
 
-LS_RAG_IMAGE=$(yq '.global.lightspeed.initContainer.image | .registry + "/" + .repository' values.default.yaml)
-LS_RAG_DIGEST=$(yq '.global.lightspeed.initContainer.image.tag' values.default.yaml)
+LS_OKP_IMAGE=$(yq '.global.lightspeed.okp.image | .registry + "/" + .repository' values.default.yaml)
+LS_OKP_DIGEST=$(yq '.global.lightspeed.okp.image.tag' values.default.yaml)
 LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
 LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
 ----
@@ -32,7 +34,7 @@ apiVersion: mirror.openshift.io/v2alpha1
 kind: ImageSetConfiguration
 mirror:
   additionalImages:
-    - name: ${LS_RAG_IMAGE}:${LS_RAG_DIGEST}
+    - name: ${LS_OKP_IMAGE}:${LS_OKP_DIGEST}
     - name: ${LS_CORE_IMAGE}:${LS_CORE_DIGEST}
   helm:
     repositories:
