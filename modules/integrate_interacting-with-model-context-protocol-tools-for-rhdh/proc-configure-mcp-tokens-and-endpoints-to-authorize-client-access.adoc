@@ -6,7 +6,7 @@
 [role="_abstract"]
 Configure Model Context Protocol (MCP) server endpoints, database backends, and authentication tokens to securely authorize client applications to interact with your developer portal.
 
-This configuration is a prerequisite for MCP clients to use the defined MCP tools and access the exposed capabilities of {product-very-short}.
+This configuration is a prerequisite for MCP clients to use the defined MCP tools and access the exposed capabilities of {product-very-short}. The MCP server supports three authentication schemes: static bearer tokens for service-level access, OIDC user tokens for user-identity-aware access with individual RBAC enforcement, and Dynamic Client Registration (DCR) for clients that obtain OIDC tokens automatically through an OAuth redirect. For a description of all schemes and the full security model, see xref:mcp-server-security-model_{context}[Understand the MCP server security model].
 
 .Prerequisites
 
@@ -14,11 +14,13 @@ This configuration is a prerequisite for MCP clients to use the defined MCP tool
 
 .Procedure
 
-. In your {product} `{my-app-config-file}` file, configure a static token for authentication against the MCP server endpoint. MCP clients (such as `Cursor`, `Continue`, or `Lightspeed Core`) use these tokens to authenticate against the {backstage} MCP server. For example:
+. In your {product} `{my-app-config-file}` file, configure authentication for the MCP server endpoint. MCP clients (such as `Cursor`, `Continue`, or `Lightspeed Core`) use these tokens to authenticate against the {backstage} MCP server.
+
+.. To configure a *static bearer token* for service-level access, add a static entry under `backend.auth.externalAccess`. Clients that authenticate with this token are assigned the configured service subject:
 +
 [source,yaml]
 ----
-backend:  
+backend:
   auth:
     externalAccess:
       - type: static
@@ -27,19 +29,81 @@ backend:
           subject: mcp-clients
 ----
 where:
-
-`${MCP_TOKEN}`:: Set the token value that you generate manually and share with your MCP clients.
 +
-[NOTE]
-====
-Tokens must be long and complex strings without whitespace to prevent brute-force guessing.
-
-. To generate a sample token, use the following command:
+`${MCP_TOKEN}`:: Set the token value that you generate manually and share with your MCP clients. Tokens must be long and complex strings without whitespace to prevent brute-force guessing. To generate a sample token, use the following command:
++
 [source,bash]
 ----
 $ node -p `require("crypto").randomBytes(24).toString("base64")`
 ----
+
+.. To enable *OIDC user token* authentication so that individual developers can connect their own AI clients with their user identity, ensure that an OIDC identity provider is configured as the sign-in provider. The MCP server uses the `IdentityApi` to resolve each incoming OIDC token to the corresponding {backstage} user entity (for example, `user:default/alice`) and enforces that user's RBAC permissions for every tool call:
++
+[source,yaml]
+----
+signInPage: oidc
+auth:
+  environment: production
+  session:
+    secret: "${BACKEND_SECRET}"
+  providers:
+    oidc:
+      production:
+        clientId: ${OIDC_CLIENT_ID}
+        clientSecret: ${OIDC_CLIENT_SECRET}
+        metadataUrl: ${OIDC_METADATA_URL}
+----
++
+[NOTE]
 ====
+Configuring an OIDC identity provider enables users to retrieve their personal session tokens and use them directly in MCP clients such as Cursor, Visual Studio Code, and Claude Code. For the procedure, see xref:connect-third-party-mcp-clients-to-rhdh_{context}[Connect third-party MCP clients to {product-short}].
+====
+
+.. To enable *Dynamic Client Registration (DCR)* so that OAuth 2.0-capable MCP clients obtain tokens automatically through a browser sign-in instead of requiring users to copy tokens manually, add the `experimentalDynamicClientRegistration` setting under `auth`:
++
+[source,yaml]
+----
+auth:
+  experimentalDynamicClientRegistration:
+    allowedRedirectUriPatterns:
+      - '*'
+----
++
+When DCR is enabled, MCP clients that support OAuth 2.0 register themselves dynamically with the {backstage} authentication system, redirect the user to sign in through the configured identity provider, and receive a token automatically after successful authentication. The MCP Actions backend validates DCR-obtained tokens identically to manually obtained OIDC tokens, so the same identity resolution and RBAC enforcement applies.
++
+[IMPORTANT]
+====
+In a production environment, replace `'*'` with specific redirect URI patterns for your authorized MCP clients.
+====
++
+[NOTE]
+====
+DCR requires the {product-very-short} new front-end system because the `@backstage/plugin-auth` plugin is available only in the new front-end system.
+====
+
+. Optional: To use MCP tools through the {ia-short} chat interface, configure the {ia-short} backend to mint tokens automatically on behalf of the logged-in user. Set `auth: dcr` for each MCP server:
++
+[source,yaml]
+----
+intelligent-assistant:
+  mcpServers:
+    - name: mcp-integration-tools
+      auth: dcr
+----
++
+With this setting, the {ia-short} backend obtains a per-user token for each MCP tool call automatically, chat users do not need to configure or manage any tokens, and each tool call is authorized against the specific user's RBAC permissions.
++
+You can combine DCR and static token servers in the same configuration:
++
+[source,yaml]
+----
+intelligent-assistant:
+  mcpServers:
+    - name: mcp-integration-tools
+      auth: dcr
+    - name: external-api-server
+      token: ${EXTERNAL_MCP_TOKEN}
+----
 
 . Register the MCP tools that you install as a plugin source in your `{my-app-config-file}` file:
 
@@ -85,7 +149,6 @@ backend:
 mcpActions:
   namespacedToolNames: false
 ----
-
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----

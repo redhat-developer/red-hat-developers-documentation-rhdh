@@ -1,0 +1,135 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="connect-third-party-mcp-clients-to-rhdh_{context}"]
+= Connect third-party MCP clients to {product-short}
+
+[role="_abstract"]
+Retrieve an authentication token and configure your MCP client to connect third-party AI tools, such as Cursor, Visual Studio Code, or Claude Code, to the {product-very-short} MCP server.
+
+Any MCP-compliant client can connect to the {product-very-short} MCP server. You must present a valid authentication token so that the server can resolve your identity and enforce your {backstage} RBAC permissions. Choose the token type based on your use case:
+
+User session token (OIDC):: Recommended for individual developers. The token is bound to your user identity, and all tool calls are authorized against your personal RBAC permissions. All actions are performed on your behalf.
+
+Static service token:: Suitable for automated workflows or shared team integrations. The token maps to a service-level identity configured by a platform engineer.
+
+Dynamic Client Registration (DCR):: Recommended for individual developers who use an OAuth 2.0-capable client, such as Cursor or Visual Studio Code. If your platform engineer has enabled DCR, your client obtains a user-bound token automatically through a browser sign-in, so you do not need to copy or paste a token.
+
+[IMPORTANT]
+====
+The {product-very-short} MCP server enforces your RBAC permissions for every tool call. Providing a valid token does not grant access to tools for which you do not have permission. For details, see xref:mcp-server-security-model_{context}[Understand the MCP server security model].
+====
+
+.Prerequisites
+
+* Your platform engineer has installed and configured the {product-very-short} MCP server. For details, see {model-context-protocol-book-link}#install-the-mcp-server-and-tool-plugins-in-red-hat-developer-hub[Install MCP server and tool plugins].
+* Your platform engineer has configured authentication and MCP endpoints. For details, see {model-context-protocol-book-link}#configure-mcp-tokens-and-endpoints-to-authorize-client-access_{context}[Configure MCP tokens and endpoints to authorize client access].
+* You know the URL of your {product-very-short} instance (`{my-product-url}`).
+
+.Procedure
+
+. Obtain an authentication token:
+
+.. To obtain a *user session token*:
+... Sign in to your {product-very-short} instance at `{my-product-url}`.
+... Navigate to *Settings* > *Profile* and select *Copy user token*. This copies your OIDC session token to the clipboard.
++
+[NOTE]
+====
+User session tokens are short-lived and expire when your {product-very-short} session ends. Retrieve a new token by signing in again when it expires.
+====
+
+.. To obtain a *static service token*:
+... Ask your platform engineer for the value of the `MCP_TOKEN` environment variable configured in the {product-very-short} deployment. This is the token set in `backend.auth.externalAccess` in the `{my-app-config-file}` file.
+
+. Configure your MCP client with the server endpoint and your authentication token:
+
+.. To configure *Cursor*:
+... From the Cursor desktop app, navigate to *Cursor Settings* > *MCP Tools* > *New MCP Server*.
+... Add the following configuration, replacing `_<your_token>_` with the token you obtained:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{
+  "mcpServers": {
+    "backstage-actions": {
+      "url": "{my-product-url}/api/mcp-actions/v1",
+      "headers": {
+        "Authorization": "Bearer _<your_token>_"
+      }
+    }
+  }
+}
+----
+
+.. To configure *Visual Studio Code*:
+... Create or update the `.vscode/mcp.json` file in your workspace, replacing `_<your_token>_` with the token you obtained:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{
+  "servers": {
+    "backstage-actions": {
+      "type": "http",
+      "url": "{my-product-url}/api/mcp-actions/v1",
+      "headers": {
+        "Authorization": "Bearer _<your_token>_"
+      }
+    }
+  }
+}
+----
+
+.. To configure *Claude Code*:
+... Run the following command, replacing `_<your_token>_` with the token you obtained:
++
+[source,bash,subs="+attributes,+quotes"]
+----
+$ claude mcp add backstage-actions \
+  --transport http \
+  --url {my-product-url}/api/mcp-actions/v1 \
+  --header "Authorization: Bearer _<your_token>_"
+----
++
+[NOTE]
+====
+If your client does not yet support the Streamable HTTP endpoint, use the SSE (Legacy) endpoint instead: `{my-product-url}/api/mcp-actions/v1/sse`.
+====
+
+. Optional: If your platform engineer has enabled Dynamic Client Registration (DCR), you do not need to copy or paste any token. Your MCP client obtains authentication automatically through a browser sign-in.
++
+For example, to configure *Cursor* to use DCR:
++
+.. From the Cursor desktop app, navigate to *Cursor Settings* > *MCP Tools* > *New MCP Server*.
+.. Add the following configuration:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{
+  "mcpServers": {
+    "backstage-actions": {
+      "url": "{my-product-url}/api/mcp-actions/v1"
+    }
+  }
+}
+----
++
+No `headers` or `Authorization` field is required. DCR handles the token exchange automatically.
+.. When you first call a tool, your browser opens for sign-in. After you authenticate, tools work with your personal RBAC permissions.
+
+.Verification
+
+. Confirm that your MCP client lists the {product-very-short} tools (for example, `fetch-catalog-entities`, `fetch-techdocs`).
+. Request a tool that requires a specific permission. If your user role does not include that permission, the tool returns an `Unauthorized` error, confirming that RBAC enforcement is active.
+
+.Troubleshooting
+
+If your MCP client connects but does not list tools, or returns an authentication error, verify the following:
+
+* Ensure that the authorization header uses the format `Bearer _<your_token>_`, with a space between `Bearer` and the token value.
+* Confirm that the server URL is correct. Use the SSE endpoint (`/api/mcp-actions/v1/sse`) if your client does not support Streamable HTTP.
+* For user session tokens, verify that your {product-very-short} session has not expired. Sign in again to refresh the token.
+* For DCR, if the sign-in redirect does not trigger, confirm that your platform engineer has enabled `experimentalDynamicClientRegistration` in the {product-very-short} configuration.
+* If your client shows a certificate error for self-signed or internal certificates, consult your MCP client documentation for disabling certificate validation in development environments.
+* Contact your platform engineer to confirm that the MCP server is running and that the configured plugin sources include the tools you expect.
+
+For additional troubleshooting steps, see {model-context-protocol-book-link}#resolve-authentication-issues-when-tools-are-not-found_{context}[Resolve authentication issues].

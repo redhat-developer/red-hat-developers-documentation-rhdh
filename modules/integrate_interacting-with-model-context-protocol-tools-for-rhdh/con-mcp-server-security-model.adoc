@@ -1,0 +1,76 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="mcp-server-security-model_{context}"]
+= Understand the MCP server security model
+
+[role="_abstract"]
+The {product-short} MCP server enforces a Zero Trust security model, validating every tool call against the authenticated user's {backstage} identity and permissions.
+
+The {product-very-short} MCP server does not grant any implicit trust to connecting clients. Every inbound request must carry a valid authentication token, and every tool invocation is verified against the calling user's permissions before any action is executed. This model ensures that platform engineers retain centralized control over access to Internal Developer Platform capabilities, regardless of which MCP client is used.
+
+The MCP server implements the standard MCP Security Specification for authorization. When a client connects, the server performs an MCP initialization handshake that requires the client to present a valid bearer token. The following table describes the authentication schemes supported by the {product-very-short} MCP server:
+
+[cols="20%,45%,35%",options="header"]
+|===
+|Scheme |Description |Recommended use
+
+|Static bearer token
+|A long-lived token configured by a platform engineer and shared with MCP clients. The token maps to a service-level identity subject (for example, `mcp-clients`).
+|Service accounts, CI/CD pipelines, or team-shared integrations that require consistent non-interactive access.
+
+|User session token (OIDC)
+|A token issued by the identity provider configured for {product-very-short}, bound to a specific authenticated user and their {backstage} entity reference (for example, `user:default/alice`).
+|Individual developers connecting their own AI clients (Cursor, Visual Studio Code, Claude Code) with access controlled by their personal RBAC permissions.
+
+|Dynamic Client Registration (DCR)
+|An OAuth 2.0 flow in which the MCP client registers dynamically with the {backstage} authentication system and redirects the user to sign in through the configured identity provider. The token is obtained automatically, so no manual copy is required. From the server's perspective, the resulting token is validated identically to a manually obtained OIDC token.
+|MCP clients that support OAuth 2.0, such as Cursor and Visual Studio Code. DCR is also used internally by the {ia-short} to mint per-user tokens for chat-based MCP tool calls.
+|===
+
+[NOTE]
+====
+If a client presents a token that cannot be resolved to a valid {backstage} identity, the server rejects the request and no tools are executed.
+====
+
+When the MCP server receives a request, it passes the bearer token to the {backstage} `IdentityApi` to resolve it to a `{backstage}Identity`. This identity contains the user's entity reference and the ownership claims for their groups.
+
+* A static token resolves to the configured service subject.
+* An OIDC user token resolves to the specific user's entity reference (for example, `user:default/alice`) and all groups that the user belongs to.
+
+The resolved identity is used for all subsequent permission checks within the request.
+
+For every tool invocation, the MCP server calls the {backstage} `PermissionEvaluator` with the specific permission that the requested action requires. The following table lists the permission required for each tool:
+
+[cols="35%,30%,35%",options="header"]
+|===
+|Tool |Plugin |Required permission
+|`fetch-catalog-entities` |`software-catalog-mcp-extras` |`catalog.entity.read`
+|`catalog-register-tool` |`software-catalog-mcp-extras` |`catalog.entity.create`
+|`catalog-unregister-tool` |`software-catalog-mcp-extras` |`catalog.entity.delete`
+|`fetch-techdocs` |`techdocs-mcp-extras` |`catalog.entity.read`
+|`analyze-techdocs-coverage` |`techdocs-mcp-extras` |`catalog.entity.read`
+|`retrieve-techdocs-content` |`techdocs-mcp-extras` |`catalog.entity.read`
+|Scaffolder tools |`scaffolder-mcp-extras` |`scaffolder.action.execute`
+|===
+
+If the `PermissionEvaluator` returns `DENY`, the MCP server returns a standard `Unauthorized` error and does not execute the tool. This enforcement happens server-side for every call, independent of the client making the request.
+
+[IMPORTANT]
+====
+Because the MCP server enforces permissions using the existing {backstage} Permission Framework, you do not need to define separate permission rules for MCP. Any RBAC policy you configure in {product-very-short} applies equally to MCP tool calls.
+====
+
+When you use OIDC user tokens or Dynamic Client Registration (DCR), each user's MCP tool calls are authorized individually against that user's RBAC permissions. For example, if a user's RBAC role does not include the `catalog.entity.read` permission and they ask the {ia-short} to _List all Component entities in the catalog_, the tool call is denied with an `Unauthorized` error, even though the MCP server is running and the user is authenticated.
+
+This per-user enforcement is a key advantage over static bearer tokens, where every client that shares the same token has identical access regardless of who is using it.
+
+When a tool performs downstream actions (for example, fetching a file from a connected source control system), the MCP server passes the user's credentials through the request context. This On Behalf Of (OBO) pattern ensures that downstream systems receive requests authorized as the calling user, not as a privileged system account. The MCP server never substitutes its own credentials when acting on a user's behalf.
+
+[TIP]
+====
+The {product-very-short} audit log records all MCP tool calls, including the resolved user identity, the permission check result, and whether the tool was executed or denied. Use the audit log to verify that your RBAC policies are enforced as expected.
+====
+
+.Additional resources
+* {authorization-book-link}[Configuring authorization in {product}]
+* {authentication-book-link}[Configuring authentication in {product}]
