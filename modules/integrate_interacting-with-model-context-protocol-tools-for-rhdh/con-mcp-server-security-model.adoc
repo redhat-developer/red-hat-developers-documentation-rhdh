@@ -21,6 +21,10 @@ The MCP server implements the standard MCP Security Specification for authorizat
 |User session token (OIDC)
 |A token issued by the identity provider configured for {product-very-short}, bound to a specific authenticated user and their {backstage} entity reference (for example, `user:default/alice`).
 |Individual developers connecting their own AI clients (Cursor, Visual Studio Code, Claude Code) with access controlled by their personal RBAC permissions.
+
+|Dynamic Client Registration (DCR)
+|An OAuth 2.0 flow in which the MCP client registers dynamically with the {backstage} authentication system and redirects the user to sign in through the configured identity provider. The token is obtained automatically, so no manual copy is required. From the server's perspective, the resulting token is validated identically to a manually obtained OIDC token.
+|MCP clients that support OAuth 2.0, such as Cursor and Visual Studio Code. DCR is also used internally by the {ia-short} to mint per-user tokens for chat-based MCP tool calls.
 |===
 
 [NOTE]
@@ -55,6 +59,10 @@ If the `PermissionEvaluator` returns `DENY`, the MCP server returns a standard `
 ====
 Because the MCP server enforces permissions using the existing {backstage} Permission Framework, you do not need to define separate permission rules for MCP. Any RBAC policy you configure in {product-very-short} applies equally to MCP tool calls.
 ====
+
+When you use OIDC user tokens or Dynamic Client Registration (DCR), each user's MCP tool calls are authorized individually against that user's RBAC permissions. For example, if a user's RBAC role does not include the `catalog.entity.read` permission and they ask the {ia-short} to _List all Component entities in the catalog_, the tool call is denied with an `Unauthorized` error, even though the MCP server is running and the user is authenticated.
+
+This per-user enforcement is a key advantage over static bearer tokens, where every client that shares the same token has identical access regardless of who is using it.
 
 When a tool performs downstream actions (for example, fetching a file from a connected source control system), the MCP server passes the user's credentials through the request context. This On Behalf Of (OBO) pattern ensures that downstream systems receive requests authorized as the calling user, not as a privileged system account. The MCP server never substitutes its own credentials when acting on a user's behalf.
 
