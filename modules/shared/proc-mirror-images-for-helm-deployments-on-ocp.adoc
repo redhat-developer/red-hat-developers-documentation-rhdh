@@ -12,16 +12,16 @@ Mirror the required {ls-short} container images to your local registry by using 
 
 .Procedure
 
-// TODO (RHIDP-16107): Confirm the exact Helm values key for the OKP sidecar image
-// (replacing the old global.lightspeed.initContainer.image). Update <okp-image-key> below.
-. Identify the OKP and {lcs-short} sidecar container images from the default values file of the chart:
+// OKP is deployed as a standalone service (image: registry.redhat.io/offline-knowledge-portal/rhokp-rhel9),
+// not a sidecar or init container. Helm values key confirmed against rhdh-chart PR 500 (pending merge).
+. Identify the OKP and {lcs-short} container images from the default values file of the chart:
 +
 [source,terminal,subs=attributes]
 ----
 helm show values redhat-developer-hub --repo https://charts.openshift.io/ --version {product-chart-version} > values.default.yaml
 
-LS_OKP_IMAGE=$(yq '.<okp-image-key> | .registry + "/" + .repository' values.default.yaml)
-LS_OKP_DIGEST=$(yq '.<okp-image-key>.tag' values.default.yaml)
+LS_OKP_IMAGE=$(yq '.global.lightspeed.okp.image | .registry + "/" + .repository' values.default.yaml)
+LS_OKP_DIGEST=$(yq '.global.lightspeed.okp.image.tag' values.default.yaml)
 LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
 LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
 ----
