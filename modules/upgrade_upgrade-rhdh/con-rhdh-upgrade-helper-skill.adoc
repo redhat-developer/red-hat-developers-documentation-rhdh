@@ -1,0 +1,43 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="rhdh-upgrade-helper-skill_{context}"]
+= Assess upgrade risk with the {product-very-short} Upgrade Helper skill
+
+[role="_abstract"]
+The {product-very-short} Upgrade Helper is a community Claude Code skill in `rhdh-users-skill-pack`. It helps platform engineers identify upgrade risks before upgrading a {product-very-short} instance between released versions, including minor (for example, 1.8 to 1.10) and major upgrades.
+
+[NOTE]
+====
+The {product-very-short} Upgrade Helper skill is a community tool distributed under an open-source licence. It does not require a Red Hat subscription.
+====
+
+== What the skill analyses
+
+When you run the skill with your configuration files and target version, it cross-references your environment against overlay repository metadata, bundled release notes, {backstage} changelogs, and known public bug data. The skill identifies the following categories of risk:
+
+Breaking changes in upstream {backstage} APIs:: API changes between the current and target {backstage} versions that may affect your plugins or backend configuration.
+
+Configuration drift:: Settings in your `app-config.yaml` or dynamic plugins configuration that are deprecated, removed, or behave differently in the target version.
+
+Plugin compatibility issues:: Plugins in your current configuration that are incompatible with, or require updates for, the target {product-very-short} version.
+
+Known upgrade failure patterns:: Historical upgrade issues surfaced from public {product-very-short} bug data relevant to your version range.
+
+== What the skill produces
+
+The skill writes a structured, prioritised report to your terminal. The report lists each predicted issue by severity, explains the impact, and describes the action required before upgrading.
+
+When skipping multiple minor versions — for example, upgrading from 1.5 to 1.9 — the skill accumulates predicted issues across all skipped releases into a single report.
+
+== Validate your configuration using {product-local} before upgrading
+
+If you are not already using {product-local} ({product-local-very-short}), the skill recommends it as a safe, cluster-free environment for validating your configuration against the target version before upgrading your production instance. {product-local-very-short} uses `rhdh-local` with Podman Compose and does not require a Kubernetes cluster.
+
+== Protect secrets when providing configuration files
+
+The skill scans input files for content that appears to contain secrets. Before and during analysis, the skill:
+
+* Warns you if it detects API keys, passwords, tokens, or credentials in configuration files or environment variable exports.
+* Redacts detected secret values from its output if you choose to continue.
+
+Do not provide configuration files that contain secret values to the skill.
