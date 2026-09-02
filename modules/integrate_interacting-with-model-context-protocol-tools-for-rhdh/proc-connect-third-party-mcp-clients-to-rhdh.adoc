@@ -12,6 +12,8 @@ User session token (OIDC):: Recommended for individual developers. The token is 
 
 Static service token:: Suitable for automated workflows or shared team integrations. The token maps to a service-level identity configured by a platform engineer.
 
+Dynamic Client Registration (DCR):: Recommended for individual developers who use an OAuth 2.0-capable client, such as Cursor or Visual Studio Code. If your platform engineer has enabled DCR, your client obtains a user-bound token automatically through a browser sign-in, so you do not need to copy or paste a token.
+
 [IMPORTANT]
 ====
 The {product-very-short} MCP server enforces your RBAC permissions for every tool call. Providing a valid token does not grant access to tools for which you do not have permission. For details, see xref:mcp-server-security-model_{context}[Understand the MCP server security model].
@@ -93,6 +95,27 @@ $ claude mcp add backstage-actions \
 If your client does not yet support the Streamable HTTP endpoint, use the SSE (Legacy) endpoint instead: `{my-product-url}/api/mcp-actions/v1/sse`.
 ====
 
+. Optional: If your platform engineer has enabled Dynamic Client Registration (DCR), you do not need to copy or paste any token. Your MCP client obtains authentication automatically through a browser sign-in.
++
+For example, to configure *Cursor* to use DCR:
++
+.. From the Cursor desktop app, navigate to *Cursor Settings* > *MCP Tools* > *New MCP Server*.
+.. Add the following configuration:
++
+[source,json,subs="+attributes,+quotes"]
+----
+{
+  "mcpServers": {
+    "backstage-actions": {
+      "url": "{my-product-url}/api/mcp-actions/v1"
+    }
+  }
+}
+----
++
+No `headers` or `Authorization` field is required. DCR handles the token exchange automatically.
+.. When you first call a tool, your browser opens for sign-in. After you authenticate, tools work with your personal RBAC permissions.
+
 .Verification
 
 . Confirm that your MCP client lists the {product-very-short} tools (for example, `fetch-catalog-entities`, `fetch-techdocs`).
@@ -105,6 +128,8 @@ If your MCP client connects but does not list tools, or returns an authenticatio
 * Ensure that the authorization header uses the format `Bearer _<your_token>_`, with a space between `Bearer` and the token value.
 * Confirm that the server URL is correct. Use the SSE endpoint (`/api/mcp-actions/v1/sse`) if your client does not support Streamable HTTP.
 * For user session tokens, verify that your {product-very-short} session has not expired. Sign in again to refresh the token.
+* For DCR, if the sign-in redirect does not trigger, confirm that your platform engineer has enabled `experimentalDynamicClientRegistration` in the {product-very-short} configuration.
+* If your client shows a certificate error for self-signed or internal certificates, consult your MCP client documentation for disabling certificate validation in development environments.
 * Contact your platform engineer to confirm that the MCP server is running and that the configured plugin sources include the tools you expect.
 
 For additional troubleshooting steps, see {model-context-protocol-book-link}#resolve-authentication-issues-when-tools-are-not-found_{context}[Resolve authentication issues].
