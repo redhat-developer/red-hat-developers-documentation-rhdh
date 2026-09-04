@@ -4,7 +4,7 @@
 = Troubleshooting connector functionality
 
 [role="_abstract"]
-The {kserve-kubeflow-connector-name} runs as a set of dynamic plugins inside the {product-very-short} backend container. To diagnose connector issues, verify that the plugins are installed and inspect the plugin logs in the `backstage-backend` container.
+The {openshift-ai-connector-name} runs as a set of dynamic plugins inside the {product-very-short} backend container. To diagnose connector issues, verify that the plugins are installed and inspect the plugin logs in the `backstage-backend` container.
 
 The actual contents of the diagnostic data are not part of any product guaranteed specification, and can change at any time.
 
@@ -26,7 +26,7 @@ In the `install-dynamic-plugins` logs, check that the following plugins installe
 
 == Inspect plugin logs
 
-View the connector plugin logs in the `backstage-backend` container. Look for messages that indicate the connector is watching KServe `InferenceService` resources and that the entity provider is discovering model servers.
+View the connector plugin logs in the `backstage-backend` container. The connector backend logs under the `kserve-kubeflow-connector` logger service name, so you can filter the container logs on that name to isolate connector activity. Look for messages that indicate the connector is watching KServe `InferenceService` resources and that the entity provider is discovering model servers.
 
 To enable debug logging, set the `LOG_LEVEL` environment variable to `debug` on the `backstage-backend` container. For more information, see {monitoring-and-logging-book-link}[{monitoring-and-logging-book-title}].
 
@@ -45,3 +45,26 @@ If model servers do not appear in the catalog, confirm the following:
 * The `AiModelServerAPI` kind is allowed in your catalog rules.
 
 If model cards do not appear as TechDocs, confirm that the `InferenceService` resources are annotated with `rhdh.io/catalog-source` and `rhdh.io/catalog-model`, and that the Kubeflow Model Catalog URL is reachable from the {product-very-short} backend.
+
+== Query the Kubeflow Model Catalog
+
+To access the same Kubeflow Model Catalog data as the connector, use `curl` to query the model catalog API directly. Confirm that the `ServiceAccount` token has the correct access, and export the model catalog URL as `RHOAI_MODEL_CATALOG_URL` before you run the following commands.
+
+* Fetch the catalog sources:
++
+[source,bash]
+----
+$ curl -k -H "Authorization: Bearer $TOKEN" $RHOAI_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/sources | jq
+----
+
+* Fetch the available models:
++
+[source,bash]
+----
+$ curl -k -H "Authorization: Bearer $TOKEN" $RHOAI_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/models?pageSize=200 | jq
+----
++
+[NOTE]
+====
+The `pageSize` query parameter is required to retrieve more than the default page of results, which returns approximately 10 models. Set `pageSize` to a value large enough to return all of your models. The total number of available models is reported in the `size` field at the end of the `jq` output. If the `size` value equals your `pageSize` value, increase `pageSize` and run the query again to confirm that you retrieved every model.
+====
