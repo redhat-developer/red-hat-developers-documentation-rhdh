@@ -1,75 +1,70 @@
 :_mod-docs-content-type: REFERENCE
 
 [id="troubleshoot-connector-functionality_{context}"]
-= Troubleshoot Connector functionality
+= Troubleshooting connector functionality
 
 [role="_abstract"]
-The connector system consists of the two dynamic plugins and the three {openshift-ai-connector-name-short} sidecar containers. You must gather logs from these components and provide them to {company-name} Support for diagnostic analysis.
+The {openshift-ai-connector-name} runs as a set of dynamic plugins inside the {product-very-short} backend container. To diagnose connector issues, verify that the plugins are installed and inspect the plugin logs in the `backstage-backend` container.
 
 The actual contents of the diagnostic data are not part of any product guaranteed specification, and can change at any time.
 
-[NOTE]
-====
-During startup, you might see non-critical log errors, such as `in cluster config error: open /var/run/secrets/kubernetes.io/serviceaccount/token: no such file or directory`, in the sidecar logs. This error is expected during the initial setup and does not indicate a failure, provided the container eventually becomes healthy.
-====
-
 == Verify dynamic plugin status
 
-Validate that the dynamic plugins have been successfully installed into your {product-very-short} project Pod by using the following command:
+Validate that the connector dynamic plugins are successfully installed into your {product-very-short} pod by using the following command:
 
 [source,bash,subs=+attributes]
 ----
 $ oc logs -c install-dynamic-plugins deployment/<your {product-very-short} deployment>
 ----
 
-In the `install-dynamic-plugin` logs, you can check the following installation logs for successful logs:
+In the `install-dynamic-plugins` logs, check that the following plugins installed successfully:
 
-* `red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog` (Entity Provider)
-* `red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend` (TechDoc URL Reader)
+* `red-hat-developer-hub-backstage-plugin-kserve-kubeflow-connector-backend`
+* `red-hat-developer-hub-backstage-plugin-catalog-backend-module-ai-model-server`
+* `red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog`
+* `red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend`
 
 == Inspect plugin logs
 
-View the {openshift-ai-connector-name} plugins in the `backstage-backend` container. Items to look for:
-
-[cols="3,4,4"]
-|===
-|Plugin Component |Logger Service Target |Common Log Text
-
-|Model Catalog Entity Provider
-|`ModelCatalogResourceEntityProvider`
-|`Discovering ResourceEntities from Model Server...`
-
-|Model Catalog TechDoc URL Reader
-|`ModelCatalogBridgeTechdocUrlReader`
-|`ModelCatalogBridgeTechdocUrlReader.readUrl`
-|===
+View the connector plugin logs in the `backstage-backend` container. The connector backend logs under the `kserve-kubeflow-connector` logger service name, so you can filter the container logs on that name to isolate connector activity. Look for messages that indicate the connector is watching KServe `InferenceService` resources and that the entity provider is discovering model servers.
 
 To enable debug logging, set the `LOG_LEVEL` environment variable to `debug` on the `backstage-backend` container. For more information, see {monitoring-and-logging-book-link}[{monitoring-and-logging-book-title}].
 
-== Inspect the {openshift-ai-connector-name-short}
+== Verify connector REST routes
 
-The {openshift-ai-connector-name-short} sidecars manage the data fetching and storage:
+The connector exposes {backstage}-authenticated REST routes that the companion plugins consume:
 
-. Check Cached Data (ConfigMap): The processed AI Model metadata is stored in a `ConfigMap`.
+* `GET /list` returns all discovered model servers and models.
+* `GET /models/<model>/<version>` returns metadata for a specific model version.
+* `GET /modelcard/<sourceId>/<path>` returns the model-card Markdown for TechDocs generation.
+
+If model servers do not appear in the catalog, confirm the following:
+
+* The `ServiceAccount` that the connector uses has `get`, `list`, and `watch` permissions on `serving.kserve.io` `InferenceService` resources.
+* The cluster connection is configured correctly, including the `url`, `serviceAccountToken`, and TLS fields.
+* The `AiModelServerAPI` kind is allowed in your catalog rules.
+
+If model cards do not appear as TechDocs, confirm that the `InferenceService` resources are annotated with `rhdh.io/catalog-source` and `rhdh.io/catalog-model`, and that the Kubeflow Model Catalog URL is reachable from the {product-very-short} backend.
+
+== Query the Kubeflow Model Catalog
+
+To access the same Kubeflow Model Catalog data as the connector, use `curl` to query the model catalog API directly. Confirm that the `ServiceAccount` token has the correct access, and export the model catalog URL as `RHOAI_MODEL_CATALOG_URL` before you run the following commands.
+
+* Fetch the catalog sources:
 +
 [source,bash]
 ----
-$ oc get configmap bac-import-model -o json | jq -r '.binaryData | to_entries[] | "=== \(.key) ===\n" + (.value | @base64d | fromjson | .body | @base64d | fromjson | tostring)' | jq -R 'if startswith("=== ") then . else (. | fromjson) end'
+$ curl -k -H "Authorization: Bearer $TOKEN" $RHOAI_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/sources | jq
 ----
 
-. Check Location Service API: Confirm the location service is providing data to the {product-very-short} Entity Provider.
-+
-[source,bash,subs=+attributes]
-----
-$ oc rsh -c backstage-backend deployment/<your {product-very-short} deployment>
-$ curl http://localhost:9090/list
-----
-
-. Check Sidecar Container Logs:
+* Fetch the available models:
 +
 [source,bash]
 ----
-$ oc logs -c rhoai-normalizer deployment/<your {product-very-short} deployment>
-$ oc logs -c storage-rest deployment/<your {product-very-short} deployment>
-$ oc logs -c location deployment/<your {product-very-short} deployment>
+$ curl -k -H "Authorization: Bearer $TOKEN" $RHOAI_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/models?pageSize=200 | jq
 ----
++
+[NOTE]
+====
+The `pageSize` query parameter is required to retrieve more than the default page of results, which returns approximately 10 models. Set `pageSize` to a value large enough to return all of your models. The total number of available models is reported in the `size` field at the end of the `jq` output. If the `size` value equals your `pageSize` value, increase `pageSize` and run the query again to confirm that you retrieved every model.
+====

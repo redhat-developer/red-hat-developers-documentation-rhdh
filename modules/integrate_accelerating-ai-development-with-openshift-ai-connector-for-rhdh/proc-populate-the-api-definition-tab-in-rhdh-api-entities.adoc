@@ -1,33 +1,67 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="populate-the-api-definition-tab-in-rhdh-api-entities_{context}"]
-= Populate the API Definition tab in {product-very-short} API entities
+= Populating the API Definition tab in {product-very-short} API entities
 
 [role="_abstract"]
-Because {rhoai-short} does not expose the OpenAPI specification by default, the AI platform engineer can take the following steps to provide this information:
+The KServe `InferenceService` resource does not expose the OpenAPI specification of a model server, so the connector cannot populate the *Definition* tab of the generated `AiModelServerAPI` entity automatically. To provide this information, store the OpenAPI specification as a separate {backstage} API entity, import it into the {product-very-short} Catalog, and reference it from the `InferenceService`. The connector then copies the reference into the `spec.apiEntityRef` field of the generated entity, and the *Definition* tab renders the interactive API documentation.
+
+include::{docdir}/artifacts/snip-developer-preview-rhoai.adoc[]
 
 .Prerequisites
 
-* You have set up the {openshift-ai-connector-name} with {rhoai-brand-name}. For more information, see xref:set-up-with_{context}[Set up {openshift-ai-connector-name} with {rhoai-brand-name}].
+* You have installed and configured the {openshift-ai-connector-name-short}.
 * You have a running AI model server with an accessible endpoint.
+* You have a Git repository that {product-very-short} can read as a catalog location.
 
 .Procedure
 
-. Retrieve OpenAPI JSON: Use a tool such as `curl` to fetch the specification directly from the running endpoint of the AI model server. The following command provides the precise endpoint (`/openapi.json`) and shows how to include a `Bearer` token if the model requires authentication for access.
+. Retrieve the OpenAPI specification from the running endpoint of the model server. Use a tool such as `curl` to fetch the specification from the `/openapi.json` path, and include a `Bearer` token if the model requires authentication:
 +
 [source,bash]
 ----
 $ curl -k -H "Authorization: Bearer $MODEL_API_KEY" https://$MODEL_ROOT_URL_INCLUDING_PORT/openapi.json | jq > open-api.json
 ----
 
-. Set Property in {rhoai-short}.
-.. In the *{rhoai-short}* dashboard, go to *Model Registry* and select the appropriate *Model Version*.
+. Define an {backstage} API entity that embeds the OpenAPI specification, and store it in a `catalog-info.yaml` file in your Git repository. Set the `spec.definition` field to the contents of the `open-api.json` file:
 +
-[NOTE]
-====
-Red Hat recommends using *Model Version* instead of *Registered Model* to maintain stability if the API changes between versions.
-====
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: my-model-api
+  description: OpenAPI specification for my model server
+spec:
+  type: openapi
+  lifecycle: production
+  owner: my-team
+  definition: |
+    <contents of open-api.json>
+----
 
-.. In the **Properties** section, set a key/value pair where the key is `API Spec` and the value is the entire JSON content from the `open-api.json` file.
+. Import the `catalog-info.yaml` file into the {product-very-short} Catalog as a location so that the API entity is registered. For more information about registering catalog locations, see the {configuring-book-link}[{configuring-book-title}] guide.
 
-. Propagation: The {openshift-ai-connector-name} periodically polls the {rhoai-short} Model Registry, propagates this JSON, and renders the interactive API documentation in the *Definition* tab of the {product-very-short} API entity.
+. Annotate the `InferenceService` for the model server with the `rhdh.io/api-entity-ref` annotation, and set its value to the entity reference of the API entity that you registered:
++
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: my-model-server
+  namespace: my-models
+  annotations:
+    rhdh.io/api-entity-ref: api:default/my-model-api
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: pytorch
+----
+
+.Verification
+
+. Restart your {product-very-short} instance, or wait for the connector to run on its configured schedule.
+. In the {product-very-short} Catalog, open the generated `AiModelServerAPI` entity for the model server.
+. Confirm that the *Definition* tab displays the interactive API documentation from the referenced API entity.
