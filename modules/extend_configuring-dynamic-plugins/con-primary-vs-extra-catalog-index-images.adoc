@@ -1,0 +1,72 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="primary-vs-extra-catalog-index-images_{context}"]
+= How primary and extra catalog index images differ
+
+[role="_abstract"]
+{product} can extract plugins from multiple catalog index images to populate the Extensions UI.
+Understanding the distinction between primary and extra catalog index images helps you control which plugins install automatically and which plugins require explicit configuration.
+
+== What catalog index images contain
+
+A catalog index image is an OCI-compliant container image that packages plugin metadata and optional default configurations.
+Each catalog index image contains one or both of the following directories:
+
+`catalog-entities/`:: Plugin metadata files in {backstage} software catalog descriptor format. The Extensions UI reads these files to display available plugins, their descriptions, and installation instructions.
+
+`dynamic-plugins.default.yaml`:: Default plugin configurations that {product} applies automatically during installation. Only the primary catalog index image provides this file.
+
+{product} extracts these directories from catalog index images during the `install-dynamic-plugins` init container phase, before the main {product} application starts.
+
+== Primary catalog index image
+
+The primary catalog index image is the single source of truth for default plugin configurations.
+You configure the primary catalog by using the `CATALOG_INDEX_IMAGE` environment variable.
+
+The primary catalog provides:
+
+* Catalog entities for the Extensions UI
+* The `dynamic-plugins.default.yaml` file with out-of-the-box plugin configurations
+
+When you deploy {product}, plugins listed in the primary catalog's `dynamic-plugins.default.yaml` install and enable automatically without additional configuration.
+This ensures a consistent baseline plugin ecosystem across {product} installations.
+
+== Extra catalog index images
+
+Extra catalog index images extend plugin discovery without changing default plugin enablement.
+You configure extra catalogs by using the `EXTRA_CATALOG_INDEX_IMAGES` environment variable.
+
+Extra catalogs provide:
+
+* Catalog entities for the Extensions UI
+* No `dynamic-plugins.default.yaml` file
+
+Plugins from extra catalog index images appear in the Extensions UI for discovery and evaluation, but they do *not* install automatically.
+To install a plugin from an extra catalog, you must add explicit configuration to your `dynamic-plugins.yaml` file.
+
+== Why this separation matters
+
+The primary versus extra catalog distinction enables governance over your plugin ecosystem:
+
+Prevents conflicting default configurations:: Only one source (the primary catalog) provides default plugin configurations. Multiple catalogs attempting to provide defaults for the same plugin would create conflicts.
+
+Enables plugin discovery without automatic installation:: Platform teams can make community, partner, and internal custom plugin catalogs visible in the Extensions UI without automatically installing untested or unapproved plugins.
+
+Supports plugin source separation:: Different catalog index images can represent different levels of trust: Red Hat certified plugins in the primary catalog, community plugins in one extra catalog, internal custom plugins in another.
+
+Makes plugin provenance visible:: The Extensions UI organizes plugins by catalog source, helping developers identify whether a plugin comes from Red Hat, the community, or an internal custom catalog.
+
+== Common use cases
+
+Use extra catalog index images when you want to:
+
+* Offer community plugins for evaluation without automatically installing them
+* Separate certified Red Hat plugins from experimental or preview plugins
+* Provide partner-developed plugins that require approval before installation
+* Make internal custom plugins discoverable to development teams while maintaining installation control
+* Test new plugin versions in a secondary catalog before promoting them to the primary catalog
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:{configuring-dynamic-plugins-book-link}[{configuring-dynamic-plugins-book-title}]

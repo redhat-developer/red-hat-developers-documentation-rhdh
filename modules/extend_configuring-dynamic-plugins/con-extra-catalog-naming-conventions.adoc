@@ -1,0 +1,88 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="extra-catalog-naming-conventions_{context}"]
+= Extra catalog subdirectory naming conventions
+
+[role="_abstract"]
+{product} extracts each extra catalog index image into a separate subdirectory under `/extensions/extra/`.
+Understanding subdirectory naming rules helps you predict where catalog entities appear and troubleshoot catalog extraction issues.
+
+== Why subdirectory names matter
+
+Each extra catalog index image is extracted into its own subdirectory to:
+
+Prevent conflicts between catalogs:: Different catalog index images might provide plugins with the same name. Separate subdirectories ensure plugin metadata from one catalog does not overwrite metadata from another.
+
+Enable source identification:: The Extensions UI uses the subdirectory name to organize plugins by catalog source. Users can determine whether a plugin comes from the Red Hat catalog, a community catalog, or an internal custom catalog.
+
+Support verification:: Platform engineers can inspect `/extensions/extra/<subdirectory>/catalog-entities/` to verify that catalog extraction succeeded and that the expected plugins are available.
+
+== Explicit naming with the name=image_ref format
+
+You can explicitly name a subdirectory by prefixing the catalog image reference with `<name>=`:
+
+[source,terminal]
+----
+EXTRA_CATALOG_INDEX_IMAGES="community=quay.io/community/plugin-catalog:latest"
+----
+
+In this example, {product} extracts the catalog into `/extensions/extra/community/catalog-entities/`.
+The subdirectory name is `community`, regardless of the image registry, repository, or tag.
+
+Use explicit naming when you want:
+
+* Readable, predictable subdirectory names that are independent of image registry details
+* Stable subdirectory names that do not change when you update image tags or migrate to a different registry
+* Clear source identification in the Extensions UI and verification scripts
+
+== Auto-derived naming from image references
+
+If you do not provide an explicit name, {product} auto-derives the subdirectory name from the image reference by replacing `/`, `:`, and `@` characters with underscores (`_`):
+
+[source,terminal]
+----
+EXTRA_CATALOG_INDEX_IMAGES="quay.io/community/plugin-catalog:latest"
+----
+
+In this example, the subdirectory name becomes `quay.io_community_plugin-catalog_latest`.
+
+Auto-derived names are useful when:
+
+* You are testing catalog extraction and do not need readable names
+* You have only one or two extra catalogs and subdirectory name length is not a concern
+* You want to avoid explicitly managing subdirectory names
+
+Auto-derived names can become unwieldy when image references include long registry domains or deeply nested repository paths.
+For production deployments, explicit naming is recommended.
+
+== Duplicate subdirectory names
+
+If you configure multiple catalog index images with the same subdirectory name, {product} logs a warning message and applies last-write-wins behavior:
+
+[source,terminal]
+----
+EXTRA_CATALOG_INDEX_IMAGES="internal=registry.example.com/plugins:v1,internal=registry.example.com/plugins:v2"
+----
+
+In this example, both entries use the subdirectory name `internal`.
+The second entry (`plugins:v2`) overwrites the first entry (`plugins:v1`).
+The `/extensions/extra/internal/catalog-entities/` directory contains only the catalog entities from `plugins:v2`.
+
+You can use this behavior intentionally to override a catalog entry by placing the override later in the comma-separated list.
+
+== Best practices for naming
+
+To avoid confusion and ensure maintainability:
+
+Use explicit names in production deployments:: Explicit names are easier to read, remain stable across image updates, and simplify verification scripts.
+
+Avoid duplicate names unless intentionally overriding:: Duplicate names cause one catalog to overwrite another. If you need to override a catalog, document the override behavior in your deployment configuration.
+
+Choose short, descriptive names:: Names like `community`, `partner`, or `internal` are easier to work with than auto-derived names like `quay.io_community_plugins_catalog_v1.10.0`.
+
+Use consistent naming across deployment methods:: If you deploy {product} using both Helm and Operator methods in different environments, use the same subdirectory names to simplify troubleshooting.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:extra-catalog-index-directory-structure_{context}[Extra catalog index directory structure reference]
