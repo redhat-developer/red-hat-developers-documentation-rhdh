@@ -1,0 +1,182 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="helm-chart-catalog-index-extra-images_{context}"]
+= Helm chart global.catalogIndex.extraImages parameter reference
+
+[role="_abstract"]
+The `global.catalogIndex.extraImages` parameter configures additional catalog index images for plugin discovery in Helm chart deployments.
+
+== Parameter path
+
+`global.catalogIndex.extraImages`
+
+== Parameter type
+
+List of objects
+
+== Default value
+
+`[]` (empty list)
+
+== Purpose
+
+Configures additional catalog index images that {product} extracts to populate the Extensions UI with plugins from community, partner, and internal custom catalogs.
+The Helm chart converts this parameter into the `EXTRA_CATALOG_INDEX_IMAGES` environment variable for the `install-dynamic-plugins` init container.
+
+== Sub-fields
+
+Each entry in the `extraImages` list is an object with the following fields:
+
+.global.catalogIndex.extraImages sub-fields
+[cols="1,1,1,2", options="header"]
+|===
+|Field
+|Type
+|Required
+|Description
+
+|`name`
+|String
+|No
+|The subdirectory name under `/extensions/extra/` where catalog entities are extracted. If omitted, {product} auto-derives the name from the image reference by replacing `/`, `:`, and `@` characters with underscores (`_`).
+
+|`registry`
+|String
+|Yes
+|The container registry hostname (for example, `quay.io`, `registry.example.com`, `docker.io`).
+
+|`repository`
+|String
+|Yes
+|The repository path within the registry (for example, `community/rhdh-plugin-catalog`, `team/custom-plugins`).
+
+|`tag`
+|String
+|Yes
+|The image tag (for example, `v1.10.0`, `latest`, `sha256:abc123`).
+|===
+
+== Behavior
+
+When you configure `global.catalogIndex.extraImages`, the Helm chart:
+
+. Constructs an `EXTRA_CATALOG_INDEX_IMAGES` environment variable from the `extraImages` list.
+. For each entry:
++
+* If `name` is provided, uses the `name=registry/repository:tag` format.
+* If `name` is omitted, uses the plain `registry/repository:tag` format.
+
+. Injects the `EXTRA_CATALOG_INDEX_IMAGES` environment variable into the `install-dynamic-plugins` init container.
+
+. The `install-dynamic-plugins` init container extracts each catalog index image to `/extensions/extra/<subdirectory>/catalog-entities/`.
+
+== Configuration examples
+
+Single extra catalog with explicit name:
+
+[source,yaml]
+----
+global:
+  catalogIndex:
+    extraImages:
+      - name: community
+        registry: quay.io
+        repository: community/rhdh-plugin-catalog
+        tag: v1.10.0
+----
+
+This configuration creates the environment variable `EXTRA_CATALOG_INDEX_IMAGES="community=quay.io/community/rhdh-plugin-catalog:v1.10.0"` and extracts catalog entities to `/extensions/extra/community/catalog-entities/`.
+
+Multiple extra catalogs with mixed naming:
+
+[source,yaml]
+----
+global:
+  catalogIndex:
+    extraImages:
+      - name: community
+        registry: quay.io
+        repository: community/rhdh-plugin-catalog
+        tag: v1.10.0
+      - registry: registry.example.com
+        repository: partner/plugin-catalog
+        tag: latest
+      - name: internal
+        registry: registry.example.com
+        repository: custom/plugins
+        tag: v2.0.0
+----
+
+This configuration creates the environment variable:
+
+[source,terminal]
+----
+EXTRA_CATALOG_INDEX_IMAGES="community=quay.io/community/rhdh-plugin-catalog:v1.10.0,registry.example.com/partner/plugin-catalog:latest,internal=registry.example.com/custom/plugins:v2.0.0"
+----
+
+Catalog entities are extracted to `/extensions/extra/community/catalog-entities/`, `/extensions/extra/registry.example.com_partner_plugin-catalog_latest/catalog-entities/`, and `/extensions/extra/internal/catalog-entities/`.
+
+Extra catalog without explicit name:
+
+[source,yaml]
+----
+global:
+  catalogIndex:
+    extraImages:
+      - registry: quay.io
+        repository: community/rhdh-plugin-catalog
+        tag: v1.10.0
+----
+
+This configuration creates the environment variable:
+
+[source,terminal]
+----
+EXTRA_CATALOG_INDEX_IMAGES="quay.io/community/rhdh-plugin-catalog:v1.10.0"
+----
+
+Catalog entities are extracted to `/extensions/extra/quay.io_community_rhdh-plugin-catalog_v1.10.0/catalog-entities/`.
+
+== Duplicate handling
+
+If multiple entries in `extraImages` use the same `name` value (or result in the same auto-derived name), the `install-dynamic-plugins` init container logs a warning message and applies last-write-wins behavior.
+The last entry in the list overwrites earlier entries with the same name.
+
+Example with duplicate names:
+
+[source,yaml]
+----
+global:
+  catalogIndex:
+    extraImages:
+      - name: internal
+        registry: registry.example.com
+        repository: plugins
+        tag: v1
+      - name: internal
+        registry: registry.example.com
+        repository: plugins
+        tag: v2
+----
+
+In this example:
+
+* Both entries use the subdirectory name `internal`.
+* The second entry (`plugins:v2`) overwrites the first entry (`plugins:v1`).
+* The `/extensions/extra/internal/catalog-entities/` directory contains only the catalog entities from `plugins:v2`.
+
+== Relationship to CATALOG_INDEX_IMAGE
+
+The primary catalog index image is configured using a separate parameter (not shown in this reference).
+The primary catalog provides both catalog entities and the `dynamic-plugins.default.yaml` file with default plugin configurations.
+
+The `global.catalogIndex.extraImages` parameter configures additional catalogs that provide only catalog entities for plugin discovery.
+Extra catalogs do not provide default plugin configurations.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:primary-vs-extra-catalog-index-images_{context}[How primary and extra catalog index images differ]
+* xref:extra-catalog-naming-conventions_{context}[Extra catalog subdirectory naming conventions]
+* xref:extra-catalog-index-images-environment-variable_{context}[EXTRA_CATALOG_INDEX_IMAGES environment variable reference]
+* link:{default-helm-chart-values-link}[Default Helm chart values.yaml]

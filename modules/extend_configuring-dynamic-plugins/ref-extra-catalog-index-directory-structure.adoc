@@ -1,0 +1,159 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="extra-catalog-index-directory-structure_{context}"]
+= Extra catalog index directory structure reference
+
+[role="_abstract"]
+{product} extracts catalog index images into a structured directory tree under `/extensions/`.
+Understanding this structure helps you verify catalog extraction and troubleshoot configuration issues.
+
+== Primary catalog directory structure
+
+The primary catalog index image (configured via `CATALOG_INDEX_IMAGE`) is extracted to `/extensions/`:
+
+----
+/extensions/
+├── catalog-entities/          # Plugin metadata for Extensions UI
+└── dynamic-plugins.default.yaml  # Default plugin configurations
+----
+
+The `catalog-entities/` directory contains Backstage software catalog descriptor files in YAML or JSON format.
+The Extensions UI reads these files to display available plugins.
+
+The `dynamic-plugins.default.yaml` file contains default plugin configurations.
+{product} applies these configurations automatically during installation.
+
+== Extra catalog directory structure
+
+Each extra catalog index image (configured via `EXTRA_CATALOG_INDEX_IMAGES`) is extracted to `/extensions/extra/<subdirectory>/`:
+
+----
+/extensions/
+├── catalog-entities/          # From CATALOG_INDEX_IMAGE
+├── dynamic-plugins.default.yaml  # From CATALOG_INDEX_IMAGE
+└── extra/
+    ├── community/
+    │   └── catalog-entities/  # From extra catalog "community"
+    ├── partner/
+    │   └── catalog-entities/  # From extra catalog "partner"
+    └── internal/
+        └── catalog-entities/  # From extra catalog "internal"
+----
+
+In this example:
+
+* The `community/` subdirectory contains catalog entities from an extra catalog configured with the name `community`.
+* The `partner/` subdirectory contains catalog entities from an extra catalog configured with the name `partner`.
+* The `internal/` subdirectory contains catalog entities from an extra catalog configured with the name `internal`.
+
+Each subdirectory contains only `catalog-entities/`.
+Extra catalog index images do *not* provide `dynamic-plugins.default.yaml`.
+
+== Subdirectory naming rules
+
+The subdirectory name under `/extensions/extra/` is determined by:
+
+Explicit name:: When you configure an extra catalog using the `name=image_ref` format, the subdirectory name is the `<name>` portion.
++
+Example: `community=quay.io/community/plugins:v1.10` creates `/extensions/extra/community/`.
+
+Auto-derived name:: When you configure an extra catalog using the plain `image_ref` format, {product} derives the subdirectory name from the image reference by replacing `/`, `:`, and `@` characters with underscores (`_`).
++
+Example: `quay.io/community/plugins:v1.10` creates `/extensions/extra/quay.io_community_plugins_v1.10/`.
+
+== Directory structure examples
+
+Single extra catalog with explicit name:
+
+Configuration: `EXTRA_CATALOG_INDEX_IMAGES="community=quay.io/community/rhdh-plugin-catalog:v1.10.0"`
+
+Resulting directory structure:
+
+----
+/extensions/
+├── catalog-entities/
+├── dynamic-plugins.default.yaml
+└── extra/
+    └── community/
+        └── catalog-entities/
+            ├── plugin-a.yaml
+            ├── plugin-b.yaml
+            └── plugin-c.yaml
+----
+
+Multiple extra catalogs with mixed naming:
+
+Configuration: `EXTRA_CATALOG_INDEX_IMAGES="community=quay.io/community/plugins:v1.10,quay.io/partner/catalog:latest,internal=registry.example.com/custom:v2.0"`
+
+Resulting directory structure:
+
+----
+/extensions/
+├── catalog-entities/
+├── dynamic-plugins.default.yaml
+└── extra/
+    ├── community/
+    │   └── catalog-entities/
+    ├── quay.io_partner_catalog_latest/
+    │   └── catalog-entities/
+    └── internal/
+        └── catalog-entities/
+----
+
+In this example:
+
+* `community` and `internal` use explicit names.
+* `quay.io_partner_catalog_latest` is auto-derived from the image reference `quay.io/partner/catalog:latest`.
+
+Auto-derived names with complex image references:
+
+Configuration: `EXTRA_CATALOG_INDEX_IMAGES="registry.example.com/team/plugins:v1.10.0,quay.io/org/catalog@sha256:abc123"`
+
+Resulting directory structure:
+
+----
+/extensions/
+├── catalog-entities/
+├── dynamic-plugins.default.yaml
+└── extra/
+    ├── registry.example.com_team_plugins_v1.10.0/
+    │   └── catalog-entities/
+    └── quay.io_org_catalog_sha256_abc123/
+        └── catalog-entities/
+----
+
+Auto-derived names can become unwieldy with complex image references.
+For production deployments, explicit naming is recommended.
+
+== Fallback directory locations
+
+If a catalog index image does not contain a `catalog-entities/` directory at the root level, {product} checks the following fallback locations in order:
+
+. `marketplace/`
+. `extensions/`
+
+If none of these directories exist, no catalog entities are extracted from that catalog index image, and a warning message is logged.
+
+== Verifying directory structure
+
+To verify that extra catalog index images were extracted correctly:
+
+. Execute a shell in the {product} container:
++
+[source,terminal]
+----
+$ oc exec -n {my-product-namespace} <pod_name> -- ls -lR /extensions/extra/
+----
++
+Replace `<pod_name>` with the name of your {product} pod.
+
+. Check the output for subdirectories matching your configured extra catalog names.
+
+. Verify that each subdirectory contains a `catalog-entities/` directory with YAML or JSON files.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:primary-vs-extra-catalog-index-images_{context}[How primary and extra catalog index images differ]
+* xref:extra-catalog-naming-conventions_{context}[Extra catalog subdirectory naming conventions]
+* xref:extra-catalog-index-images-environment-variable_{context}[EXTRA_CATALOG_INDEX_IMAGES environment variable reference]

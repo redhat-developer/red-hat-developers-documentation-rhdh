@@ -1,0 +1,150 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="extra-catalog-index-images-environment-variable_{context}"]
+= EXTRA_CATALOG_INDEX_IMAGES environment variable reference
+
+[role="_abstract"]
+The `EXTRA_CATALOG_INDEX_IMAGES` environment variable configures additional catalog index images for plugin discovery in the Extensions UI.
+
+== Variable name
+
+`EXTRA_CATALOG_INDEX_IMAGES`
+
+== Purpose
+
+Configures additional catalog index images that {product} extracts to populate the Extensions UI with plugins from community, partner, and internal custom catalogs.
+Plugins from extra catalog index images appear in the Extensions UI but do not install automatically.
+
+== Format
+
+Comma-separated list of catalog index image references.
+Each entry supports two formats:
+
+Explicit name format:: `<name>=<registry>/<repository>:<tag>`
++
+Example: `community=quay.io/community/rhdh-plugin-catalog:v1.10.0`
+
+Plain image reference format:: `<registry>/<repository>:<tag>`
++
+Example: `quay.io/community/rhdh-plugin-catalog:v1.10.0`
+
+You can mix both formats in the same comma-separated list.
+
+== Behavior
+
+When you configure `EXTRA_CATALOG_INDEX_IMAGES`, the `install-dynamic-plugins` init container:
+
+. Parses the comma-separated list of catalog index images.
+. Extracts each catalog index image to `/extensions/extra/<subdirectory>/catalog-entities/`.
+. Determines the subdirectory name based on:
++
+* The explicit `<name>` if you use the `name=image_ref` format.
+* An auto-derived name created by replacing `/`, `:`, and `@` characters with underscores (`_`) if you use the plain `image_ref` format.
+
+. Extracts only the `catalog-entities` directory (or `marketplace/` or `extensions/` as fallbacks) from each catalog index image.
+The `dynamic-plugins.default.yaml` file is *not* extracted from extra catalog index images.
+
+. Logs a warning message if multiple entries use the same subdirectory name.
+The last entry in the list overwrites earlier entries with the same name.
+
+== Subdirectory naming examples
+
+The following table shows how {product} determines subdirectory names:
+
+[cols="1,1", options="header"]
+|===
+|EXTRA_CATALOG_INDEX_IMAGES value
+|Resulting subdirectory name
+
+|`community=quay.io/community/plugins:v1.10`
+|`community`
+
+|`quay.io/community/plugins:v1.10`
+|`quay.io_community_plugins_v1.10`
+
+|`internal=registry.example.com/custom:latest`
+|`internal`
+
+|`registry.example.com/custom:latest`
+|`registry.example.com_custom_latest`
+
+|`partner=quay.io/partner/catalog@sha256:abc123`
+|`partner`
+
+|`quay.io/partner/catalog@sha256:abc123`
+|`quay.io_partner_catalog_sha256_abc123`
+|===
+
+== Relationship to CATALOG_INDEX_IMAGE
+
+`CATALOG_INDEX_IMAGE` configures the primary catalog index image, which provides:
+
+* Catalog entities for the Extensions UI
+* The `dynamic-plugins.default.yaml` file with default plugin configurations
+
+`EXTRA_CATALOG_INDEX_IMAGES` configures additional catalog index images, which provide:
+
+* Catalog entities for the Extensions UI
+* No `dynamic-plugins.default.yaml` file
+
+Only the primary catalog index image provides default plugin configurations.
+Extra catalog index images provide plugin discovery without automatic installation.
+
+== Duplicate handling
+
+If multiple entries in `EXTRA_CATALOG_INDEX_IMAGES` result in the same subdirectory name, the `install-dynamic-plugins` init container logs a warning message and applies last-write-wins behavior.
+The catalog entities from the last entry overwrite earlier entries.
+
+Example with duplicate names:
+
+[source,terminal]
+----
+EXTRA_CATALOG_INDEX_IMAGES="internal=registry.example.com/plugins:v1,internal=registry.example.com/plugins:v2"
+----
+
+In this example:
+
+* Both entries use the subdirectory name `internal`.
+* The second entry (`plugins:v2`) overwrites the first entry (`plugins:v1`).
+* The `/extensions/extra/internal/catalog-entities/` directory contains only the catalog entities from `plugins:v2`.
+
+You can use this behavior intentionally to override a catalog entry by placing the override later in the comma-separated list.
+
+== Supported deployment methods
+
+`EXTRA_CATALOG_INDEX_IMAGES` is supported in:
+
+* Helm chart deployments (configured via `global.catalogIndex.extraImages`)
+* Operator deployments (configured via `extraEnvs` targeting the `install-dynamic-plugins` container)
+* {product-local} deployments (configured in the `.env` file)
+
+== Disconnected environments
+
+In disconnected or air-gapped environments using the Operator, you must configure matching `RELATED_IMAGE_extra_catalog_index_<name>` environment variables on the Operator controller.
+The `<name>` portion of the `RELATED_IMAGE` variable must match the subdirectory name used in `EXTRA_CATALOG_INDEX_IMAGES`.
+
+Example:
+
+[source,yaml]
+----
+# Operator deployment
+env:
+  - name: RELATED_IMAGE_extra_catalog_index_community
+    value: internal-registry.example.com/community/catalog:v1.10
+
+# {product-custom-resource-type} CR
+extraEnvs:
+  envs:
+    - name: EXTRA_CATALOG_INDEX_IMAGES
+      value: "community=internal-registry.example.com/community/catalog:v1.10"
+  container: install-dynamic-plugins
+----
+
+The subdirectory name `community` must match in both configurations.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:primary-vs-extra-catalog-index-images_{context}[How primary and extra catalog index images differ]
+* xref:extra-catalog-naming-conventions_{context}[Extra catalog subdirectory naming conventions]
+* xref:extra-catalog-index-directory-structure_{context}[Extra catalog index directory structure reference]

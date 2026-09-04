@@ -1,0 +1,144 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-extra-catalog-index-images-disconnected_{context}"]
+= Configure extra catalog index images in disconnected environments
+
+[role="_abstract"]
+Configure extra catalog index images in disconnected or air-gapped environments by mirroring catalog images to an internal registry and configuring the {product} Operator to use the mirrored images.
+
+.Prerequisites
+
+* You have deployed {product} using the Operator in a disconnected or air-gapped environment.
+* You have mirrored the primary catalog index image and any extra catalog index images to an internal container registry.
+* You have access to modify the {product} Operator deployment to add `RELATED_IMAGE` environment variables.
+* You understand the distinction between primary and extra catalog index images.
+
+.Procedure
+
+. Mirror each extra catalog index image to your internal registry.
++
+[source,terminal]
+----
+$ skopeo copy \
+    docker://quay.io/community/rhdh-plugin-catalog:v1.10.0 \
+    docker://internal-registry.example.com/community/rhdh-plugin-catalog:v1.10.0
+----
++
+Repeat this step for each extra catalog index image you want to configure.
+
+. Edit the {product} Operator deployment to add `RELATED_IMAGE_extra_catalog_index_<name>` environment variables for each extra catalog index image.
+The `<name>` portion must match the subdirectory name you will use in the `EXTRA_CATALOG_INDEX_IMAGES` configuration:
++
+[source,terminal]
+----
+$ oc edit deployment rhdh-operator -n <operator_namespace>
+----
++
+Replace `<operator_namespace>` with the namespace where the {product} Operator is deployed.
+
+. In the Operator deployment, add environment variables to the `manager` container under `spec.template.spec.containers`:
++
+[source,yaml]
+----
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          env:
+            - name: RELATED_IMAGE_extra_catalog_index_community
+              value: internal-registry.example.com/community/rhdh-plugin-catalog:v1.10.0
+            - name: RELATED_IMAGE_extra_catalog_index_partner
+              value: internal-registry.example.com/partner/plugin-catalog:v1.0.0
+----
++
+In this example:
++
+. The `RELATED_IMAGE_extra_catalog_index_community` variable points to the mirrored community catalog image.
+. The `RELATED_IMAGE_extra_catalog_index_partner` variable points to the mirrored partner catalog image.
+. The suffixes `community` and `partner` must match the names used in the `EXTRA_CATALOG_INDEX_IMAGES` configuration in the next step.
+
+. Edit your {product-custom-resource-type} custom resource to add the `EXTRA_CATALOG_INDEX_IMAGES` environment variable.
+Use the same subdirectory names (`community`, `partner`) that you used in the `RELATED_IMAGE` variable names:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: {product-custom-resource-type}
+metadata:
+  name: {my-product-cr-name}
+spec:
+  application:
+    extraEnvs:
+      envs:
+        - name: EXTRA_CATALOG_INDEX_IMAGES
+          value: "community=internal-registry.example.com/community/rhdh-plugin-catalog:v1.10.0,partner=internal-registry.example.com/partner/plugin-catalog:v1.0.0"
+      container: install-dynamic-plugins
+----
++
+[IMPORTANT]
+====
+The subdirectory names in the `name=image_ref` entries (`community`, `partner`) must match the suffixes in the corresponding `RELATED_IMAGE_extra_catalog_index_<name>` environment variables.
+If the names do not match, catalog extraction fails.
+====
+
+. Apply the {product-custom-resource-type} custom resource:
++
+[source,terminal]
+----
+$ oc apply -f backstage-cr.yaml -n {my-product-namespace}
+----
+
+.Verification
+
+. Wait for the {product} deployment to complete and the pod to reach the `Running` state:
++
+[source,terminal]
+----
+$ oc get pods -n {my-product-namespace}
+----
+
+. Verify that the extra catalog entities were extracted by inspecting the `install-dynamic-plugins` init container logs:
++
+[source,terminal]
+----
+$ oc logs -n {my-product-namespace} \
+    <pod_name> \
+    -c install-dynamic-plugins
+----
++
+Replace `<pod_name>` with the name of your {product} pod.
+Look for log messages indicating successful extraction of extra catalog index images.
+
+. Verify the subdirectory structure:
++
+[source,terminal]
+----
+$ oc exec -n {my-product-namespace} <pod_name> -- ls -l /extensions/extra/
+----
++
+You should see subdirectories corresponding to the names used in your `EXTRA_CATALOG_INDEX_IMAGES` configuration (`community`, `partner`).
+
+. Verify that plugins from the extra catalogs appear in the Extensions UI:
++
+--
+.. Navigate to your {product} instance in a web browser.
+.. Open the Extensions UI.
+.. Look for plugins organized under subdirectories matching your extra catalog names.
+--
+
+.Troubleshooting
+
+If catalog extraction fails:
+
+. Verify that the `RELATED_IMAGE_extra_catalog_index_<name>` variable names match the subdirectory names in `EXTRA_CATALOG_INDEX_IMAGES`.
+. Check that the mirrored images are accessible from the {product} pod's network.
+. Inspect the `install-dynamic-plugins` init container logs for error messages related to image pull failures or name mismatches.
+
+[role="_additional-resources"]
+.Additional resources
+
+. xref:primary-vs-extra-catalog-index-images_{context}[How primary and extra catalog index images differ]
+. xref:extra-catalog-naming-conventions_{context}[Extra catalog subdirectory naming conventions]
+. xref:extra-catalog-index-images-environment-variable_{context}[EXTRA_CATALOG_INDEX_IMAGES environment variable reference]
+. link:{installing-in-air-gap-book-link}[{installing-in-air-gap-book-title}]

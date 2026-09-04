@@ -1,0 +1,90 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-extra-catalog-index-images-rhdh-local_{context}"]
+= Configure extra catalog index images with {product-local}
+
+[role="_abstract"]
+Add extra catalog index images to your {product-local} deployment to make plugins from community, partner, and internal custom catalogs discoverable in the Extensions UI during local development and testing.
+
+.Prerequisites
+
+* You have installed {product-local}.
+* You have access to the catalog index image registries you want to configure.
+* You understand the distinction between primary and extra catalog index images.
+
+.Procedure
+
+. Locate the {product-local} `.env` file.
+By default, this file is in the {product-local} installation directory.
+
+. Open the `.env` file for editing.
+
+. Add or edit the `EXTRA_CATALOG_INDEX_IMAGES` environment variable with a comma-separated list of catalog index images:
++
+[source,terminal]
+----
+EXTRA_CATALOG_INDEX_IMAGES="community=quay.io/community/rhdh-plugin-catalog:v1.10.0,quay.io/partner/plugin-catalog:v1.0.0,internal=localhost:5000/custom-plugins:latest"
+----
++
+In this example:
++
+. The first entry uses the `name=image_ref` format with an explicit subdirectory name (`community`).
+. The second entry uses the plain `image_ref` format, so {product-local} auto-derives the subdirectory name from the image reference: `quay.io_partner_plugin-catalog_v1.0.0`.
+. The third entry references a locally-hosted registry on `localhost:5000` with the explicit name `internal`.
+
+. Save the `.env` file.
+
+. Restart {product-local} to apply the configuration:
++
+[source,terminal]
+----
+$ rhdh-local restart
+----
++
+Or, if you use Podman Compose directly:
++
+[source,terminal]
+----
+$ podman-compose down
+$ podman-compose up -d
+----
+
+.Verification
+
+. Wait for the {product-local} containers to start and reach a healthy state:
++
+[source,terminal]
+----
+$ podman ps
+----
+
+. Verify that the extra catalog entities were extracted by checking the `/extensions/extra/` directory structure:
++
+[source,terminal]
+----
+$ podman exec <container_name> ls -l /extensions/extra/
+----
++
+Replace `<container_name>` with the name of your {product-local} container.
+You should see subdirectories corresponding to the explicit names or auto-derived names from your `EXTRA_CATALOG_INDEX_IMAGES` configuration.
+
+. Verify that plugins from the extra catalogs appear in the Extensions UI:
++
+--
+.. Navigate to your local {product} instance in a web browser (typically `http://localhost:7007`).
+.. Open the Extensions UI.
+.. Look for plugins organized under subdirectories matching your extra catalog names.
+--
+
+[NOTE]
+====
+Plugins from extra catalog index images appear in the Extensions UI but do not install automatically.
+To install a plugin from an extra catalog, you must add explicit configuration to your `dynamic-plugins.yaml` file.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+. xref:primary-vs-extra-catalog-index-images_{context}[How primary and extra catalog index images differ]
+. xref:extra-catalog-naming-conventions_{context}[Extra catalog subdirectory naming conventions]
+. xref:extra-catalog-index-images-environment-variable_{context}[EXTRA_CATALOG_INDEX_IMAGES environment variable reference]

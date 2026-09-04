@@ -1,0 +1,117 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-extra-catalog-index-images-operator_{context}"]
+= Configure extra catalog index images with the Operator
+
+[role="_abstract"]
+Add extra catalog index images to your Operator deployment to make plugins from community, partner, and internal custom catalogs discoverable in the Extensions UI.
+
+.Prerequisites
+
+* You have installed the {product} Operator.
+* You have created or are preparing to create a {product-custom-resource-type} custom resource.
+* You have access to the catalog index image registries you want to configure.
+* You understand the distinction between primary and extra catalog index images.
+
+.Procedure
+
+. Open your {product-custom-resource-type} custom resource YAML file for editing.
+
+. Add an `extraEnvs` section targeting the `install-dynamic-plugins` container with the `EXTRA_CATALOG_INDEX_IMAGES` environment variable:
++
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: {product-custom-resource-type}
+metadata:
+  name: {my-product-cr-name}
+spec:
+  application:
+    extraEnvs:
+      envs:
+        - name: EXTRA_CATALOG_INDEX_IMAGES
+          value: "community=quay.io/community/rhdh-plugin-catalog:v1.10.0,registry.example.com/internal/custom-plugins:latest"
+      container: install-dynamic-plugins
+----
++
+In this example:
++
+. The first entry uses the `name=image_ref` format with an explicit subdirectory name (`community`).
+. The second entry uses the plain `image_ref` format, so {product} auto-derives the subdirectory name from the image reference.
+
+. Format the `EXTRA_CATALOG_INDEX_IMAGES` value as a comma-separated list of catalog index images.
+Each entry can use one of two formats:
++
+Explicit name format:: `<name>=<image_ref>`
++
+Example: `community=quay.io/community/plugins:v1.10`
++
+Use this format when you want a readable, stable subdirectory name.
++
+Plain image reference format:: `<image_ref>`
++
+Example: `quay.io/community/plugins:v1.10`
++
+Use this format when subdirectory name readability is not critical.
+{product} auto-derives the subdirectory name by replacing `/`, `:`, and `@` characters with underscores (`_`).
+
+. Apply the {product-custom-resource-type} custom resource:
++
+[source,terminal]
+----
+$ oc apply -f backstage-cr.yaml -n {my-product-namespace}
+----
+
+.Verification
+
+. Wait for the {product} deployment to complete and the pod to reach the `Running` state:
++
+[source,terminal]
+----
+$ oc get pods -n {my-product-namespace}
+----
+
+. Verify that the extra catalog entities were extracted by inspecting the `install-dynamic-plugins` init container logs:
++
+[source,terminal]
+----
+$ oc logs -n {my-product-namespace} \
+    <pod_name> \
+    -c install-dynamic-plugins
+----
++
+Replace `<pod_name>` with the name of your {product} pod.
+Look for log messages indicating extraction of extra catalog index images.
++
+If you configured duplicate subdirectory names, check for warning messages in the logs.
+
+. Verify the subdirectory structure by executing a shell in the {product} container:
++
+[source,terminal]
+----
+$ oc exec -n {my-product-namespace} <pod_name> -- ls -l /extensions/extra/
+----
++
+You should see subdirectories corresponding to the explicit names or auto-derived names from your `EXTRA_CATALOG_INDEX_IMAGES` configuration.
+
+. Verify that plugins from the extra catalogs appear in the Extensions UI:
++
+--
+.. Navigate to your {product} instance in a web browser.
+.. Open the Extensions UI.
+.. Look for plugins organized under subdirectories matching your extra catalog names.
+--
+
+[NOTE]
+====
+Plugins from extra catalog index images appear in the Extensions UI but do not install automatically.
+To install a plugin from an extra catalog, you must add explicit configuration to your `dynamic-plugins.yaml` file.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+. xref:primary-vs-extra-catalog-index-images_{context}[How primary and extra catalog index images differ]
+. xref:extra-catalog-naming-conventions_{context}[Extra catalog subdirectory naming conventions]
+. xref:extra-catalog-index-images-environment-variable_{context}[EXTRA_CATALOG_INDEX_IMAGES environment variable reference]
+. link:{configuring-book-link}[{configuring-book-title}]
