@@ -1,0 +1,140 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-github-dora-datasource_{context}"]
+= Configure GitHub DORA datasource
+
+[role="_abstract"]
+To calculate deployment frequency and lead time for changes, you must configure GitHub as a DORA datasource to collect deployment events, pull requests, and commit history.
+
+.Prerequisites
+
+* You have xref:install-configure-dora-backend-module_{context}[installed and configured the DORA backend module].
+* You have xref:integrate-github-health-metrics-using-scorecards_{context}[configured GitHub integration] with appropriate permissions to read deployment events and repository data.
+
+.Procedure
+
+. Add the GitHub DORA datasource to your `app-config.yaml` file:
++
+[source,yaml]
+----
+scorecard:
+  dora:
+    dataSources:
+      github:
+        enabled: true
+        deploymentEvents:
+          source: github_deployments
+        pullRequests:
+          enabled: true
+----
++
+Where:
++
+`deploymentEvents.source`:: Specifies how to identify deployments. Valid values are `github_deployments` (GitHub deployment events API) or `release_tags` (GitHub release tags).
+`pullRequests.enabled`:: Enables pull request data collection for calculating lead time for changes. The default value is `true`.
+
+. Define what constitutes a deployment for your organization by choosing one of the following options:
++
+. *GitHub deployment events*: Use GitHub's deployment API to track when code is deployed to production.
+This option requires that your deployment workflows create GitHub deployment events.
++
+[source,yaml]
+----
+scorecard:
+  dora:
+    dataSources:
+      github:
+        deploymentEvents:
+          source: github_deployments
+          environment: production
+----
++
+. *Release tags*: Use GitHub release tags as deployment markers.
+This option is useful when your deployment process does not create GitHub deployment events.
++
+[source,yaml]
+----
+scorecard:
+  dora:
+    dataSources:
+      github:
+        deploymentEvents:
+          source: release_tags
+          tagPattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+----
++
+Where:
++
+`environment`:: Filters deployment events to a specific environment. Use `production` to count only production deployments.
+`tagPattern`:: A regular expression matching release tag names. The example pattern matches semantic version tags like `v1.2.3`.
+
+. Configure lead time calculation by specifying the starting point for measuring lead time:
++
+[source,yaml]
+----
+scorecard:
+  dora:
+    dataSources:
+      github:
+        leadTime:
+          startFrom: first_commit
+----
++
+Where:
++
+`leadTime.startFrom`:: Specifies when to start measuring lead time. Valid values are `first_commit` (time from first commit in a pull request to deployment) or `pr_creation` (time from pull request creation to deployment). The default value is `first_commit`.
+
+. Configure repository mapping to catalog components by adding annotations to your component `catalog-info.yaml` files:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    github.com/project-slug: my-org/my-repo
+    scorecard.io/dora-enabled: "true"
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+----
++
+Where:
++
+`github.com/project-slug`:: Links the component to a GitHub repository in the format `organization/repository`.
+`scorecard.io/dora-enabled`:: Enables DORA metric collection for this component.
+
+. Restart your {product-very-short} instance to apply the configuration changes.
+
+.Verification
+
+. Navigate to a component page in your {product-very-short} catalog and select the *Scorecard* tab.
+
+. Verify that deployment frequency and lead time metrics appear on the scorecard.
++
+[NOTE]
+====
+DORA metrics may take up to one hour to appear after initial configuration, depending on your configured collection interval.
+====
+
+. Check the DORA backend logs for GitHub data collection activity:
++
+[source,terminal]
+----
+$ oc logs <rhdh_pod_name> | grep "GitHub DORA collector"
+----
++
+You should see log entries indicating successful GitHub API calls and deployment event processing.
+
+.Troubleshooting
+
+. If deployment frequency shows zero, verify that your GitHub repository has deployment events or release tags matching your configuration.
+. If lead time metrics do not appear, check that pull requests are being merged in your GitHub repository and that the GitHub integration has permissions to read pull request data.
+. If you see rate limit errors in the logs, consider xref:schedule-metrics-to-avoid-api-limits_monitor-collective-health-across-components[scheduling metrics collection to avoid API limits].
+
+.Additional resources
+
+. link:https://docs.github.com/en/rest/deployments/deployments[GitHub Deployments API documentation]
+. xref:configure-jira-dora-datasource_{context}[Configure Jira DORA datasource]
