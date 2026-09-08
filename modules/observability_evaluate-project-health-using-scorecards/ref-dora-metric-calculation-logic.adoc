@@ -9,12 +9,12 @@ This reference explains the data sources, formulas, and timestamp logic for each
 
 == Deployment Frequency
 
-=== Definition
+*Definition*
 
 The number of successful production deployments per time period.
 Deployment frequency measures how often an organization successfully releases code to production.
 
-=== Calculation formula
+*Calculation formula*
 
 [source,text]
 ----
@@ -23,7 +23,7 @@ Deployment Frequency = Total Deployment Events / Time Period (days)
 
 Unit: Deployments per day
 
-=== Data sources
+*Data sources*
 
 GitHub deployments API:: The DORA backend module queries the GitHub Deployments API for deployment events where `environment` matches the configured production environment name (default: `production`).
 
@@ -31,11 +31,11 @@ GitHub releases:: If deployment events are not available, the backend module tre
 
 Configurable event patterns:: Platform engineers can configure custom patterns to identify deployments, such as tags matching `v*.*.*` or commits to specific branches.
 
-=== Timestamp used
+*Timestamp used*
 
 The `created_at` timestamp from the GitHub deployment event or release creation time.
 
-=== Example calculation
+*Example calculation*
 
 A component has the following deployment events in a 30-day window:
 
@@ -47,7 +47,7 @@ Calculation:
 Deployment Frequency = 15 deployments / 30 days = 0.5 deployments per day
 ----
 
-=== Configuration that affects calculation
+*Configuration that affects calculation*
 
 `deploymentEvents.source`:: Determines whether to use GitHub deployments API, releases, or custom patterns.
 
@@ -57,12 +57,12 @@ Deployment Frequency = 15 deployments / 30 days = 0.5 deployments per day
 
 == Lead Time for Changes
 
-=== Definition
+*Definition*
 
 The time elapsed from the first commit in a pull request to successful production deployment.
 Lead time measures how quickly code changes move from development to production.
 
-=== Calculation formula
+*Calculation formula*
 
 [source,text]
 ----
@@ -73,7 +73,7 @@ Unit: Hours
 
 For multiple commits in a pull request, the DORA backend module uses the earliest commit timestamp as the start time.
 
-=== Data sources
+*Data sources*
 
 GitHub pull requests:: The backend module retrieves merged pull request data including commit timestamps.
 
@@ -81,13 +81,13 @@ GitHub deployments or releases:: The backend module uses deployment events (or r
 
 Commit-to-deployment correlation:: The backend module maps pull requests to deployments by matching commit SHA values in deployment payloads.
 
-=== Timestamp used
+*Timestamp used*
 
 Start time:: The `commit.author.date` timestamp of the earliest commit in the merged pull request.
 
 End time:: The `created_at` timestamp of the deployment event that includes the commit SHA.
 
-=== Example calculation
+*Example calculation*
 
 A pull request has these timestamps:
 
@@ -104,7 +104,7 @@ Lead Time = 2026-09-02 09:00 - 2026-09-01 10:00 = 23 hours
 The merge time is not used in the calculation.
 Lead time measures the full cycle from code authoring to production deployment.
 
-=== Configuration that affects calculation
+*Configuration that affects calculation*
 
 `leadTime.includeWeekends`:: Determines whether to count weekend hours in lead time (default: `true`).
 
@@ -114,12 +114,12 @@ Lead time measures the full cycle from code authoring to production deployment.
 
 == Change Failure Rate
 
-=== Definition
+*Definition*
 
 The percentage of deployments that result in production incidents requiring remediation.
 Change failure rate measures the stability impact of deployments.
 
-=== Calculation formula
+*Calculation formula*
 
 [source,text]
 ----
@@ -128,7 +128,7 @@ Change Failure Rate = (Failed Deployments / Total Deployments) × 100
 
 Unit: Percentage (%)
 
-=== Data sources
+*Data sources*
 
 GitHub deployments:: Deployment events with their success/failure status.
 
@@ -142,7 +142,7 @@ Incident-to-deployment correlation:: The DORA backend module correlates incident
 * Parsing incident description or custom fields for deployment identifiers
 --
 
-=== Timestamp used
+*Timestamp used*
 
 Deployment timestamp:: The `created_at` timestamp of the deployment event.
 
@@ -150,7 +150,7 @@ Incident timestamp:: The `created` timestamp of the Jira incident.
 
 Correlation window:: Incidents created within 24 hours (configurable) after a deployment are considered caused by that deployment.
 
-=== Example calculation
+*Example calculation*
 
 A component has the following events in a 30-day window:
 
@@ -163,7 +163,7 @@ Calculation:
 Change Failure Rate = (3 / 30) × 100 = 10%
 ----
 
-=== Configuration that affects calculation
+*Configuration that affects calculation*
 
 `changeFailureRate.incidentTypes`:: Jira issue types that count as production incidents (default: `["Incident", "Bug"]`).
 
@@ -175,12 +175,12 @@ Change Failure Rate = (3 / 30) × 100 = 10%
 
 == Time to Restore Service
 
-=== Definition
+*Definition*
 
 The time elapsed from incident creation to incident resolution.
 Time to restore service (MTTR) measures how quickly teams recover from production failures.
 
-=== Calculation formula
+*Calculation formula*
 
 [source,text]
 ----
@@ -191,17 +191,17 @@ Unit: Hours
 
 The DORA backend module calculates the average MTTR across all incidents in the time window.
 
-=== Data sources
+*Data sources*
 
 Jira incidents:: Jira issues with `Issue Type = Incident` and a status that indicates resolution (for example, `Done`, `Resolved`, `Closed`).
 
-=== Timestamp used
+*Timestamp used*
 
 Start time:: The `created` timestamp of the Jira incident.
 
 End time:: The `resolutiondate` timestamp when the incident was marked as resolved.
 
-=== Example calculation
+*Example calculation*
 
 An incident has these timestamps:
 
@@ -220,7 +220,7 @@ For multiple incidents, the DORA backend module reports the average:
 Average MTTR = (2.5 hours + 4.0 hours + 1.5 hours) / 3 incidents = 2.67 hours
 ----
 
-=== Configuration that affects calculation
+*Configuration that affects calculation*
 
 `timeToRestore.incidentTypes`:: Jira issue types that count as production incidents requiring restoration (default: `["Incident"]`).
 
@@ -232,7 +232,7 @@ Average MTTR = (2.5 hours + 4.0 hours + 1.5 hours) / 3 incidents = 2.67 hours
 
 == Handling edge cases
 
-=== Missing deployment events
+*Missing deployment events*
 
 If no deployment events are found for a component:
 
@@ -240,14 +240,14 @@ If no deployment events are found for a component:
 * Lead Time for Changes reports as `null` (no data)
 * Change Failure Rate reports as `null` (cannot calculate without deployments)
 
-=== Missing incident data
+*Missing incident data*
 
 If no Jira incidents are found for a component:
 
 * Change Failure Rate reports as `0%` (all deployments succeeded)
 * Time to Restore Service reports as `null` (no incidents to restore)
 
-=== Deployments without commit data
+*Deployments without commit data*
 
 If a deployment event does not include commit SHA information:
 
@@ -255,7 +255,7 @@ If a deployment event does not include commit SHA information:
 * Lead Time for Changes cannot be calculated for that specific deployment
 * The DORA backend module logs a warning message
 
-=== Incidents without resolution timestamps
+*Incidents without resolution timestamps*
 
 If a Jira incident has `created` timestamp but no `resolutiondate`:
 
