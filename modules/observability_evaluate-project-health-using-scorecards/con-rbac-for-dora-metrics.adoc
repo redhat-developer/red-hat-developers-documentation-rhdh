@@ -1,0 +1,97 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="rbac-for-dora-metrics_{context}"]
+= Access control for DORA metrics
+
+[role="_abstract"]
+DORA metrics can reveal sensitive information about team performance and organizational delivery capabilities.
+Use {product-very-short} role-based access control (RBAC) to restrict which users can view DORA metrics at component, portfolio, and API levels.
+
+DORA metrics provide visibility into software delivery performance, but they can also expose information that organizations consider sensitive, including:
+
+* Change failure rates that might reflect negatively on specific teams
+* Time to restore service metrics that reveal incident response capabilities
+* Deployment frequency patterns that indicate team velocity
+* Lead time measurements that could be used for performance evaluation
+
+Organizations often require different access levels for DORA metrics compared to other Scorecard data.
+For example, developers might view health and compliance metrics for their own components, but only engineering leadership should see aggregated DORA metrics across the entire organization.
+
+== RBAC policy structure for DORA metrics
+
+{product-very-short} RBAC policies control access to Scorecard DORA metrics through permission rules.
+You can restrict access at three levels:
+
+Component-level access:: Control who can view DORA metrics on individual component Scorecard pages.
+Use this to limit metrics visibility to component owners and their managers.
+
+Portfolio-level access:: Control who can view DORA aggregation cards on the homepage.
+Use this to restrict organization-wide performance visibility to leadership and platform engineering teams.
+
+API-level access:: Control who can query DORA metrics through the TimeSeries and Collectors metadata APIs.
+Use this to prevent unauthorized programmatic access to delivery performance data.
+
+== Permission types for DORA metrics
+
+The Scorecard plugin provides these permission types for DORA metrics:
+
+`scorecard.dora.metric.read`:: Allows reading DORA metric values for catalog entities the user can access.
+Without this permission, DORA metrics do not appear on component Scorecard pages.
+
+`scorecard.dora.aggregation.read`:: Allows viewing portfolio-level DORA aggregation cards on the homepage.
+Without this permission, DORA homepage cards are hidden even if configured.
+
+`scorecard.dora.timeseries.read`:: Allows querying the TimeSeries API for historical DORA metric data.
+Without this permission, API requests return 403 Forbidden.
+
+`scorecard.dora.collectors.read`:: Allows querying the Collectors metadata API for DORA data source health.
+Without this permission, troubleshooting DORA data collection requires administrator assistance.
+
+== Default access behavior
+
+By default, all authenticated users can view DORA metrics if they have access to the underlying catalog entities.
+This matches the behavior of other Scorecard metrics like GitHub open pull requests or Jira open issues.
+
+If your organization considers DORA metrics sensitive, you must explicitly configure RBAC policies to restrict access.
+Without RBAC configuration, any user who can view a component in the catalog can also see its DORA metrics.
+
+== Common RBAC scenarios
+
+Restrict DORA metrics to component owners and managers::
++
+Allow developers to see DORA metrics only for components they own.
+Use catalog entity ownership metadata combined with `scorecard.dora.metric.read` permission.
+
+Leadership-only portfolio visibility::
++
+Hide DORA aggregation cards from the homepage for all users except engineering leadership.
+Use role-based policies with `scorecard.dora.aggregation.read` permission tied to leadership groups.
+
+Platform engineering troubleshooting access::
++
+Grant platform engineering teams access to the Collectors metadata API for monitoring DORA data source health.
+Use `scorecard.dora.collectors.read` permission for the platform engineering role.
+
+Read-only external reporting::
++
+Provide business intelligence systems with read-only API access to DORA metrics for executive dashboards.
+Use service account credentials with `scorecard.dora.timeseries.read` permission.
+
+== RBAC interaction with catalog visibility
+
+RBAC policies for DORA metrics work in combination with catalog entity visibility rules.
+A user must satisfy both conditions to view DORA metrics:
+
+. The user must have permission to view the catalog entity (component, system, or resource).
+. The user must have the appropriate `scorecard.dora.*` permission.
+
+If a user lacks catalog visibility for a component, RBAC policies for DORA metrics do not apply because the component itself is not visible.
+Conversely, if a user can view a component but lacks DORA permissions, they see the component Scorecard page without DORA metrics.
+
+This layered approach ensures that RBAC policies cannot accidentally grant access to components a user should not see.
+
+.Additional resources
+
+* link:{default-rbac-configuration-link}[Configuring RBAC in {product}]
+* xref:configure-portfolio-health-on-a-customizable-home-page_configure-scorecard-cards-on-the-homepage[Configure portfolio health on a customizable home page]
+* xref:scorecard-timeseries-api_{context}[TimeSeries REST API for Scorecard]
