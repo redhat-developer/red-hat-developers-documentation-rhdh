@@ -1,0 +1,128 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="aicontext-entity-schema-reference_{context}"]
+= AIContext entity schema reference
+
+[role="_abstract"]
+Use this reference to define an `AIContext` entity in a `catalog-info.yaml` file. The schema supports two asset location types: `git` for source repositories and `oci` for OCI image references.
+
+[NOTE]
+====
+The `AIContext` entity kind is experimental and its schema might change. Engineering owns the final schema design, and the field requirements in this reference might be adjusted to align with the upstream {backstage} proposal. Set `lifecycle: experimental` until the schema stabilizes.
+====
+
+== Required fields
+[cols="1,2", options="header"]
+|===
+| Field | Description
+
+| `apiVersion`
+| The {backstage} API version. Use `backstage.io/v1alpha1`.
+
+| `kind`
+| The entity kind. Must be `AIContext`.
+
+| `metadata.name`
+| A unique name for the asset within the catalog.
+
+| `metadata.description`
+| A short description of the asset. A clear description improves discoverability in search and filtering.
+
+| `spec.type`
+| The category of content that the asset contains. One of `skills`, `rules`, `agents`, or `mixed`.
+
+| `spec.scope`
+| The organizational scope of the asset. One of `organization`, `product`, or `team`.
+
+| `spec.owner`
+| The team or group that owns the asset. Ownership is enforced by the existing catalog role-based access control (RBAC) model.
+
+| `spec.location.type`
+| The asset location type. One of `git` or `oci`.
+
+| `spec.location.target`
+| The asset location. For `git`, a source repository URL. For `oci`, an OCI image reference.
+|===
+
+== Optional fields
+[cols="1,2", options="header"]
+|===
+| Field | Description
+
+| `metadata.tags`
+| A list of tags that describe the asset, such as `python` or `security`. Tags are searchable.
+
+| `metadata.links`
+| A list of external links that are shown on the entity detail page.
+
+| `metadata.annotations`
+| Annotations for the entity, such as `backstage.io/techdocs-ref` to link TechDocs documentation, or relationship annotations that link the entity to other catalog entities.
+
+| `spec.lifecycle`
+| The lifecycle state of the asset. Set to `experimental` while the `AIContext` schema is experimental.
+|===
+
+== Accepted location types
+[cols="1,2", options="header"]
+|===
+| `spec.location.type` | Expected `spec.location.target`
+
+| `git`
+| A source repository URL, for example `https://github.com/redhat-developer/rh-python-ai-standards`.
+
+| `oci`
+| An OCI image reference, for example `quay.io/redhat/security-ai-rules-bundle:v2.1.0`.
+|===
+
+The catalog processor accepts only the `git` and `oci` location types. Any other value, such as an HTTPS archive URL, is rejected during ingestion.
+
+== Example: source repository asset
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AIContext
+metadata:
+  name: rh-python-ai-standards
+  description: "Red Hat Python team AI coding standards: skills and rules for Claude Code and Cursor"
+  tags:
+    - python
+    - testing
+    - ai-rules
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: mixed
+  scope: organization
+  owner: platform-team
+  lifecycle: experimental
+  location:
+    type: git
+    target: https://github.com/redhat-developer/rh-python-ai-standards
+----
+
+== Example: OCI image asset
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AIContext
+metadata:
+  name: security-ai-rules-bundle
+  description: "Packaged security-focused rules and agents on Quay.io"
+  tags:
+    - security
+    - ai-rules
+    - ai-agents
+  annotations:
+    backstage.io/techdocs-ref: url:https://docs.example.com/security-ai-bundle
+spec:
+  type: mixed
+  scope: organization
+  owner: security-team
+  lifecycle: experimental
+  location:
+    type: oci
+    target: quay.io/redhat/security-ai-rules-bundle:v2.1.0
+----
+
+.Additional resources
+* xref:troubleshooting-aicontext-schema-validation-errors_{context}[Troubleshooting AIContext schema validation errors]
