@@ -1,0 +1,124 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="airesource-entity-schema-reference_{context}"]
+= AiResource entity schema reference
+
+[role="_abstract"]
+Use this reference to define an `AiResource` entity in a `catalog-info.yaml` file. The asset location is set in the `backstage.io/source-location` annotation, which supports a source repository URL or an OCI image reference.
+
+[NOTE]
+====
+The `AiResource` entity kind is experimental and its schema might change. Set `lifecycle: experimental` until the schema stabilizes.
+====
+
+== Required fields
+[cols="1,2", options="header"]
+|===
+| Field | Description
+
+| `apiVersion`
+| The {backstage} API version. Use `backstage.io/v1alpha1`.
+
+| `kind`
+| The entity kind. Must be `AiResource`.
+
+| `metadata.name`
+| A unique name for the asset within the catalog.
+
+| `metadata.description`
+| A short description of the asset. A clear description improves discoverability in search and filtering.
+
+| `metadata.annotations.backstage.io/source-location`
+| The asset location, in location-reference form. For a source repository, use `url:_<repository_url>_`. For an OCI image, use `url:oci://_<image_reference>_`. The `url:` prefix is required.
+
+| `spec.type`
+| The category of content that the asset contains. One of `skill` or `rule`.
+
+| `spec.lifecycle`
+| The lifecycle state of the asset. Set to `experimental` while the `AiResource` schema is experimental.
+
+| `spec.owner`
+| The team or group that owns the asset. Ownership is enforced by the existing catalog role-based access control (RBAC) model.
+|===
+
+== Optional fields
+[cols="1,2", options="header"]
+|===
+| Field | Description
+
+| `metadata.tags`
+| A list of tags that describe the asset, such as `python` or `security`. Tags are searchable.
+
+| `metadata.links`
+| A list of external links that are shown on the entity detail page.
+
+| `metadata.annotations`
+| Additional annotations for the entity, such as `backstage.io/techdocs-ref` to link TechDocs documentation.
+|===
+
+== Accepted location references
+The `backstage.io/source-location` annotation accepts the following forms:
+
+[cols="1,2", options="header"]
+|===
+| Location type | Expected `backstage.io/source-location` value
+
+| Source repository
+| A source repository URL with the `url:` prefix, for example `url:https://github.com/my-org/python-test-writing-skill`.
+
+| OCI image
+| An OCI image reference with the `url:` prefix and the `oci://` scheme, for example `url:oci://quay.io/my-org/skills/pdf-processor:v1.2.0`. The catalog stores the image reference only; it does not pull the image.
+|===
+
+== Example: skill in a source repository
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: python-test-writing-skill
+  description: Skill for writing Python unit tests.
+  annotations:
+    backstage.io/source-location: url:https://github.com/my-org/python-test-writing-skill
+spec:
+  type: skill
+  lifecycle: experimental
+  owner: team-platform
+----
+
+== Example: rule in a source repository
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: security-coding-rules
+  description: Organization security rules for AI coding assistants.
+  annotations:
+    backstage.io/source-location: url:https://github.com/my-org/security-coding-rules
+spec:
+  type: rule
+  lifecycle: experimental
+  owner: team-security
+----
+
+== Example: skill packaged as an OCI image
+Use the location-reference form `url:oci://...`. The `url:` prefix is required. The catalog stores the image reference only; it does not pull the image.
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: pdf-processor-skill
+  description: Skill that extracts and summarizes PDF documents, published as an OCI image.
+  annotations:
+    backstage.io/source-location: url:oci://quay.io/my-org/skills/pdf-processor:v1.2.0
+spec:
+  type: skill
+  lifecycle: experimental
+  owner: team-platform
+----
+
+.Additional resources
+* xref:troubleshooting-airesource-schema-validation-errors_{context}[Troubleshooting AiResource schema validation errors]
