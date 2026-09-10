@@ -1,0 +1,188 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-orchestrator-workflow-permissions-to-conditional-policies_{context}"]
+= Migrate Orchestrator workflow permissions to conditional policies
+
+[role="_abstract"]
+To keep workflow-specific access after you remove the deprecated per-workflow Orchestrator permissions, replace them with conditional policies that use the `IS_ALLOWED_WORKFLOW_ID` rule.
+
+Per-workflow permission strings such as `orchestrator.workflow.greeting` and `orchestrator.workflow.use.greeting` are deprecated and will be removed in a future {product-short} release.
+They still work in this release.
+There is no automatic migration.
+You must create replacement conditional policies and remove the deprecated permissions.
+
+Migrate if any of the following conditions apply:
+
+* Your RBAC CSV file has `orchestrator.workflow._<workflow_id>_` or `orchestrator.workflow.use._<workflow_id>_` entries.
+* You created those per-workflow permissions by using the RBAC REST API.
+* Users have access to some workflows but not to all workflows.
+
+You do not need to migrate in the following cases:
+
+* Roles use only the generic `orchestrator.workflow` and `orchestrator.workflow.use` permissions, with no workflow-specific restrictions.
+* All users already have access to all workflows.
+
+The {product-short} web UI cannot create or display these deprecated permissions, so they exist only in a CSV file or through the REST API.
+
+.Prerequisites
+* You have {authorization-book-link}#enabling-and-giving-access-to-rbac_title-authorization[enabled RBAC and assigned a policy administrator role].
+* You have a copy of your current RBAC CSV file, or you can list permission policies by using the REST API.
+* You have identified the source of each affected role, such as an external CSV file, the REST API, or the web UI.
+
+.Procedure
+. Inventory the deprecated permissions.
++
+In your RBAC CSV file, search for permission names that add a workflow ID after `orchestrator.workflow.` or `orchestrator.workflow.use.`.
+Keep generic entries such as `orchestrator.workflow` and `orchestrator.workflow.use`.
++
+Deprecated entries resemble the following example:
++
+[source,csv]
+----
+p, role:default/developer, orchestrator.workflow.yamlgreet, read, allow
+p, role:default/developer, orchestrator.workflow.checkout, read, allow
+p, role:default/developer, orchestrator.workflow.use.yamlgreet, update, allow
+----
++
+Record the role name, workflow IDs, and action (`read` or `update`) for each entry.
++
+If you created policies by using the REST API, list the policies for each role by sending a `GET` request to the `/api/permission/policies/__<kind>__/__<namespace>__/__<name>__` endpoint, and record the same details:
++
+[source,subs="+attributes,+quotes"]
+----
+$ curl -v \
+  -H "Authorization: Bearer _<token>_" \
+  -X GET "{my-product-url}/api/permission/policies/role/default/developer"
+----
++
+For more information, see {authorization-book-link}#managing-authorizations-by-using-the-rest-api[Managing authorizations by using the REST API].
+
+. Create replacement conditional policies for each role by using the same source that you use to manage that role.
++
+Use one conditional policy per unique set of workflow IDs and actions.
+For example, replace the earlier CSV entries with the following YAML:
++
+[source,yaml]
+----
+result: CONDITIONAL
+roleEntityRef: "role:default/developer"
+pluginId: orchestrator
+resourceType: orchestrator-workflow
+permissionMapping:
+  - read
+conditions:
+  rule: IS_ALLOWED_WORKFLOW_ID
+  resourceType: orchestrator-workflow
+  params:
+    workflowIds:
+      - yamlgreet
+      - checkout
+---
+result: CONDITIONAL
+roleEntityRef: "role:default/developer"
+pluginId: orchestrator
+resourceType: orchestrator-workflow
+permissionMapping:
+  - update
+conditions:
+  rule: IS_ALLOWED_WORKFLOW_ID
+  resourceType: orchestrator-workflow
+  params:
+    workflowIds:
+      - yamlgreet
+----
++
+If the role must both view and run the same workflow IDs, you can set `permissionMapping` to `[read, update]` in a single policy.
++
+Keep the role and its membership (`g,`) lines in the CSV file.
+Define the replacement conditional policies in a separate YAML file.
+Set `roleEntityRef` to the role from the CSV file.
+By default, a conditional policy takes precedence over unrestricted `orchestrator.workflow` or `orchestrator.workflow.use` allow policies on the same role.
++
+For the YAML file path, web UI steps, and REST API method, see xref:manage-orchestrator-plugin-permissions-using-rbac-policies_{context}[].
++
+If you manage the role by using the REST API, create the equivalent conditional policy by sending a `POST` request to the `/api/permission/roles/conditions` endpoint for each unique set of workflow IDs and actions.
+The following request grants `read` access to both workflows:
++
+[source,subs="+attributes,+quotes"]
+----
+$ curl -v -H "Content-Type: application/json" \
+  -H "Authorization: Bearer _<token>_" \
+  -X POST "{my-product-url}/api/permission/roles/conditions" \
+  -d '{
+    "result": "CONDITIONAL",
+    "roleEntityRef": "role:default/developer",
+    "pluginId": "orchestrator",
+    "resourceType": "orchestrator-workflow",
+    "permissionMapping": ["read"],
+    "conditions": {
+      "rule": "IS_ALLOWED_WORKFLOW_ID",
+      "resourceType": "orchestrator-workflow",
+      "params": {
+        "workflowIds": ["yamlgreet", "checkout"]
+      }
+    }
+  }'
+----
++
+Send a second request that grants `update` access only to the workflows that require it, by setting `permissionMapping` to `["update"]` and `workflowIds` to `["yamlgreet"]`.
+
+. Remove the deprecated permissions from the same source that created them.
++
+From a CSV file, delete lines such as the following example, and keep generic `orchestrator.workflow` and `orchestrator.workflow.use` entries that you still need:
++
+[source,csv]
+----
+p, role:default/developer, orchestrator.workflow.yamlgreet, read, allow
+p, role:default/developer, orchestrator.workflow.use.yamlgreet, update, allow
+----
++
+Keep role membership (`g,`) lines.
++
+If you created the deprecated permissions by using the REST API, delete each matching policy by sending a `DELETE` request to the `/api/permission/policies/__<kind>__/__<namespace>__/__<name>__` endpoint.
+Identify each policy by its permission, action, and effect:
++
+[source,subs="+attributes,+quotes"]
+----
+$ curl -v \
+  -H "Authorization: Bearer _<token>_" \
+  -X DELETE "{my-product-url}/api/permission/policies/role/default/developer?permission=orchestrator.workflow.yamlgreet&policy=read&effect=allow"
+
+$ curl -v \
+  -H "Authorization: Bearer _<token>_" \
+  -X DELETE "{my-product-url}/api/permission/policies/role/default/developer?permission=orchestrator.workflow.use.yamlgreet&policy=update&effect=allow"
+----
++
+You cannot delete these deprecated permissions in the web UI.
+
+. If you added a conditional policies YAML file, set `permission.rbac.conditionalPoliciesFile` in your `{my-app-config-file}` file.
+. Restart the application if `policyFileReload` is not set to `true`.
+
+.Verification
+. Confirm that the replacement conditional policies exist in your YAML file, in the web UI, or in the REST API response.
+. Log in as a user assigned to a migrated role and verify that the Orchestrator list shows only the workflows in `workflowIds`.
+. Verify that the user can run a workflow that has `update` mapped and cannot run a workflow that does not.
+. Log in as a user whose role has generic `orchestrator.workflow` and `orchestrator.workflow.use` permissions and no conditional policy, and verify that all workflows remain visible and runnable.
+
+.Troubleshooting
+
+If a user loses access after you upgrade {product-short}:
+
+* Create the replacement conditional policy before you remove the deprecated permission, or complete both changes in the same configuration update.
+
+If a user can see a workflow but cannot run it:
+
+* Add `update` to `permissionMapping`, or create a second conditional policy that grants `update` for the required workflow IDs.
+
+If a conditional policy has no effect:
+
+* Verify that the `workflowIds` values match the `id` field in the workflow definition.
+* Verify that the user is a member of the role in `roleEntityRef`.
+* Verify that the `policies-csv-file` and `conditionalPoliciesFile` paths in `{my-app-config-file}` are correct.
+* If the user can see every workflow, confirm that {product-short} loaded a conditional policy for that role.
++
+By default, unrestricted full-access permissions apply only when no conditional policy exists for the same action.
+
+[role="_additional-resources"]
+.Additional resources
+* {authorization-book-link}#conditional-policies-reference_authorization-in-rhdh[Conditional policies reference]

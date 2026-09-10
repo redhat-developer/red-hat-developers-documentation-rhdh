@@ -1,0 +1,166 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="manage-orchestrator-plugin-permissions-using-rbac-policies_{context}"]
+= Manage Orchestrator plugin permissions using RBAC policies
+
+[role="_abstract"]
+To restrict users to only the workflows that their role allows, control Orchestrator access by using RBAC policies for full access and conditional policies for workflow-specific access.
+
+The Orchestrator plugin uses permission strings to control access to workflows and instances.
+After you enable the role-based access control (RBAC) plugin, use the RBAC CSV file to define roles and assign users or groups to those roles.
+You cannot define conditional policies in the CSV file.
+To limit a role to specific workflows, define conditional policies in a separate YAML file.
+Each conditional policy applies to a role that you defined in the CSV file.
+You can create the same conditional policies in the {product-short} web UI or by using the RBAC REST API.
+The web UI does not support creating or displaying the deprecated per-workflow permissions.
+
+`orchestrator.workflow` (read)::
+Lists and views workflow definitions and their instances.
+If this permission is missing and no matching conditional policy grants `read`, the workflow list in the web UI appears empty.
+`orchestrator.workflow.use` (update)::
+Runs or stops a workflow.
+`orchestrator.workflowAdminView` (read)::
+Accesses the workflow definition editor and instance variables.
+`orchestrator.instanceAdminView` (read)::
+Views all workflow instances, including those created by other users.
+
+[IMPORTANT]
+====
+The `orchestrator.workflow._<workflow_id>_` and `orchestrator.workflow.use._<workflow_id>_` permissions are deprecated and will be removed in a future {product-short} release.
+Do not create new per-workflow permission strings in the CSV file.
+To restrict a role to specific workflows, define the role in the CSV file and define a conditional policy with the `IS_ALLOWED_WORKFLOW_ID` rule in a separate YAML file.
+
+See xref:migrate-orchestrator-workflow-permissions-to-conditional-policies_{context}[].
+====
+
+You can use the following access models:
+
+Full access to all workflows::
+Grant `orchestrator.workflow` and `orchestrator.workflow.use` in the CSV file.
+Do not add a conditional policy for that role.
+Restricted access to specific workflows::
+Define the RBAC role and assign users or groups to it in the CSV file.
+Define the workflow restrictions in a separate `rbac-conditional-policies.yaml` file that lists the allowed workflow IDs.
+The `roleEntityRef` value in the YAML file must match the role in the CSV file.
+By default, if that role also has unrestricted `orchestrator.workflow` or `orchestrator.workflow.use` allow policies in the CSV file, the conditional policy still takes precedence.
+View all workflows and run only specific workflows::
+Grant `orchestrator.workflow` (read) in the CSV file.
+In a separate `rbac-conditional-policies.yaml` file, define a conditional policy that grants `update` only for the listed workflow IDs.
+
+[NOTE]
+====
+By default, conditional policies have a higher priority than unrestricted full-access permissions for the same role and action.
+====
+
+.Prerequisites
+* You have {authorization-book-link}#enabling-and-giving-access-to-rbac_title-authorization[enabled RBAC and assigned a policy administrator role].
+* You {authorization-book-link}#manage-authorizations-by-using-external-files_authorization-in-rhdh[manage authorizations by using external files].
+* You have added `orchestrator` to the list of authorized plugins under your `permission.rbac.pluginsWithPermission` configuration.
+
+.Procedure
+. If you plan to restrict access to specific workflows, identify the `id` field from your workflow definition file:
++
+[source,yaml]
+----
+id: greeting
+version: '1.0'
+----
+
+. In your RBAC CSV file, define role membership and, for full access, the generic Orchestrator permissions:
++
+[source,csv]
+----
+# Restricted user: role membership only. Workflow access comes from conditional policies.
+g, user:default/example_user, role:default/workflowUser
+
+# Support role: view all workflows and instances, but do not execute
+p, role:default/workflowSupport, orchestrator.workflow, read, allow
+p, role:default/workflowSupport, orchestrator.instanceAdminView, read, allow
+g, user:default/example_support, role:default/workflowSupport
+
+# Full admin role: complete access to all Orchestrator functions
+p, role:default/workflowAdmin, orchestrator.workflow, read, allow
+p, role:default/workflowAdmin, orchestrator.workflow.use, update, allow
+p, role:default/workflowAdmin, orchestrator.workflowAdminView, read, allow
+p, role:default/workflowAdmin, orchestrator.instanceAdminView, read, allow
+g, user:default/example_admin, role:default/workflowAdmin
+----
++
+[NOTE]
+====
+The CSV file defines RBAC roles, role membership, and unrestricted (generic) permissions.
+You cannot define conditional policies in the CSV file.
+Do not add deprecated per-workflow permission strings such as `orchestrator.workflow.greeting` or `orchestrator.workflow.use.greeting`.
+====
+
+. Optional: Restrict the `workflowUser` role to specific workflows by defining a conditional policy in a separate `rbac-conditional-policies.yaml` file as described in {authorization-book-link}#managing-authorizations-by-using-external-files[Defining conditional policies].
+The `roleEntityRef` value must match the role that you assigned in the CSV file:
++
+[source,yaml,subs="+quotes"]
+----
+result: CONDITIONAL
+roleEntityRef: "role:default/workflowUser"
+pluginId: orchestrator
+resourceType: orchestrator-workflow
+permissionMapping:
+  - read
+  - update
+conditions:
+  rule: IS_ALLOWED_WORKFLOW_ID
+  resourceType: orchestrator-workflow
+  params:
+    workflowIds:
+      - greeting
+----
++
+where:
+
+`roleEntityRef`::
+Enter the RBAC role that you defined in the CSV file, such as `role:default/workflowUser`.
+`workflowIds`::
+Enter the workflow identifiers that the role can access.
+Each value must match the `id` field in the workflow definition.
+`permissionMapping`::
+Enter `read` to allow viewing, `update` to allow running or stopping, or both.
++
+With this policy, users in `role:default/workflowUser` can view and run only the `greeting` workflow.
+
+. In your {product-very-short} `{my-app-config-file}` file, enable the Orchestrator plugin in the `rbac` section and set the policy file paths:
++
+[source,yaml,subs="+quotes"]
+----
+permission:
+  enabled: true
+  rbac:
+    policies-csv-file: __<absolute_path_to_the_policy_file>__
+    conditionalPoliciesFile: __<absolute_path_to_the_conditional_policy_file>__
+    pluginsWithPermission:
+      - orchestrator
+    policyFileReload: true
+    admin:
+      users:
+        - name: user:default/__<your_user>__
+----
++
+where:
+
+`policies-csv-file`::
+Enter the path to your RBAC CSV file.
+`conditionalPoliciesFile`::
+Enter the path to your conditional policies YAML file.
+Omit this key if you grant only unrestricted access and do not use conditional policies.
+`__<your_user>__`::
+Enter the user entity reference for a policy administrator.
+
+. Restart the application if `policyFileReload` is not set to `true`.
+
+.Verification
+. Log in as a user assigned to the `workflowUser` role.
+. Go to *Orchestrator* and verify that only the allowed workflow appears in the list.
+. Verify that you can run a workflow in the `workflowIds` list and cannot run a workflow outside the list.
+
+[role="_additional-resources"]
+.Additional resources
+* {authorization-book-link}#conditional-policies-reference_authorization-in-rhdh[Conditional policies reference]
+* {authorization-book-link}#manage-role-based-access-controls-rbac-using-the-rhdh-web-ui_authorization-in-rhdh[Managing authorizations by using the web UI]
+* {authorization-book-link}#managing-authorizations-by-using-the-rest-api[Managing authorizations by using the REST API]
