@@ -1,0 +1,139 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="install-the-openshift-ai-connector_{context}"]
+= Install the {openshift-ai-connector-name}
+
+[role="_abstract"]
+Install the {openshift-ai-connector-name} as a set of dynamic plugins and grant it the Kubernetes permissions to discover KServe `InferenceService` resources. The connector runs inside the {product-very-short} backend container, so you do not need to add any sidecar containers.
+
+include::{docdir}/artifacts/snip-developer-preview-rhoai.adoc[]
+
+.Prerequisites
+
+* You have cluster-admin access to a Kubernetes or {ocp-short} cluster where KServe is installed. The cluster can be a {rhoai-brand-name} cluster or a generic KServe installation.
+* You have installed KServe and deployed one or more model servers as `serving.kserve.io` `InferenceService` resources.
+* To import model cards as TechDocs, the Kubeflow Model Catalog is available on the cluster and your `InferenceService` resources are annotated to reference their model cards.
+* You have installed the {product-very-short} Operator or Helm chart and can update your dynamic plugin configuration.
+
+.Procedure
+
+. Configure the Kubernetes role-based access control (RBAC) and credentials that the connector uses to access the cluster.
++
+The connector requires a Kubernetes `ServiceAccount` with least-privilege, read-only access to the KServe and {ocp-short} resources that it discovers. Create the following resources, replacing the namespace (`ai-rhdh`) as needed for your {product-very-short} deployment:
++
+.. A `ServiceAccount` for the connector. For example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhdh-kserve-kubeflow-connector
+  namespace: ai-rhdh
+----
++
+.. A `ClusterRole` and `ClusterRoleBinding` that grant read-only access to `InferenceService` resources, {ocp-short} `Route` resources, and `ServiceAccount` resources. For example:
++
+[source,yaml]
+----
+# Example ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rhdh-kserve-kubeflow-connector
+rules:
+  - apiGroups: ["serving.kserve.io"]
+    resources: ["inferenceservices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["route.openshift.io"]
+    resources: ["routes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list", "watch"]
+----
++
+[source,yaml]
+----
+# Example ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhdh-kserve-kubeflow-connector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rhdh-kserve-kubeflow-connector
+subjects:
+  - kind: ServiceAccount
+    name: rhdh-kserve-kubeflow-connector
+    namespace: ai-rhdh
+----
++
+[NOTE]
+====
+The connector reads {ocp-short} `Route` resources only when you do not configure a Kubeflow Model Catalog URL and the connector must discover the route automatically. It reads `ServiceAccount` resources to detect whether a model server requires authentication.
+====
++
+.. A `Secret` of type `kubernetes.io/service-account-token` for the `ServiceAccount`. For example:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rhdh-kserve-kubeflow-connector-token
+  namespace: ai-rhdh
+  annotations:
+    kubernetes.io/service-account.name: rhdh-kserve-kubeflow-connector
+type: kubernetes.io/service-account-token
+----
+
+. Update your {product-very-short} dynamic plugin configuration to install the connector and its companion plugins.
++
+In your {product-very-short} dynamic plugins configuration, add the following plugins:
++
+[source,yaml]
+----
+plugins:
+  - disabled: false
+    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-kserve-kubeflow-connector-backend:<tag>
+  - disabled: false
+    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-backend-module-ai-model-server:<tag>
+  - disabled: false
+    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog:<tag>
+  - disabled: false
+    package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend:<tag>
+----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
++
+where:
++
+`kserve-kubeflow-connector-backend`:: The connector backend plugin. It watches KServe `InferenceService` resources and exposes the REST routes that the other plugins consume.
+`catalog-backend-module-ai-model-server`:: The catalog module that registers the `AiModelServerAPI` entity kind so that the catalog accepts the entities that the connector generates.
+`catalog-backend-module-model-catalog`:: The entity provider that calls the connector REST route and emits `AiModelServerAPI` catalog entities.
+`catalog-techdoc-url-reader-backend`:: The TechDocs URL reader that resolves model-card content through the connector for TechDocs generation.
+
+. Allow the `AiModelServerAPI` entity kind in your catalog rules by adding it to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+catalog:
+  rules:
+    - allow:
+        [
+          Component,
+          System,
+          API,
+          AiModelServerAPI,
+          Resource,
+          Location,
+          User,
+          Group,
+        ]
+----
+
+.Next steps
+
+* Configure the connector with access to your cluster and the Kubeflow Model Catalog. For more information, see xref:configure-the-openshift-ai-connector_{context}[Configure the {openshift-ai-connector-name}].

@@ -6,6 +6,15 @@
 include::{docdir}/artifacts/snip-developer-preview-rhoai.adoc[]
 
 [role="_abstract"]
-The {openshift-ai-connector-name} ({openshift-ai-connector-name-short}) discovers AI assets managed within {rhoai-brand-name}. The connector automatically converts AI models and model servers into {backstage} entities to provide a unified view for developer teams.
+The {openshift-ai-connector-name} discovers AI model servers that are deployed as KServe `InferenceService` resources on your clusters, and converts them and their models into {backstage} catalog entities to provide a unified view for developer teams.
 
-For more information on model registry components, see {rhoai-docs-link}/managing_model_registries/index#overview-of-model-registries_managing-model-registries[Overview of model registries and model catalog].
+The connector is a standalone {backstage} backend plugin. It runs inside the main {product-very-short} backend container and communicates directly with the KServe and Kubeflow Model Catalog APIs. It does not require any sidecar containers or bridge services.
+
+The connector watches `serving.kserve.io` `InferenceService` resources through a Kubernetes informer, reconciles the resources that are ready, and exposes the discovered model servers and models through authenticated {backstage} REST routes. Companion plugins consume these routes to generate `AiModelServerAPI` catalog entities and to import model cards as TechDocs.
+
+When an `InferenceService` is annotated to reference a model card in the Kubeflow Model Catalog, the connector fetches that model card and imports it as {product-very-short} TechDocs.
+
+[NOTE]
+====
+Earlier {developer-preview} versions of the connector integrated with the Kubeflow Model Registry. Because {rhoai-brand-name} has moved away from the Kubeflow Model Registry, the connector no longer integrates with it. Model and model server metadata is now sourced directly from KServe `InferenceService` resources and the Kubeflow Model Catalog. Migration of data from an earlier Model Registry-based deployment is not provided.
+====
