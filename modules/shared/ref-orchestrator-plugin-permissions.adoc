@@ -1,0 +1,105 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="orchestrator-plugin-permissions_{context}"]
+= Orchestrator plugin permissions
+
+[role="_abstract"]
+The Orchestrator plugin uses role-based access control (RBAC) to restrict which workflows users can view and run.
+
+[IMPORTANT]
+====
+The `orchestrator.workflow._<workflow_id>_` and `orchestrator.workflow.use._<workflow_id>_` permissions are deprecated and will be removed in a future {product-short} release.
+These per-workflow permissions still work in this release.
+There is no automatic migration.
+After removal, roles that rely only on these permissions lose access to the corresponding workflows.
+
+To restrict access to specific workflows, use a conditional policy with the `IS_ALLOWED_WORKFLOW_ID` rule.
+====
+
+[cols="15%,25%,15%,45%", frame="all", options="header"]
+|===
+|Name
+|Resource type
+|Policy
+|Description
+
+|`orchestrator.workflow`
+|`orchestrator-workflow`
+|`read`
+|Enables a user or role to list and read all workflow definitions and their instances.
+Use a conditional policy with the `IS_ALLOWED_WORKFLOW_ID` rule to limit this access to specific workflows.
+
+|`orchestrator.workflow.use`
+|`orchestrator-workflow`
+|`update`
+|Enables a user or role to run or stop any workflow.
+Use a conditional policy with the `IS_ALLOWED_WORKFLOW_ID` rule to limit this access to specific workflows.
+
+|`orchestrator.workflow._<workflow_id>_`
+|
+|`read`
+|Deprecated.
+Enables a user or role to list and read a specific workflow definition and its instances.
+Replace this permission with a conditional policy that uses the `IS_ALLOWED_WORKFLOW_ID` rule.
+
+|`orchestrator.workflow.use._<workflow_id>_`
+|
+|`update`
+|Deprecated.
+Enables a user or role to run or stop a specific workflow.
+Replace this permission with a conditional policy that uses the `IS_ALLOWED_WORKFLOW_ID` rule.
+
+|`orchestrator.workflowAdminView`
+|
+|`read`
+|Enables a user or role to view instance variables and the workflow definition editor.
+
+|`orchestrator.instanceAdminView`
+|
+|`read`
+|Enables a user or role to view all workflow instances, including those created by other users.
+|===
+
+To restrict `orchestrator.workflow` and `orchestrator.workflow.use` to specific workflows, define a conditional policy that uses the following rule:
+
+`IS_ALLOWED_WORKFLOW_ID`::
+Limits the permission to the workflow identifiers that you list in the `workflowIds` parameter.
+The rule applies to the `orchestrator-workflow` resource type in the `orchestrator` plugin.
+
+`workflowIds`::
+Enter one or more workflow identifiers.
+Each identifier must match the `id` field in the workflow definition.
+
+[WARNING]
+====
+By default, a conditional policy takes precedence over an unrestricted allow policy for `orchestrator.workflow` or `orchestrator.workflow.use` on the same role and action.
+The role can access only the workflows listed in `workflowIds`.
+
+To grant access to all workflows, define unrestricted allow policies in the CSV file and do not add a conditional policy for that role.
+
+During this deprecation period, access is also granted when a deprecated per-workflow permission allows it.
+====
+
+The `workflowIds` values must match the unique identifier in your workflow definition file.
+For example, in the following workflow definition, the identifier is `greeting`:
+
+[source,yaml,subs="+attributes,+quotes"]
+----
+id: greeting
+version: '1.0'
+specVersion: '0.8'
+name: Greeting workflow
+description: YAML based greeting workflow
+annotations:
+  - 'workflow-type/infrastructure'
+dataInputSchema: 'schemas/greeting.sw.input-schema.json'
+extensions:
+  - extensionid: workflow-output-schema
+    outputSchema: schemas/workflow-output-schema.json
+----
+
+[role="_additional-resources"]
+.Additional resources
+* {orchestrator-book-link}#manage-orchestrator-plugin-permissions-using-rbac-policies_install-rhdh-with-orchestrator-by-using-the-rhdh-operator[Manage Orchestrator plugin permissions using RBAC policies]
+* {orchestrator-book-link}#migrate-orchestrator-workflow-permissions-to-conditional-policies_install-rhdh-with-orchestrator-by-using-the-rhdh-operator[Migrate Orchestrator workflow permissions to conditional policies]
+* {authorization-book-link}#conditional-policies-reference_authorization-in-rhdh[Conditional policies reference]
