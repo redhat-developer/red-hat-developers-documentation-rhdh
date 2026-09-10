@@ -4,140 +4,67 @@
 = AI feature permissions
 
 [role="_abstract"]
-Configure role-based access control (RBAC) policies for AI features in {product} by using the permission identifiers in the following tables.
+To control who can use each {ls-short} AI feature, assign the feature-linked RBAC permissions that grant access to the chat, Notebooks, MCP tools, and skills features.
 
-Each permission uses a behavior-linked name that describes the capability it grants. Permissions follow the pattern `_<feature>_._<resource>_._<verb>_`, where the verb is one of the following:
+Each feature has a single permission that grants full use of that feature.
+The permissions do not separate create, read, update, and delete actions: a role can either use a feature or not.
+All AI feature permissions use the `use` action.
 
-`access`:: View or open the feature interface.
-`use`:: Actively interact with the feature, such as sending a chat message.
-`manage`:: Administer resources within the feature, such as deleting chat history.
-
-[discrete]
-== {ls-short} chat permissions
-
-[cols="2,1,3",options="header"]
+[cols="2,3",options="header"]
 |===
-| Permission | Action | What it grants
+| Permission | What it grants
 
-| `intelligent-assistant.chat.access`
-| `use`
-| Access to the {ls-short} chat interface. Required to open the chat window.
+| `intelligent-assistant.chat`
+| Use the {ls-short} chat feature, including opening the chat window, sending messages, and managing chat history.
 
-| `intelligent-assistant.chat.use`
-| `use`
-| Send messages to {ls-short} and start chat conversations.
+| `intelligent-assistant.notebooks`
+| Use the {ls-short} Notebooks feature, including listing, reading, creating, uploading, querying, updating, and deleting Notebooks.
 
-| `intelligent-assistant.chat.manage`
-| `use`
-| Edit and delete chat history entries.
-|===
+| `intelligent-assistant.mcp.tools`
+| Use the Model Context Protocol (MCP) tools, including listing MCP servers and managing their configuration.
 
-[discrete]
-== {ls-short} Notebooks permissions
-
-[cols="2,1,3",options="header"]
-|===
-| Permission | Action | What it grants
-
-| `intelligent-assistant.notebooks.use`
-| `use`
-| Access the Notebooks feature in {ls-short}. List, read, create, upload, and query Notebooks.
-
-| `intelligent-assistant.notebooks.manage`
-| `use`
-| Update and delete Notebooks.
-|===
-
-[discrete]
-== Model Context Protocol (MCP) permissions
-
-[cols="2,1,3",options="header"]
-|===
-| Permission | Action | What it grants
-
-| `mcp.tools.use`
-| `use`
-| List configured MCP servers and view their status.
-
-| `mcp.tools.manage`
-| `use`
-| Add, edit, delete, and validate MCP server configurations.
-|===
-
-[discrete]
-== Saved prompts permissions
-
-[cols="2,1,3",options="header"]
-|===
-| Permission | Action | What it grants
-
-| `intelligent-assistant.saved-prompts.manage`
-| `update`
-| List, create, and delete saved prompts. Read saved prompts configuration.
+| `intelligent-assistant.skills`
+| Use the {ls-short} skills feature.
 |===
 
 [discrete]
 == Example RBAC policy
 
-The following example grants a team full access to all AI features:
+The following example grants a team full access to all {ls-short} AI features:
 
 [source,text,subs="+quotes"]
 ----
-p, role:default/_<team>_, intelligent-assistant.chat.access, use, allow
-p, role:default/_<team>_, intelligent-assistant.chat.use, use, allow
-p, role:default/_<team>_, intelligent-assistant.chat.manage, use, allow
-p, role:default/_<team>_, intelligent-assistant.notebooks.use, use, allow
-p, role:default/_<team>_, intelligent-assistant.notebooks.manage, use, allow
-p, role:default/_<team>_, mcp.tools.use, use, allow
-p, role:default/_<team>_, mcp.tools.manage, use, allow
-p, role:default/_<team>_, intelligent-assistant.saved-prompts.manage, update, allow
+p, role:default/_<team>_, intelligent-assistant.chat, use, allow
+p, role:default/_<team>_, intelligent-assistant.notebooks, use, allow
+p, role:default/_<team>_, intelligent-assistant.mcp.tools, use, allow
+p, role:default/_<team>_, intelligent-assistant.skills, use, allow
 ----
 
-To grant view-only chat access without the ability to send messages, manage history, or configure MCP, grant only `intelligent-assistant.chat.access`.
+To grant access to only some features, include only the permissions for those features.
 
 [discrete]
 == Migration from previous permission names
 
-If you are upgrading from {product-short} 1.x, update your RBAC policies to use the new permission identifiers. {product-short} version 2.1 removes the previous permission names that used create, read, update, and delete action verbs.
+If you are upgrading from {product-short} 1.x, replace the previous `lightspeed.*` permission names with the feature-linked names.
+{product-short} 2.1 grants each feature with a single permission and no longer uses the create, read, update, and delete action verbs.
 
-[cols="2,2,1",options="header"]
+[cols="2,2",options="header"]
 |===
-| Old permission (1.x) | New permission (2.1) | Action
+| Previous permissions (1.x) | New permission (2.1)
 
-| `lightspeed.chat.read, read`
-| `intelligent-assistant.chat.access, use`
-| Changed
+| `lightspeed.chat.read`, `lightspeed.chat.create`, `lightspeed.chat.update`, `lightspeed.chat.delete`
+| `intelligent-assistant.chat`
 
-| `lightspeed.chat.create, create`
-| `intelligent-assistant.chat.use, use`
-| Changed
+| `lightspeed.notebooks.use`
+| `intelligent-assistant.notebooks`
 
-| `lightspeed.chat.delete, delete`
-| `intelligent-assistant.chat.manage, use`
-| Changed
-
-| `lightspeed.chat.update, update`
-| `intelligent-assistant.chat.manage, use`
-| Merged into `manage`
-
-| `lightspeed.notebooks.use, update`
-| `intelligent-assistant.notebooks.use, use`
-| Renamed
-
-| _(none)_
-| `intelligent-assistant.notebooks.manage, use`
-| New
-
-| `lightspeed.mcp.read, read`
-| `mcp.tools.use, use`
-| Changed
-
-| `lightspeed.mcp.manage, update`
-| `mcp.tools.manage, use`
-| Changed
+| `lightspeed.mcp.read`, `lightspeed.mcp.manage`
+| `intelligent-assistant.mcp.tools`
 |===
 
 [IMPORTANT]
 ====
-This is a breaking change. The old permission names are not supported in {product-short} 2.1. Update all RBAC policies, conditional rules, and automation scripts that reference the old `lightspeed.*` permission identifiers before upgrading.
+This is a breaking change.
+{product-short} 2.1 does not support the previous permission names.
+Update all RBAC policies, conditional rules, and automation scripts that reference the previous `lightspeed.*` permission identifiers before you upgrade.
 ====
