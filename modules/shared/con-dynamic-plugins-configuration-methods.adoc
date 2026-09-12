@@ -1,0 +1,91 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="dynamic-plugins-configuration-methods_{context}"]
+= Choosing between inline and ConfigMap-based plugin configuration
+
+[role="_abstract"]
+When you deploy {product-short} with the Operator, configure dynamic plugins by using either inline configuration in the `{product-custom-resource-type}` custom resource or a separate `ConfigMap`.
+Choose the method that best matches your deployment complexity and configuration reuse requirements.
+
+The two configuration methods are mutually exclusive.
+You cannot use both `spec.application.dynamicPlugins` and `spec.application.dynamicPluginsConfigMapName` in the same `{product-custom-resource-type}` custom resource.
+
+== Inline configuration in the Backstage custom resource
+
+Inline configuration defines dynamic plugins directly in the `spec.application.dynamicPlugins` field of your `{product-custom-resource-type}` custom resource.
+
+Use inline configuration when:
+
+* You are deploying a single {product-short} instance with a straightforward plugin configuration
+* Your plugin configuration does not need to be shared across multiple instances
+* You want to reduce the number of Kubernetes resources to manage
+* Your plugin list is specific to one environment and does not require environment-specific variations
+
+Benefits of inline configuration:
+
+* Fewer Kubernetes resources to create and maintain
+* Entire plugin configuration visible in a single resource
+* Reduced boilerplate for simple deployments
+* Less risk of configuration drift between the custom resource and its referenced ConfigMap
+
+Limitations of inline configuration:
+
+* Plugin configuration cannot be shared across multiple {product-short} instances
+* Less flexible for environment-specific configuration variations
+* Changing plugin configuration requires updating the custom resource
+
+== ConfigMap-based configuration
+
+ConfigMap-based configuration stores the `dynamic-plugins.yaml` file in a separate `ConfigMap` resource that the `{product-custom-resource-type}` custom resource references using `spec.application.dynamicPluginsConfigMapName`.
+
+Use ConfigMap-based configuration when:
+
+* You need to share the same plugin configuration across multiple {product-short} instances
+* You require environment-specific plugin configuration variations (development, staging, production)
+* You want to version plugin configurations independently from the custom resource
+* You need to apply configuration changes without modifying the custom resource
+
+Benefits of ConfigMap-based configuration:
+
+* Plugin configuration can be shared across multiple instances
+* Supports configuration overlay patterns for environment-specific variations
+* Plugin configuration can be versioned and updated independently
+* Enables separation of concerns between deployment configuration and plugin configuration
+
+Limitations of ConfigMap-based configuration:
+
+* More Kubernetes resources to create and maintain
+* Requires managing the reference consistency between the custom resource and the ConfigMap
+* Higher complexity for simple deployments
+
+[cols="2,1,2",options="header"]
+|===
+|Deployment scenario
+|Recommended method
+|Rationale
+
+|Single instance with 2-3 plugins for evaluation or testing
+|Inline
+|Reduces resource count and simplifies initial setup
+
+|Multiple instances across environments with identical plugin sets
+|ConfigMap
+|Enables configuration sharing and consistency
+
+|Production deployment with environment-specific plugin configurations
+|ConfigMap
+|Supports environment-specific variations and independent versioning
+
+|Single production instance with stable plugin configuration
+|Inline
+|Simplifies ongoing maintenance with fewer resources
+
+|Development environment with frequently changing plugin list
+|Inline
+|Faster iteration without managing separate ConfigMap updates
+|===
+
+[role="_additional-resources"]
+.Additional resources
+* xref:configure-dynamic-plugins-inline-operator_{context}[Configure dynamic plugins inline in {product-custom-resource-type} custom resource]
+* xref:install-dynamic-plugins-with-the-rhdh-operator_{context}[Install dynamic plugins with the {product} Operator using a ConfigMap]
