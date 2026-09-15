@@ -90,9 +90,13 @@ jobs:
       - name: Get changed shell scripts
         id: changed-files
         run: |
-          # Get list of changed .sh files that still exist (exclude deletions)
-          git fetch origin ${{ github.base_ref }}
-          ALL_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.sh$' || echo "")
+          # Get list of changed .sh files that still exist (exclude deletions).
+          # Fetch the base ref from the upstream repository rather than "origin":
+          # for fork PRs (for example, openshift-cherrypick-robot cherry-picks) the
+          # checked-out repo is the fork, which does not contain the base branch,
+          # so "git fetch origin ${{ github.base_ref }}" fails.
+          git fetch https://github.com/${{ github.repository }}.git ${{ github.base_ref }}
+          ALL_CHANGED=$(git diff --name-only FETCH_HEAD...HEAD | grep '\.sh$' || echo "")
           CHANGED_FILES=""
           while IFS= read -r file; do
             if [ -n "$file" ] && [ -f "$file" ]; then
