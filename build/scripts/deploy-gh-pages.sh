@@ -12,13 +12,13 @@
 # Flow:
 #   1. Create a temp git repo, fetch gh-pages (shallow)
 #   2. Copy --publish-dir content into the working tree
-#   3. For branch deploys: clean up stale PR and branch directories
+#   3. Clean up stale directories (see below)
 #   4. Regenerate index.html (branch list) and pulls.html (PR list)
 #   5. Commit everything (content + cleanup + indexes) and push
 #   6. On push rejection: rebase and retry (max 3 attempts)
 #
-# Branch deploys clean up merged/closed PR dirs and deleted branch dirs.
-# PR deploys only update content and pulls.html — no cleanup.
+# All deploys prune merged/closed PR dirs (keeps gh-pages under the GitHub Pages
+# 1 GB publish limit). Branch deploys additionally prune deleted-branch dirs.
 #
 # Usage: deploy-gh-pages.sh <publish_dir> [--message <msg>]
 #
@@ -92,7 +92,7 @@ apply_content() {
   return 0
 }
 
-# ── Cleanup (branch deploys only) ────────────────────────────────────────────
+# ── Cleanup ──────────────────────────────────────────────────────────────────
 
 get_pr_state() {
   local pr_number="$1"
@@ -115,8 +115,11 @@ get_pr_state() {
   fi
 }
 
-cleanup() {
-  # PR cleanup: remove directories for merged/closed PRs
+# Remove directories for merged/closed PRs. Runs on every deploy (including PR
+# deploys) so stale previews are pruned promptly instead of accumulating until
+# the next branch deploy — unbounded growth here pushes the gh-pages branch past
+# GitHub Pages' 1 GB publish limit, which fails the Pages deployment repo-wide.
+cleanup_prs() {
   for d in "$DEPLOY_DIR"/pr-*/; do
     [[ -d "$d" ]] || continue
     local dir_name pr_number state
@@ -130,8 +133,12 @@ cleanup() {
       rm -rf "$d"
     fi
   done
+  return 0
+}
 
-  # Branch cleanup: remove directories for deleted remote branches
+# Remove directories for deleted remote branches. Branch deploys only: a PR
+# deploy must never remove version directories (main, release-*).
+cleanup_branches() {
   local remote_branches
   remote_branches="$(git -C "$DEPLOY_DIR" ls-remote --heads origin 2>/dev/null | awk '{print $2}' | sed 's|refs/heads/||')"
 
@@ -259,9 +266,12 @@ try_rebase_and_push() {
 fetch_gh_pages
 apply_content
 
-# Cleanup runs once before retries (avoids redundant API calls)
+# Cleanup runs once before retries (avoids redundant API calls).
+# Prune merged/closed PR previews on every deploy to keep gh-pages under the
+# GitHub Pages 1 GB limit; branch deploys also prune deleted-branch directories.
+cleanup_prs
 if [[ "$BRANCH_DIR" != pr-* ]]; then
-  cleanup
+  cleanup_branches
 fi
 
 for attempt in $(seq 1 "$MAX_RETRIES"); do
