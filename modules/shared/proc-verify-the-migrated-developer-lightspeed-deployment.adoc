@@ -1,0 +1,38 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="verify-the-migration-to-confirm-a-stable-developer-lightspeed-deployment_{context}"]
+= Verify the migration to confirm a stable {ls-short} deployment
+
+[role="_abstract"]
+To confirm a successful migration, verify that {ls-short} runs on {lcs-name} ({lcs-short}) with the unified configuration and that no {product-very-short} 1.10 Llama Stack files remain.
+
+.Prerequisites
+
+* You migrated your configuration to the unified `lightspeed-stack.yaml` file and deployed {product} ({product-very-short}) 2.1.
+
+.Procedure
+
+. Confirm that the {product-very-short} pod is ready and has the `lightspeed-core` container:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc get pods -n _<namespace>_
+----
+
+. Confirm that `/app-root/lightspeed-stack.yaml` comes from the intended ConfigMap and that the pod has no `/app-root/config.yaml` mount.
+
+. Review the `lightspeed-core` logs for configuration, provider, credential, model, vector-store, and Model Context Protocol (MCP) connection errors. Do not print Secret values:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc logs -n _<namespace>_ deployment/_<deployment_name>_ -c lightspeed-core
+----
+
+. Open the *Intelligent Assistant* and submit a development question to confirm that each enabled provider and allowed model responds.
+. If query validation is enabled, submit one development question and one unrelated question to confirm the expected results.
+. Test any required MCP tools, and confirm feedback and notebook behavior when those features are enabled.
+. Restart the pod and confirm the expected persistence behavior for feedback, cache, and vector data.
+
+.Troubleshooting
+* If verification fails, keep the 1.10 deployment available and roll back to it. For a parallel Helm installation, direct traffic back to the 1.10 release. For an Operator deployment, restore the backed-up {backstage} custom resource (CR) and its customer-managed resources.
+* Do not overwrite 1.10 persistent data with an untested 2.1 path. Take storage-level backups before you change claims or database schemas.
