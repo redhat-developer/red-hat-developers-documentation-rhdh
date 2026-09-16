@@ -1,0 +1,58 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configuring-rhdh-for-the-rhdh-cli_{context}"]
+= Configure {product} to authenticate {product-cli}
+
+[role="_abstract"]
+To allow {product-cli} to sign in to an instance, enable the authentication plugin and the OAuth2 flows that the command-line interface (CLI) uses to obtain and refresh tokens.
+
+.Prerequisites
+* You are running {product} ({product-very-short}) 2.1 or later.
+* You have installed {product-cli} 2.0.9 or later.
+* You have administrative access to the {product-very-short} configuration.
+* You can install dynamic plugins on your instance.
+
+.Procedure
+. Install the `backstage-plugin-auth` front-end plugin as a dynamic plugin so that your instance can serve the OAuth2 consent page. Add the following entry to your `dynamic-plugins.yaml` file, which registers the `/oauth2/*` route that the consent flow requires:
++
+[NOTE]
+====
+The plugin image tags in the following examples target {product} 2.1, which uses {backstage} 1.54.6. For any new {product-very-short} release, use plugin images built for that release's {backstage} version.
+====
++
+[source,yaml]
+----
+plugins:
+  - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-auth:bs_1.54.6__0.1.11'
+    disabled: false
+    pluginConfig:
+      dynamicPlugins:
+        frontend:
+          backstage.plugin-auth:
+            dynamicRoutes:
+              - path: /oauth2/*
+                importName: Router
+----
++
+For more information about installing dynamic plugins, see {installing-and-viewing-plugins-book-link}[{installing-and-viewing-plugins-book-title}].
+
+. In your `app-config` file, enable the OAuth2 client ID metadata documents and refresh token flows that the CLI requires:
++
+[source,yaml]
+----
+auth:
+  clientIdMetadataDocuments:
+    enabled: true
+  experimentalRefreshToken:
+    enabled: true
+----
++
+[NOTE]
+====
+The `clientIdMetadataDocuments` key applies to {backstage} 1.53 and later, which {product} 2.1 uses. On earlier versions, use `experimentalClientIdMetadataDocuments`, which remains available as a deprecated alias in later releases.
+====
+
+. Save the file and restart your instance to apply the configuration.
+
+.Verification
+* Sign in from the CLI as described in xref:authenticating-and-registering-action-sources-for-the-rhdh-cli_{context}[Authenticate and register action sources]. A successful login confirms that {product-very-short} accepts the CLI authentication flows.
