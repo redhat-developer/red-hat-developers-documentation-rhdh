@@ -1,0 +1,44 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="complete-the-developer-lightspeed-migration-with-the-helm-chart_{context}"]
+= Complete the {ls-short} migration by using the Helm chart
+
+[role="_abstract"]
+To finish migrating on Helm, apply your unified {ls-short} configuration and provider Secret to a fresh {product} ({product-very-short}) 2.1 release.
+
+The 2.1 Helm chart does not support an in-place `helm upgrade` from the 1.x `backstage` chart. Plan a fresh release, and keep the 1.10 release available until you verify the 2.1 deployment.
+
+.Prerequisites
+
+* You migrated your configuration to the unified `lightspeed-stack.yaml` file. For more information, see xref:migrate-developer-lightspeed-settings-to-remove-direct-llama-stack-configuration_{context}[Migrate {ls-short} settings to remove direct {ogx-short} configuration].
+* You backed up your 1.10 Helm values.
+* You have operational credentials for your inference providers.
+
+.Procedure
+
+. Move your `++global.lightspeed.*++` customizations to the matching root `++intelligentAssistant.*++` keys.
+
+. Do not migrate the 1.10 `name: server` ConfigMap entry. The 2.1 chart provides only stack and profile entries.
+
+. Create the provider Secret, and then reference it by setting `intelligentAssistant.existingSecret`.
+
+. If you customized the shipped configuration file, supply your unified stack ConfigMap through the `intelligentAssistant.config.stack.existingConfigMap` value:
++
+[source,yaml]
+----
+intelligentAssistant:
+  existingSecret: lightspeed-auth-secrets
+  config:
+    stack:
+      existingConfigMap: my-custom-lightspeed-stack
+----
+
+. Install a fresh `redhat-developer-hub` 2.1 chart release. Do not run `helm upgrade` against the 1.x `backstage` release.
+
+.Verification
+
+* Confirm that the {product-very-short} pod is ready and includes the `lightspeed-core` container, and then continue with xref:verify-the-migration-to-confirm-a-stable-developer-lightspeed-deployment_{context}[Verify the migration to confirm a stable {ls-short} deployment].
+
+[role="_additional-resources"]
+.Additional resources
+* {upgrading-book-link}[{upgrading-book-title}]

@@ -1,0 +1,66 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="complete-the-developer-lightspeed-migration-with-the-operator_{context}"]
+= Complete the {ls-short} migration by using the Operator
+
+[role="_abstract"]
+To finish migrating on the Operator, update your {backstage} custom resource (CR) to use the unified {ls-short} configuration and provider Secret.
+
+.Prerequisites
+
+* You migrated your configuration to the unified `lightspeed-stack.yaml` file. For more information, see xref:migrate-developer-lightspeed-settings-to-remove-direct-llama-stack-configuration_{context}[Migrate {ls-short} settings to remove direct {ogx-short} configuration].
+* The {product-very-short} Operator is installed on your cluster.
+* You have cluster administrator privileges.
+
+.Procedure
+
+. Change any explicit `lightspeed` flavor name to `intelligent-assistant`.
+
+. Create the provider Secret, and inject it into the `lightspeed-core` container through the `spec.application.extraEnvs.secrets` section of the {backstage} CR:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: lightspeed-rhdh
+spec:
+  application:
+    extraEnvs:
+      secrets:
+        - name: lightspeed-auth-secrets
+          containers:
+            - lightspeed-core
+----
+
+. If you customized the shipped configuration file, create a unified `lightspeed-stack.yaml` ConfigMap, and mount it at `/app-root` in the `lightspeed-core` container through the `spec.application.extraFiles.configMaps` section:
++
+[source,yaml]
+----
+    extraFiles:
+      configMaps:
+        - name: my-custom-lightspeed-stack
+          mountPath: /app-root
+          key: lightspeed-stack.yaml
+          containers:
+            - lightspeed-core
+----
+
+. Do not carry a custom `llama-stack-config` mount or a `config.yaml` reference into the 2.1 CR.
+
+. Keep the flavor-managed `rhdh-profile.py` file unless you maintain a custom prompt profile.
+
+. Apply the updated custom resource:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc apply -f _<backstage_cr_file>_.yaml
+----
+
+.Verification
+
+* Confirm that the {product-very-short} pod is ready and includes the `lightspeed-core` container, and then continue with xref:verify-the-migration-to-confirm-a-stable-developer-lightspeed-deployment_{context}[Verify the migration to confirm a stable {ls-short} deployment].
+
+[role="_additional-resources"]
+.Additional resources
+* {upgrading-book-link}[{upgrading-book-title}]
