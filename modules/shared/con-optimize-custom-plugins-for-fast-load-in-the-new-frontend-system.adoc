@@ -1,0 +1,24 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="plugin-load-time-optimization-for-fast-page-loads_{context}"]
+= Plugin load-time optimization for fast page loads
+
+[role="_abstract"]
+Keep the entry point of a migrated front-end plugin lightweight so {product} loads only the code it needs at startup. Deferring heavy interface code behind blueprint loaders shrinks the startup chunk and preserves fast page loads for your users.
+
+In {product} dynamic plugin mode, each front-end plugin is a Module Federation remote. {product} evaluates the plugin entry point (for example, `src/index.ts`, `src/alpha.ts`, or the default export) when it loads the remote at startup. Any module reached through a static `import` from that entry point becomes part of the synchronous chunk that {product} must download and parse before the plugin can register its extensions. Code loaded later through `import()` becomes an asynchronous chunk that {product} downloads only when it is needed.
+
+A migrated plugin can accidentally move code that was lazy-loaded under the old front-end system into the synchronous chunk. The goal of optimization is to reduce the code that runs synchronously at startup, not the total plugin size. A well-optimized plugin usually shows a smaller synchronous chunk and a larger asynchronous chunk.
+
+Key rule:: A `loader: async () => <MyComponent />` callback does not lazy-load `MyComponent` if `MyComponent` is statically imported in the same file. The bundler resolves static imports at build time and includes them in the synchronous chunk. The `import()` call must be the only reference to the component from the entry or extension-definition file.
+
+Keeping the entry point limited to blueprints, routes, API factories, and type exports is one of the highest-impact changes you can make. When heavy interface code loads only on-demand, users reach the pages they need faster and the application starts more quickly.
+
+This guidance is supplementary. It does not replace the required migration steps that make a plugin load in {product} {product-version}.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:plugin-optimization-patterns-for-faster-startup_{context}[Plugin optimization patterns for faster startup]
+* xref:migrate-custom-plugins-to-ensure-compatibility-after-upgrade_{context}[Migrate custom plugins to ensure compatibility after upgrade]
+* link:https://backstage.io/docs/frontend-system/architecture/plugins/[Upstream front-end plugins architecture]
