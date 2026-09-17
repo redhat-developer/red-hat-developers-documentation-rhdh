@@ -1,0 +1,68 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-enable-ai-catalog-plugin_{context}"]
+= Enable the AI Catalog plugin
+
+[role="_abstract"]
+To allow developers to discover AI assets, enable the AI Catalog dynamic plugin in your {product-short} instance.
+
+.Prerequisites
+* You have administrator access to your {product-short} instance.
+* AI Asset entities are ingested into the Software Catalog.
+* The entities include the required annotations: `rhdh.io/ai-asset-category`, `rhdh.io/ai-asset-version`, and `rhdh.io/ai-asset-source`.
+
+.Procedure
+. Edit your `dynamic-plugins-rhdh` ConfigMap to include the AI Catalog plugin:
++
+[source,yaml,subs="+quotes"]
+----
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: '@redhat/backstage-plugin-ai-catalog'
+        disabled: false
+----
+
+. Optional: Configure filter visibility in your `app-config.yaml` or `app-config-rhdh` ConfigMap:
++
+[source,yaml,subs="+quotes"]
+----
+app:
+  extensions:
+    - entity-ref: 'plugin:ai-catalog'
+      config:
+        filters:
+          owner:
+            disabled: true  # Hide the owner filter
+----
+
+. Apply the updated ConfigMap:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc apply -f __<configmap-file>__
+----
++
+where `__<configmap-file>__` is the path to your updated ConfigMap YAML file.
+
+. Restart the {product-short} pods to load the plugin:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc rollout restart deployment/backstage
+----
+
+.Verification
+. Navigate to your {product-short} instance in a web browser.
+. Confirm that an *AI Catalog* menu item appears in the navigation sidebar.
+. Click *AI Catalog* and verify that AI assets are displayed in the card grid.
+
+[role="_additional-resources"]
+.Additional resources
+* link:https://docs.redhat.com/en/documentation/red_hat_developer_hub/{product-version}/html-single/installing_and_viewing_plugins_in_red_hat_developer_hub/index#installing-dynamic-plugins[Installing dynamic plugins in Installing and viewing plugins in {product}]
