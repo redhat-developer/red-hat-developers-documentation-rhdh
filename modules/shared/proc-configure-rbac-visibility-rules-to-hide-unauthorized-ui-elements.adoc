@@ -1,0 +1,206 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-rbac-visibility-rules-to-hide-unauthorized-ui-elements_{context}"]
+= Configure RBAC visibility rules to hide unauthorized UI elements
+
+[role="_abstract"]
+Configure RBAC visibility rules in {product} to hide unauthorized UI elements by using the `if` predicate in extension blueprints, ensuring users only see pages, tabs, and navigation items they have permission to access.
+
+.Prerequisites
+
+* You have administrative access to {product-very-short}.
+* You have enabled the RBAC feature in {product-very-short}.
+* You have defined the required permissions for your plugins.
+
+.Procedure
+
+. Determine which UI elements you want to control with RBAC permissions.
+
+. Identify the permission names that should get access to UI elements you want to control.
++
+Basic permissions follow the naming pattern `<resource>.<action>`, for example, `catalog.entity.create`.
+
+. Specify whether the permission is evaluated with or without an `action` attribute:
++
+--
+* To evaluate a *basic permission without attributes*, use the bare permission name. The permission is checked with an empty `attributes` object:
++
+[source,typescript]
+----
+if: {
+  permissions: { $contains: 'catalog.entity.create' },
+}
+----
+
+* To evaluate a *basic permission with attributes*, append the action to the permission name by using the `+#action+` suffix. The part before the number sign (`+#+`) is the permission name, and the part after it is passed as the `action` attribute to the permission API:
++
+[source,typescript]
+----
+if: {
+  permissions: { $contains: 'catalog.entity.create#create' },
+}
+----
+--
++
+[NOTE]
+====
+The `if` predicate supports only basic permissions. You cannot use resource-based permissions (permissions with a `resourceType`) in the `if` predicate, because they depend on a resource context that is not available when the predicate is evaluated during front-end initialization. For other unsupported scenarios, such as component-level hiding and conditional visibility based on entity metadata, see xref:unsupported-scenarios-and-constraints-for-rbac-ui-visibility_{context}[].
+====
+
+. Configure the `if` predicate in your extension blueprint to control UI visibility based on permissions:
++
+. To control the visibility of entire pages, use the `if` predicate in the `PageBlueprint`:
++
+[source,typescript]
+----
+PageBlueprint.make({
+  name: 'bulk-import',
+  params: {
+    path: '/bulk-import/repositories',
+    routeRef: rootRouteRef,
+    loader: () =>
+      import('../components/BulkImportPage').then(m => <m.BulkImportPage />),
+  },
+  if: {
+    permissions: { $contains: 'bulk.import' },
+  },
+});
+----
++
+In this example, the Bulk Import page is only visible to users who have the `bulk.import` permission.
++
+Similarly, to control the visibility of the Adoption Insights page, use the `PageBlueprint`:
++
+[source,typescript]
+----
+const adoptionInsightsPage = PageBlueprint.make({
+  if: {
+    permissions: { $contains: 'adoption-insights.events.read#read' },
+  },
+  params: {
+    title: 'Adoption Insights',
+    icon: <MUIAdoptionInsightsIcon />,
+    path: '/adoption-insights',
+    routeRef: rootRouteRef,
+    loader: () =>
+      import('./components/AdoptionInsightsPage').then(m => (
+        <m.AdoptionInsightsPage />
+      )),
+  },
+});
+----
++
+In this example, the Adoption Insights page is only visible to users who have the `adoption-insights.events.read` permission with the `read` action.
+
+. To control the visibility of tabs on entity pages, use the `if` predicate in the `EntityContentBlueprint`:
++
+[source,typescript]
+----
+EntityContentBlueprint.make({
+  name: 'tektonEntityContent',
+  params: {
+    path: '/tekton',
+    title: 'Tekton',
+    filter: isTektonCIAvailable,
+    loader: () => import('./components/Router').then(m => <m.Router />),
+  },
+  if: {
+    $all: [
+      {
+        permissions: { $contains: 'kubernetes.clusters.read#read' },
+      },
+      {
+        permissions: { $contains: 'kubernetes.resources.read#read' },
+      },
+    ],
+  },
+});
+----
++
+In this example, the Tekton tab is only visible to users who have both the `kubernetes.clusters.read` and `kubernetes.resources.read` permissions with the `read` action.
+The `$all` operator ensures that all specified permissions are required.
++
+To reuse a permission check across multiple UI elements, define the `if` predicate as a variable and reference it. For example, to control the visibility of the Topology tab, use the `EntityContentBlueprint`:
++
+[source,typescript]
+----
+const topologyReadPermissionsIfPredicate = {
+  $all: [
+    { permissions: { $contains: 'kubernetes.clusters.read#read' } },
+    { permissions: { $contains: 'kubernetes.resources.read#read' } },
+  ],
+};
+
+const topologyEntityContent = EntityContentBlueprint.make({
+  name: 'topology',
+  if: topologyReadPermissionsIfPredicate,
+  params: {
+    path: '/topology',
+    title: 'Topology',
+    filter: isTopologyAvailable,
+    loader: async () => {
+      const { TopologyEntityContent } = await import('./components/Topology');
+      return <TopologyEntityContent />;
+    },
+  },
+});
+----
++
+In this example, the Topology tab is only visible to users who have both the `kubernetes.clusters.read` and `kubernetes.resources.read` permissions with the `read` action.
+
+. To control the visibility of cards and homepage widgets, apply the same `if` predicate pattern in the `EntityCardBlueprint` and `HomePageWidgetBlueprint`.
+
+. Use permission operators to combine multiple permission checks:
++
+`$contains`::
+Checks if the user has a specific permission.
++
+[source,typescript]
+----
+if: {
+  permissions: { $contains: 'permission.name' },
+}
+----
+
+`$all`::
+Requires the user to have all specified permissions.
++
+[source,typescript]
+----
+if: {
+  $all: [
+    { permissions: { $contains: 'permission.one' } },
+    { permissions: { $contains: 'permission.two' } },
+  ],
+}
+----
+
+`$any`::
+Requires the user to have at least one of the specified permissions.
++
+[source,typescript]
+----
+if: {
+  $any: [
+    { permissions: { $contains: 'permission.one' } },
+    { permissions: { $contains: 'permission.two' } },
+  ],
+}
+----
+
+`$not`::
+Requires that the user does not have the specified permission.
++
+[source,typescript]
+----
+if: {
+  $not: { permissions: { $contains: 'permission.name' } },
+}
+----
+
+.Verification
+
+. Log in to {product-very-short} as a user with limited permissions.
+. Verify that UI elements requiring permissions you do not have are hidden from view.
+. Log in as a user with the required permissions.
+. Verify that the UI elements are now visible and accessible.
