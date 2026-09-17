@@ -1,0 +1,91 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-ai-asset-entity-model_{context}"]
+= AI Asset entity model
+
+[role="_abstract"]
+AI assets are represented as Software Catalog entities with specific annotations that define their category, version, and source registry.
+
+All AI Asset entities must include the following annotations for the AI Catalog to display them correctly:
+
+[cols="1,3",options="header"]
+|===
+| Annotation | Description
+
+| `rhdh.io/ai-asset-category`
+| The category of the AI asset. Valid values: `agent`, `skill`, `mcp-server`, `ai-model`, `model-server`
+
+| `rhdh.io/ai-asset-version`
+| The version of the asset, normalized to a semantic version format (for example, `1.0.0`)
+
+| `rhdh.io/ai-asset-source`
+| The ingestion connector and registry that provided the entity (for example, `mcp-registry`, `rhoai`, `jfrog`, `agentregistry`)
+|===
+
+Skills and other assets published as OCI container images include an additional annotation for registry details:
+
+[cols="1,3",options="header"]
+|===
+| Annotation | Description
+
+| `rhdh.io/oci-registry`
+| The OCI registry reference, including registry URL, namespace, image name, and digest
+|===
+
+AI assets use the `AiResource` entity kind with `spec.type` values corresponding to their category:
+
+[cols="1,1,3",options="header"]
+|===
+| Category | `spec.type` | Description
+
+| AI Agent
+| `ai-agent`
+| Autonomous systems that perform tasks using tools and skills
+
+| AI Skill
+| `ai-skill`
+| Reusable capabilities invoked by agents to accomplish tasks
+
+| MCP Server
+| `mcp-server`
+| Model Context Protocol servers exposing tools and resources
+
+| AI Model
+| `ai-model`
+| Machine learning models for inference and prediction
+
+| Model Server
+| `model-server`
+| Deployment platforms serving AI models at runtime
+|===
+
+The following example shows an AI skill entity with required annotations:
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: python-testing-skill
+  namespace: default
+  annotations:
+    rhdh.io/ai-asset-category: skill
+    rhdh.io/ai-asset-version: 1.2.0
+    rhdh.io/ai-asset-source: mcp-registry
+    rhdh.io/oci-registry: quay.io/rhdh/python-testing-skill@sha256:abc123
+spec:
+  type: ai-skill
+  owner: team-ai
+  lifecycle: production
+----
+
+To display rich usage documentation in the AI Catalog detail page, add a TechDocs reference to the entity:
+
+[source,yaml]
+----
+metadata:
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+----
+
+When a TechDocs reference is present, the AI Catalog renders the documentation inline in the "How to use this" panel. Without a TechDocs reference, the catalog displays links to the source registry, repository, or download location.
