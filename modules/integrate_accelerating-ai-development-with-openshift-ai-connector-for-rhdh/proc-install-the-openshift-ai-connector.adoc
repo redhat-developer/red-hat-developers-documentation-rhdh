@@ -4,15 +4,15 @@
 = Install the {openshift-ai-connector-name}
 
 [role="_abstract"]
-Install the {openshift-ai-connector-name} as a set of dynamic plugins and grant it the Kubernetes permissions to discover KServe `InferenceService` resources. The connector runs inside the {product-very-short} backend container, so you do not need to add any sidecar containers.
+Install the {openshift-ai-connector-name} as a set of dynamic plugins and grant it the Kubernetes permissions to discover KServe `InferenceService` and `LLMInferenceService` resources. The connector runs inside the {product-very-short} backend container and requires no sidecar containers.
 
 include::{docdir}/artifacts/snip-developer-preview-rhoai.adoc[]
 
 .Prerequisites
 
 * You have cluster-admin access to a Kubernetes or {ocp-short} cluster where KServe is installed. The cluster can be a {rhoai-brand-name} cluster or a generic KServe installation.
-* You have installed KServe and deployed one or more model servers as `serving.kserve.io` `InferenceService` resources.
-* To import model cards as TechDocs, the Kubeflow Model Catalog is available on the cluster and your `InferenceService` resources are annotated to reference their model cards.
+* You have installed KServe and deployed one or more model servers as `serving.kserve.io` `InferenceService` or `LLMInferenceService` resources.
+* To import model cards as TechDocs, the Kubeflow Model Catalog is available on the cluster and your `InferenceService` or `LLMInferenceService` resources are annotated to reference their model cards.
 * You have installed the {product-very-short} Operator or Helm chart and can update your dynamic plugin configuration.
 
 .Procedure
@@ -32,7 +32,7 @@ metadata:
   namespace: ai-rhdh
 ----
 +
-.. A `ClusterRole` and `ClusterRoleBinding` that grant read-only access to `InferenceService` resources, {ocp-short} `Route` resources, and `ServiceAccount` resources. For example:
+.. A `ClusterRole` and `ClusterRoleBinding` that grant read-only access to `InferenceService` and `LLMInferenceService` resources, {ocp-short} `Route` resources, and `ServiceAccount` resources. For example:
 +
 [source,yaml]
 ----
@@ -43,7 +43,7 @@ metadata:
   name: rhdh-kserve-kubeflow-connector
 rules:
   - apiGroups: ["serving.kserve.io"]
-    resources: ["inferenceservices"]
+    resources: ["inferenceservices", "llminferenceservices"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["route.openshift.io"]
     resources: ["routes"]
@@ -110,7 +110,7 @@ include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
 +
 where:
 +
-`kserve-kubeflow-connector-backend`:: The connector backend plugin. It watches KServe `InferenceService` resources and exposes the REST routes that the other plugins consume.
+`kserve-kubeflow-connector-backend`:: The connector backend plugin. It watches KServe `InferenceService` and `LLMInferenceService` resources and exposes the REST routes that the other plugins consume.
 `catalog-backend-module-ai-model-server`:: The catalog module that registers the `AiModelServerAPI` entity kind so that the catalog accepts the entities that the connector generates.
 `catalog-backend-module-model-catalog`:: The entity provider that calls the connector REST route and emits `AiModelServerAPI` catalog entities.
 `catalog-techdoc-url-reader-backend`:: The TechDocs URL reader that resolves model-card content through the connector for TechDocs generation.

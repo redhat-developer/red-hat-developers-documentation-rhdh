@@ -26,7 +26,7 @@ In the `install-dynamic-plugins` logs, check that the following plugins installe
 
 == Inspect plugin logs
 
-View the connector plugin logs in the `backstage-backend` container. The connector backend logs under the `kserve-kubeflow-connector` logger service name, so you can filter the container logs on that name to isolate connector activity. Look for messages that indicate the connector is watching KServe `InferenceService` resources and that the entity provider is discovering model servers.
+View the connector plugin logs in the `backstage-backend` container. The connector backend logs under the `kserve-kubeflow-connector` logger service name, so you can filter the container logs on that name to isolate connector activity. Look for messages that indicate the connector is watching KServe `InferenceService` and `LLMInferenceService` resources and that the entity provider is discovering model servers.
 
 To enable debug logging, set the `LOG_LEVEL` environment variable to `debug` on the `backstage-backend` container. For more information, see {monitoring-and-logging-book-link}[{monitoring-and-logging-book-title}].
 
@@ -44,28 +44,28 @@ For example, the `catalog-techdoc-url-reader-backend` plugin retrieves model-car
 
 If model servers do not appear in the catalog, confirm the following:
 
-* The `ServiceAccount` that the connector uses has `get`, `list`, and `watch` permissions on `serving.kserve.io` `InferenceService` resources.
+* The `ServiceAccount` that the connector uses has `get`, `list`, and `watch` permissions on `serving.kserve.io` `InferenceService` and `LLMInferenceService` resources.
 * The cluster connection is configured correctly, including the `url`, `serviceAccountToken`, and TLS fields.
 * The `AiModelServerAPI` kind is allowed in your catalog rules.
 
-If model cards do not appear as TechDocs, confirm that the `InferenceService` resources are annotated with `rhdh.io/catalog-source` and `rhdh.io/catalog-model`, and that the Kubeflow Model Catalog URL is reachable from the {product-very-short} backend.
+If model cards do not appear as TechDocs, confirm that the `InferenceService` or `LLMInferenceService` resources are annotated with `rhdh.io/catalog-source` and `rhdh.io/catalog-model`, and that the Kubeflow Model Catalog URL is reachable from the {product-very-short} backend.
 
 == Query the Kubeflow Model Catalog
 
-To access the same Kubeflow Model Catalog data as the connector, use `curl` to query the model catalog API directly. Confirm that the `ServiceAccount` token has the correct access, and export the model catalog URL as `RHOAI_MODEL_CATALOG_URL` before you run the following commands.
+To access the same Kubeflow Model Catalog data as the connector, use `curl` to query the model catalog API directly. Confirm that the `ServiceAccount` token has the correct access, and export the model catalog URL as `{rhoai-short}_MODEL_CATALOG_URL` before you run the following commands.
 
 * Fetch the catalog sources:
 +
-[source,bash]
+[source,bash,subs="+attributes,+quotes"]
 ----
-$ curl -k -H "Authorization: Bearer $TOKEN" $RHOAI_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/sources | jq
+$ curl -k -H "Authorization: Bearer $TOKEN" ${rhoai-short}_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/sources | jq
 ----
 
 * Fetch the available models:
 +
-[source,bash]
+[source,bash,subs="+attributes,+quotes"]
 ----
-$ curl -k -H "Authorization: Bearer $TOKEN" $RHOAI_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/models?pageSize=200 | jq
+$ curl -k -H "Authorization: Bearer $TOKEN" ${rhoai-short}_MODEL_CATALOG_URL/api/model_catalog/v1alpha1/models?pageSize=200 | jq
 ----
 +
 [NOTE]
