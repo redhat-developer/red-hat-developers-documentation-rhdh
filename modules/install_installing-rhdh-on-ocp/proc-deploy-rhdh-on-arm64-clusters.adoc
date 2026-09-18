@@ -1,0 +1,54 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="deploy-rhdh-on-arm64-clusters_{context}"]
+= Deploy {product} on ARM64 clusters by using community images
+
+[role="_abstract"]
+To evaluate {product} on 64-bit Arm infrastructure, deploy the Helm chart or Operator with community images and a multi-architecture database image.
+
+include::{docdir}/artifacts/snip-developer-preview.adoc[]
+
+.Prerequisites
+
+* You have an ARM64 (`aarch64`) cluster: {ocp-brand-name} ({ocp-short}) or a supported Kubernetes cluster with 64-bit Arm worker nodes.
+* You have cluster access with permissions to create projects and deploy applications.
+* Your cluster meets the ARM64 platform requirements. See xref:hardware-requirements-for-arm64-deployments_{context}[Hardware requirements for ARM64 deployments].
+
+.Procedure
+
+. Set the {product} container image to a community image that supports ARM64:
++
+--
+Use the `quay.io/rhdh-community` image registry. Productized multi-architecture images are not available during the {developer-preview}.
+--
+
+. Deploy {product-very-short} by using one of the following methods:
++
+--
+* *Helm chart*: Follow the standard Helm chart deployment steps and set the community image values. See {installing-on-ocp-book-link}#deploy-rhdh-on-ocp-with-the-helm-cli_install-rhdh-on-ocp-with-the-helm-chart[Deploy with the Helm CLI].
+* *Operator*: Follow the standard Operator installation steps. See {installing-on-ocp-book-link}#install-the-rhdh-operator_install-rhdh-on-ocp-with-the-operator[Install the Operator].
+--
+
+. Replace the default PostgreSQL image with a multi-architecture image.
++
+--
+The default embedded PostgreSQL image supports `x86_64` only and fails to start on ARM64. Override it with a multi-architecture image, such as `registry.redhat.io/rhel8/postgresql-15`.
+--
+
+.Verification
+
+. Confirm that all {product-very-short} pods reach the `Ready` state:
++
+[subs="quotes+"]
+----
+oc get pods -n _<your_namespace>_
+----
+
+. Open the {product-very-short} portal URL in your browser and confirm that the portal loads and basic navigation works.
+
+. Check the pod logs for architecture mismatch or `exec format error` messages:
++
+[subs="quotes+"]
+----
+oc logs _<pod_name>_ -n _<your_namespace>_
+----
