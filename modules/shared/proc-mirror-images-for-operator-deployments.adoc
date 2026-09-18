@@ -20,15 +20,18 @@ The {installing-in-air-gap-book-link}#install-rhdh-in-a-fully-disconnected-envir
 ----
 BUNDLE_IMAGE="registry.redhat.io/rhdh/rhdh-operator-bundle:{product-version}"
 CONTAINER_ID=$(podman create "${BUNDLE_IMAGE}")
-podman cp $CONTAINER_ID:/manifests/rhdh-flavour-lightspeed-config_v1_configmap.yaml ./lightspeed-config.yaml
+podman cp $CONTAINER_ID:/manifests/rhdh-flavour-intelligent-assistant-config_v1_configmap.yaml ./lightspeed-config.yaml
 podman rm $CONTAINER_ID
 ----
 
-. Identify the initialization and sidecar container image tags from the extracted configuration file:
+// OKP is deployed as a standalone service, not a sidecar or init container. On non-OpenShift platforms,
+// the Operator does not deploy OKP. Config map name, data keys, and OKP container name confirmed against
+// rhdh-operator PR 3370 (pending merge): the OKP image lives in the separate "okp-deployment.yaml" key.
+. Identify the OKP and {lcs-short} container image tags from the extracted configuration file:
 +
 [source,terminal]
 ----
-LS_RAG_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.initContainers[] | select(.name == "init-rag-data") | .image')
+LS_OKP_IMAGE=$(yq '.data["okp-deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.containers[] | select(.name == "okp") | .image')
 LS_CORE_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.containers[] | select(.name == "lightspeed-core") | .image')
 ----
 
@@ -36,7 +39,7 @@ LS_CORE_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec
 +
 [source,terminal]
 ----
-skopeo copy docker://${LS_RAG_IMAGE} docker://<mirror_registry>/<ls_rag_repo>@<digest>
+skopeo copy docker://${LS_OKP_IMAGE} docker://<mirror_registry>/<ls_okp_repo>@<digest>
 skopeo copy docker://${LS_CORE_IMAGE} docker://<mirror_registry>/<ls_core_repo>@<digest>
 ----
 
