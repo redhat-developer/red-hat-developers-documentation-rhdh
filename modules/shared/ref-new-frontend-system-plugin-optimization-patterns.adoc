@@ -1,0 +1,49 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="plugin-optimization-patterns-for-faster-startup_{context}"]
+= Plugin optimization patterns for faster startup
+
+[role="_abstract"]
+Apply these patterns when you migrate a front-end plugin so that heavy interface code loads on-demand instead of at startup. Each pattern keeps the plugin entry point lightweight and reduces the synchronous chunk that {product} downloads before the plugin can register its extensions.
+
+Use the following patterns to keep the plugin entry point lightweight:
+
+Lazy-load extension user interfaces through blueprint loaders:: Return the component from an `import()` call inside the blueprint `loader`, and do not statically import the component in the same file. The bundler then places the component in an asynchronous chunk.
++
+[source,typescript]
+----
+// Avoid: MyPage is statically imported, so it stays in the synchronous chunk.
+import { MyPage } from './components/MyPage';
+loader: async () => <MyPage />,
+
+// Prefer: MyPage loads only when the extension is rendered.
+loader: async () => {
+  const { MyPage } = await import('./components/MyPage');
+  return <MyPage />;
+},
+----
+
+Avoid fake-asynchronous loaders:: An `async` loader that references a statically imported component is not lazy-loaded. Make the dynamic `import()` the only reference to the component from the entry or extension-definition file.
+
+Keep page routers and layouts out of entry files:: Import routers, layout components, and their child routes through `import()` inside a loader. A router that is statically imported pulls every route it references into the synchronous chunk.
+
+Defer heavy dependencies behind API factories:: When an API implementation depends on a large library, load the library inside the factory function with `import()` so that the dependency loads only when the API is first used.
+
+Split reusable building blocks onto a separate entry:: Expose shared components and utilities through a dedicated Module Federation entry so that consuming plugins load them as separate asynchronous chunks instead of inflating a single synchronous chunk.
+
+Keep icons and navigation metadata dependency-free:: Define icons, titles, and navigation metadata inline in the entry file, without importing heavy component modules. This metadata must be available synchronously for navigation to render.
+
+A plugin author applies all of these optimizations.
+
+To confirm that an optimization reduces the synchronous chunk, complete the following checks:
+
+. Build the plugin with `yarn backstage-cli package bundle`.
+. Open the generated `dist/mf-manifest.json` file and compare the synchronous and asynchronous chunk sizes before and after your change.
+. Confirm that the synchronous chunk is smaller and that the deferred code appears in an asynchronous chunk.
+. Load the plugin in {product} and smoke test the affected pages to confirm that extensions still render.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:plugin-load-time-optimization-for-fast-page-loads_{context}[Plugin load-time optimization for fast page loads]
+* link:https://backstage.io/docs/frontend-system/architecture/plugins/[Upstream front-end plugins architecture]
