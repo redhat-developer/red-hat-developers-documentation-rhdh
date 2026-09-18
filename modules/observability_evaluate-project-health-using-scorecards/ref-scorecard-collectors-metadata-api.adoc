@@ -1,0 +1,161 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="scorecard-collectors-metadata-api_{context}"]
+= Collectors metadata REST API
+
+[role="_abstract"]
+The Collectors metadata API provides endpoints for retrieving information about active metric collectors, their health status, and operational metadata, enabling platform administrators to monitor data collection reliability.
+
+The Collectors metadata API exposes operational information about DORA datasource collectors.
+Use this API to verify which collectors are running, identify data collection failures, and troubleshoot missing or delayed metrics.
+
+== API endpoint
+
+[cols="1,3", options="header"]
+|===
+| Method | Endpoint
+| GET | `/api/scorecard/collectors/metadata`
+|===
+
+== Query parameters
+
+This endpoint accepts no query parameters and returns metadata for all active collectors.
+
+== Response format
+
+The API returns a JSON array of collector metadata objects:
+
+[source,json]
+----
+[
+  {
+    "collectorId": "github-dora",
+    "status": "active",
+    "lastCollection": "2026-09-08T14:30:00Z",
+    "entityCount": 42,
+    "errors": []
+  },
+  {
+    "collectorId": "jira-dora",
+    "status": "error",
+    "lastCollection": "2026-09-08T12:00:00Z",
+    "entityCount": 38,
+    "errors": [
+      "Authentication failed: Invalid API token"
+    ]
+  }
+]
+----
+
+Where:
+
+`collectorId`:: The unique identifier for the collector (datasource name).
+`status`:: The current collector status. Valid values: `active`, `error`, `disabled`.
+`lastCollection`:: The timestamp of the most recent successful collection run in ISO 8601 format.
+`entityCount`:: The number of catalog entities monitored by this collector.
+`errors`:: An array of error messages from the most recent collection attempt. Empty if no errors occurred.
+
+== Example request
+
+Retrieve metadata for all collectors:
+
+[source,terminal]
+----
+$ curl -X GET "https://<rhdh_host>/api/scorecard/collectors/metadata" \
+  -H "Authorization: Bearer <token>"
+----
+
+== Response example
+
+[source,json]
+----
+[
+  {
+    "collectorId": "github-dora",
+    "status": "active",
+    "lastCollection": "2026-09-08T14:30:00Z",
+    "entityCount": 42,
+    "errors": []
+  },
+  {
+    "collectorId": "jira-dora",
+    "status": "active",
+    "lastCollection": "2026-09-08T14:25:00Z",
+    "entityCount": 38,
+    "errors": []
+  },
+  {
+    "collectorId": "github-openssf",
+    "status": "active",
+    "lastCollection": "2026-09-08T14:20:00Z",
+    "entityCount": 45,
+    "errors": []
+  }
+]
+----
+
+== Collector status values
+
+[cols="1,3", options="header"]
+|===
+| Status | Description
+
+| `active`
+| Collector is running and successfully collecting metrics.
+
+| `error`
+| Collector encountered an error during the most recent collection attempt. Check the `errors` field for details.
+
+| `disabled`
+| Collector is configured but disabled in the application configuration.
+|===
+
+== Authentication and permissions
+
+The Collectors metadata API requires authentication using a valid {product-very-short} token.
+Users must have the `scorecard.metric.read` permission to access collector metadata.
+
+== Error responses
+
+[cols="1,2,3", options="header"]
+|===
+| Status code | Condition | Response
+
+| 403
+| Permission denied (user lacks scorecard.metric.read permission)
+| `{"error": "Permission denied"}`
+|===
+
+== Use cases
+
+* *Health monitoring*: Poll the API to verify that collectors are running and collecting data on schedule.
+* *Troubleshooting*: Identify which collector is failing when metrics stop updating.
+* *Capacity planning*: Monitor `entityCount` to understand how many components are being tracked by each collector.
+* *Operational dashboards*: Display collector status in monitoring tools like Grafana or Prometheus.
+* *Alert integration*: Trigger alerts when collector status changes to `error` or when `lastCollection` timestamp becomes stale.
+
+== Interpreting collector errors
+
+Common error messages and their resolutions:
+
+[cols="2,3", options="header"]
+|===
+| Error message | Resolution
+
+| "Authentication failed: Invalid API token"
+| Verify that GitHub or Jira integration credentials are correct in your {product-very-short} secrets.
+
+| "Rate limit exceeded"
+| Reduce collection frequency or use xref:schedule-metrics-to-avoid-api-limits_monitor-collective-health-across-components[scheduled collection] to avoid API rate limits.
+
+| "Entity not found in catalog"
+| Check that catalog components have correct annotations for GitHub or Jira project mapping.
+
+| "Database connection failed"
+| Verify that the PostgreSQL database is accessible and connection parameters are correct.
+|===
+
+.Additional resources
+
+* xref:scorecard-timeseries-api_{context}[TimeSeries REST API for Scorecard]
+* xref:install-configure-dora-backend-module_install-and-configure-scorecards-to-view-metrics[Install and configure the DORA backend module]

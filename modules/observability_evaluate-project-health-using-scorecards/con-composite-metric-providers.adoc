@@ -1,0 +1,62 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="composite-metric-providers_{context}"]
+= Composite metric providers
+
+[role="_abstract"]
+Composite metric providers aggregate data from multiple sources to calculate metrics that require information from more than one system.
+The Scorecard plugin uses composite providers to calculate DORA metrics that combine deployment data from GitHub with incident data from Jira.
+
+Standard Scorecard metric providers collect data from a single source.
+For example, the GitHub provider collects pull request metrics, and the Jira provider collects issue counts.
+Each provider operates independently and calculates metrics based on data from its own source.
+
+Composite metric providers extend this model by orchestrating data collection from multiple providers and combining the results.
+The DORA backend module implements composite providers to calculate metrics that require cross-system correlation.
+
+== How composite providers work
+
+The Scorecard backend module coordinates data collection through these steps:
+
+. The DORA backend module registers composite metric providers for each DORA metric.
+. When a metric calculation is requested, the composite provider identifies which data sources are needed.
+. The provider fetches data from each source (for example, GitHub deployments and Jira incidents).
+. The provider applies the metric calculation formula using data from all sources.
+. The result is stored in the time-series database for historical tracking.
+
+For example, the change failure rate composite provider:
+
+. Fetches deployment events from GitHub to identify when deployments occurred.
+. Fetches incident data from Jira to identify which incidents were caused by deployments.
+. Correlates deployments with incidents based on timestamps and component mappings.
+. Calculates the percentage of deployments that resulted in incidents.
+
+== When to use composite providers
+
+Use composite providers when a metric requires data from multiple systems:
+
+* *Change failure rate*: Requires deployment data from GitHub and incident data from Jira.
+* *Custom compliance metrics*: May require data from GitHub (code analysis), Jira (issue tracking), and security scanning tools.
+
+Use standard single-source providers when a metric requires data from only one system:
+
+* *Deployment frequency*: Requires only GitHub deployment events.
+* *Open pull requests*: Requires only GitHub pull request data.
+* *Open issues*: Requires only Jira issue data.
+
+== Architectural considerations
+
+Composite providers introduce dependencies between data sources.
+If one source is unavailable or misconfigured, the composite metric may fail to calculate.
+The DORA backend module handles these scenarios by:
+
+* Logging errors when a data source fails to respond.
+* Returning partial results when possible (for example, calculating lead time from GitHub data even if Jira is unavailable).
+* Exposing collector metadata through the REST API for troubleshooting.
+
+Plan data source availability requirements when configuring composite metrics in production environments.
+
+.Additional resources
+
+* xref:dora-metrics-in-scorecard_{context}[How DORA metrics measure delivery performance]
+* xref:available-scorecard-metric-providers-and-metric-ids_{context}[Supported Scorecard metric providers]
