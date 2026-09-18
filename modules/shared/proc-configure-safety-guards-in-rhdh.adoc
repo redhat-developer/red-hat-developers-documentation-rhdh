@@ -1,186 +1,53 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="configure-safety-guards-in-rhdh_{context}"]
-= Configure safety guards in {product}
+= Enable prompt validation to block off-topic AI responses
 
 [role="_abstract"]
-To protect users from insecure or harmful AI model outputs, {product} ({product-very-short}) uses Llama Guard as a default safety shield. You must configure these guards to align with your organization's security policies.
+Enable the question-validity shield to classify each prompt before {ls-short} answers it, so that off-topic or harmful prompts never reach your answering model.
 
-`Default safety guard configuration`::
+In {product-very-short} 2.1, {ls-short} validates prompts through a single question-validity shield that {lcs-name} ({lcs-short}) defines in the `lightspeed-stack.yaml` configuration file. This shield replaces the Llama Guard safety provider, registered shield resources, and `run.yaml` overrides used in earlier releases. Do not edit Llama Stack files or the generated `run.yaml` file to change validation behavior.
 
-The system uses Llama Guard as the default safety shield. Override these settings in the `run.yaml` file.
+The shipped `lightspeed-stack.yaml` file includes the shield in a disabled state. You enable or disable the shield through environment variables in the Kubernetes Secret that {lcs-short} reads. When you enable the shield, {lcs-short} sends each prompt to the validation model, which classifies the prompt as allowed or rejected.
 
-[NOTE] 
-====
-The `external_providers_dir` parameter defaults to null and is no longer required in your configuration.
-====
+.Prerequisites
 
-`Overriding safety guards`::
-
-To implement custom security layers or different safety shields, you must define a new safety provider within a custom `run.yaml` file.
-
-`Disabling safety guards`::
-
-To run {product-very-short} without safety guards, you must use the `run-no-guard.yaml` configuration file.
-
-[IMPORTANT]
-====
-Running without safety guards increases the risk of invalid model output. Only use this configuration in secure development environments.
-====
-
-`Applying the no-guard configuration`::
-
-To run the system without a safety guard, perform these steps:
+* You have an inference provider configured and enabled in the `inference.providers` section of your `lightspeed-stack.yaml` file.
+* You can edit the Kubernetes Secret that supplies environment variables to the `lightspeed-core` container.
 
 .Procedure
-. Add the following YAML file as a config map to your namespace:
-+
-[source,yaml]
-----
-version: 2
-image_name: redhat-ai-dev-llama-stack-no-guard
-apis:
-  - agents
-  - inference
-  - safety
-  - tool_runtime
-  - vector_io
-  - files
-container_image:
-external_providers_dir:
-providers:
-  agents:
-    - config:
-        persistence:
-          agent_state:
-            namespace: agents
-            backend: kv_default
-          responses:
-            table_name: responses
-            backend: sql_default
-      provider_id: meta-reference
-      provider_type: inline::meta-reference
-  inference:
-    - provider_id: ${env.ENABLE_VLLM:+vllm}
-      provider_type: remote::vllm
-      config:
-        url: ${env.VLLM_URL:=}
-        api_token: ${env.VLLM_API_KEY:=}
-        max_tokens: ${env.VLLM_MAX_TOKENS:=4096}
-        tls_verify: ${env.VLLM_TLS_VERIFY:=true}
-    - provider_id: ${env.ENABLE_OLLAMA:+ollama}
-      provider_type: remote::ollama
-      config:
-        url: ${env.OLLAMA_URL:=http://localhost:11434}
-    - provider_id: ${env.ENABLE_OPENAI:+openai}
-      provider_type: remote::openai
-      config:
-        api_key: ${env.OPENAI_API_KEY:=}
-    - provider_id: ${env.ENABLE_VERTEX_AI:+vertexai}
-      provider_type: remote::vertexai
-      config:
-        project: ${env.VERTEX_AI_PROJECT:=}
-        location: ${env.VERTEX_AI_LOCATION:=us-central1}
-    - provider_id: sentence-transformers
-      provider_type: inline::sentence-transformers
-      config: {}
-  tool_runtime:
-    - provider_id: model-context-protocol
-      provider_type: remote::model-context-protocol
-      config: {}
-    - provider_id: rag-runtime
-      provider_type: inline::rag-runtime
-      config: {}
-  vector_io:
-    - provider_id: faiss
-      provider_type: inline::faiss
-      config:
-        persistence:
-          namespace: vector_io::faiss
-          backend: faiss_kv
-  files:
-    - provider_id: localfs
-      provider_type: inline::localfs
-      config:
-        storage_dir: /tmp/llama-stack-files
-        metadata_store:
-          table_name: files_metadata
-          backend: sql_files
-storage:
-  backends:
-    kv_default:
-      type: kv_sqlite
-      db_path: /tmp/kvstore.db
-    sql_default:
-      type: sql_sqlite
-      db_path: /tmp/sql_store.db
-    sql_files:
-      type: sql_sqlite
-      db_path: /rag-content/vector_db/rhdh_product_docs/1.9/files_metadata.db
-    faiss_kv:
-      type: kv_sqlite
-      db_path: /rag-content/vector_db/rhdh_product_docs/1.9/faiss_store.db
-  stores:
-    metadata:
-      namespace: registry
-      backend: faiss_kv
-    inference:
-      table_name: inference_store
-      backend: sql_default
-      max_write_queue_size: 10000
-      num_writers: 4
-    conversations:
-      table_name: openai_conversations
-      backend: sql_default
-registered_resources:
-  models:
-    - model_id: sentence-transformers/all-mpnet-base-v2
-      metadata:
-        embedding_dimension: 768
-      model_type: embedding
-      provider_id: sentence-transformers
-      provider_model_id: /rag-content/embeddings_model
-  tool_groups:
-    - provider_id: rag-runtime
-      toolgroup_id: builtin::rag
-  vector_dbs:
-    - vector_db_id: rhdh-product-docs-1_8
-      embedding_model: sentence-transformers/all-mpnet-base-v2
-      embedding_dimension: 768
-      provider_id: faiss
-server:
-  auth:
-  host:
-  port: 8321
-  quota:
-  tls_cafile:
-  tls_certfile:
-  tls_keyfile:
-----
 
-. Mount the config map to your Llama Stack container at `/app-root/run.yaml` to make sure it overrides the default image file:
+. To enable query validation, add the following keys to the Secret that {lcs-short} reads:
 +
 [source,yaml]
 ----
-name: llama-stack
-volumeMounts:
-- mountPath: /app-root/run.yaml
-  subPath: run.yaml
-  name: llama-stack-config
-----
-
-. Configure the required volume:
-+
-[source,yaml]
-----
-volumes:
-- name: llama-stack-config
-  configMap:
-    name: llama-stack-config
+stringData:
+  ENABLE_VALIDATION: question_validity
+  VALIDATION_PROVIDER: <provider_id>
+  VALIDATION_MODEL_NAME: <model_name>
 ----
 +
 where:
++
+`ENABLE_VALIDATION`:: Specifies whether the shield is enabled. You must set the value to `question_validity`. A nonempty value such as `true` does not enable the shield in {product-very-short} 2.1.
+`VALIDATION_PROVIDER`:: Specifies the inference provider that runs the classification. The value must match the `id` of a provider that is enabled in `inference.providers`.
+`VALIDATION_MODEL_NAME`:: Specifies the model that classifies each prompt. If the provider defines `allowed_models`, include this model in that list.
 
-`llama-stack-config`:: The config map where you added the new no-guard configuration file.
+. To keep query validation disabled, leave `ENABLE_VALIDATION` unset, or set it to `__disabled__`:
++
+[source,yaml]
+----
+stringData:
+  ENABLE_VALIDATION: __disabled__
+----
++
+[IMPORTANT]
+====
+Running without query validation increases the risk of off-topic or harmful model output. Disable validation only in secure development environments.
+====
 
-. Restart the deployment if it does not trigger an automatic rollout.
+. Apply the updated Secret, and then restart the {lcs-short} service so that the container reads the new environment variables.
+
+.Verification
+. Open the *Intelligent Assistant* and submit a development question, for example, `How do I create a software template in {product-very-short}?`. Confirm that the assistant answers the question.
+. Submit a clearly unrelated question, for example, `What is a good recipe for pizza?`. Confirm that the assistant rejects the question when validation is enabled.
