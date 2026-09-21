@@ -1,27 +1,27 @@
 :_mod-docs-content-type: PROCEDURE
 [id="mirror-images-for-helm-deployments-on-ocp_{context}"]
-= Mirror {ls-short} images for Helm deployments on {ocp-short}
+= Mirror Intelligent Assistant images for Helm deployments on {ocp-short}
 
 [role="_abstract"]
-Mirror the required {ls-short} container images to your local registry by using the `oc-mirror` plugin when deploying the Helm chart on an {ocp-short} cluster.
+Mirror the required Intelligent Assistant container images to your local registry by using the `oc-mirror` plugin when deploying the Helm chart on an {ocp-short} cluster.
 
 .Prerequisites
 * You have a target mirror registry accessible to your disconnected {ocp-short} cluster.
 * You authenticated to the {rhcr} and your target mirror registry.
-* You have configured image pull authentication for your mirror registry as described in {installing-in-air-gap-book-link}#install-rhdh-on-ocp-in-an-air-gapped-environment-with-the-helm-chart[Install {product} on {ocp-short} in an air-gapped environment with the Helm chart]. The `kubelet` requires these credentials to pull all {product} container images, including the {ls-short} sidecar images.
+* You have configured image pull authentication for your mirror registry as described in {installing-in-air-gap-book-link}#install-rhdh-on-ocp-in-an-air-gapped-environment-with-the-helm-chart[Install {product} on {ocp-short} in an air-gapped environment with the Helm chart]. The `kubelet` requires these credentials to pull all {product} container images, including the Intelligent Assistant sidecar and Offline Knowledge Portal (OKP) images.
 
 .Procedure
 
-. Identify the initialization and sidecar container images from the default values file of the chart:
+. Identify the sidecar and OKP container images from the default values file of the chart:
 +
 [source,terminal,subs=attributes]
 ----
 helm show values redhat-developer-hub --repo https://charts.openshift.io/ --version {product-chart-version} > values.default.yaml
 
-LS_RAG_IMAGE=$(yq '.global.lightspeed.initContainer.image | .registry + "/" + .repository' values.default.yaml)
-LS_RAG_DIGEST=$(yq '.global.lightspeed.initContainer.image.tag' values.default.yaml)
-LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
-LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
+LS_CORE_IMAGE=$(yq '.intelligentAssistant.core.image | .registry + "/" + .repository' values.default.yaml)
+LS_CORE_DIGEST=$(yq '.intelligentAssistant.core.image.tag' values.default.yaml)
+OKP_IMAGE=$(yq '.intelligentAssistant.okp.image | .registry + "/" + .repository' values.default.yaml)
+OKP_DIGEST=$(yq '.intelligentAssistant.okp.image.tag' values.default.yaml)
 ----
 
 . Add these images to the `additionalImages` section of your `ImageSetConfiguration` file:
@@ -32,8 +32,8 @@ apiVersion: mirror.openshift.io/v2alpha1
 kind: ImageSetConfiguration
 mirror:
   additionalImages:
-    - name: ${LS_RAG_IMAGE}:${LS_RAG_DIGEST}
     - name: ${LS_CORE_IMAGE}:${LS_CORE_DIGEST}
+    - name: ${OKP_IMAGE}:${OKP_DIGEST}
   helm:
     repositories:
       - name: openshift-charts
