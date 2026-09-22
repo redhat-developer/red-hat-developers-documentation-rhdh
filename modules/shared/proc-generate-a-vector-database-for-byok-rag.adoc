@@ -4,150 +4,90 @@
 = Generate a vector database for BYOK RAG
 
 [role="_abstract"]
-Use the {product} RAG Tool container image to embed your custom documentation and produce a FAISS vector database compatible with {lcs-name} ({lcs-short}) in library mode.
+Install the `rag-content` tooling, generate a portable OGX FAISS vector store from your custom documentation, and test retrieval before you deploy the store to {ia-short}.
 
 .Prerequisites
-* You have prepared your content directory as described in xref:prepare-custom-content-for-byok-rag_{context}[Prepare custom content for BYOK RAG].
-* You have `podman` installed.
-* You are authenticated to the {rhcr}:
-+
-[source,terminal]
-----
-$ podman login registry.redhat.io
-----
+* You have prepared your content directory as described in xref:prepare-custom-content-for-byok-rag_{context}[Prepare the source documents for BYOK RAG].
+* You have a workstation with Git and link:https://docs.astral.sh/uv/[`uv`] installed.
 
 .Procedure
 
-. Pull the {product} RAG Tool container image:
+. Clone the `rag-content` repository and install its pinned dependencies:
 +
 [source,terminal]
 ----
-$ podman pull registry.redhat.io/lightspeed-core/rag-tool-rhel9:latest
-----
-+
-The image includes the default embedding model (`sentence-transformers/all-mpnet-base-v2`) and all processing dependencies.
-
-. Create an output directory for the vector database:
-+
-[source,terminal]
-----
-$ mkdir -p ./vector_db
-----
-
-. Write a custom content processor script (`custom_processor.py`) that defines how your documentation files map to source URLs. The following example uses a static base URL:
-+
-[source,python]
-----
-from lightspeed_rag_content.metadata_processor import MetadataProcessor
-from lightspeed_rag_content.document_processor import DocumentProcessor
-from lightspeed_rag_content import utils
-
-class CustomMetadataProcessor(MetadataProcessor):
-
-    def __init__(self, url, hermetic_build=False):
-        super().__init__(hermetic_build=hermetic_build)
-        self.url = url
-
-    def url_function(self, file_path: str) -> str:
-        return self.url
-
-if __name__ == "__main__":
-    parser = utils.get_common_arg_parser()
-    args = parser.parse_args()
-
-    metadata_processor = CustomMetadataProcessor(
-        "https://docs.example.com",
-        hermetic_build=True,
-    )
-    document_processor = DocumentProcessor(
-        chunk_size=args.chunk,
-        chunk_overlap=args.overlap,
-        model_name=args.model_name,
-        embeddings_model_dir=args.model_dir,
-        num_workers=args.workers,
-        vector_store_type=args.vector_store_type,
-        doc_type=args.doc_type,
-    )
-    document_processor.process(args.folder, metadata=metadata_processor)
-    document_processor.save(args.index, args.output)
+$ git clone https://github.com/lightspeed-core/rag-content.git
+$ cd rag-content
+$ uv sync
 ----
 +
 [TIP]
 ====
-Set `hermetic_build=True` to disable URL reachability checks. This is required in air-gapped or CI environments without outbound network access.
+Use a specific release or commit in repeatable production workflows. The generator, query helper, and runtime dependencies must be kept compatible.
 ====
 
-. Run the vector database generator:
+. From the `rag-content` repository, generate a portable OGX FAISS vector store:
 +
 [source,terminal]
 ----
-$ podman run --rm \
-  -v ./custom_docs:/rag-content/custom_docs:Z \
-  -v ./vector_db:/rag-content/vector_db:Z \
-  -v ./custom_processor.py:/rag-content/custom_processor.py:Z \
-  registry.redhat.io/lightspeed-core/rag-tool-rhel9:latest \
-  python ./custom_processor.py \
-    --output ./vector_db/custom_docs/1.0 \
-    --folder ./custom_docs/1.0/ \
-    --model-dir "" \
-    --model-name sentence-transformers/all-mpnet-base-v2 \
-    --index custom-docs-1_0 \
-    --vector-store-type llamastack-faiss
+$ uv run python scripts/generate_embeddings.py \
+  --folder /path/to/custom_docs \
+  --output /path/to/vector_db/custom_docs \
+  --index custom-docs \
+  --vector-store llamastack-faiss \
+  --model-dir "" \
+  --model-name sentence-transformers/all-mpnet-base-v2 \
+  --doc-type markdown \
+  --chunk-size 512 \
+  --chunk-overlap 128
 ----
 +
-The flags used in this command are described in the following table:
+The `llamastack-faiss` value is retained as a compatibility name in the `rag-content` command-line interface. Current `rag-content` releases use OGX to create this store.
 +
-[cols="1,3",options="header"]
-|===
-| Flag | Description
-
-| `-o`, `--output`
-| Output directory for the generated vector database.
-
-| `-f`, `--folder`
-| Input directory containing your content files.
-
-| `-md`, `--model-dir`
-| Path to a locally downloaded embedding model. Set to `""` (empty string) to use the HuggingFace model ID from `--model-name` at runtime. Using an empty string makes the database portable across environments.
-
-| `-mn`, `--model-name`
-| HuggingFace model ID. Must match the model used when {lcs-short} loads the vector database.
-
-| `-i`, `--index`
-| Unique index identifier for this knowledge source. This value becomes the `rag_id` in `lightspeed-stack.yaml`.
-
-| `--vector-store-type`
-| Set to `llamastack-faiss` for {product-very-short} library mode deployments.
-
-| `-dt`, `--document-type`
-| Input format: `text` (default), `markdown`, `html`, or `pdf`.
-|===
+Passing an empty value to `--model-dir` records the Hugging Face model ID rather than a workstation-specific model path. This makes the generated store portable. At runtime, the same model ID is resolved by the `sentence_transformers` provider.
 +
-[IMPORTANT]
+[NOTE]
 ====
-Always set `--model-dir ""` (empty string) with `--model-name` when generating vector databases for {product-very-short} deployments. Setting `--model-dir` to a local path writes that path into the database metadata, which breaks portability across container environments.
+This model-ID configuration can require network access when the model is not already cached. For a disconnected deployment, package the embedding model and configure its runtime filesystem path as described in xref:deploy-byok-rag-in-a-disconnected-environment_{context}[Deploy BYOK RAG in a disconnected environment].
 ====
 
-. Confirm the output files:
+. Confirm the output files. The output directory contains:
++
+--
+* `faiss_store.db`: the vector database required at runtime.
+* `lightspeed-stack.yaml`: an example {ia-short} configuration generated for the store.
+* `llama-stack.yaml`: the OGX configuration used to create the store.
+--
+
+. Read the unique vector-store ID from the generated configuration:
 +
 [source,terminal]
 ----
-$ ls ./vector_db/custom_docs/1.0/
-faiss_store.db  lightspeed-stack.yaml  llama-stack.yaml
+$ yq '.registered_resources.vector_stores[0].vector_store_id' \
+  /path/to/vector_db/custom_docs/llama-stack.yaml
 ----
-
-. Review the generated `lightspeed-stack.yaml` file in the output directory and note the `byok_rag` section — specifically the `vector_db_id` value, which you will need in the configuration step:
 +
-[source,yaml]
+Save this value. The runtime configuration must use the exact same ID.
+
+. Test retrieval before deployment by using the query helper from the same `rag-content` checkout:
++
+[source,terminal]
 ----
-byok_rag:
-  - rag_id: custom-docs-1_0
-    rag_type: inline::faiss
-    embedding_model: sentence-transformers/all-mpnet-base-v2
-    embedding_dimension: 768
-    vector_db_id: <auto-generated-id>
-    db_path: /rag-content/vector_db/custom_docs/1.0/faiss_store.db
+$ uv run python scripts/query_rag.py \
+  --db-path /path/to/vector_db/custom_docs \
+  --product-index custom-docs \
+  --model-path "" \
+  --top-k 5 \
+  --query "Enter a question answered only by the custom documents" \
+  --json
 ----
++
+Review the returned chunks, scores, titles, and source URLs. Use a question that contains a distinctive fact from the custom content so that the result is easy to distinguish from general model knowledge.
++
+[NOTE]
+====
+Some combinations of OGX and `rag-content` can report that the vector store is already registered when `query_rag.py` opens a newly generated database. Do not edit the SQLite database manually. Use a compatible `rag-content` revision or continue validation through the deployed {ia-short} vector-store API, and report reproducible helper failures to the `rag-content` project.
+====
 
 .Next steps
 * xref:package-a-byok-rag-container-image_{context}[Package a BYOK RAG container image]

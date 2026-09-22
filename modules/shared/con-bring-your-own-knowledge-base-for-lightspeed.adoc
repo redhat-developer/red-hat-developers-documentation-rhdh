@@ -1,46 +1,47 @@
 :_mod-docs-content-type: CONCEPT
 
 [id="bring-your-own-knowledge-base-for-lightspeed_{context}"]
-= Bring Your Own Knowledge (BYOK) for {ls-short}
+= Bring Your Own Knowledge (BYOK) for {ia-short}
 
 [role="_abstract"]
-Extend {ls-short} with your organization's internal documentation by configuring a custom retrieval-augmented generation (RAG) knowledge source that {lcs-name} ({lcs-short}) searches during chat queries.
+Bring Your Own Knowledge (BYOK) enables {ia-short} to retrieve information from documentation that your organization provides. An administrator generates an OGX vector store from source documents and registers it as a retrieval source.
 
-By default, {ls-short} grounds AI responses in {product} ({product-very-short}) product documentation. With Bring Your Own Knowledge (BYOK), you can add additional knowledge sources — such as internal runbooks, architecture guides, or custom API references — so that {ls-short} can cite and retrieve content specific to your organization.
+By default, {ia-short} grounds AI responses in {product} ({product-very-short}) product documentation. With BYOK, you can add additional knowledge sources — such as internal runbooks, architecture guides, or custom API references — so that {ia-short} can retrieve and cite content that is specific to your organization.
 
 [NOTE]
 ====
-BYOK knowledge sources are cluster-wide and managed by Platform Engineers. Per-session, developer-managed file uploads use a separate mechanism and are not affected by BYOK configuration.
+This workflow is intended for {product-very-short} administrators. The upstream `rag-content` README is the source of truth for supported vector-store generation commands and current prerequisites. See the additional resources.
 ====
 
-== Workflow overview
+== How BYOK works
 
-The BYOK workflow involves the following steps:
+The BYOK workflow has four parts:
 
-. *Prepare content*: Organize your documentation into a supported input format (text, Markdown, HTML, or PDF).
-. *Generate a vector database*: Use the {product} RAG Tool container image to embed your content and produce a FAISS vector database.
-. *Package a container image*: Bundle the vector database into a container image that can run as an init container in your deployment.
-. *Deploy the container*: Add the init container to your {product-very-short} deployment using the Helm chart or Operator.
-. *Configure `lightspeed-stack.yaml`*: Declare the BYOK source in the `byok_rag` section and activate it in the `rag` section.
-. *Verify*: Confirm that {ls-short} returns citations from your custom documentation.
+. Prepare source documents and citation metadata.
+. Generate embeddings and an OGX vector store with `rag-content`.
+. Deliver the vector database and, when required, a local embedding model to the {ia-short} runtime.
+. Register the store as a retrieval source and verify it through the {ia-short}.
 
-== Library mode and configuration scope
+[IMPORTANT]
+====
+The embedding model and dimension used to generate the database must match the model and dimension in the runtime configuration. A mismatch prevents reliable retrieval and can stop the vector store from loading.
+====
 
-{product-very-short} runs {lcs-short} in _library mode_ (`use_as_library_client: true`). In this mode, {lcs-short} and Llama Stack share the same container process. The `enrich_byok_rag()` function in {lcs-short} automatically generates all required Llama Stack configuration (vector I/O providers, storage backends, vector stores, and embedding models) from the `byok_rag` section of `lightspeed-stack.yaml`.
+== Retrieval source ordering and prioritization
 
-As a result, you only need to edit `lightspeed-stack.yaml`. Do not edit `run.yaml` — that file applies to service mode deployments and is not used in {product-very-short}.
+The order of entries under `rag.retrieval.inline.sources` or `rag.retrieval.tool.sources` does not assign priority to the vector stores. For example, listing `custom-docs` before `okp` does not guarantee that content from `custom-docs` is returned first.
 
-== Init container pattern
+{ia-short} supports per-store BYOK weighting only with Inline RAG. Set `score_multiplier` on each entry under `rag.byok.stores` to adjust its relative importance. Values greater than `1.0` boost that store's results, while values less than `1.0` reduce them.
 
-Custom knowledge content is delivered to {lcs-short} through an init container:
+Inline RAG queries the configured BYOK stores, multiplies each raw relevance score by that store's `score_multiplier`, merges the results, and ranks them by weighted score. Consequently, a store with a higher `score_multiplier` receives a boost regardless of where it appears in the `sources` list.
 
-* An init container runs before {lcs-short} starts and copies the vector database files to a shared `EmptyDir` volume.
-* The {lcs-short} container mounts the shared volume and reads the vector database from the path specified in `db_path` inside `lightspeed-stack.yaml`.
+Tool RAG does not apply `score_multiplier`. It exposes the configured stores through the `file_search` tool. OGX searches them, merges their chunks, and ranks the combined results by the scores returned by the stores. Use Tool RAG when the model should decide when to search. Use Inline RAG when every request must retrieve context and you require configurable BYOK store weighting.
 
-== Multi-source configuration
-
-You can configure multiple BYOK sources simultaneously. Each source is declared as a separate entry in the `byok_rag` list. Use the `score_multiplier` field to control the relative ranking weight of results from each source when {lcs-short} merges results across sources.
+[NOTE]
+====
+`score_multiplier` applies only to BYOK stores. It does not weight OKP results, whose scores use a different scoring system. When you combine BYOK and OKP through Inline RAG, enable the supported reranker to normalize and rerank results across those sources.
+====
 
 .Additional resources
 * xref:ref-byok-rag-configuration-fields-for-lightspeed-stack_{context}[BYOK RAG configuration fields for `lightspeed-stack.yaml`]
-* xref:solve-project-specific-challenges-with-notebooks_{context}[Solve project-specific challenges with notebooks]
+* link:https://github.com/lightspeed-core/rag-content/blob/main/README.md#ogx-vector-stores[rag-content OGX vector stores]
