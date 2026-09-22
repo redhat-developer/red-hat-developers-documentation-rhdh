@@ -1,76 +1,56 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="prepare-custom-content-for-byok-rag_{context}"]
-= Prepare custom content for BYOK RAG
+= Prepare the source documents for BYOK RAG
 
 [role="_abstract"]
-Organize your internal documentation into a directory structure and supported file format before generating the vector database.
+Organize the documents that you want {ia-short} to search into a directory, and add citation metadata before you generate the vector store.
 
-The vector database generator accepts the following input formats:
+The examples in this workflow use Markdown documents, an OGX FAISS store, and the `sentence-transformers/all-mpnet-base-v2` embedding model. This model produces embeddings with dimension `768`.
 
-[cols="1,2,2",options="header"]
-|===
-| `--document-type` value | Input file extensions | Processing method
-
-| `text` (default)
-| `.txt`
-| Read as plain text.
-
-| `markdown`
-| `.md`
-| Read as Markdown; chunked on headings.
-
-| `html`
-| `.html`, `.htm`
-| Converted to Markdown by docling, then chunked.
-
-| `pdf`
-| `.pdf`
-| Converted to Markdown by docling, then chunked.
-|===
-
-[NOTE]
-====
-Scanned or image-only PDFs contain no embedded text and produce empty or near-empty output. Run such files through a separate OCR step before ingestion.
-====
+.Prerequisites
+* You have a workstation with Git and link:https://docs.astral.sh/uv/[`uv`] installed, or a container runtime such as Podman.
+* You have access to the link:https://github.com/lightspeed-core/rag-content[lightspeed-core rag-content] repository.
+* You have source documents that you are authorized to use.
+* You have access to a container registry or another approved method of delivering files to your {product-very-short} deployment.
+* You have a {ia-short} deployment configured with the `sentence_transformers` inference provider.
+* You have network access to download the embedding model from Hugging Face, unless the model is supplied locally.
 
 .Procedure
 
-. Create a versioned directory for your documentation:
+. Create a directory for the documents that you want the assistant to search. For example:
 +
-[source,terminal]
+[source,text]
 ----
-mkdir -p ./custom_docs/<version>/
+custom_docs/
+  installation-guide.md
+  operations-guide.md
 ----
 +
-Replace `<version>` with a string that identifies your content version, for example `1.0`.
+Use clear headings and ordinary text wherever possible. Text embedded only in screenshots or scanned PDF pages must be converted with optical character recognition before it can be indexed reliably.
 
-. Copy or generate your documentation files into the versioned directory. Use a single `--document-type` value per directory — mix formats by running the vector database generator multiple times against separate directories and using different index IDs.
+. Process one document type per generation run and set `--doc-type` accordingly. This example uses `markdown`.
 
-. Optional: Add YAML frontmatter to Markdown files to set document metadata:
+. For Markdown content, add YAML frontmatter to identify the document and its canonical source URL:
 +
 [source,markdown]
 ----
 ---
-title: My Custom Page Title
-url: https://docs.example.com/my-page
+title: Example Operations Guide
+url: https://docs.example.com/operations-guide
 ---
 
-# Content starts here
+# Example Operations Guide
+
+Document content begins here.
 ----
 +
-The following frontmatter fields are recognized:
+The metadata is stored with each generated chunk. {ia-short} can use the title and URL when presenting retrieval sources and citations.
 +
-[cols="1,3",options="header"]
-|===
-| Field | Description
-
-| `title`
-| Document title. Overrides extraction from the first heading line.
-
-| `url`
-| Source URL. Appears in {ls-short} citations. Takes priority over the URL returned by the `url_function` in your processing script.
-|===
+[IMPORTANT]
+====
+Do not include secrets, credentials, personal data, or content that users of the assistant are not authorized to retrieve. Access controls on the source system are not automatically reproduced inside a vector store.
+====
 
 .Next steps
 * xref:generate-a-vector-database-for-byok-rag_{context}[Generate a vector database for BYOK RAG]

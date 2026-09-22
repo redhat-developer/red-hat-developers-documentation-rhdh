@@ -1,42 +1,48 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="verify-byok-rag-retrieval_{context}"]
-= Verify BYOK RAG retrieval
+= Verify the deployed vector store
 
 [role="_abstract"]
-Confirm that {ls-short} retrieves content from your custom knowledge source and returns citations in chat responses.
+Confirm that {ia-short} can read the delivered artifacts, that the BYOK source is registered, and that the assistant retrieves and cites content from your custom documentation.
 
 .Prerequisites
-* You have completed either xref:configure-byok-rag-by-using-the-helm-chart_{context}[Configure BYOK RAG by using the Helm chart] or xref:configure-byok-rag-by-using-the-operator_{context}[Configure BYOK RAG by using the Operator].
-* You have access to a running {product-very-short} instance.
+* You have registered the store as described in xref:configure-byok-rag-by-using-the-helm-chart_{context}[Configure BYOK RAG by using the Helm chart], xref:configure-byok-rag-by-using-the-operator_{context}[Configure BYOK RAG by using the Operator], or xref:deploy-byok-rag-in-a-disconnected-environment_{context}[Deploy BYOK RAG in a disconnected environment].
+* You have applied the configuration and restarted or rolled out the {ia-short} workload so that it receives both the configuration and the database.
 
 .Procedure
 
-. Confirm the init container completed successfully by checking its status:
+. Verify the following conditions after deployment:
++
+--
+.. The init container or file-delivery process completes successfully.
+.. The {ia-short} container can read the configured `faiss_store.db` path.
+.. The {ia-short} container can read the local embedding model files, including `model.safetensors`, the tokenizer, and model configuration.
+.. The {ia-short} readiness endpoint reports success.
+.. The BYOK source appears in the RAG and vector-store API responses.
+.. The {ia-short} answers a distinctive question from the custom documents and displays the expected source metadata.
+--
+
+. From inside the {ia-short} container, run the following example checks:
 +
 [source,terminal]
 ----
-$ kubectl get pods -l app=developer-hub \
-    -o jsonpath='{.items[*].status.initContainerStatuses[*]}'
+$ test -r /rag-content/embeddings_model/model.safetensors
+$ test -r /rag-content/vector_db/custom_docs/faiss_store.db
+$ curl --fail http://127.0.0.1:8080/readiness
+$ curl --fail http://127.0.0.1:8080/v1/rags
+$ curl --fail http://127.0.0.1:8080/v1/vector-stores
 ----
 +
-The `init-byok-custom-docs` container must show `"state": {"terminated": {"reason": "Completed"}}`. If the init container is in an error state, see xref:ref-byok-rag-troubleshooting_{context}[Troubleshooting BYOK RAG].
+The exact host and port can differ depending on the installation. Protect administrative and diagnostic endpoints according to your organization's security requirements.
 
-. Confirm the shared volume contains the vector database by opening a shell in the `lightspeed-core` container:
+. In the {ia-short}, ask a question whose answer appears only in the custom content. Confirm both the answer and the cited title or URL.
 +
-[source,terminal]
-----
-$ kubectl exec -it <pod-name> -c lightspeed-core -- \
-    ls /app-root/byok-data/rag/vector_db/custom_docs/1.0/
-----
-+
-The `faiss_store.db` file must be present.
-
-. Open the {ls-short} chat interface by selecting the *Open Lightspeed* floating action button (FAB) on the {product-very-short} home page.
-
-. Send a query that matches content in your custom documentation.
-
-. Verify that the response includes citations referencing your documentation source. Citations appear as expandable source links below the AI response when the model retrieves content from a BYOK knowledge source.
+[NOTE]
+====
+A plausible answer without the expected retrieval source does not prove that BYOK retrieval occurred.
+====
 
 .Additional resources
 * xref:ref-byok-rag-troubleshooting_{context}[Troubleshooting BYOK RAG]
+* xref:update-the-byok-rag-knowledge-base_{context}[Update the BYOK RAG knowledge base]
