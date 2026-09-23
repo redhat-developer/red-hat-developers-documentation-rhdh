@@ -49,7 +49,7 @@ To migrate your configuration:
 . For each identified plugin, retrieve its configuration:
 .. Go to the link:https://github.com/redhat-developer/rhdh-plugin-export-overlays[{product-short} Overlay Repository]
 .. Locate the plugin's metadata directory: `workspaces/__<plugin-name>__/metadata/__<package-name>__/`
-.. Find `appConfigExamples[0].content` — this contains the configuration (frontend and/or backend) that goes under `pluginConfig:`
+.. Find `appConfigExamples[0].content` — this contains the configuration (frontend or backend) that goes under `pluginConfig:`
 .. Copy this configuration to add to your plugin entry
 
 . Find the corresponding `ghcr.io` OCI path in the migration table below.
@@ -71,15 +71,17 @@ plugins:
 # After ({product-very-short} 1.9+)
 # Both frontend and backend configuration MUST be explicit
 plugins:
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins-backend:bs_1.45.3__0.26.0
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins-backend:bs_1.45.3__0.22.0
     disabled: false
     pluginConfig:
       # Backend configuration from appConfigExamples[0].content
       # Found in: workspaces/jenkins/metadata/backstage-community-plugin-jenkins-backend/
       jenkins:
-        baseUrl: ${JENKINS_URL}
-        username: ${JENKINS_USERNAME}
-        apiKey: ${JENKINS_API_KEY}
+        instances:
+          - name: default
+            baseUrl: ${JENKINS_URL}
+            username: ${JENKINS_USERNAME}
+            apiKey: ${JENKINS_TOKEN}
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
     disabled: false
     pluginConfig:
@@ -102,7 +104,11 @@ plugins:
 [NOTE]
 ====
 The exact configuration structure varies by plugin. Some plugins have only frontend configuration, some have only backend configuration, and some have both.
+
 Always copy the configuration from `appConfigExamples[0].content` in the overlay repository for each plugin package you are migrating.
+
+Ensure that all secrets that you reference in your configuration are ingested, see {configuring-book-link}#rhdh-secrets_understanding-rhdh-configuration-files[{configuring-book-title}].
+
 ====
 
 == Understanding the tag format
