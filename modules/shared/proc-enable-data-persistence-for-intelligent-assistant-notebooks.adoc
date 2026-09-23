@@ -1,0 +1,81 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-data-persistence-for-intelligent-assistant-notebooks_{context}"]
+= Enable data persistence for {ia-short} Notebooks
+
+[role="_abstract"]
+Notebook embeddings are stored in a FAISS vector store, which {ia-short} persists to a SQLite file on disk. By default, that file lives on an ephemeral `emptyDir` volume, so the system clears it when the pod restarts or reschedules.
+
+To retain Notebook documents and embeddings across restarts, move the FAISS store onto a Persistent Volume by pointing the `kv_notebooks` storage backend at a persistent mount and backing that mount with a Persistent Volume Claim (PVC). The store remains an on-disk FAISS/SQLite file; only the volume behind it changes.
+
+[IMPORTANT]
+====
+Depending on your installation method, note the following constraints:
+
+* *Helm Chart*: The `kv_notebooks` backend defaults to `/rag-content` (`ragVolume`). Moving the `db_path` to a custom PVC mount (like `/var/lib/lightspeed-data`) works, but alternatively, you can use the chart's native `runtimeVolume.type: persistentVolumeClaim` configuration.
+* *Operator*: The Operator currently mounts configuration via annotated config maps and does not expose a PVC option. Modifying the deployment manifest manually (as shown in this procedure) is unsupported for Operator installs, as changes will be reverted during operator reconciliation.
+====
+
+.Prerequisites
+
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster that contains your {product-short} instance.
+* You have authored and provisioned a custom config map for your deployment. For more information, see link:{configuring-book-link}#provision-your-custom-rhdh-configuration_provision-and-use-your-custom-rhdh-configuration[Provision your custom {product} configuration].
+* A Persistent Volume Claim (PVC) named `lightspeed-notebooks-pvc` is provisioned in the namespace of your {ia-short} deployment.
+
+.Procedure
+
+. In your `config.yaml` config map, point the `kv_notebooks` storage backend at a path on the persistent mount. The backend stays `kv_sqlite`, so the FAISS index continues to persist as an on-disk file:
++
+[source,yaml]
+----
+storage:
+  backends:
+    kv_notebooks:
+      type: kv_sqlite
+      db_path: /var/lib/lightspeed-data/vector_db/notebooks/faiss_store.db
+----
+
+. Update your deployment manifest to create the directory on the volume and mount the PVC into the {ia-short} container. The config map mounts are already defined by the deployment and are unchanged:
++
+[source,yaml]
+----
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        - name: init-notebooks-storage
+          image: registry.access.redhat.com/ubi9/ubi-minimal
+          command:
+            - sh
+            - -c
+            - mkdir -p /var/lib/lightspeed-data/vector_db/notebooks
+          volumeMounts:
+            - name: lightspeed-notebooks
+              mountPath: /var/lib/lightspeed-data
+      containers:
+        - name: lightspeed-core
+          volumeMounts:
+            - name: lightspeed-notebooks
+              mountPath: /var/lib/lightspeed-data
+      volumes:
+        - name: lightspeed-notebooks
+          persistentVolumeClaim:
+            claimName: lightspeed-notebooks-pvc
+----
+
+. Apply the updated configuration and restart the service.
+
+.Verification
+
+. In {product}, create a Notebook and upload a test document.
+. Send a message to the virtual assistant and verify that the response is based on the document.
+. Restart the pod:
++
+[source,terminal]
+----
+$ oc delete pod <pod_name>
+----
+. After the pod recovers, refresh the *My Notebooks* dashboard.
+. Verify that the Notebook and the uploaded file are still accessible.
