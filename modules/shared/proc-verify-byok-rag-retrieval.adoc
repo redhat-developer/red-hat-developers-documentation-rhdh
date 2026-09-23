@@ -17,7 +17,7 @@ Confirm that {ia-short} can read the delivered artifacts, that the BYOK source i
 --
 .. The init container or file-delivery process completes successfully.
 .. The {ia-short} container can read the configured `faiss_store.db` path.
-.. The {ia-short} container can read the local embedding model files, including `model.safetensors`, the tokenizer, and model configuration.
+.. For a disconnected deployment that uses a local embedding model, the {ia-short} container can read the local embedding model files, including `model.safetensors`, the tokenizer, and model configuration. A connected deployment that uses a Hugging Face model ID does not require these local files.
 .. The {ia-short} readiness endpoint reports success.
 .. The BYOK source appears in the RAG and vector-store API responses.
 .. The {ia-short} answers a distinctive question from the custom documents and displays the expected source metadata.
@@ -27,7 +27,6 @@ Confirm that {ia-short} can read the delivered artifacts, that the BYOK source i
 +
 [source,terminal]
 ----
-$ test -r /rag-content/embeddings_model/model.safetensors
 $ test -r /rag-content/vector_db/custom_docs/faiss_store.db
 $ curl --fail http://127.0.0.1:8080/readiness
 $ curl --fail http://127.0.0.1:8080/v1/rags
@@ -35,6 +34,16 @@ $ curl --fail http://127.0.0.1:8080/v1/vector-stores
 ----
 +
 The exact host and port can differ depending on the installation. Protect administrative and diagnostic endpoints according to your organization's security requirements.
++
+[NOTE]
+====
+Run the following additional check only for a disconnected deployment that bundles a local embedding model. A connected deployment that uses a Hugging Face model ID, such as `sentence-transformers/all-mpnet-base-v2`, does not require this file:
+
+[source,terminal]
+----
+$ test -r /rag-content/embeddings_model/model.safetensors
+----
+====
 
 . In the {ia-short}, ask a question whose answer appears only in the custom content. Confirm both the answer and the cited title or URL.
 +

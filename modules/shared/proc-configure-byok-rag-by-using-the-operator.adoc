@@ -15,7 +15,12 @@ Deploy your BYOK container image as an init container and register the custom kn
 
 .Procedure
 
-. Create a `ConfigMap` that contains your customized `lightspeed-stack.yaml`. Add the `sentence_transformers` embedding provider, register the store under `rag.byok.stores`, and activate it under `rag.retrieval`:
+. Create a `ConfigMap` that contains the complete `lightspeed-stack.yaml` for your {product-very-short} version with the BYOK sections added. Start from the product-provided configuration, then add the `sentence_transformers` embedding provider, register the store under `rag.byok.stores`, and activate it under `rag.retrieval`:
++
+[WARNING]
+====
+The mounted file replaces the product-provided `lightspeed-stack.yaml` in its entirety; it is not merged. If you include only the BYOK sections, you remove other supported or required settings, including the service, authentication, cache, user-data and profile, MCP, and other product configuration, and {ia-short} can fail to start or lose required functionality. Always copy the complete configuration for your {product-very-short} version and add the BYOK sections to it.
+====
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -25,6 +30,9 @@ metadata:
   name: lightspeed-stack-byok
 data:
   lightspeed-stack.yaml: |
+    # Retain the complete product-provided configuration for your {product-very-short} version
+    # (service, authentication, cache, profile, MCP, and other settings), then add the
+    # following BYOK sections to it:
     inference:
       providers:
         - type: sentence_transformers
@@ -36,7 +44,7 @@ data:
             embedding_model: sentence-transformers/all-mpnet-base-v2
             embedding_dimension: 768
             vector_db_id: vs_replace_with_generated_id  <2>
-            db_path: /rag-content/vector_db/custom_docs/faiss_store.db  <3>
+            db_path: /rag-content-byok/vector_db/custom_docs/faiss_store.db  <3>
             score_multiplier: 1.0  # Used by Inline RAG only
       retrieval:
         tool:
@@ -46,7 +54,7 @@ data:
 +
 <1>:: The `rag_id` identifies the retrieval source. Use the same value under `rag.retrieval.tool.sources`.
 <2> Replace with the `vector_db_id` value that you read from the generated `llama-stack.yaml` file. The runtime configuration must use the exact same ID.
-<3> Must match the path where the init container copies the database inside the {ia-short} container.
+<3> Must match the path where the init container copies the database inside the {ia-short} container. This procedure uses the dedicated `/rag-content-byok` mount path so that the BYOK content does not shadow the product-provided content that the default init container delivers to `/rag-content`.
 <4> Must match `rag_id`. If you have other sources, such as product documentation, list each required source under `sources`.
 
 . Apply the `ConfigMap` to your cluster:
@@ -56,7 +64,7 @@ data:
 $ oc apply -f lightspeed-stack-byok-configmap.yaml
 ----
 
-. Update your `{backstage}` custom resource (CR) to mount the custom `ConfigMap`, add the BYOK init container, and configure the shared volume:
+. Update your `{backstage}` custom resource (CR) to mount the custom `ConfigMap`, and use `spec.deployment.patch` to add the BYOK init container, shared volume, and volume mount. The Operator applies `spec.deployment.patch` as a strategic merge patch, so the BYOK init container is added alongside the product init container and the product-provided RAG content in `/rag-content` is preserved:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -73,31 +81,35 @@ spec:
           key: lightspeed-stack.yaml
           containers:
             - lightspeed-core
-    extraContainers:
-      initContainers:
-        - name: byok-rag-init  <2>
-          image: quay.io/your-organization/rhdh-byok:1.0.0
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              set -eu
-              mkdir -p /rag-content/vector_db
-              cp -R /byok/vector_db/. /rag-content/vector_db/
-          volumeMounts:
-            - name: lightspeed-rag
-              mountPath: /rag-content
-    extraVolumes:
-      - name: lightspeed-rag
-        emptyDir: {}
-    extraVolumeMounts:
-      - name: lightspeed-rag
-        mountPath: /rag-content
-        containers:
-          - lightspeed-core
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: byok-rag
+                emptyDir: {}
+            initContainers:
+              - name: byok-rag-init  <2>
+                image: quay.io/your-organization/rhdh-byok:1.0.0
+                command: ["/bin/sh", "-c"]
+                args:
+                  - |
+                    set -eu
+                    mkdir -p /rag-content-byok/vector_db
+                    cp -R /byok/vector_db/. /rag-content-byok/vector_db/
+                volumeMounts:
+                  - name: byok-rag
+                    mountPath: /rag-content-byok
+            containers:
+              - name: lightspeed-core
+                volumeMounts:
+                  - name: byok-rag
+                    mountPath: /rag-content-byok
 ----
 +
 <1>:: References the `ConfigMap` created in the previous step. This replaces the default `lightspeed-stack.yaml` for the `lightspeed-core` container.
-<2> The init container runs before {ia-short} starts and copies the vector database to the shared volume.
+<2> The init container runs before {ia-short} starts and copies the vector database to the shared `byok-rag` volume. The dedicated `/rag-content-byok` mount path avoids shadowing the product-provided content that the default init container delivers to `/rag-content`.
 
 . Apply the updated `{backstage}` CR:
 +
@@ -111,3 +123,4 @@ $ oc apply -f <backstage_cr_file>.yaml
 
 .Additional resources
 * xref:ref-byok-rag-configuration-fields-for-lightspeed-stack_{context}[BYOK RAG configuration fields for `lightspeed-stack.yaml`]
+* link:https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format[Strategic Merge Patch]
