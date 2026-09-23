@@ -1,0 +1,135 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="integrate-sonarqube-health-metrics-using-scorecards_{context}"]
+= Integrate SonarQube health metrics
+
+[role="_abstract"]
+You can configure the SonarQube Scorecard plugin to display code quality and security metrics from SonarQube or SonarCloud in your {product-very-short} catalog. With this integration, you can monitor code coverage, security hotspots, and maintainability ratings directly from {product}.
+
+.Prerequisites
+
+* You have {install-category-link}[installed your {product-very-short} instance].
+* You have {scorecard-plugin-book-link}#proc-installing-scorecard-plugin-in-rhdh-instance[installed the Scorecard images].
+* You have {configuring-book-link}[added a custom {product-short} application configuration].
+* You have access to a SonarQube or SonarCloud instance. Configuration is optional for public SonarCloud projects; the base URL defaults to `https://sonarcloud.io`.
+
+.Procedure
+
+. Optional: If your SonarQube or SonarCloud project is private, generate an API key or token for your instance.
+
+. Add the SonarQube API key to {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets]:
++
+`SONARQUBE_API_KEY`:: Your SonarQube or SonarCloud API key. Optional for public SonarCloud projects.
+
+. Configure the SonarQube instance in your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+sonarqube:
+  baseUrl: https://sonarcloud.io # optional, defaults to https://sonarcloud.io
+  apiKey: ${SONARQUBE_API_KEY} # optional for public projects
+----
++
+where:
++
+`baseUrl`:: Optional: The base URL of your SonarQube installation. Defaults to `https://sonarcloud.io`.
+`apiKey`:: Optional for public projects: The API key to access the SonarQube instance under `baseUrl`, configured under `${SONARQUBE_API_KEY}` in your {product-very-short} secrets.
+
+. Optional: Configure multiple SonarQube instances: If you connect to more than one SonarQube or SonarCloud instance, add each instance under `sonarqube.instances` in your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+sonarqube:
+  baseUrl: https://sonarcloud.io
+  apiKey: ${SONARQUBE_DEFAULT_KEY}
+  instances:
+    - name: internal
+      baseUrl: https://sonar.internal.com
+      apiKey: ${SONARQUBE_INTERNAL_KEY}
+      authType: Bearer # optional, defaults to Basic
+    - name: cloud
+      baseUrl: https://sonarcloud.io
+      # apiKey optional for public SonarCloud projects (omit if not needed)
+----
++
+where:
++
+`instances:name`:: A unique name for the SonarQube instance. Entities reference this name to select which instance to query.
+`instances:baseUrl`:: The base URL of the SonarQube instance.
+`instances:apiKey`:: Optional for public projects: The API key to access this instance.
+`instances:authType`:: Optional: The authentication type for this instance. Valid values are `Basic` and `Bearer`. Defaults to `Basic`.
+
+. Enable the SonarQube Scorecard plugin: Add the SonarQube Scorecard module to your {product-very-short} `dynamic-plugins-config.yaml` file:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-sonarqube:<tag>
+    disabled: false
+----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+
+. Annotate catalog entities: Link a component to its SonarQube project by editing the `catalog-info.yaml` file for your {product-very-short} entity and adding the required annotation:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    sonarqube.org/project-key: my-project-key
+spec:
+  type: service
+  lifecycle: production
+  owner: _<your_team_name>_
+----
++
+where:
++
+`annotations:sonarqube.org/project-key`:: The SonarQube or SonarCloud project key for this entity.
++
+[NOTE]
+====
+If you configured multiple SonarQube instances, prefix the project key with the instance name, for example `my-instance/my-project-key`. When you do not provide an instance prefix, {product-very-short} uses the default instance configuration.
+====
+
+. Import the catalog entity: Add the location of your `catalog-info.yaml` to the `catalog.locations` section in your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml]
+----
+catalog:
+  locations:
+    - type: url
+      target: https://github.com/<owner>/<repository>/catalog-info.yaml
+----
+
+. Optional: Customize thresholds: Define custom threshold rules for a SonarQube metric in your {product-very-short} `{my-app-config-file}` file. The following example customizes the *SonarQube Quality Gate* (`sonarqube.qualityGate`) metric:
++
+[source,yaml]
+----
+scorecard:
+  metricProviders:
+    sonarqube:
+      qualityGate:
+        thresholds:
+          rules:
+            - key: success
+              expression: '==true'
+            - key: error
+              expression: '==false'
+----
++
+where:
++
+`scorecard:metricProviders:sonarqube:qualityGate:thresholds`:: Lists the threshold values for the SonarQube Quality Gate metric.
++
+[NOTE]
+====
+Each SonarQube metric provider supports its own default thresholds. For example, count metrics such as *SonarQube Open Issues* (`sonarqube.openIssues`) use `success`, `warning`, and `error` ranges, and rating metrics such as *SonarQube Security Rating* (`sonarqube.securityRating`) use custom `A`-`E` keys with a `color` and `icon` for each key. For the full list of supported SonarQube metrics and their default thresholds, see xref:available-scorecard-metric-providers-and-metric-ids_{scorecard-ref-context}[Available scorecard metric providers and metric IDs]. For more information about customizing thresholds, see xref:scorecard-metric-thresholds_evaluate-project-health-using-scorecards[Scorecard metric thresholds].
+====
+
+.Additional resources
+
+* {scorecard-plugin-book-link}#available-scorecard-metric-providers-and-metric-ids_evaluate-project-health-using-scorecards[Available scorecard metric providers and metric IDs]
