@@ -54,7 +54,7 @@ To migrate your configuration:
 
 . Find the corresponding `ghcr.io` OCI path in the migration table below.
 
-. Update your configuration with both the new OCI path and the explicit frontend configuration.
+. Update your configuration with both the new OCI path and the explicit configuration.
 
 == Migration example
 
@@ -63,14 +63,23 @@ The following example shows the complete migration for the Jenkins plugin:
 [source,yaml]
 ----
 # Before ({product-very-short} 1.8 and earlier)
-# Frontend configuration was implicit in the bundled plugin
+# Configuration was implicit in the bundled plugin
 plugins:
   - package: ./dynamic-plugins/dist/backstage-community-plugin-jenkins
     disabled: false
 
 # After ({product-very-short} 1.9+)
-# Frontend configuration MUST be explicit
+# Both frontend and backend configuration MUST be explicit
 plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins-backend:bs_1.45.3__0.26.0
+    disabled: false
+    pluginConfig:
+      # Backend configuration from appConfigExamples[0].content
+      # Found in: workspaces/jenkins/metadata/backstage-community-plugin-jenkins-backend/
+      jenkins:
+        baseUrl: ${JENKINS_URL}
+        username: ${JENKINS_USERNAME}
+        apiKey: ${JENKINS_API_KEY}
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
     disabled: false
     pluginConfig:
@@ -92,8 +101,8 @@ plugins:
 
 [NOTE]
 ====
-The exact frontend configuration structure varies by plugin.
-Always copy the configuration from `appConfigExamples[0].content` in the overlay repository for the specific plugin you are migrating.
+The exact configuration structure varies by plugin. Some plugins have only frontend configuration, some have only backend configuration, and some have both.
+Always copy the configuration from `appConfigExamples[0].content` in the overlay repository for each plugin package you are migrating.
 ====
 
 == Understanding the tag format
