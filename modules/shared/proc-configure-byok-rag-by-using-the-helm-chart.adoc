@@ -14,7 +14,12 @@ Deploy your BYOK container image as an init container and register the custom kn
 
 .Procedure
 
-. Create a `ConfigMap` that contains your customized `lightspeed-stack.yaml`. Add the `sentence_transformers` embedding provider, register the store under `rag.byok.stores`, and activate it under `rag.retrieval`:
+. Create a `ConfigMap` that contains the complete `lightspeed-stack.yaml` for your {product-very-short} version with the BYOK sections added. Start from the product-provided configuration, then add the `sentence_transformers` embedding provider, register the store under `rag.byok.stores`, and activate it under `rag.retrieval`:
++
+[WARNING]
+====
+The mounted file replaces the product-provided `lightspeed-stack.yaml` in its entirety; it is not merged. If you include only the BYOK sections, you remove other supported or required settings, including the service, authentication, cache, user-data and profile, MCP, and other product configuration, and {ia-short} can fail to start or lose required functionality. Always copy the complete configuration for your {product-very-short} version and add the BYOK sections to it.
+====
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -24,6 +29,9 @@ metadata:
   name: lightspeed-stack-byok
 data:
   lightspeed-stack.yaml: |
+    # Retain the complete product-provided configuration for your {product-very-short} version
+    # (service, authentication, cache, profile, MCP, and other settings), then add the
+    # following BYOK sections to it:
     inference:
       providers:
         - type: sentence_transformers
@@ -55,7 +63,7 @@ data:
 $ kubectl apply -f lightspeed-stack-byok-configmap.yaml
 ----
 
-. Update your Helm `values.yaml` file to reference the custom `ConfigMap`, add the BYOK init container, and configure the shared volume:
+. Update your Helm `values.yaml` file to reference the custom `ConfigMap` and override the {ia-short} init container so that it delivers your BYOK vector store. The chart mounts the RAG volume (`global.lightspeed.ragVolume`) automatically into both the init container and the {ia-short} container at `/rag-content`, so you do not define extra volumes or volume mounts:
 +
 [source,yaml]
 ----
@@ -69,30 +77,23 @@ global:
         subPath: lightspeed-stack.yaml
         sourceFile: lightspeed-stack.yaml
         optional: false
-    extraInitContainers:  <2>
-      - name: byok-rag-init
-        image: quay.io/your-organization/rhdh-byok:1.0.0
-        command: ["/bin/sh", "-c"]
-        args:
-          - |
-            set -eu
-            mkdir -p /rag-content/vector_db
-            cp -R /byok/vector_db/. /rag-content/vector_db/
-        volumeMounts:
-          - name: lightspeed-rag
-            mountPath: /rag-content
-    extraVolumes:
-      - name: lightspeed-rag
-        emptyDir: {}
-    extraVolumeMounts:
-      - name: lightspeed-rag
-        mountPath: /rag-content
-        containers:
-          - lightspeed-core
+    initContainer:  <2>
+      image: quay.io/your-organization/rhdh-byok:1.0.0
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -eu
+          mkdir -p /rag-content/vector_db
+          cp -R /byok/vector_db/. /rag-content/vector_db/
 ----
 +
+[IMPORTANT]
+====
+The chart exposes a single `global.lightspeed.initContainer`. Overriding it replaces the default init container that delivers the product-provided RAG content. To preserve that content, build your BYOK image from the product RAG init image so that the overridden init container delivers both the product-provided content and your BYOK vector store. Validate the result against your chart version before relying on it in production.
+====
++
 <1>:: Replace the default `lightspeed-stack.yaml` `ConfigMap` with your custom one that contains the BYOK configuration.
-<2> The init container runs before {ia-short} starts and copies the vector database to the shared volume.
+<2> Override the default init container so that it copies the BYOK vector database into the automatically mounted `/rag-content` RAG volume before {ia-short} starts.
 
 . Run `helm upgrade` to apply the changes:
 +
