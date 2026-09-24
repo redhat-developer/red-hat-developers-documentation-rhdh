@@ -1,7 +1,7 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="deploy-on-gke-with-the-helm-chart_{context}"]
-= Deploy on GKE using the Helm chart
+= Deploy on {gke-short} using the Helm chart
 
 [role="_abstract"]
 Deploy {product-short} on {gke-short} by using the Helm chart for building, testing, and deploying applications.
@@ -92,35 +92,29 @@ Example `values.yaml` file:
 +
 [source,yaml,subs="attributes+"]
 ----
-global:
-  host: <rhdh_domain_name>
-route:
-  enabled: false
-upstream:
-  service:
-    type: NodePort
-  ingress:
-    enabled: true
-    annotations:
-      kubernetes.io/ingress.class: gce
-      kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
-      networking.gke.io/managed-certificates: <rhdh_certificate_name>
-      networking.gke.io/v1beta1.FrontendConfig: <ingress_security_config>
-    className: gce
-  backstage:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
+host: <rhdh_domain_name>
+service:
+  type: NodePort
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
+    networking.gke.io/managed-certificates: <rhdh_certificate_name>
+    networking.gke.io/v1beta1.FrontendConfig: <ingress_security_config>
+  className: gce
+imagePullSecrets:
+- rhdh-pull-secret
+podSecurityContext:
+  fsGroup: 2000
+postgresql:
+  image:
+    pullSecrets:
+    - rhdh-pull-secret
+  primary:
     podSecurityContext:
-      fsGroup: 2000
-  postgresql:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        fsGroup: 3000
+      enabled: true
+      fsGroup: 3000
   volumePermissions:
     enabled: true
 ----

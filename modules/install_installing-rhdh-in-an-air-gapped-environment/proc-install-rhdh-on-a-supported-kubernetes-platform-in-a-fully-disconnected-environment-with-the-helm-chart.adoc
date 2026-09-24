@@ -40,10 +40,10 @@ The `helm pull _<helm_chart_repo_name>_/redhat-developer-hub --version _<rhdh_ve
 +
 [source,terminal,subs="+quotes,+attributes"]
 ----
-{product-very-short}_IMAGE=$(yq '.upstream.backstage.image | .registry + "/" + .repository' values.default.yaml)
-{product-very-short}_DIGEST=$(yq '.upstream.backstage.image.tag' values.default.yaml)
-PG_IMAGE=$(yq '.upstream.postgresql.image | .registry + "/" + .repository' values.default.yaml)
-PG_DIGEST=$(yq '.upstream.postgresql.image.tag' values.default.yaml)
+{product-very-short}_IMAGE=$(yq '.image | .registry + "/" + .repository' values.default.yaml)
+{product-very-short}_DIGEST=$(yq '.image.tag' values.default.yaml)
+PG_IMAGE=$(yq '.postgresql.image | .registry + "/" + .repository' values.default.yaml)
+PG_DIGEST=$(yq '.postgresql.image.tag' values.default.yaml)
 ----
 . Mirror the images to your local archive by running the following commands:
 +
@@ -81,19 +81,16 @@ _<postgresql_repo_name>_ :: Specifies the name of the repository that stores you
 +
 [source,yaml,subs="+quotes,+attributes"]
 ----
-upstream:
-  backstage:
-    image:
-      registry: "_<mirror_registry_name>_"
-      repository: _<rhdh_repo_name>_
-      tag: "${product-very-short}_DIGEST}"
+image:
+  registry: "_<mirror_registry_name>_"
+  repository: _<rhdh_repo_name>_
+  tag: "${product-very-short}_DIGEST}"
 
-  postgresql:
-    image:
-      registry: "_<mirror_registry_name>_"
-      repository: _<postgresql_repo_name>_
-      tag: "${PG_DIGEST}"
-
+postgresql:
+  image:
+    registry: "_<mirror_registry_name>_"
+    repository: _<postgresql_repo_name>_
+    tag: "${PG_DIGEST}"
 ----
 +
 where
@@ -134,29 +131,22 @@ where:
 +
 [source,yaml,subs="+quotes"]
 ----
-global:
-  host: <app_address>
-route:
-  enabled: false
-upstream:
-  ingress:
-    enabled: true
-    className: webapprouting.kubernetes.azure.com
-    host:
-  backstage:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
+host: <app_address>
+ingress:
+  enabled: true
+  className: webapprouting.kubernetes.azure.com
+imagePullSecrets:
+  - rhdh-pull-secret
+podSecurityContext:
+  fsGroup: 3000
+postgresql:
+  image:
+    pullSecrets:
+      - rhdh-pull-secret
+  primary:
     podSecurityContext:
+      enabled: true
       fsGroup: 3000
-  postgresql:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        fsGroup: 3000
   volumePermissions:
     enabled: true
 ----
@@ -165,51 +155,44 @@ upstream:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
-global:
-  # TODO: Set your application domain name.
-  host: {my-product-domain}
+# TODO: Set your application domain name.
+host: {my-product-domain}
 
-route:
-  enabled: false
+service:
+  # NodePort is required for the ALB to route to the Service
+  type: NodePort
 
-upstream:
-  service:
-    # NodePort is required for the ALB to route to the Service
-    type: NodePort
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
 
-  ingress:
-    enabled: true
-    annotations:
-      kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
 
-      alb.ingress.kubernetes.io/scheme: internet-facing
+    # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxx:xxxx:certificate/xxxxxx
 
-      # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
-      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxx:xxxx:certificate/xxxxxx
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
 
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
 
-      alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # TODO: Set your application domain name.
+    external-dns.alpha.kubernetes.io/hostname: <your rhdh domain name>
 
-      # TODO: Set your application domain name.
-      external-dns.alpha.kubernetes.io/hostname: <your rhdh domain name>
-
-  backstage:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
+imagePullSecrets:
+  - rhdh-pull-secret
+podSecurityContext:
+  # you can assign any random value as fsGroup
+  fsGroup: 2000
+postgresql:
+  image:
+    pullSecrets:
+    - rhdh-pull-secret
+  primary:
     podSecurityContext:
+      enabled: true
       # you can assign any random value as fsGroup
-      fsGroup: 2000
-  postgresql:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        # you can assign any random value as fsGroup
-        fsGroup: 3000
+      fsGroup: 3000
   volumePermissions:
     enabled: true
 ----
@@ -218,35 +201,29 @@ upstream:
 +
 [source,yaml,subs="+quotes"]
 ----
-global:
-  host: <rhdh_domain_name>
-route:
-  enabled: false
-upstream:
-  service:
-    type: NodePort
-  ingress:
-    enabled: true
-    annotations:
-      kubernetes.io/ingress.class: gce
-      kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
-      networking.gke.io/managed-certificates: <rhdh_certificate_name>
-      networking.gke.io/v1beta1.FrontendConfig: <ingress_security_config>
-    className: gce
-  backstage:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
+host: <rhdh_domain_name>
+service:
+  type: NodePort
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: <ADDRESS_NAME>
+    networking.gke.io/managed-certificates: <rhdh_certificate_name>
+    networking.gke.io/v1beta1.FrontendConfig: <ingress_security_config>
+  className: gce
+imagePullSecrets:
+  - rhdh-pull-secret
+podSecurityContext:
+  fsGroup: 2000
+postgresql:
+  image:
+    pullSecrets:
+    - rhdh-pull-secret
+  primary:
     podSecurityContext:
-      fsGroup: 2000
-  postgresql:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        fsGroup: 3000
+      enabled: true
+      fsGroup: 3000
   volumePermissions:
     enabled: true
 ----

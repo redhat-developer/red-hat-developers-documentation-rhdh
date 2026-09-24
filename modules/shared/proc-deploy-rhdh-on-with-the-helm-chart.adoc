@@ -1,7 +1,7 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="deploy-rhdh-on-with-the-helm-chart_{context}"]
-= Deploy on AKS using the Helm chart
+= Deploy on {aks-short} using the Helm chart
 
 [role="_abstract"]
 Deploy {product-short} on {aks-short} by using the Helm chart for building, testing, and deploying applications.
@@ -136,29 +136,22 @@ $ kubectl -n $NAMESPACE create secret docker-registry rhdh-pull-secret \
 +
 [source,yaml]
 ----
-global:
-  host: <app_address>
-route:
-  enabled: false
-upstream:
-  ingress:
-    enabled: true
-    className: webapprouting.kubernetes.azure.com
-    host:
-  backstage:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
+host: <app_address>
+ingress:
+  enabled: true
+  className: webapprouting.kubernetes.azure.com
+imagePullSecrets:
+  - rhdh-pull-secret
+podSecurityContext:
+  fsGroup: 3000
+postgresql:
+  image:
+    pullSecrets:
+      - rhdh-pull-secret
+  primary:
     podSecurityContext:
+      enabled: true
       fsGroup: 3000
-  postgresql:
-    image:
-      pullSecrets:
-        - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        fsGroup: 3000
   volumePermissions:
     enabled: true
 ----
@@ -184,8 +177,8 @@ $ kubectl get deploy $DEPLOYMENT_NAME -n $NAMESPACE
 PASSWORD=$(kubectl get secret redhat-developer-hub-postgresql -o jsonpath="{.data.password}" | base64 -d)
 CLUSTER_ROUTER_BASE=$(kubectl get route console -n openshift-console -o=jsonpath='{.spec.host}' | sed 's/^[^.]*\.//')
 helm upgrade $DEPLOYMENT_NAME -i "https://github.com/openshift-helm-charts/charts/releases/download/redhat-redhat-developer-hub-{product-chart-version}/redhat-developer-hub-{product-chart-version}.tgz" \
-    --set global.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
-    --set global.postgresql.auth.password="$PASSWORD"
+    --set openshift.clusterRouterBase="$CLUSTER_ROUTER_BASE" \
+    --set postgresql.auth.password="$PASSWORD"
 ----
 
 . Display the running {product-short} instance URL, by running the following command:
