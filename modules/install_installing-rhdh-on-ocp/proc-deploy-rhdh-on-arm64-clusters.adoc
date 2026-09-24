@@ -1,0 +1,71 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="deploy-rhdh-on-arm64-clusters_{context}"]
+= Deploy {product} on ARM64 clusters by using community images
+
+[role="_abstract"]
+To evaluate {product} on 64-bit Arm infrastructure, deploy the {product} Helm chart with community images and a multi-architecture database image.
+
+include::{docdir}/artifacts/snip-developer-preview.adoc[]
+
+.Prerequisites
+
+* You have an ARM64 (`aarch64`) cluster: {ocp-brand-name} ({ocp-short}) or a supported Kubernetes cluster with 64-bit Arm worker nodes.
+* You have cluster access with permissions to create projects and deploy applications.
+* Your cluster meets the ARM64 platform requirements. See xref:hardware-requirements-for-arm64-deployments_{context}[Hardware requirements for ARM64 deployments].
+
+.Procedure
+
+. Create a Helm chart values file that pins the community image, overrides the database image, and disables {ls-short}. The following values are verified on an ARM64 {ocp-short} cluster:
++
+[source,yaml,subs="+attributes"]
+----
+openshift:
+  clusterRouterBase: <cluster_router_base>
+intelligentAssistant:
+  enabled: false
+image:
+  registry: quay.io
+  repository: rhdh-community/rhdh
+  tag: {product-version}
+  digest: ""
+postgresql:
+  image:
+    registry: registry.redhat.io
+    repository: rhel10/postgresql-18
+    tag: latest
+    digest: ""
+----
++
+--
+This configuration applies the following ARM64-specific overrides:
+
+* `image`: Uses the community image stream at `quay.io/rhdh-community/rhdh`, which provides ARM64 builds. Setting `digest` to an empty string clears the productized image digest that the chart sets by default, so that the chart pulls the community `tag` instead. Productized multi-architecture images are not available during the {developer-preview}.
+* `postgresql.image`: Replaces the default embedded PostgreSQL image, which supports `x86_64` only and fails to start on ARM64, with the multi-architecture `registry.redhat.io/rhel10/postgresql-18` image. Setting `digest` to an empty string clears any pinned digest, so that the chart uses the specified `tag`.
+* `intelligentAssistant.enabled`: Disables {ls-short}, which is not validated in the ARM64 {developer-preview}.
+--
+
+. Deploy {product-very-short} by using the {product} Helm chart with your values file. See {installing-on-ocp-book-link}#deploy-rhdh-on-ocp-with-the-helm-cli_install-rhdh-on-ocp-with-the-helm-chart[Deploy with the Helm CLI].
++
+[NOTE]
+====
+You can also deploy {product-very-short} on ARM64 clusters by using the {product} Operator with community images. This procedure describes the Helm chart method.
+====
+
+.Verification
+
+. Confirm that all {product-very-short} pods reach the `Ready` state:
++
+[source,terminal,subs="+quotes"]
+----
+oc get pods -n _<your_namespace>_
+----
+
+. Open the {product-very-short} portal URL in your browser and confirm that the portal loads and basic navigation works.
+
+. Check the pod logs for architecture mismatch or `exec format error` messages:
++
+[source,terminal,subs="+quotes"]
+----
+oc logs _<pod_name>_ -n _<your_namespace>_
+----
