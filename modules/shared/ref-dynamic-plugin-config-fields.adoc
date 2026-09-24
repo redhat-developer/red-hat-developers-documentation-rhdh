@@ -1,0 +1,142 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="dynamic-plugin-config-fields_{context}"]
+= Dynamic plugin configuration fields
+
+[role="_abstract"]
+When you configure dynamic plugins inline in the `{product-custom-resource-type}` custom resource or in a `ConfigMap`, each plugin entry supports several fields that control plugin behavior and configuration.
+
+[cols="1,1,1,1,3",options="header"]
+|===
+|Field
+|Type
+|Required
+|Default
+|Description
+
+|`package`
+|string
+|Yes
+|N/A
+|Package reference identifying the plugin location.
+Supports several formats including built-in plugin references (`ref://`), OCI images (`oci://`), npm packages, file system paths (`file://`), and HTTP/HTTPS URLs.
+For available formats, see xref:dynamic-plugin-package-reference-formats_{context}[Dynamic plugin package reference formats].
+
+|`enabled`
+|boolean
+|No
+|`true`
+|Controls whether the plugin activates.
+Set to `true` to enable the plugin or `false` to disable it.
+If you omit this field, the plugin activates by default.
+
+|`pluginConfig`
+|object
+|No
+|`{}`
+|Plugin-specific configuration as arbitrary YAML.
+The {product} Operator merges this configuration into the application configuration at runtime.
+The structure and content depend on the specific plugin requirements.
+
+|`integrity`
+|string
+|No
+|N/A
+|Package integrity checksum for verification in the format `algorithm-base64hash`.
+Supported algorithms include `sha256`, `sha384`, and `sha512`.
+When specified, the Operator verifies the downloaded plugin package against the checksum before installation.
+Example: `sha256-AbC123...`
+|===
+
+== Example: Complete plugin entry with all fields
+
+The following example shows a plugin entry with all four fields populated:
+
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'oci://registry.redhat.io/rhdh/rhdh-plugin-quay@sha256:abc123...'
+    enabled: true
+    integrity: 'sha256-abc123def456...'
+    pluginConfig:
+      quay:
+        uiUrl: 'https://quay.io'
+        apiUrl: 'https://quay.io/api/v1'
+----
+
+== Field usage notes
+
+`package` field::
+The `package` field is the only required field.
+It specifies where the {product} Operator should retrieve the plugin.
+Use digest-based OCI references for production deployments to ensure reproducibility.
++
+Example:
++
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'oci://registry.redhat.io/rhdh/rhdh-plugin-quay@sha256:abc123...'
+----
+
+`enabled` field::
+The `enabled` field controls plugin activation state.
+When you set `enabled: false`, the Operator includes the plugin in the configuration but does not activate it.
+The `enabled` field takes precedence over the `disabled` field.
+If you specify both fields, the Operator uses the `enabled` field value.
++
+Example of disabling a plugin:
++
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'ref:catalog-backend-module-bitbucket'
+    enabled: false
+----
+
+`pluginConfig` field::
+The `pluginConfig` field has plugin-specific configuration that the Operator merges into the application configuration.
+The structure of `pluginConfig` depends on the plugin.
+Consult the plugin documentation for the required configuration fields.
+You can reference environment variables in `pluginConfig` by using the `${VARIABLE_NAME}` syntax.
+Ensure the environment variables exist in your secrets.
++
+Example with catalog provider configuration:
++
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'ref:catalog-backend-module-github'
+    pluginConfig:
+      catalog:
+        providers:
+          github:
+            organization: "${GITHUB_ORG}"
+            schedule:
+              frequency:
+                minutes: 30
+              timeout:
+                minutes: 3
+----
+
+`integrity` field::
+The `integrity` field specifies a checksum for verifying the downloaded plugin package.
+Use integrity checksums to prevent tampering and ensure you are installing the expected plugin version.
+The format is `algorithm-base64hash`, where algorithm is one of `sha256`, `sha384`, or `sha512`.
+The Operator downloads the plugin, computes its checksum by using the specified algorithm, and compares it to the provided value.
+If the checksums do not match, the plugin installation fails.
++
+Example with integrity checksum:
++
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'https://example.com/plugins/my-plugin.tar.gz'
+    integrity: 'sha256-AbC123def456Ghi789...'
+----
+
+[role="_additional-resources"]
+.Additional resources
+* xref:configure-dynamic-plugins-inline-operator_{context}[Configure dynamic plugins inline in {product-custom-resource-type} custom resource]
+* xref:dynamic-plugin-package-reference-formats_{context}[Dynamic plugin package reference formats]
+* xref:dynamic-plugins-configuration-methods_{context}[Choosing between inline and ConfigMap-based plugin configuration]
