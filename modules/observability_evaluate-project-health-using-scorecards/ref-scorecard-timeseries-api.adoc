@@ -1,0 +1,216 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="scorecard-timeseries-api_{context}"]
+= TimeSeries REST API for Scorecard
+
+[role="_abstract"]
+The TimeSeries API provides endpoints for retrieving historical DORA metric values over specified time windows, enabling programmatic access to delivery performance data for custom dashboards and reporting tools.
+
+The TimeSeries API extends the Scorecard plugin to support historical metric queries.
+Use this API to integrate DORA metrics into external business intelligence tools, create custom reports, or build dashboards that combine {product-very-short} metrics with other data sources.
+
+== API endpoint
+
+[cols="1,3", options="header"]
+|===
+| Method | Endpoint
+| GET | `/api/scorecard/timeseries`
+|===
+
+== Query parameters
+
+[cols="1,1,2,1", options="header"]
+|===
+| Parameter | Type | Description | Required
+
+| `entity`
+| string
+| The catalog entity reference in the format `kind:namespace/name`. For example, `component:default/my-service`.
+| Yes
+
+| `metricId`
+| string
+| The DORA metric identifier. Valid values: `dora.deploymentFrequency`, `dora.leadTimeForChanges`, `dora.changeFailureRate`, `dora.timeToRestoreService`.
+| Yes
+
+| `startDate`
+| string
+| The start date of the time window in ISO 8601 format (`YYYY-MM-DD`). For example, `2026-08-01`.
+| Yes
+
+| `endDate`
+| string
+| The end date of the time window in ISO 8601 format (`YYYY-MM-DD`). For example, `2026-09-01`.
+| Yes
+
+| `interval`
+| string
+| The data point granularity. Valid values: `daily`, `weekly`. Default: `daily`.
+| No
+|===
+
+== Response format
+
+The API returns a JSON array of time-series data points:
+
+[source,json]
+----
+[
+  {
+    "timestamp": "2026-08-01T00:00:00Z",
+    "metricId": "dora.deploymentFrequency",
+    "value": 5.2,
+    "unit": "deployments/day"
+  },
+  {
+    "timestamp": "2026-08-02T00:00:00Z",
+    "metricId": "dora.deploymentFrequency",
+    "value": 6.1,
+    "unit": "deployments/day"
+  }
+]
+----
+
+Where:
+
+`timestamp`:: The date and time of the data point in ISO 8601 format.
+`metricId`:: The DORA metric identifier.
+`value`:: The metric value for the specified time period.
+`unit`:: The unit of measurement for the metric value.
+
+== Example requests
+
+Retrieve deployment frequency for a component over 30 days:
+
+[source,terminal]
+----
+$ curl -X GET "https://<rhdh_host>/api/scorecard/timeseries?entity=component:default/my-service&metricId=dora.deploymentFrequency&startDate=2026-08-01&endDate=2026-09-01&interval=daily" \
+  -H "Authorization: Bearer <token>"
+----
+
+Retrieve weekly change failure rate data:
+
+[source,terminal]
+----
+$ curl -X GET "https://<rhdh_host>/api/scorecard/timeseries?entity=component:default/my-service&metricId=dora.changeFailureRate&startDate=2026-06-01&endDate=2026-09-01&interval=weekly" \
+  -H "Authorization: Bearer <token>"
+----
+
+== Response examples
+
+Deployment frequency (daily granularity):
+
+[source,json]
+----
+[
+  {
+    "timestamp": "2026-08-01T00:00:00Z",
+    "metricId": "dora.deploymentFrequency",
+    "value": 5.2,
+    "unit": "deployments/day"
+  },
+  {
+    "timestamp": "2026-08-02T00:00:00Z",
+    "metricId": "dora.deploymentFrequency",
+    "value": 6.1,
+    "unit": "deployments/day"
+  }
+]
+----
+
+Lead time for changes (hours):
+
+[source,json]
+----
+[
+  {
+    "timestamp": "2026-08-01T00:00:00Z",
+    "metricId": "dora.leadTimeForChanges",
+    "value": 18.5,
+    "unit": "hours"
+  },
+  {
+    "timestamp": "2026-08-02T00:00:00Z",
+    "metricId": "dora.leadTimeForChanges",
+    "value": 14.2,
+    "unit": "hours"
+  }
+]
+----
+
+Change failure rate (percentage):
+
+[source,json]
+----
+[
+  {
+    "timestamp": "2026-08-01T00:00:00Z",
+    "metricId": "dora.changeFailureRate",
+    "value": 12.5,
+    "unit": "percentage"
+  },
+  {
+    "timestamp": "2026-08-02T00:00:00Z",
+    "metricId": "dora.changeFailureRate",
+    "value": 15.0,
+    "unit": "percentage"
+  }
+]
+----
+
+Time to restore service (hours):
+
+[source,json]
+----
+[
+  {
+    "timestamp": "2026-08-01T00:00:00Z",
+    "metricId": "dora.timeToRestoreService",
+    "value": 2.3,
+    "unit": "hours"
+  },
+  {
+    "timestamp": "2026-08-02T00:00:00Z",
+    "metricId": "dora.timeToRestoreService",
+    "value": 1.8,
+    "unit": "hours"
+  }
+]
+----
+
+== Authentication and permissions
+
+The TimeSeries API requires authentication using a valid {product-very-short} token.
+Users must have the `scorecard.metric.read` permission to access metric data.
+
+== Error responses
+
+[cols="1,2,3", options="header"]
+|===
+| Status code | Condition | Response
+
+| 400
+| Invalid query parameters (missing required fields, invalid date format, invalid metric ID)
+| `{"error": "Invalid parameter: metricId must be a valid DORA metric identifier"}`
+
+| 403
+| Permission denied (user lacks scorecard.metric.read permission)
+| `{"error": "Permission denied"}`
+
+| 404
+| Entity not found in catalog
+| `{"error": "Entity not found: component:default/my-service"}`
+|===
+
+== Use cases
+
+* *Custom dashboards*: Retrieve DORA metrics for display in Grafana, Tableau, or other visualization tools.
+* *Data export*: Extract metric history for offline analysis or archival.
+* *Alerting and monitoring*: Poll the API to detect metric degradations and trigger alerts.
+* *Reporting automation*: Generate scheduled reports on delivery performance trends.
+* *Cross-system integration*: Combine {product-very-short} DORA metrics with metrics from other tools for comprehensive performance analysis.
+
+.Additional resources
+
+* xref:scorecard-collectors-metadata-api_{context}[Collectors metadata REST API]
+* xref:dora-metric-trends-visualization_{context}[DORA metric trends visualization]

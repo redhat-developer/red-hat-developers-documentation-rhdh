@@ -1,0 +1,88 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="install-configure-dora-backend-module_{context}"]
+= Install and configure the DORA backend module
+
+[role="_abstract"]
+To enable DORA metrics calculation and time-series storage, you must install the scorecard-backend-module-dora plugin and configure database access for metric history.
+
+.Prerequisites
+
+* You have xref:enable-scorecards_set-up-scorecards-to-monitor-your-project-health[enabled the Scorecard plugin].
+* You have configured GitHub and Jira integrations in your {product-very-short} instance.
+* You have access to a PostgreSQL database for storing time-series metric data.
+
+.Procedure
+
+. Add the DORA backend module to your `dynamic-plugin-config.yaml` file:
++
+[source,yaml,subs="attributes+"]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-dora:<tag>
+    disabled: false
+----
++
+include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+
+. Configure database connection parameters in your `app-config.yaml` file:
++
+[source,yaml]
+----
+backend:
+  database:
+    client: pg
+    connection:
+      host: <database_host>
+      port: 5432
+      user: <database_user>
+      password: <database_password>
+      database: <database_name>
+
+scorecard:
+  dora:
+    database:
+      retentionDays: 90
+      collectionInterval: 3600
+----
++
+Where:
++
+`<database_host>`:: The hostname or IP address of your PostgreSQL database server.
+`<database_user>`:: The database user with permissions to create tables and write data.
+`<database_password>`:: The password for the database user.
+`<database_name>`:: The name of the database for storing DORA metrics.
+`retentionDays`:: The number of days to retain metric history. The default value is `90`.
+`collectionInterval`:: The interval in seconds between metric collection cycles. The default value is `3600` (1 hour).
+
+. Restart your {product-very-short} instance to load the DORA backend module.
+
+.Verification
+
+. Check the {product-very-short} logs to confirm the DORA backend module loaded successfully:
++
+[source,terminal]
+----
+$ oc logs <rhdh_pod_name> | grep "scorecard-backend-module-dora"
+----
++
+You should see log entries indicating the module registered successfully and database tables were created.
+
+. Verify the database schema was created:
++
+[source,terminal]
+----
+$ psql -h <database_host> -U <database_user> -d <database_name> -c "\dt scorecard*"
+----
++
+You should see tables for DORA metric storage including `scorecard_dora_metrics` and `scorecard_dora_events`.
+
+.Troubleshooting
+
+* If the DORA backend module fails to load, verify that the PostgreSQL database is accessible from your {product-very-short} instance and that the connection parameters are correct.
+* If database tables are not created, check that the database user has permissions to create tables and modify the schema.
+
+.Next steps
+
+* xref:configure-github-dora-datasource_{context}[Configure GitHub DORA datasource]
+* xref:configure-jira-dora-datasource_{context}[Configure Jira DORA datasource]

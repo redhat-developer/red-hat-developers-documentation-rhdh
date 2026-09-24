@@ -1,0 +1,160 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-dora-metric-thresholds_{context}"]
+= Configure DORA metric thresholds
+
+[role="_abstract"]
+Define performance thresholds for DORA metrics to align Scorecard status indicators with your organization's delivery performance targets.
+Thresholds determine when metrics display as success (green), warning (yellow), or error (red) states.
+
+.Prerequisites
+
+* You have xref:install-configure-dora-backend-module_install-and-configure-scorecards-to-view-metrics[installed and configured the DORA backend module].
+* You have configured GitHub or Jira DORA datasources.
+
+.Procedure
+
+. Open your {product-very-short} `app-config.yaml` file for editing.
+
+. Add DORA metric threshold configuration under the `scorecard.metricThresholds` section:
++
+[source,yaml]
+----
+scorecard:
+  metricThresholds:
+    # Deployment Frequency thresholds (deployments per day)
+    dora.deploymentFrequency:
+      success:
+        min: 1.0  # Elite: On-demand (multiple per day)
+      warning:
+        min: 0.14  # High: Between once per week and once per day
+        max: 0.99
+      error:
+        max: 0.13  # Medium/Low: Less than once per week
+
+    # Lead Time for Changes thresholds (hours)
+    dora.leadTimeForChanges:
+      success:
+        max: 24  # Elite: Less than one day
+      warning:
+        min: 24.01
+        max: 168  # High: Between one day and one week
+      error:
+        min: 168.01  # Medium/Low: More than one week
+
+    # Change Failure Rate thresholds (percentage)
+    dora.changeFailureRate:
+      success:
+        max: 15  # Elite: 0-15%
+      warning:
+        min: 15.01
+        max: 30  # High: 16-30%
+      error:
+        min: 30.01  # Medium/Low: Over 30%
+
+    # Time to Restore Service thresholds (hours)
+    dora.timeToRestoreService:
+      success:
+        max: 1  # Elite: Less than one hour
+      warning:
+        min: 1.01
+        max: 24  # High: Between one hour and one day
+      error:
+        min: 24.01  # Medium/Low: More than one day
+----
++
+The example configuration uses DORA research performance benchmarks for Elite and High performers.
+Adjust threshold values to match your organization's specific performance targets.
+
+. Customize thresholds based on your organization's maturity level:
++
+--
+For organizations starting DORA adoption:: Set more achievable thresholds aligned with Medium performance levels (for example, deployment frequency > 0.03 per day for success, lead time < 30 days).
+
+For high-performing organizations:: Use stricter thresholds aligned with Elite performance (for example, deployment frequency > 3 per day for success, lead time < 1 hour).
+
+For specific team contexts:: Create per-entity threshold overrides using catalog entity annotations to account for different service types (for example, batch processing systems have different deployment patterns than API services).
+--
+
+. Define threshold ranges using these parameters:
++
+`min`:: The minimum value (inclusive) for the threshold range.
+Values below this trigger the next lower status level.
+
+`max`:: The maximum value (inclusive) for the threshold range.
+Values above this trigger the next higher status level.
+
+. Save the `app-config.yaml` file.
+
+. Restart your {product-very-short} instance to apply the threshold configuration.
+
+.Verification
+
+. Navigate to a component with DORA metrics in your {product-very-short} catalog.
+
+. Open the Scorecard tab.
+
+. Verify that DORA metrics display with status indicators (green, yellow, red) based on your threshold configuration.
+
+. Test threshold boundaries:
++
+--
+.. Find a component with deployment frequency near a threshold boundary.
+.. Verify the status indicator matches the configured threshold range.
+.. Repeat for other DORA metrics to confirm all thresholds are applied correctly.
+--
+
+.Troubleshooting
+
+* If all DORA metrics show green (success) status regardless of values, verify that threshold ranges do not overlap and that `min` and `max` values are correctly ordered.
+* If metrics show no status indicators, check that metric IDs in `app-config.yaml` exactly match the DORA metric provider IDs (case-sensitive, including the `dora.` prefix).
+* If thresholds do not update after restart, verify that the YAML syntax is correct and that the `scorecard.metricThresholds` path is properly nested under the `scorecard` configuration block.
+
+[NOTE]
+====
+*Understanding DORA performance benchmarks*
+
+The DORA research program defines four performance levels based on metric thresholds:
+
+[cols="1,1,1,1,1", options="header"]
+|===
+| Level | Deployment Frequency | Lead Time | Change Failure Rate | Time to Restore
+
+| Elite
+| On-demand (multiple/day)
+| < 1 hour
+| 0-15%
+| < 1 hour
+
+| High
+| Between once/week and once/day
+| Between 1 day and 1 week
+| 16-30%
+| < 1 day
+
+| Medium
+| Between once/month and once/week
+| Between 1 week and 1 month
+| 16-30%
+| < 1 week
+
+| Low
+| Fewer than once/month
+| > 1 month
+| 16-30%
+| > 1 week
+|===
+
+Use these benchmarks as a starting point, but adjust thresholds based on your organization's:
+
+* Industry and regulatory constraints (for example, financial services may have mandatory change approval periods)
+* Service architecture (for example, monolithic applications deploy less frequently than microservices)
+* Team maturity and tooling capabilities
+* Business criticality (for example, customer-facing services may require stricter stability thresholds)
+====
+
+.Additional resources
+
+* link:https://dora.dev/research/[DORA Research Program]
+* xref:dora-metrics-in-scorecard_{context}[How DORA metrics measure delivery performance]
+* xref:scorecard-metric-thresholds_{context}[Scorecard metric thresholds]
