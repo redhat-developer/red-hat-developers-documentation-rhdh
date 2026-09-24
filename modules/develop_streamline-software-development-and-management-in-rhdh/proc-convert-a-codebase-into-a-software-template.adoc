@@ -1,0 +1,51 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="convert-a-codebase-into-a-software-template_{context}"]
+= Convert a codebase into a software template
+
+[role="_abstract"]
+To reuse a working project as a golden path, convert it into a parameterized software template instead of writing one from scratch. The `templatize` workflow analyzes your code, proposes the values to parameterize, and builds the template only after you confirm the mapping.
+
+The workflow is interactive at every decision point. It never edits your source until you approve the proposed parameters, so you keep control over what becomes configurable.
+
+.Prerequisites
+
+* You installed the `rhdh-templates` skill and set up a template repository.
+* You have a local copy of the source codebase to convert.
+
+.Procedure
+
+. Ask your agent to templatize the codebase, and specify the source path. The skill runs a deterministic analyzer to detect the project type and candidate literals:
++
+[source,terminal]
+----
+python <skill_dir>/scripts/analyze.py --path <source_dir> --json
+----
+
+. Review the candidate table that the skill presents. For each value, choose to parameterize it, keep it literal, or skip it. Parameterize identity values such as component name and owner; keep framework defaults literal.
+
+. Confirm the parameter mapping. Only after your confirmation does the skill create the `skeleton/` directory, copy your source files, and replace confirmed values with `${{ values.<param> }}` placeholders.
+
+. Let the skill generate `template.yaml` with your parameters and a typical `fetch:template`, `publish`, and `catalog:register` step sequence.
+
+. Register the template by generating or updating the root `location.yaml`:
++
+[source,terminal]
+----
+python <skill_dir>/scripts/create_location.py --path <template_repo_root>
+----
+
+.Verification
+
+. The `templates/<name>/` directory has `template.yaml` and a `skeleton/` directory, and the root `location.yaml` registers the template.
+. Skeleton files reference `${{ values.* }}`, not `${{ parameters.* }}`.
+. Local validation reports zero critical findings. See xref:validate-a-software-template-locally_{context}[Validate a software template locally].
+
+.Next steps
+
+* xref:validate-a-software-template-locally_{context}[Validate a software template locally]
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh-users-skill-pack[`rhdh-users-skill-pack` on GitHub]

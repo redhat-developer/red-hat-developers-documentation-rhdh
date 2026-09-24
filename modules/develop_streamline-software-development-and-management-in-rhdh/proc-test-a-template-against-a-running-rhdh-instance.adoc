@@ -1,0 +1,56 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="test-a-template-against-a-running-rhdh-instance_{context}"]
+= Test a template against a running {product-very-short} instance
+
+[role="_abstract"]
+To confirm that the Scaffolder runs your template correctly before you publish it, test it against a running {product} ({product-very-short}) instance. Use `list-actions` to verify action IDs, then use `dry-run` to run the template without creating real resources.
+
+.Prerequisites
+
+* You installed the `rhdh-templates` skill and validated the template locally with zero critical findings.
+* A running {product-very-short} instance with the Scaffolder v2 API is reachable from your environment.
+* A bearer token, provided through the `RHDH_TOKEN` environment variable or the `--token` flag.
+
+.Procedure
+
+. List the Scaffolder actions installed on your instance to confirm the exact action IDs used in your template:
++
+[source,terminal]
+----
+python <skill_dir>/scripts/list_actions.py --rhdh-url https://rhdh.example.com --json
+----
+
+. Create a JSON file of sample parameter values that match `spec.parameters`. Use fake data, not real tokens or production identifiers.
+
+. Run a dry-run of the template:
++
+[source,terminal]
+----
+python <skill_dir>/scripts/dry_run.py \
+  --rhdh-url https://rhdh.example.com \
+  --path <template_dir> \
+  --values /tmp/values.json \
+  --json
+----
+
+.Verification
+
+. The dry-run completes with exit code `0`.
+. The log shows the expected steps, especially `fetch:template`, and reports the generated file count.
+
+.Troubleshooting
+
+* A `401` or `403` response indicates a missing or expired token. Supply a valid token.
+* An `Action not found` error indicates a wrong action ID. Re-run `list-actions` and correct the `action` field.
+* Empty skeleton output indicates a missing `fetch:template` step or wrong `values` wiring. Re-run local validation and fix the step.
+
+[NOTE]
+====
+A dry-run simulates mutation steps such as `publish` and `catalog:register`. Full end-to-end verification still requires running the template in {product-very-short}.
+====
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh-users-skill-pack[`rhdh-users-skill-pack` on GitHub]
