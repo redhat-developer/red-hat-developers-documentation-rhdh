@@ -1,0 +1,82 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="package-a-byok-rag-container-image_{context}"]
+= Package a BYOK RAG container image
+
+[role="_abstract"]
+Bundle your generated vector store into a container image so that it can be delivered to your {product} ({product-very-short}) cluster and copied into the {ia-short} runtime by an init container.
+
+The {product-very-short} deployment can use an init container to copy the database from the image into a shared volume that the {ia-short} container mounts. Persistent volumes, configuration-management systems, or other organization-approved delivery mechanisms can also be used.
+
+.Prerequisites
+* You have generated a portable OGX FAISS vector store as described in xref:generate-a-vector-database-for-byok-rag_{context}[Generate a vector database for BYOK RAG].
+* You have `podman` installed.
+* You have write access to a container registry accessible to your cluster.
+
+.Procedure
+
+. Create a `Containerfile` in the directory that contains your `vector_db` output. Use the variant that matches your deployment method:
++
+--
+For the Operator, or any deployment that adds a dedicated BYOK init container alongside the product init container, use a minimal base image:
+
+[source,dockerfile]
+----
+FROM registry.access.redhat.com/ubi9-micro:latest
+COPY vector_db /byok/vector_db
+USER 1001
+----
+
+For the Helm chart, which exposes a single `global.lightspeed.initContainer` that you must override, derive the image from the product RAG init image so that the overridden init container can deliver both the product-provided content and your BYOK vector store:
+
+[source,dockerfile]
+----
+ARG PRODUCT_RAG_IMAGE
+FROM ${PRODUCT_RAG_IMAGE}
+
+COPY vector_db /byok/vector_db
+USER 1001
+----
+
+Set `PRODUCT_RAG_IMAGE` to the value of `global.lightspeed.initContainer.image` from your installed chart version. The derived image retains the product `/rag` directory and adds your custom database under `/byok/vector_db`.
+--
+
+. Build the image:
++
+--
+For the minimal UBI-based image:
+
+[source,terminal]
+----
+$ podman build --platform linux/amd64 \
+  -t quay.io/your-organization/rhdh-byok:1.0.0 .
+----
+
+For the Helm image derived from the product RAG init image, pass an immutable product image reference:
+
+[source,terminal]
+----
+$ podman build --platform linux/amd64 \
+  --build-arg PRODUCT_RAG_IMAGE=<product_rag_image_reference> \
+  -t quay.io/your-organization/rhdh-byok-with-product-rag:1.0.0 .
+----
+--
+
+. Push the image to an approved registry:
++
+[source,terminal]
+----
+$ podman push quay.io/your-organization/rhdh-byok:1.0.0
+----
++
+[IMPORTANT]
+====
+Use an immutable version tag or image digest in production. Ensure that the image architecture matches the OpenShift worker architecture.
+====
+
+. Note the final path visible inside the {ia-short} container. The `db_path` configuration must match that runtime path exactly. For example, if the database is copied to `/rag-content/vector_db/custom_docs/faiss_store.db`, use that complete path in the {ia-short} configuration.
+
+.Next steps
+* xref:configure-byok-rag-by-using-the-helm-chart_{context}[Configure BYOK RAG by using the Helm chart]
+* xref:configure-byok-rag-by-using-the-operator_{context}[Configure BYOK RAG by using the Operator]
+* xref:deploy-byok-rag-in-a-disconnected-environment_{context}[Deploy BYOK RAG in a disconnected environment]

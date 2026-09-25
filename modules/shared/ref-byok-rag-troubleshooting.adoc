@@ -1,0 +1,41 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-byok-rag-troubleshooting_{context}"]
+= Troubleshooting BYOK RAG
+
+[role="_abstract"]
+Resolve common errors that occur when you configure or use a Bring Your Own Knowledge (BYOK) RAG knowledge source with {ia-short}.
+
+== The store does not load
+
+*Symptom*: {ia-short} fails to load the vector store at startup or on the first query.
+
+*Resolution*:
+
+* Confirm that `db_path` is the path inside the {ia-short} container, not the path used on the generation workstation or inside the delivery image.
+* In a disconnected environment, confirm that `embedding_model` is the local path inside the {ia-short} container rather than only a Hugging Face model ID.
+* Confirm that the init container copied the complete model directory, including weights, tokenizer, model configuration, pooling, and normalization files.
+* Confirm that `vector_db_id` exactly matches the generated ID.
+* Confirm that the database file is present, non-empty, and readable by the container user.
+* Review init-container and {ia-short} startup logs.
+
+== Queries return irrelevant chunks
+
+*Symptom*: The knowledge source is configured and citations appear, but retrieved content is empty or unrelated.
+
+*Resolution*:
+
+* Confirm that the generation and runtime embedding models are identical.
+* Confirm that the configured embedding dimension matches the model.
+* Improve document headings and remove navigation or boilerplate text that dominates the content.
+* Adjust chunk size and overlap, regenerate the store, and compare results with representative test questions.
+
+== Citations are missing or incorrect
+
+*Symptom*: Responses do not include the expected source title or URL, or cite the wrong source.
+
+*Resolution*:
+
+* Confirm that each source document contains valid `title` and `url` frontmatter.
+* Inspect query results to ensure that title and URL metadata were stored with the chunks.
+* Confirm that the cited URL is accessible to the intended {product-very-short} users.

@@ -1,0 +1,67 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="verify-byok-rag-retrieval_{context}"]
+= Verify the deployed vector store
+
+[role="_abstract"]
+Confirm that {ia-short} can read the delivered artifacts, that the BYOK source is registered, and that the assistant retrieves and cites content from your custom documentation.
+
+.Prerequisites
+* You have registered the store as described in xref:configure-byok-rag-by-using-the-helm-chart_{context}[Configure BYOK RAG by using the Helm chart], xref:configure-byok-rag-by-using-the-operator_{context}[Configure BYOK RAG by using the Operator], or xref:deploy-byok-rag-in-a-disconnected-environment_{context}[Deploy BYOK RAG in a disconnected environment].
+* You have applied the configuration and restarted or rolled out the {ia-short} workload so that it receives both the configuration and the database.
+
+.Procedure
+
+. Verify the following conditions after deployment:
++
+--
+.. The init container or file-delivery process completes successfully.
+.. The {ia-short} container can read the configured `faiss_store.db` path.
+.. For a disconnected deployment that uses a local embedding model, the {ia-short} container can read the local embedding model files, including `model.safetensors`, the tokenizer, and model configuration. A connected deployment that uses a Hugging Face model ID does not require these local files.
+.. The {ia-short} readiness endpoint reports success.
+.. The BYOK source appears in the RAG and vector-store API responses.
+.. The {ia-short} answers a distinctive question from the custom documents and displays the expected source metadata.
+--
+
+. From inside the {ia-short} container, test the exact `db_path` that you configured, then run the readiness and API checks. Use the path that matches your deployment method:
++
+[source,terminal]
+----
+# Helm example
+$ test -r /rag-content/vector_db/custom_docs/faiss_store.db
+
+# Operator example
+$ test -r /rag-content-byok/vector_db/custom_docs/faiss_store.db
+
+$ curl --fail http://127.0.0.1:8080/readiness
+$ curl --fail http://127.0.0.1:8080/v1/rags
+$ curl --fail http://127.0.0.1:8080/v1/vector-stores
+----
++
+The exact host and port can differ depending on the installation. Protect administrative and diagnostic endpoints according to your organization's security requirements.
++
+[NOTE]
+====
+Run the following additional check only for a disconnected deployment that bundles a local embedding model. A connected deployment that uses a Hugging Face model ID, such as `sentence-transformers/all-mpnet-base-v2`, does not require this file. Test the configured embedding model path, which differs by deployment method:
+
+[source,terminal]
+----
+# Test <configured_embedding_model_path>/model.safetensors, for example:
+# Helm example
+$ test -r /rag-content/embeddings_model/model.safetensors
+
+# Operator example
+$ test -r /rag-content-byok/embeddings_model/model.safetensors
+----
+====
+
+. In the {ia-short}, ask a question whose answer appears only in the custom content. Confirm both the answer and the cited title or URL.
++
+[NOTE]
+====
+A plausible answer without the expected retrieval source does not prove that BYOK retrieval occurred.
+====
+
+.Additional resources
+* xref:ref-byok-rag-troubleshooting_{context}[Troubleshooting BYOK RAG]
+* xref:update-the-byok-rag-knowledge-base_{context}[Update the BYOK RAG knowledge base]
