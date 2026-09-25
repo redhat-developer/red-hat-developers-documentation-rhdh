@@ -1,0 +1,23 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="consolidated-developer-lightspeed-configuration-for-stable-model-integration_{context}"]
+= Consolidated {ls-short} configuration for stable model integration
+
+[role="_abstract"]
+In {product} ({product-very-short}) 2.1, {ls-short} sources all model, validation, tool, and vector-store settings from {lcs-name} ({lcs-short}), so you no longer configure or interact with {ogx-name} ({ogx-short}) directly.
+
+Earlier releases exposed {ogx-short} configuration and used some {ogx-short} APIs directly. Because those APIs and configurations changed often, deployments broke and required expensive migrations. In {product-very-short} 2.1, {lcs-short} is the exclusive integration layer, and {ogx-short} is an internal implementation detail that is no longer customer-facing.
+
+This change consolidates configuration into a single file and removes the direct {ogx-short} surface:
+
+Unified configuration file:: {product-very-short} 1.10 used both a `lightspeed-stack.yaml` file and a separate `config.yaml` file. {product-very-short} 2.1 uses one `lightspeed-stack.yaml` file. The `config.yaml` file and the `llama_stack.library_client_config_path` setting no longer apply.
+
+Inference providers:: You define each provider as an explicit entry under `inference.providers`, each with a unique `id`. The `ENABLE_OPENAI`, `ENABLE_VLLM`, `ENABLE_VERTEX_AI`, and `ENABLE_OLLAMA` switches no longer enable providers. A Secret supplies only credentials and endpoints.
+
+Query validation:: A top-level `shields` block defines the question-validity shield. You enable it by setting `ENABLE_VALIDATION` to `question_validity`, instead of the Llama Guard safety provider and registered shield resources used in 1.10.
+
+Vector store:: The file uses a singular top-level `vector_store` section. The installation program supplies the default configuration used for Notebooks.
+
+Model Context Protocol (MCP) servers:: The top-level `mcp_servers` section is unchanged from 1.10. You do not need to change existing entries.
+
+Generated runtime file:: {lcs-short} creates the `/tmp/.generated/run.yaml` file at runtime from `lightspeed-stack.yaml`. Do not edit the generated file.

@@ -1,0 +1,60 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-developer-lightspeed-settings-to-remove-direct-llama-stack-configuration_{context}"]
+= Migrate {ls-short} settings to remove direct {ogx-short} configuration
+
+[role="_abstract"]
+To move your settings to {product} ({product-very-short}) 2.1, start from the unified `lightspeed-stack.yaml` file shipped with your deployment and reapply each supported customization in its new section.
+
+Do not merge the 1.10 `lightspeed-stack.yaml` and `config.yaml` files. Start from a fresh copy of the shipped 2.1 file, keep the sections you are not changing, and edit only the sections you customized in 1.10.
+
+.Prerequisites
+
+* You completed the steps in xref:record-developer-lightspeed-settings-to-prevent-migration-data-loss_{context}[Record {ls-short} settings to prevent migration data loss].
+* You have the `lightspeed-stack.yaml` file shipped by your 2.1 deployment method.
+
+.Procedure
+
+. Keep the shipped runtime baseline:
++
+[source,yaml]
+----
+llama_stack:
+  use_as_library_client: true
+  config:
+    baseline: byo-llm
+----
++
+Do not point `library_client_config_path` at a `config.yaml` file, and do not carry a `config.yaml` file forward.
+
+. Re-create each enabled inference provider as an explicit entry under `inference.providers`. Give each provider a unique `id`, keep the `sentence_transformers` provider, and reference credentials through the Secret:
++
+[source,yaml]
+----
+inference:
+  providers:
+    - type: sentence_transformers
+    - type: openai
+      id: openai-primary
+      api_key_env: OPENAI_API_KEY
+----
++
+[NOTE]
+====
+Replace the `ENABLE_OPENAI`, `ENABLE_VLLM`, `ENABLE_VERTEX_AI`, and `ENABLE_OLLAMA` switches with provider entries. Adding a Secret key alone does not enable a provider.
+====
+
+. Keep the supplied `vector_store` section unless you customized vector storage in 1.10. Do not copy the old `providers.vector_io` or `registered_resources.vector_stores` blocks.
++
+[IMPORTANT]
+====
+Keeping the supplied configuration does not migrate existing vector data. If users must retain indexed notebook content, verify the source and destination volumes and plan the data movement separately.
+====
+
+. Enable query validation. To use the validation that ships by default with 2.1, set `ENABLE_VALIDATION` to `question_validity` in the Secret. If you supplied a custom validation prompt in 1.10, reapply it to the prompt block under the top-level `shields` block in the shipped `lightspeed-stack.yaml` file. For more information, see xref:configure-safety-guards-in-rhdh_get-ai-assisted-help-for-your-development-tasks[Enable prompt validation to block off-topic AI responses].
+
+. Keep your existing top-level `mcp_servers` entries. The schema is unchanged from 1.10. Do not copy the internal `tool_runtime` provider from the old `config.yaml` file.
+
+. Leave every other section in the shipped 2.1 file unchanged. If you customized feedback collection, the conversation cache, authentication, or the prompt profile in 1.10, reapply only the values that you still need instead of replacing the whole section.
+
+. Complete the migration for your deployment method. For a Helm deployment, see xref:complete-the-developer-lightspeed-migration-with-the-helm-chart_{context}[Complete the {ls-short} migration by using the Helm chart]. For an Operator deployment, see xref:complete-the-developer-lightspeed-migration-with-the-operator_{context}[Complete the {ls-short} migration by using the Operator].
