@@ -1,0 +1,42 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="restrict-model-selection-to-hide-internal-safety-models_{context}"]
+= Restrict model selection to hide internal safety models
+
+[role="_abstract"]
+To prevent users from selecting internal safety guardrail models in the chat dialog, restrict the models available in the model selection dropdown menu by defining an allowlist for each inference provider in the `lightspeed-stack.yaml` file.
+
+By default, the model selection dropdown menu lists every model that the configured inference provider exposes, including internal safety and guardrail models that are not intended for end-user prompts. Selecting these models is prone to user error during workshops and standard workflows.
+
+To restrict the list, set the `allowed_models` field under `inference.providers[].extra` for each provider. When you define `allowed_models`, the dropdown menu shows only the listed models, so users see only the functional, user-facing models that you allow.
+
+.Prerequisites
+* You have access to the `lightspeed-stack.yaml` configuration file for your deployment.
+
+.Procedure
+. In the `lightspeed-stack.yaml` file, add the `allowed_models` field under `extra` for each inference provider, and list the models that you want to expose to users:
++
+[source,yaml]
+----
+inference:
+  providers:
+    - type: openai
+      id: openai
+      api_key_env: OPENAI_API_KEY
+      extra:
+        allowed_models:
+          - gpt-4o-mini
+----
++
+where:
++
+`allowed_models`:: The list of models that appear in the model selection dropdown menu for that provider. Models that you omit from this list, including internal safety models, are hidden from users.
+
+. To persist your changes across reconciliation loops or Helm upgrades, apply the modified `lightspeed-stack.yaml` file by using a custom ConfigMap. For Operator-based deployments, map the ConfigMap in the `extraFiles` section of the {backstage} custom resource. For Helm-based deployments, reference the ConfigMap in the `values.yaml` file.
+
+. Apply the updated configuration to your cluster, and restart the deployment if it does not trigger an automatic rollout.
+
+.Verification
+. Log in to your {product-very-short} instance.
+. Open the chat dialog and select the model selection dropdown menu.
+. Confirm that the dropdown menu lists only the allowed models and that internal safety models are hidden.
