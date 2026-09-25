@@ -81,48 +81,103 @@ $ podman build -t registry.example.com/rhdh/byok-content:1.0.0 .
 $ podman push registry.example.com/rhdh/byok-content:1.0.0
 ----
 
-. Create one volume, mount it in both the init container and the {ia-short} container, and copy the artifacts into it before {ia-short} starts. Apply the following pod wiring through the supported Helm chart or Operator customization mechanism for your {product-very-short} installation:
+. Deliver the artifacts to the {ia-short} runtime and configure offline operation. The supported customization paths differ for the Helm chart and the Operator, so use the variant that matches your {product-very-short} installation.
 +
+--
+*Helm chart*
+
+Because the chart exposes a single `global.lightspeed.initContainer`, derive a combined image from the product RAG init image that also includes your custom vector database and local embedding model. Use a `Containerfile` such as:
+
+[source,dockerfile]
+----
+ARG PRODUCT_RAG_IMAGE
+FROM ${PRODUCT_RAG_IMAGE}
+
+COPY vector_db /byok/vector_db
+COPY embeddings_model /byok/embeddings_model
+USER 1001
+----
+
+Override the single `global.lightspeed.initContainer` so that it copies the product content, your BYOK database, and the local model into the automatically mounted `/rag-content` volume, and set the offline environment variables under `global.lightspeed.sidecar.env`:
+
+[source,yaml]
+----
+global:
+  lightspeed:
+    sidecar:
+      env:
+        - name: HF_HUB_OFFLINE
+          value: "1"
+        - name: TRANSFORMERS_OFFLINE
+          value: "1"
+    initContainer:
+      image: quay.io/your-organization/rhdh-byok-with-product-rag:1.0.0
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -eu
+          mkdir -p /rag-content/vector_db
+          cp -R --no-preserve=mode,ownership \
+            /rag/vector_db/. /rag-content/vector_db/
+          cp -R --no-preserve=mode,ownership \
+            /byok/vector_db/. /rag-content/vector_db/
+          cp -R --no-preserve=mode,ownership \
+            /byok/embeddings_model /rag-content/embeddings_model
+          chmod -R a+rwX \
+            /rag-content/embeddings_model /rag-content/vector_db
+----
+--
++
+--
+*Operator*
+
+Use `spec.deployment.patch` to add the `byok-rag` volume and the BYOK init container, mount the volume at `/rag-content-byok` in both the init container and `lightspeed-core`, copy both artifacts into it, and add the offline environment variables to `lightspeed-core`:
+
 [source,yaml]
 ----
 spec:
-  template:
-    spec:
-      volumes:
-        - name: lightspeed-rag
-          emptyDir: {}
-
-      initContainers:
-        - name: byok-rag-init
-          image: registry.example.com/rhdh/byok-content@sha256:replace_with_digest
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              set -eu
-              mkdir -p /rag-content/vector_db /rag-content/embeddings_model
-              cp -R /byok/vector_db/. /rag-content/vector_db/
-              cp -R /byok/embeddings_model/. /rag-content/embeddings_model/
-          volumeMounts:
-            - name: lightspeed-rag
-              mountPath: /rag-content
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
-
-      containers:
-        - name: lightspeed-core
-          env:
-            - name: HF_HUB_OFFLINE
-              value: "1"
-            - name: TRANSFORMERS_OFFLINE
-              value: "1"
-          volumeMounts:
-            - name: lightspeed-rag
-              mountPath: /rag-content
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: byok-rag
+                emptyDir: {}
+            initContainers:
+              - name: byok-rag-init
+                image: registry.example.com/rhdh/byok-content@sha256:replace_with_digest
+                imagePullPolicy: IfNotPresent
+                command: ["/bin/sh", "-c"]
+                args:
+                  - |
+                    set -eu
+                    mkdir -p /rag-content-byok/vector_db /rag-content-byok/embeddings_model
+                    cp -R /byok/vector_db/. /rag-content-byok/vector_db/
+                    cp -R /byok/embeddings_model/. /rag-content-byok/embeddings_model/
+                volumeMounts:
+                  - name: byok-rag
+                    mountPath: /rag-content-byok
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  runAsNonRoot: true
+                  capabilities:
+                    drop: ["ALL"]
+                  seccompProfile:
+                    type: RuntimeDefault
+            containers:
+              - name: lightspeed-core
+                env:
+                  - name: HF_HUB_OFFLINE
+                    value: "1"
+                  - name: TRANSFORMERS_OFFLINE
+                    value: "1"
+                volumeMounts:
+                  - name: byok-rag
+                    mountPath: /rag-content-byok
 ----
+--
 +
 Kubernetes init containers run before application containers, so the model and database are present when {ia-short} starts.
 +
@@ -131,8 +186,11 @@ Kubernetes init containers run before application containers, so the model and d
 If several init containers populate the same volume, give each vector store a unique directory and ensure that later containers merge content instead of replacing the entire `vector_db` directory.
 ====
 
-. Register the disconnected store with local runtime paths:
+. Register the disconnected store with local runtime paths that match your deployment method:
 +
+--
+For the Helm chart:
+
 [source,yaml]
 ----
 rag:
@@ -150,6 +208,27 @@ rag:
       sources:
         - custom-docs
 ----
+
+For the Operator:
+
+[source,yaml]
+----
+rag:
+  byok:
+    stores:
+      - rag_id: custom-docs
+        backend: faiss
+        embedding_model: /rag-content-byok/embeddings_model  <1>
+        embedding_dimension: 768
+        vector_db_id: vs_replace_with_generated_id
+        db_path: /rag-content-byok/vector_db/custom_docs/faiss_store.db
+        score_multiplier: 1.0
+  retrieval:
+    tool:
+      sources:
+        - custom-docs
+----
+--
 +
 <1>:: Using the local path prevents the `sentence_transformers` provider from attempting to resolve `sentence-transformers/all-mpnet-base-v2` from Hugging Face when the pod starts or processes its first query.
 

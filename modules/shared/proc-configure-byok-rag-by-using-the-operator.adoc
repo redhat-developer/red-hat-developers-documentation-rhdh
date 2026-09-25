@@ -15,56 +15,52 @@ Deploy your BYOK container image as an init container and register the custom kn
 
 .Procedure
 
-. Create a `ConfigMap` that contains the complete `lightspeed-stack.yaml` for your {product-very-short} version with the BYOK sections added. Start from the product-provided configuration, then add the `sentence_transformers` embedding provider, register the store under `rag.byok.stores`, and activate it under `rag.retrieval`:
+. Prepare a complete `lightspeed-stack.yaml` file with the BYOK sections added, then create a `ConfigMap` from it:
 +
 [WARNING]
 ====
-The mounted file replaces the product-provided `lightspeed-stack.yaml` in its entirety; it is not merged. If you include only the BYOK sections, you remove other supported or required settings, including the service, authentication, cache, user-data and profile, MCP, and other product configuration, and {ia-short} can fail to start or lose required functionality. Always copy the complete configuration for your {product-very-short} version and add the BYOK sections to it.
+The mounted file replaces the product-provided `lightspeed-stack.yaml` in its entirety; it is not merged. If you create the `ConfigMap` from only the BYOK sections, you remove other supported or required settings, including the service, authentication, cache, user-data and profile, MCP, and other product configuration, and {ia-short} can fail to start or lose required functionality. Always create the `ConfigMap` from the complete configuration for your {product-very-short} version with the BYOK sections added to it.
 ====
++
+.. Copy or export the complete product-provided `lightspeed-stack.yaml` for your installed {product-very-short} version to a local file.
+.. Ensure that the `sentence_transformers` embedding provider is present under `inference.providers`, then register the store under `rag.byok.stores` and activate it under `rag.retrieval`. Add the following fragment to the local file, merging it with the existing sections rather than replacing them:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: lightspeed-stack-byok
-data:
-  lightspeed-stack.yaml: |
-    # Retain the complete product-provided configuration for your {product-very-short} version
-    # (service, authentication, cache, profile, MCP, and other settings), then add the
-    # following BYOK sections to it:
-    inference:
-      providers:
-        - type: sentence_transformers
-    rag:
-      byok:
-        stores:
-          - rag_id: custom-docs  <1>
-            backend: faiss
-            embedding_model: sentence-transformers/all-mpnet-base-v2
-            embedding_dimension: 768
-            vector_db_id: vs_replace_with_generated_id  <2>
-            db_path: /rag-content-byok/vector_db/custom_docs/faiss_store.db  <3>
-            score_multiplier: 1.0  # Used by Inline RAG only
-      retrieval:
-        tool:
-          sources:
-            - custom-docs  <4>
+inference:
+  providers:
+    - type: sentence_transformers  # Add only if not already present
+rag:
+  byok:
+    stores:
+      - rag_id: custom-docs  <1>
+        backend: faiss
+        embedding_model: sentence-transformers/all-mpnet-base-v2
+        embedding_dimension: 768
+        vector_db_id: vs_replace_with_generated_id  <2>
+        db_path: /rag-content-byok/vector_db/custom_docs/faiss_store.db  <3>
+        score_multiplier: 1.0  # Used by Inline RAG only
+  retrieval:
+    tool:
+      sources:
+        - custom-docs  <4>
 ----
 +
 <1>:: The `rag_id` identifies the retrieval source. Use the same value under `rag.retrieval.tool.sources`.
 <2> Replace with the `vector_db_id` value that you read from the generated `llama-stack.yaml` file. The runtime configuration must use the exact same ID.
-<3> Must match the path where the init container copies the database inside the {ia-short} container. This procedure uses the dedicated `/rag-content-byok` mount path so that the BYOK content does not shadow the product-provided content that the default init container delivers to `/rag-content`.
+<3> Must match the path where the init container copies the database inside the {ia-short} container. This procedure uses the dedicated `/rag-content-byok` mount path so that the BYOK content does not replace or shadow any existing product-provided RAG content in `/rag-content`.
 <4> Must match `rag_id`. If you have other sources, such as product documentation, list each required source under `sources`.
-
-. Apply the `ConfigMap` to your cluster:
++
+.. Create the `ConfigMap` from the completed local file:
 +
 [source,terminal]
 ----
-$ oc apply -f lightspeed-stack-byok-configmap.yaml
+$ oc create configmap lightspeed-stack-byok \
+    --from-file=lightspeed-stack.yaml \
+    --dry-run=client -o yaml | oc apply -f -
 ----
 
-. Update your `{backstage}` custom resource (CR) to mount the custom `ConfigMap`, and use `spec.deployment.patch` to add the BYOK init container, shared volume, and volume mount. The Operator applies `spec.deployment.patch` as a strategic merge patch, so the BYOK init container is added alongside the product init container and the product-provided RAG content in `/rag-content` is preserved:
+. Update your `{backstage}` custom resource (CR) to mount the custom `ConfigMap`, and use `spec.deployment.patch` to add the BYOK init container, shared volume, and volume mount. The `spec.deployment.patch` value is a deployment fragment that the Operator merges with the generated deployment, so the BYOK init container is added alongside any existing init containers, and the dedicated `/rag-content-byok` mount does not replace or shadow any existing product-provided RAG content:
 +
 [source,yaml,subs="+attributes,+quotes"]
 ----
@@ -92,6 +88,7 @@ spec:
             initContainers:
               - name: byok-rag-init  <2>
                 image: quay.io/your-organization/rhdh-byok:1.0.0
+                imagePullPolicy: IfNotPresent
                 command: ["/bin/sh", "-c"]
                 args:
                   - |
@@ -101,6 +98,14 @@ spec:
                 volumeMounts:
                   - name: byok-rag
                     mountPath: /rag-content-byok
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  runAsNonRoot: true
+                  capabilities:
+                    drop: ["ALL"]
+                  seccompProfile:
+                    type: RuntimeDefault
             containers:
               - name: lightspeed-core
                 volumeMounts:
@@ -109,7 +114,7 @@ spec:
 ----
 +
 <1>:: References the `ConfigMap` created in the previous step. This replaces the default `lightspeed-stack.yaml` for the `lightspeed-core` container.
-<2> The init container runs before {ia-short} starts and copies the vector database to the shared `byok-rag` volume. The dedicated `/rag-content-byok` mount path avoids shadowing the product-provided content that the default init container delivers to `/rag-content`.
+<2> The init container runs before {ia-short} starts and copies the vector database to the shared `byok-rag` volume. The dedicated `/rag-content-byok` mount path does not replace or shadow any existing product-provided RAG content.
 
 . Apply the updated `{backstage}` CR:
 +
@@ -123,4 +128,3 @@ $ oc apply -f <backstage_cr_file>.yaml
 
 .Additional resources
 * xref:ref-byok-rag-configuration-fields-for-lightspeed-stack_{context}[BYOK RAG configuration fields for `lightspeed-stack.yaml`]
-* link:https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md#basic-patch-format[Strategic Merge Patch]

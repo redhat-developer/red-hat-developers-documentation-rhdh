@@ -15,8 +15,11 @@ The {product-very-short} deployment can use an init container to copy the databa
 
 .Procedure
 
-. Create a `Containerfile` in the directory that contains your `vector_db` output:
+. Create a `Containerfile` in the directory that contains your `vector_db` output. Use the variant that matches your deployment method:
 +
+--
+For the Operator, or any deployment that adds a dedicated BYOK init container alongside the product init container, use a minimal base image:
+
 [source,dockerfile]
 ----
 FROM registry.access.redhat.com/ubi9-micro:latest
@@ -24,13 +27,40 @@ COPY vector_db /byok/vector_db
 USER 1001
 ----
 
+For the Helm chart, which exposes a single `global.lightspeed.initContainer` that you must override, derive the image from the product RAG init image so that the overridden init container can deliver both the product-provided content and your BYOK vector store:
+
+[source,dockerfile]
+----
+ARG PRODUCT_RAG_IMAGE
+FROM ${PRODUCT_RAG_IMAGE}
+
+COPY vector_db /byok/vector_db
+USER 1001
+----
+
+Set `PRODUCT_RAG_IMAGE` to the value of `global.lightspeed.initContainer.image` from your installed chart version. The derived image retains the product `/rag` directory and adds your custom database under `/byok/vector_db`.
+--
+
 . Build the image:
 +
+--
+For the minimal UBI-based image:
+
 [source,terminal]
 ----
 $ podman build --platform linux/amd64 \
   -t quay.io/your-organization/rhdh-byok:1.0.0 .
 ----
+
+For the Helm image derived from the product RAG init image, pass an immutable product image reference:
+
+[source,terminal]
+----
+$ podman build --platform linux/amd64 \
+  --build-arg PRODUCT_RAG_IMAGE=<product_rag_image_reference> \
+  -t quay.io/your-organization/rhdh-byok-with-product-rag:1.0.0 .
+----
+--
 
 . Push the image to an approved registry:
 +
