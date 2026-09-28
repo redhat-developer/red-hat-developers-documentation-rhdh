@@ -1,0 +1,87 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="mount-agent-skills-by-using-a-configmap_{context}"]
+= Mount Agent Skills by using a ConfigMap
+
+[role="_abstract"]
+If the {product-very-short} cluster cannot access a skills repository, store each file that the skills use in a ConfigMap and mount the ConfigMap into the `lightspeed-core` container. Use this alternative instead of configuring an init container.
+
+.Prerequisites
+* You have administrative access to the {product-very-short} deployment.
+* You have the skill files available on your local file system.
+
+.Procedure
+. Create a ConfigMap that contains each skill file. Give every file a unique ConfigMap key, including files in the `references` directory or other supporting directories:
++
+[source,bash,subs="+quotes"]
+----
+$ oc create configmap _<skills_config_map>_ \
+  --from-file=coding-standards-SKILL.md=skills/coding-standards/SKILL.md \
+  --from-file=coding-standards-approved-libraries.md=skills/coding-standards/references/approved-libraries.md \
+  --from-file=coding-standards-example-policy.yaml=skills/coding-standards/examples/example-policy.yaml
+----
++
+[NOTE]
+====
+Specify each file individually. When you pass a directory to `--from-file`, `oc` reads only the files in the top level of that directory and does not process subdirectories recursively. As a result, files in the `references` directory or other subdirectories are not included.
+====
+
+. Mount the ConfigMap into the `lightspeed-core` container.
+
+.. For an Operator installation, use the same `configMap` volume definition in a strategic merge patch to the {backstage} custom resource (CR):
++
+[source,yaml,subs="+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: _<rhdh_instance_name>_
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: lightspeed-skills
+                configMap:
+                  name: _<skills_config_map>_
+                  items:
+                    - key: coding-standards-SKILL.md
+                      path: coding-standards/SKILL.md
+                    - key: coding-standards-approved-libraries.md
+                      path: coding-standards/references/approved-libraries.md
+                    - key: coding-standards-example-policy.yaml
+                      path: coding-standards/examples/example-policy.yaml
+            containers:
+              - name: lightspeed-core
+                volumeMounts:
+                  - name: lightspeed-skills
+                    mountPath: /app-root/skills
+----
+
+.. For a Helm installation, use the following `values.yaml` configuration:
++
+[source,yaml,subs="+quotes"]
+----
+intelligentAssistant:
+  enabled: true
+  core:
+    extraVolumeMounts:
+      - name: lightspeed-skills
+        mountPath: /app-root/skills
+
+extraVolumes:
+  - name: lightspeed-skills
+    configMap:
+      name: _<skills_config_map>_
+      items:
+        - key: coding-standards-SKILL.md
+          path: coding-standards/SKILL.md
+        - key: coding-standards-approved-libraries.md
+          path: coding-standards/references/approved-libraries.md
+        - key: coding-standards-example-policy.yaml
+          path: coding-standards/examples/example-policy.yaml
+----
+
+. Add the mount path under `skills.paths` in your custom `lightspeed-stack.yaml` file, and apply the {backstage} CR or install or upgrade the Helm release. For more information, see xref:configure-agent-skills-for-the-intelligent-assistant_{context}[Configure Agent Skills].
