@@ -1,0 +1,331 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="intelligent-assistant-values_{context}"]
+= Intelligent Assistant values
+
+[role="_abstract"]
+You can configure the Intelligent Assistant (powered by {ls-brand-name}), the AI assistant, as a first-class feature of your {product-very-short} instance, including the dynamic plugins, configuration files, Offline Knowledge Portal (OKP), and core sidecar.
+
+[cols="1m, 1, 1, 1m"]
+|===
+d|*Key* |*Description* |*Type* d|*Default*
+
+|intelligentAssistant
+|Intelligent Assistant AI configuration.
+|object
+e|See child keys
+
+|intelligentAssistant.enabled
+|Enable Intelligent Assistant.
+|boolean
+|true
+
+|intelligentAssistant.plugins
+|Dynamic plugin definitions for Intelligent Assistant. Default includes the front-end and back-end plugins.
+|list
+e|See description
+
+|intelligentAssistant.config
+|Configuration files for Intelligent Assistant.
+|object
+e|See child keys
+
+|intelligentAssistant.config.stack.existingConfigMap.name
+|Name of an existing ConfigMap containing the Lightspeed stack configuration (lightspeed-stack.yaml).
+|string
+|""
+
+|intelligentAssistant.config.stack.existingConfigMap.key
+|Key within the ConfigMap that holds the file content. Defaults to the bundled filename (lightspeed-stack.yaml) if not set.
+|string
+|""
+
+|intelligentAssistant.config.profile.existingConfigMap.name
+|Name of an existing ConfigMap containing the Python profile with prompt templates (rhdh-profile.py).
+|string
+|""
+
+|intelligentAssistant.config.profile.existingConfigMap.key
+|Key within the ConfigMap that holds the file content. Defaults to the bundled filename (rhdh-profile.py) if not set.
+|string
+|""
+
+|intelligentAssistant.existingSecret
+a|Name of an existing Secret that supplies credentials and settings to the lightspeed-core container. Configure the provider itself in lightspeed-stack.yaml. If empty, no Secret is loaded.
+
+Expected keys (all optional; include only keys used by the configured provider): `VLLM_URL`, `VLLM_API_KEY`, `VLLM_MAX_TOKENS`, `VLLM_TLS_VERIFY`, `OPENAI_API_KEY`, `VERTEX_AI_PROJECT`, `VERTEX_AI_LOCATION`, `GOOGLE_APPLICATION_CREDENTIALS`, `ENABLE_VALIDATION`, `VALIDATION_PROVIDER`, `VALIDATION_MODEL_NAME`.
+
+Set `ENABLE_VALIDATION` to `question_validity` to enable validation. `GOOGLE_APPLICATION_CREDENTIALS` must be a path to a credentials file mounted in the sidecar.
+|string
+|""
+
+|intelligentAssistant.runtimeVolume
+|Writable scratch volume for the sidecar (/tmp).
+|object
+e|See child keys
+
+|intelligentAssistant.runtimeVolume.type
+a|Volume type: `emptyDir` or `persistentVolumeClaim`.
+|string
+|"emptyDir"
+
+|intelligentAssistant.runtimeVolume.emptyDir
+|Raw Kubernetes emptyDir volume spec. Used when type is `emptyDir`.
+|object
+|{}
+
+|intelligentAssistant.runtimeVolume.persistentVolumeClaim
+|Raw Kubernetes PVC volume spec. Used when type is `persistentVolumeClaim`.
+|object
+|{}
+
+|intelligentAssistant.core
+|Lightspeed Core sidecar container configuration.
+|object
+e|See child keys
+
+|intelligentAssistant.core.image.registry
+|Core sidecar image registry.
+|string
+|"quay.io"
+
+|intelligentAssistant.core.image.repository
+|Core sidecar image repository.
+|string
+|"lightspeed-core/lightspeed-stack"
+
+|intelligentAssistant.core.image.tag
+|Core sidecar image tag.
+|string
+|"dev-20260824-cbd182b"
+
+|intelligentAssistant.core.image.digest
+|Overrides the image tag with an image digest.
+|string
+|""
+
+|intelligentAssistant.core.imagePullPolicy
+|Image pull policy for the core sidecar.
+|string
+|"IfNotPresent"
+
+|intelligentAssistant.core.commandOverride
+|Override the container's default command. Leave empty to use the image entrypoint.
+|list
+|[]
+
+|intelligentAssistant.core.argsOverride
+|Override the container's default args. Leave empty to use the chart defaults.
+|list
+|[]
+
+|intelligentAssistant.core.extraArgs
+|Extra arguments appended after the default arguments. Ignored when argsOverride is set.
+|list
+|[]
+
+|intelligentAssistant.core.extraEnv
+|Extra environment variables.
+|list
+|[]
+
+|intelligentAssistant.core.extraVolumeMounts
+|Additional volume mounts.
+|list
+|[]
+
+|intelligentAssistant.core.resources
+a|Resource requests and limits. Defaults: requests `cpu=100m`, `memory=512Mi`; limits `cpu=1000m`, `memory=2Gi`.
+|object
+e|See description
+
+|intelligentAssistant.core.securityContext
+a|Security context. Default: `readOnlyRootFilesystem=true`, `allowPrivilegeEscalation=false`, `runAsNonRoot=true`, `seccompProfile.type=RuntimeDefault`, drop ALL capabilities.
+|object
+e|See description
+
+|intelligentAssistant.okp
+|OKP (Offline Knowledge Portal) configuration. Deploys an OKP instance for document retrieval when Intelligent Assistant is enabled.
+|object
+e|See child keys
+
+|intelligentAssistant.okp.image.registry
+|OKP container image registry.
+|string
+|"registry.redhat.io"
+
+|intelligentAssistant.okp.image.repository
+|OKP container image repository.
+|string
+|"offline-knowledge-portal/rhokp-rhel9"
+
+|intelligentAssistant.okp.image.tag
+|OKP container image tag.
+|string
+|"1.2.12-1788274041"
+
+|intelligentAssistant.okp.image.digest
+|Overrides the image tag with an image digest.
+|string
+|""
+
+|intelligentAssistant.okp.image.pullPolicy
+|Image pull policy for the OKP container.
+|string
+|"IfNotPresent"
+
+|intelligentAssistant.okp.replicaCount
+|Number of OKP pods.
+|integer
+|1
+
+|intelligentAssistant.okp.imagePullSecrets
+a|Image pull secrets for the OKP container image. Required on uncustomized Kubernetes to authenticate with `registry.redhat.io`. Not needed on OpenShift where the cluster-wide pull secret covers Red Hat registries.
+|list
+|[]
+
+|intelligentAssistant.okp.solr.memory
+|Memory allocation for Solr.
+|string
+|"1g"
+
+|intelligentAssistant.okp.solr.hostBind
+|Host bind address for Solr.
+|string
+|"0.0.0.0"
+
+|intelligentAssistant.okp.httpd.serverName
+|Apache httpd server name.
+|string
+|"localhost"
+
+|intelligentAssistant.okp.httpd.compressed
+|Enable compression for httpd.
+|string
+|"true"
+
+|intelligentAssistant.okp.httpd.encrypt
+|Enable encryption for httpd.
+|string
+|"false"
+
+|intelligentAssistant.okp.resources
+a|Resource requests and limits. Defaults: requests `cpu=200m`, `memory=2Gi`; limits `cpu=2`, `memory=4Gi`.
+|object
+e|See description
+
+|intelligentAssistant.okp.service.type
+|Kubernetes Service type for OKP.
+|string
+|"ClusterIP"
+
+|intelligentAssistant.okp.affinity
+|Pod scheduling: affinity rules for the OKP pod.
+|object
+|{}
+
+|intelligentAssistant.okp.nodeSelector
+|Pod scheduling: node selector for the OKP pod.
+|object
+|{}
+
+|intelligentAssistant.okp.tolerations
+|Pod scheduling: tolerations for the OKP pod.
+|list
+|[]
+
+|intelligentAssistant.okp.topologySpreadConstraints
+|Pod scheduling: topology spread constraints for the OKP pod.
+|list
+|[]
+
+|intelligentAssistant.okp.readinessProbe
+|Readiness probe configuration for the OKP container.
+|object
+e|See description
+
+|intelligentAssistant.okp.readinessProbe.initialDelaySeconds
+|Initial delay before readiness probe starts.
+|integer
+|10
+
+|intelligentAssistant.okp.readinessProbe.periodSeconds
+|How often to perform the readiness probe.
+|integer
+|10
+
+|intelligentAssistant.okp.livenessProbe
+|Liveness probe configuration for the OKP container.
+|object
+e|See description
+
+|intelligentAssistant.okp.livenessProbe.initialDelaySeconds
+|Initial delay before liveness probe starts.
+|integer
+|30
+
+|intelligentAssistant.okp.livenessProbe.periodSeconds
+|How often to perform the liveness probe.
+|integer
+|30
+
+|intelligentAssistant.okp.route
+|OpenShift Route configuration for OKP.
+|object
+e|See child keys
+
+|intelligentAssistant.okp.route.enabled
+|Enable OpenShift Route for OKP.
+|boolean
+|true
+
+|intelligentAssistant.okp.route.tls.termination
+|TLS termination type.
+|string
+|"edge"
+
+|intelligentAssistant.okp.route.tls.insecureEdgeTerminationPolicy
+|Policy for insecure traffic.
+|string
+|"Redirect"
+
+|intelligentAssistant.okp.ingress
+|Kubernetes Ingress configuration for OKP.
+|object
+e|See child keys
+
+|intelligentAssistant.okp.ingress.enabled
+|Enable Kubernetes Ingress for OKP.
+|boolean
+|true
+
+|intelligentAssistant.okp.ingress.className
+|Ingress class name.
+|string
+|""
+
+|intelligentAssistant.okp.ingress.host
+|Ingress hostname.
+|string
+|""
+
+|intelligentAssistant.okp.ingress.annotations
+|Annotations for the Ingress resource.
+|object
+|{}
+
+|intelligentAssistant.okp.ingress.tls.enabled
+|Enable TLS for Ingress.
+|boolean
+|false
+
+|intelligentAssistant.okp.ingress.tls.secretName
+|Name of the TLS Secret.
+|string
+|""
+
+|intelligentAssistant.okp.securityContext
+a|OKP container security context. `readOnlyRootFilesystem` is not set because Solr (Lucene) writes a lock file into its pre-built index directory at runtime.
+|object
+e|See description
+|===
