@@ -20,10 +20,61 @@ Parameters for application settings and dynamic plugin files used to manage home
 |Property |Description
 |`title` |The primary textual label rendered on the header block of the homepage card.
 |`description` |A brief text string summarizing the target scope of the KPI.
-|`type` |The structural tracking strategy. Specify `statusGrouped` to return independent numerical entity counts per threshold status layer, or specify `average` to calculate a single weighted portfolio score.
+|`type` |The aggregation algorithm. Specify `statusGrouped` or `weightedStatusScore` to summarize entities by threshold status, or one of the scalar types (`sum`, `average`, `max`, `min`, `count`) to roll up a single numeric metric. See "Supported aggregation types" for details.
 |`metricId` |The unique provider identifier mapping to the individual source plugin collection layer.
+|`filter.status` |Optional. Scalar types only. Restricts the calculation to entities whose latest threshold evaluation matches the given status key. Silently ignored on `statusGrouped` and `weightedStatusScore`.
 |===
 
-== Options parameters for the `average` tracking type
-`options.statusScores`:: Map of threshold status rule keys (`success`, `warning`, `error`) to numeric weight integers. This parameter is required for the `average` type and must be non-empty; missing or empty maps cause application startup failures.
-`options.thresholds`:: Optional numeric value array tracking custom status levels evaluated against the `averageScore` output value on a scale from 0 to 100 with one decimal place. If omitted, the system falls back to default values: less than 30 indicates an error, 30 to 79 indicates a warning, and 80 or higher indicates a success. Custom configurations must provide full real-line range coverage with no numeric gaps.
+== Supported aggregation types
+[cols="1,2,1,1",options="header"]
+|===
+|Type ID |Category |Supports `filter` |Supports `options.thresholds`
+
+|`statusGrouped`
+|Grouped (counts per threshold status)
+|No
+|No
+
+|`weightedStatusScore`
+|Grouped (normalized weighted score)
+|No
+|Yes
+
+|`sum`
+|Scalar (rollup of latest numeric values)
+|Yes
+|Yes
+
+|`average`
+|Scalar (rollup of latest numeric values)
+|Yes
+|Yes
+
+|`max`
+|Scalar (rollup of latest numeric values)
+|Yes
+|Yes
+
+|`min`
+|Scalar (rollup of latest numeric values)
+|Yes
+|Yes
+
+|`count`
+|Scalar (rollup of latest numeric values)
+|Yes
+|Yes
+|===
+
+[IMPORTANT]
+====
+The `weightedStatusScore` type was previously named `average`. Deployments with `type: average` configured for a weighted portfolio score must update to `type: weightedStatusScore`, otherwise the backend fails startup validation. The `average` type now refers to the scalar aggregation described in this table.
+====
+
+== Options parameters for the `weightedStatusScore` tracking type
+`options.statusScores`:: Map of threshold status rule keys (`success`, `warning`, `error`) to numeric weight integers. This parameter is required for the `weightedStatusScore` type and must be non-empty; missing or empty maps cause application startup failures.
+`options.thresholds`:: Optional numeric value array tracking custom status levels evaluated against the weighted score output value on a scale from 0 to 100 with one decimal place. If omitted, the system falls back to default values: less than 30 indicates an error, 30 to 79 indicates a warning, and 80 or higher indicates a success. Custom configurations must provide full real-line range coverage with no numeric gaps.
+
+== Options parameters for scalar tracking types
+`filter.status`:: Optional. Threshold status key (case-sensitive) that must match a threshold rule for `metricId`. Only the latest entities with that status contribute to the aggregated value.
+`options.thresholds`:: Optional. Classifies the aggregated scalar output using the same threshold rule syntax as metric thresholds. If omitted, the aggregated value is returned without a status classification.
