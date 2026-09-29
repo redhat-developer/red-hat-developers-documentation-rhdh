@@ -1,0 +1,76 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-ai-configuration-from-rhdh-1-10-to-2-1_{context}"]
+= Migrate AI configuration from {product-very-short} 1.10 to 2.1
+
+[role="_abstract"]
+Update your AI backend configuration to align with the {lcs-name} ({lcs-short}) naming conventions introduced in {product} ({product-very-short}) 2.1.
+
+.Prerequisites
+
+* You have a running {product-very-short} 1.10 instance with AI features enabled.
+* You have access to your deployment manifests and RBAC policy files.
+
+.Procedure
+
+. Update config map names in your deployment manifests by replacing `llama-stack-config` with `lightspeed-core-config`:
++
+[cols="1,1",options="header"]
+|===
+| Old name (1.10) | New name (2.1)
+
+| `llama-stack-config`
+| `lightspeed-core-config`
+|===
+
+. Update container names in your deployment manifests by replacing `llama-stack` with `lightspeed-core`:
++
+[source,yaml]
+----
+containers:
+  - name: lightspeed-core
+----
+
+. If you use custom `run.yaml` configuration files that reference Llama Stack paths, update them:
++
+[cols="1,1",options="header"]
+|===
+| Old value (1.10) | New value (2.1)
+
+| `llama-stack-configs/config.yaml`
+| `config.yaml`
+
+| `/tmp/llama-stack-files`
+| `/tmp/lightspeed-core-files`
+|===
+
+. Update your RBAC policies to use the new permission identifiers. {product-very-short} 2.1 replaces the `lightspeed.*` permission namespace with `intelligent-assistant.*` and `mcp.*`. For the full mapping of old to new permission names, see link:{developer-lightspeed-book-link}#ai-feature-permissions_interacting-with-developer-lightspeed-for-rhdh[AI feature permissions] in the _{developer-lightspeed-book-title}_ guide.
++
+For example, replace:
++
+[source,text]
+----
+p, role:default/<team>, lightspeed.chat.read, read, allow
+p, role:default/<team>, lightspeed.chat.create, create, allow
+----
++
+with:
++
+[source,text,subs="+quotes"]
+----
+p, role:default/_<team>_, intelligent-assistant.chat.access, use, allow
+p, role:default/_<team>_, intelligent-assistant.chat.use, use, allow
+----
+
+. Apply the updated configuration and restart your {product-very-short} deployment.
+
+.Verification
+
+. Verify that the {lcs-short} container starts without errors:
++
+[source,terminal]
+----
+$ oc logs deployment/<deployment_name> -c lightspeed-core
+----
+. Open the {ls-short} chat interface and verify that the AI assistant responds.
+. If you use Notebooks, verify that existing Notebooks are accessible from the *My Notebooks* dashboard.
