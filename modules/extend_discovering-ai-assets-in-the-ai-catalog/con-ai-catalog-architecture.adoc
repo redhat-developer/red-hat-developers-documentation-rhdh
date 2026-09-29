@@ -1,0 +1,55 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-ai-catalog-architecture_{context}"]
+= AI Catalog architecture and dependencies
+
+[role="_abstract"]
+The AI Catalog integrates with existing {product-short} components to provide AI asset discovery without introducing new backend services or network requirements.
+
+The AI Catalog is a front-end dynamic plugin that reuses existing {product-short} infrastructure:
+
+* *Software Catalog API* -- Retrieves AI Asset entities from the catalog backend
+* *Search infrastructure* -- Enables federated search, returning AI assets alongside other catalog entities in global search results
+* *TechDocs rendering* -- Displays usage documentation when entities include TechDocs references
+* *Permission Framework* (optional) -- Enforces RBAC visibility policies defined for AI assets
+
+The plugin does not introduce a new backend service. All data flows through the existing {product-short} backend API.
+
+The AI Catalog requires the following components to function:
+
+[cols="1,2,1",options="header"]
+|===
+| Component | Purpose | Status
+
+| AI Asset entities
+| Entities registered in the Software Catalog with required annotations (`rhdh.io/ai-asset-category`, `rhdh.io/ai-asset-version`, `rhdh.io/ai-asset-source`)
+| Required
+
+| Ingestion connectors
+| Populate the Software Catalog with AI assets from external registries (MCP Registry, {rhoai-short}, JFrog, `Solo Agentregistry`)
+| Required
+
+| RBAC policies ({product-very-short}PLAN-1508)
+| Define visibility and access control for AI assets (`ai-catalog.asset.read`, `ai-catalog.asset.read.usage-docs`)
+| Optional (available in {product-very-short} 2.2+)
+
+| TechDocs content
+| Provides rich inline usage documentation for assets
+| Optional
+|===
+
+The AI Catalog is fully compatible with disconnected and air-gapped {ocp-short} environments:
+
+* All assets, icons, and TechDocs content are served from in-cluster sources
+* No required runtime calls to external or internet-hosted endpoints
+* External links (to source registries, repositories, or download locations) open in new tabs and degrade gracefully if unreachable
+* Custom CA bundles can be configured for internal registries if needed
+
+The AI Catalog does not require additional network egress beyond the existing {product-short} backend.
+
+The AI Catalog is designed to handle large catalogs with responsive performance:
+
+* Initial page load completes in under 2 seconds for catalogs with 500 assets
+* Filter application completes in under 2 seconds
+* Pagination or virtualization prevents UI lag with large result sets
+* Catalog API performance impact is less than 10% compared to baseline (non-AI-Catalog entity queries)
