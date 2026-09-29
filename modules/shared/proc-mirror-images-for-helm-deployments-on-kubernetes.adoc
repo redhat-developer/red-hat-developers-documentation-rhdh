@@ -1,6 +1,6 @@
 :_mod-docs-content-type: PROCEDURE
 [id="mirror-images-for-helm-deployments-on-kubernetes_{context}"]
-= Mirror {ls-short} images for Helm deployments on Kubernetes
+= Mirror Intelligent Assistant images for Helm deployments on Kubernetes
 
 [role="_abstract"]
 Isolate image references, copy them manually to your internal registry, and update your configuration file when deploying the Helm chart on non-{platform-generic} platforms.
@@ -8,7 +8,7 @@ Isolate image references, copy them manually to your internal registry, and upda
 .Prerequisites
 * You have a target mirror registry accessible to your disconnected cluster.
 * You authenticated to the {rhcr} and your target mirror registry.
-* You have configured image pull authentication for your mirror registry as described in {installing-in-air-gap-book-link}#install-rhdh-on-a-supported-kubernetes-platform-in-an-air-gapped-environment-with-the-helm-chart[Install {product} on a supported Kubernetes platform in an air-gapped environment with the Helm chart]. The `kubelet` requires these credentials to pull all {product} container images, including the {ls-short} sidecar images.
+* You have configured image pull authentication for your mirror registry as described in {installing-in-air-gap-book-link}#install-rhdh-on-a-supported-kubernetes-platform-in-an-air-gapped-environment-with-the-helm-chart[Install {product} on a supported Kubernetes platform in an air-gapped environment with the Helm chart]. The `kubelet` requires these credentials to pull all {product} container images, including the Intelligent Assistant sidecar and Offline Knowledge Portal (OKP) images.
 
 .Procedure
 
@@ -18,41 +18,40 @@ Isolate image references, copy them manually to your internal registry, and upda
 ----
 $ helm show values redhat-developer-hub --repo https://charts.openshift.io/ --version {product-chart-version} > values.default.yaml
 
-LS_RAG_IMAGE=$(yq '.global.lightspeed.initContainer.image | .registry + "/" + .repository' values.default.yaml)
-LS_RAG_DIGEST=$(yq '.global.lightspeed.initContainer.image.tag' values.default.yaml)
-LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
-LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
+LS_CORE_IMAGE=$(yq '.intelligentAssistant.core.image | .registry + "/" + .repository' values.default.yaml)
+LS_CORE_DIGEST=$(yq '.intelligentAssistant.core.image.tag' values.default.yaml)
+OKP_IMAGE=$(yq '.intelligentAssistant.okp.image | .registry + "/" + .repository' values.default.yaml)
+OKP_DIGEST=$(yq '.intelligentAssistant.okp.image.tag' values.default.yaml)
 ----
 
 . Mirror the images to your internal mirror registry:
 +
 [source,terminal]
 ----
-skopeo copy --all docker://${LS_RAG_IMAGE}:${LS_RAG_DIGEST} docker://<mirror_registry_name>/<ls_rag_repo_name>:${LS_RAG_DIGEST}
 skopeo copy --all docker://${LS_CORE_IMAGE}:${LS_CORE_DIGEST} docker://<mirror_registry_name>/<ls_core_repo_name>:${LS_CORE_DIGEST}
+skopeo copy --all docker://${OKP_IMAGE}:${OKP_DIGEST} docker://<mirror_registry_name>/<okp_repo_name>:${OKP_DIGEST}
 ----
 
 . Update your custom Helm values file with the mirrored registry locations and plugin references. Mirror the dynamic plugins to the local registry before you add their package paths to the file. For mirroring instructions, see {installing-and-viewing-plugins-book-link}#mirror-rhdh-dynamic-plugins-in-disconnected-environments_install-dynamic-plugins-in-rhdh[Mirroring {product} dynamic plugins in disconnected environments]:
 +
 [source,yaml]
 ----
-global:
-  lightspeed:
-    initContainer:
-      image:
-        registry: "<mirror_registry_name>"
-        repository: <ls_rag_repo_name>
-        tag: "${LS_RAG_DIGEST}"
-    sidecar:
-      image:
-        registry: "<mirror_registry_name>"
-        repository: <ls_core_repo_name>
-        tag: "${LS_CORE_DIGEST}"
-    plugins:
-      - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed@<ls_frontend_digest>"
-        disabled: false
-      - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed-backend@<ls_backend_digest>"
-        disabled: false
+intelligentAssistant:
+  core:
+    image:
+      registry: "<mirror_registry_name>"
+      repository: <ls_core_repo_name>
+      tag: "${LS_CORE_DIGEST}"
+  okp:
+    image:
+      registry: "<mirror_registry_name>"
+      repository: <okp_repo_name>
+      tag: "${OKP_DIGEST}"
+  plugins:
+    - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-intelligent-assistant@<ls_frontend_digest>"
+      enabled: true
+    - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-intelligent-assistant-backend@<ls_backend_digest>"
+      enabled: true
 ----
 
 .Additional resources

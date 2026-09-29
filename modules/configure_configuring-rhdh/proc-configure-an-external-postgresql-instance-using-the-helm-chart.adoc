@@ -93,80 +93,58 @@ include::../shared/snip-create-kubernetes-service-for-external-postgresql.adoc[]
 [source,yaml,subs="+quotes,+attributes"]
 ----
 # ...
-upstream:
-  postgresql:
-    enabled: false
-    auth:
-      existingSecret: {my-product-database-secrets}
-  backstage:
-    appConfig:
-      backend:
-        database:
-          connection:
-            host: $\{POSTGRES_HOST}
-            port: $\{POSTGRES_PORT}
-            user: $\{POSTGRES_USER}
-            password: $\{POSTGRES_PASSWORD}
-            ssl:
-              rejectUnauthorized: true,
-              ca:
-                $file: /opt/app-root/src/postgres-ca.pem
-              key:
-                $file: /opt/app-root/src/postgres-key.key
-              cert:
-                $file: /opt/app-root/src/postgres-crt.pem
-  extraEnvVarsSecrets:
-    - {my-product-database-secrets}
-  extraEnvVars:
-    - name: BACKEND_SECRET
-      valueFrom:
-        secretKeyRef:
-          key: backend-secret
-          name: '{{ include "rhdh.backend-secret-name" $ }}'
-  extraVolumeMounts:
-    - mountPath: /opt/app-root/src/dynamic-plugins-root
-      name: dynamic-plugins-root
-    - mountPath: /opt/app-root/src/postgres-crt.pem
-      name: postgres-crt
-      subPath: postgres-crt.pem
-    - mountPath: /opt/app-root/src/postgres-ca.pem
-      name: postgres-ca
-      subPath: postgres-ca.pem
-    - mountPath: /opt/app-root/src/postgres-key.key
-      name: postgres-key
-      subPath: postgres-key.key
-  extraVolumes:
-    - ephemeral:
-        volumeClaimTemplate:
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 1Gi
-      name: dynamic-plugins-root
-    - configMap:
-        defaultMode: 420
-        name: dynamic-plugins
-        optional: true
-      name: dynamic-plugins
-    - name: dynamic-plugins-npmrc
-      secret:
-        defaultMode: 420
-        optional: true
-        secretName: '{{ printf "%s-dynamic-plugins-npmrc" .Release.Name }}'
-    - name: postgres-crt
-      secret:
-        secretName: {my-product-database-certificates-secrets}
-        # ...
+postgresql:
+  enabled: false
+  auth:
+    existingSecret: {my-product-database-secrets}
+appConfig:
+  backend:
+    database:
+      connection:
+        host: $\{POSTGRES_HOST}
+        port: $\{POSTGRES_PORT}
+        user: $\{POSTGRES_USER}
+        password: $\{POSTGRES_PASSWORD}
+        ssl:
+          rejectUnauthorized: true,
+          ca:
+            $file: /opt/app-root/src/postgres-ca.pem
+          key:
+            $file: /opt/app-root/src/postgres-key.key
+          cert:
+            $file: /opt/app-root/src/postgres-crt.pem
+extraEnvFrom:
+  - secretRef:
+      name: {my-product-database-secrets}
+extraEnv:
+  - name: BACKEND_SECRET
+    valueFrom:
+      secretKeyRef:
+        key: backend-secret
+        name: '{{ include "rhdh.backend-secret-name" $ }}'
+extraVolumeMounts:
+  - mountPath: /opt/app-root/src/postgres-crt.pem
+    name: postgres-crt
+    subPath: postgres-crt.pem
+  - mountPath: /opt/app-root/src/postgres-ca.pem
+    name: postgres-ca
+    subPath: postgres-ca.pem
+  - mountPath: /opt/app-root/src/postgres-key.key
+    name: postgres-key
+    subPath: postgres-key.key
+extraVolumes:
+  - name: postgres-crt
+    secret:
+      secretName: {my-product-database-certificates-secrets}
+  # ...
 ----
 +
 Where:
 
-`upstream.postgresql.enabled`:: Set to `false` to disable the local PostgreSQL instance creation.
-`upstream.postgresql.auth.existingSecret`:: The credentials secret to inject into {product-custom-resource-type}.
-`upstream.backstage.appConfig.backend.database.connection`:: The {product-custom-resource-type} database connection parameters.
-`upstream.backstage.extraEnvVarsSecrets`:: The credentials secret to inject as environment variables into {product-custom-resource-type}.
+`postgresql.enabled`:: Set to `false` to disable the local PostgreSQL instance creation.
+`postgresql.auth.existingSecret`:: The credentials secret to inject into {product-custom-resource-type}.
+`appConfig.backend.database.connection`:: The {product-custom-resource-type} database connection parameters.
+`extraEnvFrom`:: The credentials secret to inject as environment variables into {product-custom-resource-type}.
 `extraVolumeMounts` (`postgres-crt`, `postgres-ca`, `postgres-key`):: Optional: Inject TLS certificate, CA certificate, and TLS private key into the {product-custom-resource-type} container.
 `extraVolumes` (`postgres-crt`):: The certificate secret name, required if you configure TLS.
 

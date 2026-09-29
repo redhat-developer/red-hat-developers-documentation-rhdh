@@ -1,7 +1,7 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="deploy-on-eks-with-the-helm-chart_{context}"]
-= Deploy on Amazon EKS using the Helm chart
+= Deploy on Amazon {eks-short} using the Helm chart
 
 [role="_abstract"]
 Deploy {product-short} on {eks-short} by using the Helm chart for building, testing, and deploying applications.
@@ -52,60 +52,44 @@ The created pull secret pulls the {product-short} images from the {rhcr}.
 +
 [source,yaml,subs="attributes+"]
 ----
-global:
-  # TODO: Set your application domain name.
-  host: <your {product-short} domain name>
+# TODO: Set your application domain name.
+host: <your {product-short} domain name>
 
+service:
+  # NodePort is required for the ALB to route to the Service
+  type: NodePort
 
-route:
-  enabled: false
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
 
+    alb.ingress.kubernetes.io/scheme: internet-facing
 
-upstream:
-  service:
-    # NodePort is required for the ALB to route to the Service
-    type: NodePort
+    # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxx:xxxx:certificate/xxxxxx
 
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
 
-  ingress:
-    enabled: true
-    annotations:
-      kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
 
+    # TODO: Set your application domain name.
+    external-dns.alpha.kubernetes.io/hostname: <your rhdh domain name>
 
-      alb.ingress.kubernetes.io/scheme: internet-facing
-
-
-      # TODO: Using an ALB HTTPS Listener requires a certificate for your own domain. Fill in the ARN of your certificate, e.g.:
-      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:xxx:xxxx:certificate/xxxxxx
-
-
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-
-
-      alb.ingress.kubernetes.io/ssl-redirect: '443'
-
-
-      # TODO: Set your application domain name.
-      external-dns.alpha.kubernetes.io/hostname: <your rhdh domain name>
-
-
-  backstage:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
+imagePullSecrets:
+- rhdh-pull-secret
+podSecurityContext:
+  # you can assign any random value as fsGroup
+  fsGroup: 2000
+postgresql:
+  image:
+    pullSecrets:
+    - rhdh-pull-secret
+  primary:
     podSecurityContext:
+      enabled: true
       # you can assign any random value as fsGroup
-      fsGroup: 2000
-  postgresql:
-    image:
-      pullSecrets:
-      - rhdh-pull-secret
-    primary:
-      podSecurityContext:
-        enabled: true
-        # you can assign any random value as fsGroup
-        fsGroup: 3000
+      fsGroup: 3000
   volumePermissions:
     enabled: true
 ----
