@@ -1,0 +1,143 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="dynamic-plugin-package-reference-formats_{context}"]
+= Dynamic plugin package reference formats
+
+[role="_abstract"]
+When you configure dynamic plugins inline in the `{product-custom-resource-type}` custom resource or in a `ConfigMap`, you specify the plugin location by using the `package` field.
+The `package` field supports several reference formats depending on where the plugin is hosted.
+
+[cols="1,2,2,2",options="header"]
+|===
+|Format
+|Syntax
+|Use case
+|Example
+
+|Built-in plugin reference (`ref://`)
+|`ref:_<plugin-name>_`
+|Reference plugins from the default Red Hat plugin catalog. The Operator resolves the reference to an OCI image URL.
+|`ref:catalog-backend-module-github`
+
+|OCI image reference (`oci://`)
+|`oci://_<registry>_/_<repository>_:_<tag>_` or `oci://_<registry>_/_<repository>_@_<digest>_`
+|Reference plugins packaged as OCI images in a container registry. Use digest-based references for reproducibility.
+|`oci://registry.redhat.io/rhdh/rhdh-plugin-quay:1.10.1` or `oci://registry.redhat.io/rhdh/rhdh-plugin-quay@sha256:abc123...`
+
+|NPM package
+|`_<package-name>_` or `@_<scope>_/_<package-name>_` or `_<package-name>_@_<version>_`
+|Reference plugins published to an npm registry.
+|`my-plugin` or `@myorg/my-plugin` or `my-plugin@1.2.3`
+
+|File system path (`file://`)
+|`file://_<absolute-path>_` or `./_<relative-path>_`
+|Reference plugins included in custom container images or mounted volumes.
+|`file:///opt/app-root/src/dynamic-plugins/my-plugin` or `./dynamic-plugins/dist/my-plugin`
+
+|HTTP/HTTPS URL
+|`https://_<url>_` or `http://_<url>_`
+|Reference plugins served from HTTP endpoints.
+|`https://example.com/plugins/my-plugin.tar.gz`
+|===
+
+[NOTE]
+====
+In disconnected environments, the `ref://` format might not work because it resolves to OCI URLs from the default Red Hat plugin catalog hosted on the internet.
+For disconnected deployments, use `oci://` references pointing to mirrored registries or `file://` paths for plugins included in custom images.
+====
+
+== Built-in plugin references (ref://)
+
+The `ref://` format is a convenience syntax for referencing plugins from the default Red Hat plugin catalog.
+
+When you specify `ref:_<plugin-name>_`, the {product} Operator resolves the plugin name to an OCI image URL from the catalog.
+This format simplifies configuration when using Red Hat-supported plugins.
+
+Example:
+
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'ref:catalog-backend-module-github'
+----
+
+The Operator resolves this reference to the corresponding OCI image URL based on your {product-short} version.
+
+== OCI image references
+
+The `oci://` format references plugins packaged as OCI container images stored in a container registry.
+
+Specify OCI references by using either tags or digests:
+
+* *Tag-based reference*: `oci://_<registry>_/_<repository>_:_<tag>_`
++
+Example: `oci://registry.redhat.io/rhdh/rhdh-plugin-quay:1.10.1`
++
+Tag-based references are convenient but might change if the tag is updated to point to a different image.
+
+* *Digest-based reference*: `oci://_<registry>_/_<repository>_@_<digest>_`
++
+Example: `oci://registry.redhat.io/rhdh/rhdh-plugin-quay@sha256:abc123...`
++
+Digest-based references are immutable and offer reproducibility.
+Use digest-based references for production deployments and disconnected environments.
+
+== NPM package references
+
+You can reference plugins published to npm registries using standard npm package syntax:
+
+* Simple package name: `my-plugin`
+* Scoped package: `@myorg/my-plugin`
+* Version-pinned package: `my-plugin@1.2.3`
+
+Example:
+
+[source,yaml]
+----
+dynamicPlugins:
+  - package: '@backstage-community/plugin-lighthouse'
+----
+
+The {product} Operator downloads the plugin from the configured npm registry during deployment.
+
+== File system path references
+
+The `file://` format and relative paths reference plugins from the container file system.
+
+Use file system references when:
+
+* Plugins are pre-loaded into a custom {product-short} container image
+* Plugins mount from persistent volumes or config maps
+
+Examples:
+
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'file:///opt/app-root/src/dynamic-plugins/my-custom-plugin'
+  - package: './dynamic-plugins/dist/my-plugin'
+----
+
+The {product-short} application resolves relative paths from its application directory.
+
+== HTTP/HTTPS URL references
+
+You can reference plugins served from HTTP or HTTPS endpoints.
+Package the plugin as a `.tar.gz` archive.
+
+Example:
+
+[source,yaml]
+----
+dynamicPlugins:
+  - package: 'https://example.com/plugins/my-plugin.tar.gz'
+----
+
+For production deployments, use HTTPS URLs and consider adding an integrity checksum to verify the downloaded plugin.
+See xref:dynamic-plugin-config-fields_{context}[Dynamic plugin configuration fields] for information about the `integrity` field.
+
+[role="_additional-resources"]
+.Additional resources
+* xref:configure-dynamic-plugins-inline-operator_{context}[Configure dynamic plugins inline in {product-custom-resource-type} custom resource]
+* xref:dynamic-plugin-config-fields_{context}[Dynamic plugin configuration fields]
+* xref:install-dynamic-plugins-with-the-rhdh-operator_{context}[Install dynamic plugins with the {product} Operator using a ConfigMap]
