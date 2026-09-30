@@ -6,13 +6,13 @@
 [role="_abstract"]
 Notebook embeddings are stored in a FAISS vector store, which {ia-short} persists to a SQLite file on disk. By default, that file lives on an ephemeral `emptyDir` volume, so the system clears it when the pod restarts or reschedules.
 
-To retain Notebook documents and embeddings across restarts, move the FAISS store onto a Persistent Volume by pointing the `kv_notebooks` storage backend at a persistent mount and backing that mount with a Persistent Volume Claim (PVC). The store remains an on-disk FAISS/SQLite file; only the volume behind it changes.
+To retain Notebook documents and embeddings across restarts, move the FAISS store onto a Persistent Volume by pointing the `notebooks` vector store provider at a persistent mount and backing that mount with a Persistent Volume Claim (PVC). The store remains an on-disk FAISS file; only the volume behind it changes.
 
 [IMPORTANT]
 ====
 Depending on your installation method, note the following constraints:
 
-* *Helm Chart*: The `kv_notebooks` backend defaults to `/rag-content` (`ragVolume`). Moving the `db_path` to a custom PVC mount (like `/var/lib/lightspeed-data`) works, but alternatively, you can use the chart's native `runtimeVolume.type: persistentVolumeClaim` configuration.
+* *Helm chart*: The `notebooks` vector store provider defaults to an ephemeral path. Moving the provider `path` to a custom PVC mount (like `/var/lib/lightspeed-data`) works, but alternatively, you can use the chart's native `runtimeVolume.type: persistentVolumeClaim` configuration.
 * *Operator*: The Operator currently mounts configuration via annotated config maps and does not expose a PVC option. Modifying the deployment manifest manually (as shown in this procedure) is unsupported for Operator installs, as changes will be reverted during operator reconciliation.
 ====
 
@@ -24,15 +24,19 @@ Depending on your installation method, note the following constraints:
 
 .Procedure
 
-. In your `config.yaml` config map, point the `kv_notebooks` storage backend at a path on the persistent mount. The backend stays `kv_sqlite`, so the FAISS index continues to persist as an on-disk file:
+. In your `lightspeed-stack.yaml` config map, point the `notebooks` vector store provider at a path on the persistent mount. The provider stays `faiss`, so the FAISS index continues to persist as an on-disk file:
 +
 [source,yaml]
 ----
-storage:
-  backends:
-    kv_notebooks:
-      type: kv_sqlite
-      db_path: /var/lib/lightspeed-data/vector_db/notebooks/faiss_store.db
+vector_store:
+  default_provider: notebooks
+  providers:
+    - id: notebooks
+      type: faiss
+      embedding_model: nomic-ai/nomic-embed-text-v1.5
+      embedding_dimension: 768
+      config:
+        path: /var/lib/lightspeed-data/vector_db/notebooks/faiss_store.db
 ----
 
 . Update your deployment manifest to create the directory on the volume and mount the PVC into the {ia-short} container. The config map mounts are already defined by the deployment and are unchanged:
