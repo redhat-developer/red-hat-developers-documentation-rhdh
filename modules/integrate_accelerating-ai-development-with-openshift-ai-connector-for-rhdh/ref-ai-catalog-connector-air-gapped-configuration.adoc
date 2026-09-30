@@ -1,0 +1,154 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ai-catalog-connector-air-gapped-configuration_{context}"]
+= AI Catalog connector configuration for air-gapped environments
+
+[role="_abstract"]
+AI Catalog connectors and entity providers share a common configuration pattern for air-gapped environments: a custom endpoint URL, a trusted internal certificate authority (CA), credentials from a Kubernetes `Secret`, and a synchronization schedule.
+
+The AI Asset entity model and the OpenAI Agent SDK do not require any additional network egress and are compatible with air-gapped environments. Any network egress that a connector or entity provider needs is specific to the endpoints that you configure, such as a model server URL or an agent runtime. Mirror the applicable plugins into your air-gapped registry, and configure each connector to reach the {rhoai-brand-name} services that run on the same air-gapped {ocp-short} cluster as {product-very-short}.
+
+== Custom endpoint URL
+
+Configure each connector or entity provider with the URL of the service that it reads from, rather than relying on a default public endpoint. Reference the URL from an environment variable so that you can change it without editing the application configuration:
+
+[source,yaml]
+----
+ai-catalog:
+  entityProviders:
+    ogx:
+      baseUrl: ${OGX_URL}
+----
+
+== CA bundle for internal certificates
+
+When a connector reaches a service over HTTPS that presents a self-signed or internally signed certificate, provide the CA bundle so that the connector can validate the certificate. You can provide the CA bundle in one of the following ways:
+
+* Set the connector `caData` field to a base64-encoded PEM CA bundle, referenced from a Kubernetes `Secret`. This is the same format as the `certificate-authority-data` field in a kubeconfig file:
++
+[source,yaml]
+----
+ai-catalog:
+  entityProviders:
+    ogx:
+      baseUrl: ${OGX_URL}
+      caData: ${OGX_CA_DATA}
+      skipTLSVerify: false
+----
+
+* Mount the CA PEM bundle from a `ConfigMap` or `Secret` into the {product-very-short} backend container, and set the `NODE_EXTRA_CA_CERTS` environment variable to the mounted path. This applies the CA to all HTTPS calls that the container makes.
+
+[IMPORTANT]
+====
+Do not set `skipTLSVerify: true` in production. Provide the CA bundle instead so that the connector validates the certificate.
+====
+
+== Credentials from a Kubernetes Secret
+
+Store credentials, such as an API key or token, in a Kubernetes `Secret`, and reference them from environment variables in your configuration. Do not store credentials inline in your application configuration.
+
+[source,yaml]
+----
+ai-catalog:
+  entityProviders:
+    ogx:
+      baseUrl: ${OGX_URL}
+      apiKey: ${OGX_API_KEY}
+----
+
+== Synchronization schedule
+
+Configure how often a connector or entity provider synchronizes with its source. The following example runs the synchronization every 30 minutes:
+
+[source,yaml]
+----
+ai-catalog:
+  entityProviders:
+    ogx:
+      baseUrl: ${OGX_URL}
+      schedule:
+        frequency: { minutes: 30 }
+        timeout: { minutes: 3 }
+        initialDelay: { seconds: 15 }
+----
+
+== Reference Helm chart values
+
+The following `values.yaml` example demonstrates the full air-gapped configuration pattern for a Helm chart deployment. It references credentials and the CA bundle from Kubernetes secrets, mounts the CA bundle, and sets `NODE_EXTRA_CA_CERTS`:
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    appConfig:
+      ai-catalog:
+        entityProviders:
+          ogx:
+            baseUrl: ${OGX_URL}
+            apiKey: ${OGX_API_KEY}
+            caData: ${OGX_CA_DATA}
+            skipTLSVerify: false
+            schedule:
+              frequency: { minutes: 30 }
+              timeout: { minutes: 3 }
+    extraEnvVars:
+      - name: OGX_URL
+        value: https://ogx.apps.example.com
+      - name: NODE_EXTRA_CA_CERTS
+        value: /opt/app-root/src/ogx-ca.pem
+    extraEnvVarsSecrets:
+      - ogx-credentials
+    extraVolumeMounts:
+      - mountPath: /opt/app-root/src/ogx-ca.pem
+        name: ogx-ca
+        subPath: ogx-ca.pem
+    extraVolumes:
+      - name: ogx-ca
+        secret:
+          secretName: ogx-ca
+----
+
+where:
+
+`extraEnvVarsSecrets`:: References the `ogx-credentials` `Secret`, which holds the `OGX_API_KEY` and `OGX_CA_DATA` values.
+`extraVolumes` and `extraVolumeMounts`:: Mount the CA PEM bundle from the `ogx-ca` `Secret` into the backend container.
+`NODE_EXTRA_CA_CERTS`:: Points to the mounted CA bundle so that the container trusts the internal CA for all HTTPS calls.
+
+== Reference Operator custom resource
+
+The following {product-custom-resource-type} custom resource (CR) example demonstrates the same air-gapped configuration pattern for an Operator deployment. It injects credentials from a `Secret`, mounts the CA bundle, and sets `NODE_EXTRA_CA_CERTS`:
+
+[source,yaml]
+----
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: {product-custom-resource-type}
+metadata:
+  name: {my-product-cr-name}
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: ai-catalog-app-config
+    extraEnvs:
+      secrets:
+        - name: ogx-credentials
+      envs:
+        - name: NODE_EXTRA_CA_CERTS
+          value: /opt/app-root/src/ogx-ca.pem
+    extraFiles:
+      mountPath: /opt/app-root/src
+      secrets:
+        - name: ogx-ca
+          key: ogx-ca.pem
+----
+
+where:
+
+`appConfig.configMaps`:: References the `ai-catalog-app-config` `ConfigMap`, which contains the `ai-catalog.entityProviders` configuration.
+`extraEnvs.secrets`:: Injects the `ogx-credentials` `Secret` values, such as `OGX_API_KEY` and `OGX_CA_DATA`, as environment variables.
+`extraFiles.secrets`:: Mounts the CA PEM bundle from the `ogx-ca` `Secret`.
+`NODE_EXTRA_CA_CERTS`:: Points to the mounted CA bundle so that the container trusts the internal CA for all HTTPS calls.
+
+.Additional resources
+* xref:configure-the-ogx-entity-provider_{context}[Configure the OGX entity provider]
+* xref:configure-tls-for-the-connector_{context}[Configure TLS for the connector]
