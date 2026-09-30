@@ -1,0 +1,107 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-the-ogx-entity-provider_{context}"]
+= Configure the OGX entity provider
+
+include::{docdir}/artifacts/snip-developer-preview-rhoai.adoc[]
+
+[role="_abstract"]
+Configure the OGX entity provider to ingest AI models from an OGX Model Server and to import OpenAI Agent SDK compatible agents into the {product} ({product-very-short}) Catalog. You define the provider under the `ai-catalog.entityProviders.ogx` key in your `{my-app-config-file}` file.
+
+.Prerequisites
+
+* You have installed the AI Catalog plugins that provide the OGX entity provider and register the `AiResource` and `AiModelServerAPI` entity kinds.
+* You have the base URL of your OGX Model Server.
+* For a server that requires authentication, you have created a Kubernetes `Secret` that holds the API key. For more information about credential handling in air-gapped environments, see xref:ai-catalog-connector-air-gapped-configuration_{context}[AI Catalog connector configuration for air-gapped environments].
+
+.Procedure
+
+. Add the OGX entity provider to your `{my-app-config-file}` file. The following example configures the provider to fetch models from the OGX Model Server and to import two agents:
++
+[source,yaml]
+----
+ai-catalog:
+  entityProviders:
+    ogx:
+      baseUrl: ${BOOST_OGX_URL:-http://localhost:8321}
+      defaultAgent: router
+      maxAgentTurns: 10
+      apiKey: ${OGX_API_KEY:-}
+      caData: ${OGX_CA_DATA:-}
+      skipTLSVerify: false
+      agents:
+        - id: router
+          name: FantaCo Router
+          description: Customer service router that classifies and transfers to specialists.
+          instructions: |
+            You are a customer service router. Classify the user's question and
+            transfer it to the appropriate specialist agent.
+          handoffs:
+            - legal
+          model: ${BOOST_MODEL:-}
+          lifecycleStage: published
+          createdBy: user:default/admin
+        - id: legal
+          name: Legal
+          description: Handles questions about licenses, contracts, and compliance.
+          handoffDescription: Handles questions about licenses, contracts, and compliance.
+          instructions: |
+            You are the Legal specialist. Answer the user's legal query based on
+            the relevant documents in the knowledge base.
+          enableRAG: true
+          model: ${BOOST_MODEL:-}
+          lifecycleStage: published
+          createdBy: user:default/admin
+----
++
+For the full list of provider and agent fields, see xref:ogx-entity-provider-configuration_{context}[OGX entity provider configuration reference].
+
+. Allow the `AiResource` and `AiModelServerAPI` entity kinds in your catalog rules by adding them to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+catalog:
+  rules:
+    - allow:
+        [
+          Component,
+          System,
+          Group,
+          User,
+          Resource,
+          Location,
+          Template,
+          API,
+          AiResource,
+          AiModelServerAPI,
+        ]
+----
+
+. Optional: To authenticate to an OGX Model Server over HTTPS, reference the API key and, if required, the certificate authority (CA) bundle from a Kubernetes `Secret` rather than storing them inline. Mount the `Secret` values as environment variables, and reference them in your configuration:
++
+[source,yaml]
+----
+ai-catalog:
+  entityProviders:
+    ogx:
+      baseUrl: https://ogx.apps.example.com
+      apiKey: ${OGX_API_KEY}
+      caData: ${OGX_CA_DATA}
+      skipTLSVerify: false
+----
++
+where:
++
+`apiKey`:: The API key or token that the provider uses to authenticate to the OGX Model Server. The `apiKey`, `caData`, and `skipTLSVerify` fields use the same format as the {backstage} Kubernetes plugin.
+`caData`:: The base64-encoded PEM CA bundle for the OGX Model Server, required when the server presents a self-signed or internally signed certificate.
+`skipTLSVerify`:: Whether to skip TLS verification of the OGX Model Server certificate. Set this to `false` in production.
+
+.Verification
+
+* Restart your {product-very-short} instance and confirm the following in the {product-very-short} Catalog:
+** The models that are served by the OGX Model Server appear as `AiModelServerAPI` entities.
+** The agents that you defined in the provider configuration appear as `AiResource` entities with `spec.type: agent`.
+
+.Additional resources
+* xref:ogx-entity-provider-configuration_{context}[OGX entity provider configuration reference]
+* xref:ai-catalog-connector-air-gapped-configuration_{context}[AI Catalog connector configuration for air-gapped environments]
