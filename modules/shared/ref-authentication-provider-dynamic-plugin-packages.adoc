@@ -1,0 +1,82 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="authentication-provider-dynamic-plugin-packages_{context}"]
+= Authentication provider dynamic plugin packages
+
+[role="_abstract"]
+In {product}, authentication providers are dynamic plugins. To use an authentication
+provider, install its dynamic plugin package and enable it in your `dynamic-plugins.yaml`
+file, in addition to configuring `auth.providers.<id>` in your `{my-app-config-file}`
+file.
+
+The following table lists the supported authentication provider packages:
+
+[cols="1,1,2",options="header"]
+|===
+|Authentication provider |Provider ID |Package
+
+|Guest
+|`guest`
+|`@backstage/plugin-auth-backend-module-guest-provider`
+
+|GitHub
+|`github`
+|`@backstage/plugin-auth-backend-module-github-provider`
+
+|GitLab
+|`gitlab`
+|`@backstage/plugin-auth-backend-module-gitlab-provider`
+
+|Microsoft / {azure-brand-name}
+|`microsoft`
+|`@backstage/plugin-auth-backend-module-microsoft-provider`
+
+|Keycloak
+|`keycloak`
+|`@backstage-community/plugin-auth-backend-module-keycloak-provider`
+
+|PingFederate
+|`pingfederate`
+|`@backstage-community/plugin-auth-backend-module-pingfederate-provider`
+|===
+
+// EDITOR NOTE (RHIDP-5489, pending engineer confirmation): confirm the dynamic-plugins.yaml
+// key/semantics below. This uses `disabled: false`, matching every existing "enable a
+// preloaded plugin" procedure in this repo (for example proc-enable-the-keycloak-plugin.adoc).
+// The engineers' draft used `enabled: true`, which does not match existing convention.
+
+// EDITOR NOTE (RHIDP-5489, pending engineer confirmation): confirm package granularity.
+// RHIDP-15482 (the story onboarding these packages) references bundled `app-auth` /
+// `app-integration` plugin groups in default.packages.yaml, not one package per provider
+// as shown above.
+
+Each package is listed in the supported plugins catalog as disabled by default. Enable
+only the authentication providers that you use.
+
+To enable a provider, add its package to your `dynamic-plugins.yaml` file and set
+`disabled` to `false`, as shown in the following example for the GitHub provider:
+
+[source,yaml]
+----
+plugins:
+  - package: oci://quay.io/rhdh/backstage-plugin-auth-backend-module-github-provider:{{inherit}}
+    disabled: false
+----
+
+// EDITOR NOTE (RHIDP-5489): The `artifacts/snip-tag-for-OCI-package-paths.adoc` snippet
+// (used the same way in proc-enable-the-keycloak-plugin.adoc) explains a `<tag>`
+// placeholder in the OCI package path. It was dropped here because the example above
+// uses `{{inherit}}`, which resolves automatically and has no `<tag>` to explain (see
+// proc-enable-the-orchestrator-plugins-using-the-operator.adoc for the same pattern).
+// Re-add it if the package granularity/versioning question above resolves to a
+// per-provider OCI path that requires a manual `<tag>`, matching the Keycloak plugin.
+
+[IMPORTANT]
+====
+Configuring `auth.providers.<id>` without installing and enabling the matching dynamic
+plugin does not register the provider. No authentication provider is installed by
+default.
+====
+
+.Additional resources
+* {configuring-dynamic-plugins-book-link}[{configuring-dynamic-plugins-book-title}]
