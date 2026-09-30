@@ -1,0 +1,56 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="prepare-custom-content-for-byok-rag_{context}"]
+= Prepare the source documents for BYOK RAG
+
+[role="_abstract"]
+Organize the documents that you want {ia-short} to search into a directory, and add citation metadata before you generate the vector store.
+
+The examples in this workflow use Markdown documents, an OGX FAISS store, and the `sentence-transformers/all-mpnet-base-v2` embedding model. This model produces embeddings with dimension `768`.
+
+.Prerequisites
+* You have a workstation with Git and link:https://docs.astral.sh/uv/[`uv`] installed, or a container runtime such as Podman.
+* You have access to the link:https://github.com/lightspeed-core/rag-content[lightspeed-core rag-content] repository.
+* You have source documents that you are authorized to use.
+* You have access to a container registry or another approved method of delivering files to your {product-very-short} deployment.
+* You have a {ia-short} deployment configured with the `sentence_transformers` inference provider.
+* You have network access to download the embedding model from Hugging Face, unless the model is supplied locally.
+
+.Procedure
+
+. Create a directory for the documents that you want the assistant to search. For example:
++
+[source,text]
+----
+custom_docs/
+  installation-guide.md
+  operations-guide.md
+----
++
+Use clear headings and ordinary text wherever possible. Text embedded only in screenshots or scanned PDF pages must be converted with optical character recognition before it can be indexed reliably.
+
+. Process one document type per generation run and set `--doc-type` accordingly. This example uses `markdown`.
+
+. For Markdown content, add YAML frontmatter to identify the document and its canonical source URL:
++
+[source,markdown]
+----
+---
+title: Example Operations Guide
+url: https://docs.example.com/operations-guide
+---
+
+# Example Operations Guide
+
+Document content begins here.
+----
++
+The metadata is stored with each generated chunk. {ia-short} can use the title and URL when presenting retrieval sources and citations.
++
+[IMPORTANT]
+====
+Do not include secrets, credentials, personal data, or content that users of the assistant are not authorized to retrieve. Access controls on the source system are not automatically reproduced inside a vector store.
+====
+
+.Next steps
+* xref:generate-a-vector-database-for-byok-rag_{context}[Generate a vector database for BYOK RAG]

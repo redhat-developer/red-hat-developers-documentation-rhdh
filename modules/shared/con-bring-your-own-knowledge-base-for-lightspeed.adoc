@@ -1,0 +1,47 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="bring-your-own-knowledge-base-for-lightspeed_{context}"]
+= Bring Your Own Knowledge (BYOK) for {ia-short}
+
+[role="_abstract"]
+Bring Your Own Knowledge (BYOK) enables {ia-short} to retrieve information from documentation that your organization provides. An administrator generates an OGX vector store from source documents and registers it as a retrieval source.
+
+By default, {ia-short} grounds AI responses in {product} ({product-very-short}) product documentation. With BYOK, you can add additional knowledge sources — such as internal runbooks, architecture guides, or custom API references — so that {ia-short} can retrieve and cite content that is specific to your organization.
+
+[NOTE]
+====
+This workflow is intended for {product-very-short} administrators. The upstream `rag-content` README is the source of truth for supported vector-store generation commands and current prerequisites. See the additional resources.
+====
+
+== How BYOK works
+
+The BYOK workflow has four parts:
+
+. Prepare source documents and citation metadata.
+. Generate embeddings and an OGX vector store with `rag-content`.
+. Deliver the vector database and, when required, a local embedding model to the {ia-short} runtime.
+. Register the store as a retrieval source and verify it through the {ia-short}.
+
+[IMPORTANT]
+====
+The embedding model and dimension used to generate the database must match the model and dimension in the runtime configuration. A mismatch prevents reliable retrieval and can stop the vector store from loading.
+====
+
+== Retrieval source ordering and prioritization
+
+The order of entries under `rag.retrieval.inline.sources` or `rag.retrieval.tool.sources` does not assign priority to the vector stores. For example, listing `custom-docs` before `okp` does not guarantee that content from `custom-docs` is returned first.
+
+{ia-short} supports per-store BYOK weighting only with Inline RAG. Set `score_multiplier` on each entry under `rag.byok.stores` to adjust its relative importance. Values greater than `1.0` boost that store's results, while values less than `1.0` reduce them.
+
+Inline RAG queries the configured BYOK stores, multiplies each raw relevance score by that store's `score_multiplier`, merges the results, and ranks them by weighted score. Consequently, a store with a higher `score_multiplier` receives a boost regardless of where it appears in the `sources` list.
+
+Tool RAG does not apply `score_multiplier`. It exposes the configured stores through the `file_search` tool. OGX searches them, merges their chunks, and ranks the combined results by the scores returned by the stores. Use Tool RAG when the model should decide when to search. Use Inline RAG when every request must retrieve context and you require configurable BYOK store weighting.
+
+[NOTE]
+====
+`score_multiplier` applies only to BYOK stores. It does not weight OKP results, whose scores use a different scoring system. When you combine BYOK and OKP through Inline RAG, enable the supported reranker to normalize and rerank results across those sources.
+====
+
+.Additional resources
+* xref:ref-byok-rag-configuration-fields-for-lightspeed-stack_{context}[BYOK RAG configuration fields for `lightspeed-stack.yaml`]
+* link:https://github.com/lightspeed-core/rag-content/blob/main/README.md#ogx-vector-stores[rag-content OGX vector stores]

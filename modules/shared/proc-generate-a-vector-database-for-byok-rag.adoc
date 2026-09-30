@@ -1,0 +1,93 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="generate-a-vector-database-for-byok-rag_{context}"]
+= Generate a vector database for BYOK RAG
+
+[role="_abstract"]
+Install the `rag-content` tooling, generate a portable OGX FAISS vector store from your custom documentation, and test retrieval before you deploy the store to {ia-short}.
+
+.Prerequisites
+* You have prepared your content directory as described in xref:prepare-custom-content-for-byok-rag_{context}[Prepare the source documents for BYOK RAG].
+* You have a workstation with Git and link:https://docs.astral.sh/uv/[`uv`] installed.
+
+.Procedure
+
+. Clone the `rag-content` repository and install its pinned dependencies:
++
+[source,terminal]
+----
+$ git clone https://github.com/lightspeed-core/rag-content.git
+$ cd rag-content
+$ uv sync
+----
++
+[TIP]
+====
+Use a specific release or commit in repeatable production workflows. The generator, query helper, and runtime dependencies must be kept compatible.
+====
+
+. From the `rag-content` repository, generate a portable OGX FAISS vector store:
++
+[source,terminal]
+----
+$ uv run python scripts/generate_embeddings.py \
+  --folder /path/to/custom_docs \
+  --output /path/to/vector_db/custom_docs \
+  --index custom-docs \
+  --vector-store llamastack-faiss \
+  --model-dir "" \
+  --model-name sentence-transformers/all-mpnet-base-v2 \
+  --doc-type markdown \
+  --chunk-size 512 \
+  --chunk-overlap 128
+----
++
+The `llamastack-faiss` value is retained as a compatibility name in the `rag-content` command-line interface. Current `rag-content` releases use OGX to create this store.
++
+Passing an empty value to `--model-dir` records the Hugging Face model ID rather than a workstation-specific model path. This makes the generated store portable. At runtime, the same model ID is resolved by the `sentence_transformers` provider.
++
+[NOTE]
+====
+This model-ID configuration can require network access when the model is not already cached. For a disconnected deployment, package the embedding model and configure its runtime filesystem path as described in xref:deploy-byok-rag-in-a-disconnected-environment_{context}[Deploy BYOK RAG in a disconnected environment].
+====
+
+. Confirm the output files. The output directory contains:
++
+--
+* `faiss_store.db`: the vector database required at runtime.
+* `lightspeed-stack.yaml`: an example {ia-short} configuration generated for the store.
+* `llama-stack.yaml`: the OGX configuration used to create the store.
+--
+
+. Read the unique vector-store ID from the generated configuration:
++
+[source,terminal]
+----
+$ yq '.registered_resources.vector_stores[0].vector_store_id' \
+  /path/to/vector_db/custom_docs/llama-stack.yaml
+----
++
+Save this value. The runtime configuration must use the exact same ID.
+
+. Test retrieval before deployment by using the query helper from the same `rag-content` checkout:
++
+[source,terminal]
+----
+$ uv run python scripts/query_rag.py \
+  --db-path /path/to/vector_db/custom_docs \
+  --product-index custom-docs \
+  --model-path "" \
+  --top-k 5 \
+  --query "Enter a question answered only by the custom documents" \
+  --json
+----
++
+Review the returned chunks, scores, titles, and source URLs. Use a question that contains a distinctive fact from the custom content so that the result is easy to distinguish from general model knowledge.
++
+[NOTE]
+====
+Some combinations of OGX and `rag-content` can report that the vector store is already registered when `query_rag.py` opens a newly generated database. Do not edit the SQLite database manually. Use a compatible `rag-content` revision or continue validation through the deployed {ia-short} vector-store API, and report reproducible helper failures to the `rag-content` project.
+====
+
+.Next steps
+* xref:package-a-byok-rag-container-image_{context}[Package a BYOK RAG container image]
