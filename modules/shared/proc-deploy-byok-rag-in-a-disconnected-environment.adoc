@@ -98,6 +98,17 @@ COPY embeddings_model /byok/embeddings_model
 USER 1001
 ----
 
+Build the combined image, passing the product RAG init image as the `PRODUCT_RAG_IMAGE` build argument, and push it to a registry available to the disconnected OpenShift cluster:
+
+[source,terminal]
+----
+$ podman build \
+    --build-arg PRODUCT_RAG_IMAGE=<product_rag_image_reference> \
+    -t registry.example.com/rhdh/byok-with-product-rag:1.0.0 .
+
+$ podman push registry.example.com/rhdh/byok-with-product-rag:1.0.0
+----
+
 Override the single `global.lightspeed.initContainer` so that it copies the product content, your BYOK database, and the local model into the automatically mounted `/rag-content` volume, and set the offline environment variables under `global.lightspeed.sidecar.env`:
 
 [source,yaml]
@@ -111,7 +122,7 @@ global:
         - name: TRANSFORMERS_OFFLINE
           value: "1"
     initContainer:
-      image: quay.io/your-organization/rhdh-byok-with-product-rag:1.0.0
+      image: registry.example.com/rhdh/byok-with-product-rag:1.0.0
       command: ["sh", "-c"]
       args:
         - |
