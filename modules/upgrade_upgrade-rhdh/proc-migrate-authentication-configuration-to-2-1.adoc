@@ -1,0 +1,55 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-authentication-configuration-to-2-1_{context}"]
+= Migrate authentication configuration when upgrading from 1.10 to 2.1
+
+[role="_abstract"]
+This procedure applies to any {product-very-short} 1.10.x instance with authentication configured, regardless of whether you use the Operator or the Helm chart to deploy.
+Complete this checklist before you upgrade to {product-version}.
+
+.Prerequisites
+
+* You have a running {product-very-short} 1.10.x instance with one or more authentication providers configured.
+
+.Procedure
+
+. For each identity provider that you use, install its authentication backend dynamic plugin.
++
+For more information, see {authentication-book-link}#authentication-provider-dynamic-plugin-packages_enable-authentication-with-your-identity-provider[the authentication provider dynamic plugin packages reference].
+
+. If Keycloak or PingFederate is configured under `auth.providers.oidc`, migrate the configuration to `auth.providers.keycloak` or `auth.providers.pingfederate`, and update the redirect URI and `signInPage` value to match the dedicated provider.
++
+For more information, see {authentication-book-link}#enable-authentication-with-rhbk_enable-authentication-with-your-identity-provider[Enable authentication with {rhbk}] or {authentication-book-link}#enable-authentication-with-pingfederate_enable-authentication-with-your-identity-provider[Enable authentication with PingFederate].
+
+. Move any Keycloak-specific or PingFederate-specific sign-in resolvers off the `auth.providers.oidc` entry onto the dedicated provider configuration.
++
+For more information, see {authentication-book-link}#enable-authentication-with-rhbk_enable-authentication-with-your-identity-provider[Enable authentication with {rhbk}] or {authentication-book-link}#enable-authentication-with-pingfederate_enable-authentication-with-your-identity-provider[Enable authentication with PingFederate].
+
+. Optional: If you require Guest access for non-production use, install the guest authentication provider dynamic plugin and configure `auth.providers.guest`.
+Do not rely on `auth.environment: development` alone to enable the Guest login.
++
+For more information, see {authentication-book-link}#enable-the-guest-login_enable-or-disable-authentication-with-the-guest-user[Enable the Guest login].
+
+. Explicitly enable GitHub or any other provider that you still require.
+Authentication providers are not installed by default in {product-version}.
++
+For more information, see {authentication-book-link}#authentication-provider-dynamic-plugin-packages_enable-authentication-with-your-identity-provider[the authentication provider dynamic plugin packages reference].
+
+. Remove `ENABLE_AUTH_PROVIDER_MODULE_OVERRIDE` from your Helm values or Operator configuration, if present.
++
+// EDITOR NOTE (RHIDP-5489, pending engineer confirmation): this variable has zero references anywhere in this docs repo today — confirm there is no other doc location needing this removal note, or that this step is deployment-config-only with no docs action here.
+
+. Replace `disableIdentityResolution` on auxiliary providers with an omitted `signIn.resolvers` field.
++
+For more information, see {authentication-book-link}#enable-user-authentication-with-github-as-an-auxiliary-authentication-provider_enable-authentication-with-external-services[Enable GitHub as an auxiliary authentication provider].
+
+. Optional: If an `auth.providers` entry is not meant for sign-in, such as an SCM-only or API-only integration, set `signInPage` to your primary sign-in provider so this entry is not automatically offered on the sign-in page.
++
+For more information, see {authentication-book-link}#enable-user-authentication-with-github-as-an-auxiliary-authentication-provider_enable-authentication-with-external-services[Enable GitHub as an auxiliary authentication provider].
+
+.Verification
+
+* Sign in by using each configured authentication provider, and confirm that the {product-short} sign-in page offers only the intended provider or providers.
+
+.Additional resources
+* {authentication-book-link}[{authentication-book-title}]
