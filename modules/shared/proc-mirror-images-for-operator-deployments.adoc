@@ -14,30 +14,36 @@ The {installing-in-air-gap-book-link}#install-rhdh-in-a-fully-disconnected-envir
 
 .Procedure
 
-. Extract the deployment configurations from the official Operator bundle:
+. Extract the deployment configurations from the official Operator bundle. The {lcs-short} sidecar image is defined in the `intelligent-assistant` flavour config map, and the OKP image is defined in the plugin dependencies config map:
 +
 [source,terminal,subs=+attributes]
 ----
 BUNDLE_IMAGE="registry.redhat.io/rhdh/rhdh-operator-bundle:{product-version}"
 CONTAINER_ID=$(podman create "${BUNDLE_IMAGE}")
-podman cp $CONTAINER_ID:/manifests/rhdh-flavour-lightspeed-config_v1_configmap.yaml ./lightspeed-config.yaml
+podman cp $CONTAINER_ID:/manifests/rhdh-flavour-intelligent-assistant-config_v1_configmap.yaml ./lightspeed-config.yaml
+podman cp $CONTAINER_ID:/manifests/rhdh-plugin-deps_v1_configmap.yaml ./plugin-deps-config.yaml
 podman rm $CONTAINER_ID
 ----
 
-. Identify the initialization and sidecar container image tags from the extracted configuration file:
+. Identify the {lcs-short} and OKP container image tags from the extracted configuration files:
 +
 [source,terminal]
 ----
-LS_RAG_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.initContainers[] | select(.name == "init-rag-data") | .image')
 LS_CORE_IMAGE=$(yq '.data["deployment.yaml"]' lightspeed-config.yaml | yq '.spec.template.spec.containers[] | select(.name == "lightspeed-core") | .image')
+LS_OKP_IMAGE=$(yq '.data["okp.yaml"]' plugin-deps-config.yaml | yq 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.name == "okp") | .image' | head -1)
 ----
++
+[NOTE]
+====
+OKP is an optional add-on that is disabled by default. Mirror the OKP image only if you intend to enable the `intelligent-assistant-okp` flavour.
+====
 
 . Mirror the images to your internal registry by running the `skopeo copy` command:
 +
 [source,terminal]
 ----
-skopeo copy docker://${LS_RAG_IMAGE} docker://<mirror_registry>/<ls_rag_repo>@<digest>
 skopeo copy docker://${LS_CORE_IMAGE} docker://<mirror_registry>/<ls_core_repo>@<digest>
+skopeo copy docker://${LS_OKP_IMAGE} docker://<mirror_registry>/<ls_okp_repo>@<digest>
 ----
 
 .Additional resources
