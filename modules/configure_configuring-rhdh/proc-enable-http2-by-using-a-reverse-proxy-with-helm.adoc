@@ -1,0 +1,276 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-http2-by-using-a-reverse-proxy-with-helm_{context}"]
+= Enable HTTP/2 by using a reverse proxy with Helm
+
+[role="_abstract"]
+To enable HTTP/2 for a Helm-based {product-very-short} installation, deploy a reverse proxy in front of {product-very-short}, expose it through a passthrough route, and point {product-very-short} at the reverse proxy URL.
+The reverse proxy terminates TLS and negotiates HTTP/2 with browsers.
+
+.Prerequisites
+
+* You installed {product-very-short} on {ocp-short} by using the {product-very-short} Helm chart.
+* You installed the `oc`, `helm`, and `openssl` command-line tools.
+* You have a TLS certificate and key for the reverse proxy hostname. For production, use a certificate that a certificate authority (CA) that browsers trust has signed.
+* You have a Red Hat supported reverse proxy image, such as the Red Hat Hardened Images Caddy image.
+
+.Procedure
+
+. Set environment variables for your installation, where `<your_rhdh_namespace>` is the namespace of your {product-very-short} installation and `<your_helm_release_name>` is your Helm release name:
++
+[source,terminal]
+----
+$ export NAMESPACE=<your_rhdh_namespace>
+$ export RELEASE=<your_helm_release_name>
+$ oc project "$NAMESPACE"
+----
+
+. Get the cluster application domain:
++
+[source,terminal]
+----
+$ export ROUTER_BASE=$(oc get ingress.config.openshift.io/cluster -o jsonpath='{.spec.domain}')
+----
+
+. Choose a hostname for the reverse proxy. The hostname must be different from your existing {product-very-short} route hostname:
++
+[source,terminal]
+----
+$ export CADDY_HOST="rhdh-h2-${NAMESPACE}.${ROUTER_BASE}"
+----
+
+. Create a TLS secret from your certificate and key, where `<path_to_tls_crt>` and `<path_to_tls_key>` are the paths to your certificate and key files:
++
+[source,terminal]
+----
+$ oc create secret tls tls-certs \
+  --cert=<path_to_tls_crt> \
+  --key=<path_to_tls_key> \
+  -n "$NAMESPACE"
+----
++
+[NOTE]
+====
+The TLS secret must be in the same namespace as the reverse proxy workload.
+====
+
+. Create a `caddy.yaml` file that defines the reverse proxy `Deployment`, `ConfigMap`, and `Service`:
++
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy-fronting-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: caddy-fronting-proxy
+  template:
+    metadata:
+      labels:
+        app: caddy-fronting-proxy
+    spec:
+      volumes:
+        - name: caddy-config
+          configMap:
+            name: caddy-reverse-proxy
+            defaultMode: 420
+        - name: certs
+          secret:
+            secretName: tls-certs
+      serviceAccountName: default
+      containers:
+        - name: caddy-reverse-proxy
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "3Gi"
+              cpu: "1"
+          command:
+            - caddy
+            - run
+            - '--config'
+            - /etc/caddy/Caddyfile
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: proxy
+          imagePullPolicy: Always
+          env:
+            - name: CADDY_ROUTE_HOSTNAME
+              value: "rhdh-h2-<namespace>.apps.<cluster_domain>"
+            - name: DEVELOPER_HUB_SERVICE_HOST
+              value: "http://<release>.<namespace>.svc.cluster.local:7007"
+          volumeMounts:
+            - name: caddy-config
+              mountPath: /etc/caddy/Caddyfile
+              subPath: Caddyfile
+              readOnly: true
+            - name: certs
+              mountPath: /opt/app-root/certs
+              readOnly: true
+          image: registry.access.redhat.com/hi/caddy:2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-reverse-proxy
+data:
+  Caddyfile: |
+    {
+      auto_https disable_redirects
+    }
+
+    https://{$CADDY_ROUTE_HOSTNAME}:8080 {
+      tls /opt/app-root/certs/tls.crt /opt/app-root/certs/tls.key
+
+      @scalprum_chunks {
+        path /api/scalprum/*/static/*.js
+      }
+
+      header @scalprum_chunks {
+        # Cache for 1 year (immutable because the hash changes on new builds)
+        >Cache-Control "public, max-age=31536000, immutable"
+      }
+
+      reverse_proxy {
+        to {$DEVELOPER_HUB_SERVICE_HOST}
+        transport http {
+          versions 1.1
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy-fronting-proxy
+  labels:
+    app: caddy-fronting-proxy
+spec:
+  type: ClusterIP
+  ports:
+    - name: caddy-fronting-proxy
+      port: 443
+      targetPort: 8080
+  selector:
+    app: caddy-fronting-proxy
+----
+where:
+
+`CADDY_ROUTE_HOSTNAME`:: The reverse proxy hostname, which is the value of `$CADDY_HOST`.
+`DEVELOPER_HUB_SERVICE_HOST`:: The internal {product-very-short} service URL, in the format `http://<release>.<namespace>.svc.cluster.local:7007`.
+`image`:: A Red Hat supported reverse proxy image, such as the Red Hat Hardened Images Caddy image.
+
+. Apply the manifest and wait for the rollout to complete:
++
+[source,terminal]
+----
+$ oc apply -f caddy.yaml -n "$NAMESPACE"
+$ oc rollout status deployment/caddy-fronting-proxy -n "$NAMESPACE" --timeout=5m
+----
+
+. Create an `allow-caddy-ingress.yaml` file that defines a network policy to allow the reverse proxy to reach the {product-very-short} backend, where `<release>` is your Helm release name:
++
+[source,yaml]
+----
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-caddy-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: <release>
+      app.kubernetes.io/component: backstage
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: caddy-fronting-proxy
+      ports:
+        - port: 7007
+          protocol: TCP
+----
+
+. Apply the network policy and verify that it is created:
++
+[source,terminal]
+----
+$ oc apply -f allow-caddy-ingress.yaml -n "$NAMESPACE"
+$ oc get networkpolicy allow-caddy-ingress -n "$NAMESPACE"
+----
+
+. Create a passthrough route to expose the reverse proxy externally:
++
+[source,terminal]
+----
+$ oc create route passthrough rhdh-caddy-proxy \
+  --service=caddy-fronting-proxy \
+  --port=caddy-fronting-proxy \
+  --hostname="$CADDY_HOST" \
+  -n "$NAMESPACE"
+----
++
+[NOTE]
+====
+Always set the hostname explicitly. If you do not set the hostname, {ocp-short} generates a hostname that does not match your certificate or reverse proxy configuration.
+====
+
+. Create a `helm-values-caddy.yaml` file that points {product-very-short} at the reverse proxy URL and disables the default route, where `<router_base>` is the same value as your existing installation and `<caddy_host>` is the value of `$CADDY_HOST`:
++
+[source,yaml]
+----
+openshift:
+  clusterRouterBase: "<router_base>"
+  route:
+    enabled: false
+appConfig:
+  app:
+    baseUrl: "https://<caddy_host>"
+  backend:
+    baseUrl: "https://<caddy_host>"
+    cors:
+      origin: "https://<caddy_host>"
+----
+
+. Upgrade your Helm release to apply the change. Include the values files that you normally use, followed by the new values file, where `<your_chart_version>` is your chart version and `<your_existing_values.yaml>` is your existing values file:
++
+[source,terminal]
+----
+$ helm upgrade "$RELEASE" redhat-developer/redhat-developer-hub \
+  --version <your_chart_version> \
+  -n "$NAMESPACE" \
+  -f <your_existing_values.yaml> \
+  -f helm-values-caddy.yaml
+----
+
+.Verification
+
+. Confirm that the reverse proxy negotiates HTTP/2:
++
+[source,terminal]
+----
+$ openssl s_client -connect "${CADDY_HOST}:443" -servername "$CADDY_HOST" -alpn h2,http/1.1 </dev/null 2>&1 | grep -iE 'ALPN|Protocol:'
+----
++
+If HTTP/2 is active, the output includes `h2`.
+
+. Confirm that {product-very-short} serves HTTP/2:
++
+[source,terminal]
+----
+$ curl --http2 -sk -o /dev/null -w "http_version=%{http_version}\n" "https://${CADDY_HOST}/"
+----
++
+If HTTP/2 is active, the output is `http_version=2`.
+
+.Additional resources
+
+* xref:http2-tls-requirements-and-connection-coalescing-caveats_{context}[HTTP/2 TLS requirements and connection coalescing caveats]

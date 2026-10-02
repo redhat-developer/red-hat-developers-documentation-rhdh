@@ -1,0 +1,43 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="request-cluster-wide-http2-on-openshift_{context}"]
+= Request cluster-wide HTTP/2 on {ocp-short}
+
+[role="_abstract"]
+On {ocp-brand-name}, you can request that a cluster administrator enable HTTP/2 for all routes by annotating the Ingress Controller instead of deploying a separate reverse proxy.
+
+This approach applies to the entire cluster and affects all routes, not only {product-very-short}.
+
+.Prerequisites
+
+* You have access to a cluster administrator who can modify the Ingress Controller configuration.
+* The cluster uses valid TLS certificates that browsers trust.
+
+.Procedure
+
+. Ask your cluster administrator to enable HTTP/2 on the Ingress Controller by running:
++
+[source,terminal]
+----
+$ oc annotate ingresses.config/cluster ingress.operator.openshift.io/default-enable-http2=true
+----
+
+. Verify that the {product-very-short} route serves HTTP/2. In a terminal, run:
++
+[source,terminal]
+----
+$ curl -vso /dev/null --http2 https://<my_developer_hub_url> 2>&1 | grep ALPN
+----
++
+If HTTP/2 is active, the output includes:
++
+[source,terminal]
+----
+* ALPN: server accepted h2
+----
+
+.Additional resources
+
+* xref:http2-tls-requirements-and-connection-coalescing-caveats_{context}[HTTP/2 TLS requirements and connection coalescing caveats]
+* link:https://access.redhat.com/solutions/2274201[Is it possible to enable HTTP/2 on OpenShift?]
+* link:https://access.redhat.com/solutions/7018818[Impact of enabling HTTP/2 Ingress connectivity in OpenShift 4]
