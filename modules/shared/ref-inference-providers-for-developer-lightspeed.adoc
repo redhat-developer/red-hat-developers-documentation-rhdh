@@ -1,0 +1,98 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="inference-providers-for-developer-lightspeed_{context}"]
+= Inference provider configuration reference for {ls-short}
+
+[role="_abstract"]
+To give {ls-short} access to a model, define each inference provider as an entry under the top-level `inference.providers` section of the `lightspeed-stack.yaml` file.
+
+The provider entry enables the provider. Adding an API key or an `ENABLE_*` variable to the Secret does not enable a provider on its own.
+
+Keep the `sentence_transformers` provider when you add a large language model (LLM) provider. It supports the default embedding path that the shipped vector store uses.
+
+Each LLM provider entry requires a unique `id`. The `api_key_env` field contains the name of an environment variable, not `${env...}` syntax and not the credential value. {lcs-name} ({lcs-short}) resolves the variable without exposing the key in the configuration file.
+
+OpenAI::
+Set `type` to `openai`, and add `OPENAI_API_KEY` to the Secret. Use `extra.allowed_models` to limit model registration. If you omit it, the provider registers every model that is visible to the account.
++
+[source,yaml]
+----
+inference:
+  providers:
+    - type: sentence_transformers
+    - type: openai
+      id: openai-primary
+      api_key_env: OPENAI_API_KEY
+      extra:
+        allowed_models:
+          - gpt-4o
+          - gpt-4o-mini
+----
+
+vLLM::
+Set `type` to `vllm`, and add `VLLM_URL` and `VLLM_API_KEY` to the Secret. `VLLM_URL` must be the full OpenAI-compatible base URL and end in `/v1`, for example, `https://vllm.example.com/v1`. Add `VLLM_MAX_TOKENS` or `VLLM_TLS_VERIFY` only when the defaults do not suit the endpoint.
++
+[source,yaml]
+----
+inference:
+  providers:
+    - type: sentence_transformers
+    - type: vllm
+      id: rhoai-vllm
+      api_key_env: VLLM_API_KEY
+      extra:
+        base_url: ${env.VLLM_URL:=}
+        max_tokens: ${env.VLLM_MAX_TOKENS:=4096}
+        network:
+          tls:
+            verify: ${env.VLLM_TLS_VERIFY:=true}
+----
+
+Vertex AI::
+Set `type` to `vertexai`, and set `VERTEX_AI_PROJECT`, `VERTEX_AI_LOCATION`, and `GOOGLE_APPLICATION_CREDENTIALS` in the Secret. The `GOOGLE_APPLICATION_CREDENTIALS` value must be the in-container path of a separately mounted {gcp-brand-name} credential file.
++
+[source,yaml]
+----
+inference:
+  providers:
+    - type: sentence_transformers
+    - type: vertexai
+      id: vertex-gemini
+      extra:
+        project: ${env.VERTEX_AI_PROJECT:=}
+        location: ${env.VERTEX_AI_LOCATION:=global}
+        allowed_models:
+          - google/gemini-2.5-flash
+----
+
+To enable more than one provider, combine the entries in a single `inference.providers` list. Keep every `id` unique, even when two entries use the same provider type, because validation settings refer to these IDs. The following example enables two OpenAI providers and a vLLM provider while retaining the embedding provider that the default vector store uses:
+
+[source,yaml]
+----
+inference:
+  providers:
+    - type: sentence_transformers
+    - type: openai
+      id: openai-primary
+      api_key_env: OPENAI_API_KEY
+      extra:
+        allowed_models:
+          - gpt-4o-mini
+    - type: openai
+      id: openai-secondary
+      api_key_env: OPENAI_SECONDARY_API_KEY
+      extra:
+        allowed_models:
+          - gpt-4o
+    - type: vllm
+      id: rhoai-vllm
+      api_key_env: VLLM_API_KEY
+      extra:
+        base_url: ${env.VLLM_URL:=}
+        max_tokens: ${env.VLLM_MAX_TOKENS:=4096}
+        network:
+          tls:
+            verify: ${env.VLLM_TLS_VERIFY:=true}
+----
+
+The paired Secret must define `OPENAI_API_KEY`, `OPENAI_SECONDARY_API_KEY`, `VLLM_API_KEY`, and a `VLLM_URL` value that ends in `/v1`. A user can then select models that any of these providers expose.

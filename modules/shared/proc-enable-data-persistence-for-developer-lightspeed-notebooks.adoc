@@ -1,120 +1,197 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="enable-data-persistence-for-developer-lightspeed-notebooks_{context}"]
-= Enable data persistence for {ls-short} Notebooks
+= Persist Notebook data to retain sessions across restarts
 
 [role="_abstract"]
-To persist Notebook sessions, documents, and AI history across service restarts, you must configure the Notebooks storage backends to use persistent volumes. 
+To keep Notebook sessions, documents, and AI history after a pod restart, back the {ls-short} runtime volume with persistent storage instead of the default ephemeral volume.
 
-By default, the service uses ephemeral storage in the `/tmp` directory, which the system clears during a pod restart.
+By default, {lcs-name} ({lcs-short}) writes Notebook vector data, the conversation cache, and feedback to paths under the `/tmp` directory on an ephemeral runtime volume, which the system clears during a pod restart. In {product-very-short} 2.1, you keep these paths in the unified `lightspeed-stack.yaml` file and make the data persistent through your deployment method. You do not edit a separate `config.yaml` file or any {ogx-name} ({ogx-short}) storage backend.
 
 .Prerequisites
 
-* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster aimed at containing your {product-short} instance.
-* You have authored and provisioned a custom config map for your deployment. For more information, see link:{configuring-book-link}#provision-your-custom-rhdh-configuration_provision-and-use-your-custom-rhdh-configuration[Provision your custom {product} configuration].
-* A Persistent Volume Claim (PVC) is provisioned in your cluster and mounted to the {lcs-short} container (for example, at `/var/lib/lightspeed-data`).
+* By using the link:https://docs.redhat.com/en/documentation/openshift_container_platform/{ocp-version}/html-single/cli_tools/index#cli-about-cli_cli-developer-commands[{openshift-cli}], you have access, with developer permissions, to the {ocp-short} cluster that has your {product-short} instance.
+* You have authored and provisioned a custom config map for your deployment. For more information, see {configuring-book-link}#provision-your-custom-rhdh-configuration_provision-and-use-your-custom-rhdh-configuration[Provision your custom {product} configuration].
+* You provisioned a Persistent Volume Claim (PVC) in your cluster.
 
 .Procedure
 
-. Update your custom config map `llama-stack-configs/config.yaml` file to point the `kv_notebooks` storage backend to your persistent mount point:
+. In your unified `lightspeed-stack.yaml` file, keep the shipped runtime data paths for the Notebook vector store, conversation cache, and feedback storage:
 +
 [source,yaml]
 ----
+vector_store:
+  default_provider: notebooks
+  providers:
+    - id: notebooks
+      type: faiss
+      embedding_model: nomic-ai/nomic-embed-text-v1.5
+      embedding_dimension: 768
+      config:
+        path: /tmp/vector_db/notebooks/faiss_store.db
+conversation_cache:
+  type: sqlite
+  sqlite:
+    db_path: /tmp/cache.db
+user_data_collection:
+  feedback_enabled: true
+  feedback_storage: /tmp/data/feedback
+----
+
+. Back the {lcs-short} runtime volume with your PVC so that the default `/tmp` runtime data paths survive pod replacement. Use the configuration for your deployment method:
++
+--
+Helm::
+Configure the runtime volume to use your `persistentVolumeClaim` instead of the default ephemeral volume in the `values.yaml` file:
++
+[source,yaml]
+----
+intelligentAssistant:
+  runtimeVolume:
+    type: persistentVolumeClaim
+    persistentVolumeClaim:
+      claimName: lightspeed-data-pvc
+----
+
+Operator::
+Replace the ephemeral runtime volume by patching the deployment in the {backstage} custom resource (CR):
++
+[source,yaml,subs="+attributes"]
+----
 spec:
-  initContainers:
-    - name: init-notebooks-dir
-      # ... complete init container
-  containers:
-    - name: lightspeed-core
-      image: quay.io/lightspeed-core/lightspeed-stack:0.5.1
-      ports:
-        - containerPort: 8080
-      volumeMounts:
-        - name: notebooks-storage
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - $patch: replace
+                name: lightspeed-data
+                persistentVolumeClaim:
+                  claimName: lightspeed-data-pvc
+----
+--
++
+[NOTE]
+====
+The default ephemeral runtime volume does not survive pod replacement. Confirm the exact runtime volume settings for your deployment method in the {product-very-short} installation documentation before you rely on persistence.
+====
+
+. Optional: To store the runtime data on a path other than `/tmp`, create a dedicated PVC, update the store paths in the `lightspeed-stack.yaml` file, and mount the volume at the new path.
++
+Create the PVC:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ia-data-pvc
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+----
++
+In the `lightspeed-stack.yaml` file, point the Notebook vector store at the new path:
++
+[source,yaml]
+----
+vector_store:
+  providers:
+    - id: notebooks
+      config:
+        path: /var/lib/lightspeed-data/vector_db/notebooks/faiss_store.db
+----
++
+Mount the volume and set the store paths by using your deployment method:
++
+--
+Helm::
+In the `values.yaml` file, add the volume, reference your stack ConfigMap, mount the volume in the `lightspeed-core` container, and set the store paths:
++
+[source,yaml]
+----
+extraVolumes:
+  - name: ia-persistent-data
+    persistentVolumeClaim:
+      claimName: ia-data-pvc
+
+intelligentAssistant:
+  config:
+    stack:
+      existingConfigMap:
+        name: ia-stack-config
+        key: lightspeed-stack.yaml
+  core:
+    extraVolumeMounts:
+      - name: ia-persistent-data
+        mountPath: /var/lib/lightspeed-data
+    extraEnv:
+      - name: KV_STORE_PATH
+        value: /var/lib/lightspeed-data/kvstore.db
+      - name: SQL_STORE_PATH
+        value: /var/lib/lightspeed-data/sql_store.db
+      - name: SQLITE_STORE_DIR
+        value: /var/lib/lightspeed-data/llama-stack-files
+----
+
+Operator::
+In the {backstage} CR, mount the ConfigMap and PVC in the `lightspeed-core` container, and set the store paths by patching the deployment:
++
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: my-rhdh
+spec:
+  application:
+    extraFiles:
+      configMaps:
+        - name: ia-stack-config
+          key: lightspeed-stack.yaml
+          mountPath: /app-root
+          containers: [lightspeed-core]
+      pvcs:
+        - name: ia-data-pvc
           mountPath: /var/lib/lightspeed-data
-        - name: config  # ← Added all ConfigMap mounts
-          mountPath: /app-root/config.yaml
-          subPath: config.yaml
-        - name: lightspeed-config
-          mountPath: /app-root/lightspeed-stack.yaml
-          subPath: lightspeed-stack.yaml
-        - name: profile
-          mountPath: /app-root/rhdh-profile.py
-          subPath: rhdh-profile.py
-      livenessProbe:  # ← Added health checks
-        httpGet:
-          path: /readiness
-          port: 8080          
-      readinessProbe:
-        httpGet:
-          path: /readiness
-          port: 8080
-  volumes:  # ← Added all volume definitions
-    - name: notebooks-storage
-      persistentVolumeClaim:
-        claimName: lightspeed-notebooks-pvc
-    - name: config
-      configMap:
-        name: llama-stack-config
-    - name: lightspeed-config
-      configMap:
-        name: lightspeed-core-config
-    - name: profile
-      configMap:
-        name: rhdh-profile
+          containers: [lightspeed-core]
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: lightspeed-core
+                env:
+                  - name: KV_STORE_PATH
+                    value: /var/lib/lightspeed-data/kvstore.db
+                  - name: SQL_STORE_PATH
+                    value: /var/lib/lightspeed-data/sql_store.db
+                  - name: SQLITE_STORE_DIR
+                    value: /var/lib/lightspeed-data/llama-stack-files
 ----
-. Update your deployment manifest to include the init container, volume mounts, and volume definitions:
-+
-[source,yaml]
-----
-spec:
-  template:
-    spec:
-      initContainers:
-        - name: init-notebooks-storage
-          image: registry.access.redhat.com/ubi9/ubi-minimal
-          command: ["sh", "-c", "mkdir -p /var/lib/lightspeed-data/notebooks && chmod -R 777 /var/lib/lightspeed-data/notebooks"]
-          volumeMounts:
-            - name: lightspeed-notebooks
-              mountPath: /var/lib/lightspeed-data
-      containers:
-        - name: lightspeed-stack
-          image: quay.io/lightspeed-core/lightspeed-stack:0.5.1
-          ports:
-            - containerPort: 8080
-          volumeMounts:
-            - name: lightspeed-notebooks
-              mountPath: /var/lib/lightspeed-data
-            - name: config
-              mountPath: /app-root/config.yaml
-              subPath: config.yaml
-          livenessProbe:
-            httpGet:
-              path: /readiness
-              port: 8080
-          readinessProbe:
-            httpGet:
-              path: /readiness
-              port: 8080
-      volumes:
-        - name: lightspeed-notebooks
-          persistentVolumeClaim:
-            claimName: lightspeed-notebooks-pvc
-        - name: config
-          configMap:
-            name: llama-stack-config
-----
-. Apply the updated configuration and restart the service.
+--
+
+. Apply the updated configuration, and then restart the {lcs-short} service.
 
 .Verification
 
 . In {product}, create a Notebook and upload a test document.
-. Send a message to the virtual assistant and verify that the response is based on the document.
+. Send a message to the virtual assistant, and verify that the response uses information from the document.
 . Restart the pod:
 +
-[source,terminal]
+[source,terminal,subs="+quotes"]
 ----
-$ oc delete pod <pod_name>
+$ oc delete pod _<pod_name>_
 ----
 . After the pod recovers, refresh the *My Notebooks* dashboard.
 . Verify that the Notebook and the uploaded file are still accessible.
+
+[role="_additional-resources"]
+.Additional resources
+
+* {developer-lightspeed-book-link}#configure-by-using-the-helm-chart_configure-to-initialize-the-ai-assistant[Configure {ls-short} by using the Helm chart]
+* {developer-lightspeed-book-link}#configure-by-using-the-operator_configure-to-initialize-the-ai-assistant[Configure {ls-short} by using the Operator]
