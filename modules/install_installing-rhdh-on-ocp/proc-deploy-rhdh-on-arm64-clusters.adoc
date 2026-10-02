@@ -1,0 +1,74 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="deploy-rhdh-on-arm64-clusters_{context}"]
+= Deploy {product} on ARM64 clusters by using community images
+
+[role="_abstract"]
+To evaluate {product} on 64-bit Arm infrastructure, deploy the {product} Helm chart with community images.
+
+include::{docdir}/artifacts/snip-developer-preview.adoc[]
+
+.Prerequisites
+
+* You have an ARM64 (`aarch64`) cluster: {ocp-brand-name} ({ocp-short}) or a supported Kubernetes cluster with 64-bit Arm worker nodes.
+* You have cluster access with permissions to create projects and deploy applications.
+* Your cluster meets the ARM64 platform requirements. See xref:hardware-requirements-for-arm64-deployments_{context}[Hardware requirements for ARM64 deployments].
+
+.Procedure
+
+. Create a Helm chart values file that pins the community image and disables {ls-short}:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+openshift:
+  clusterRouterBase: _<cluster_router_base>_
+intelligentAssistant:
+  enabled: false
+image:
+  registry: quay.io
+  repository: rhdh-community/rhdh
+  tag: "{product-version}"
+  digest: ""
+----
++
+--
+This configuration applies the following ARM64-specific overrides:
+
+* `image`: Uses the community image stream at `quay.io/rhdh-community/rhdh`, which provides ARM64 builds. Setting `digest` to an empty string clears the productized image digest that the chart sets by default, so that the chart pulls the specified `tag` instead.
+* `intelligentAssistant.enabled`: Disables {ls-short}, which is not validated in the ARM64 {developer-preview}.
+
+The productized {product} Helm chart provides an ARM64-compatible PostgreSQL image from `registry.redhat.io` by default, so you do not need to override the database image.
+--
+
+. Deploy {product-very-short} with the productized `{product-version}` chart and your values file, replacing `_<values_file>_` with the path to the file that you created:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+helm upgrade -i my-rhdh redhat-developer-hub \
+  --repo https://charts.openshift.io/ \
+  --version {product-chart-version} \
+  -f _<values_file>_
+----
++
+[NOTE]
+====
+You can also deploy {product-very-short} on ARM64 clusters by using the {product} Operator with community images.
+====
+
+.Verification
+
+. Confirm that all {product-very-short} pods reach the `Ready` state:
++
+[source,terminal,subs="+quotes"]
+----
+oc get pods -n _<your_namespace>_
+----
+
+. Open the {product-very-short} portal URL in your browser and confirm that the portal loads and basic navigation works.
+
+. Check the pod logs for architecture mismatch or `exec format error` messages:
++
+[source,terminal,subs="+quotes"]
+----
+oc logs _<pod_name>_ -n _<your_namespace>_
+----
