@@ -1,0 +1,54 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-scorecard-metric-groups_{context}"]
+= Configure scorecard metric groups
+
+include::{docdir}/artifacts/snip-technology-preview.adoc[]
+
+[role="_abstract"]
+You can group related Scorecard metrics into a single grid card by configuring the grouped grid layout extension in your {product-very-short} `{my-app-config-file}` file.
+
+.Prerequisites
+
+* You have installed and enabled the Scorecard plugin.
+* You have configured at least one metric provider, such as GitHub, Jira, or OpenSSF, so that metrics are available to group.
+* You have access to the {product-very-short} `{my-app-config-file}` file.
+* If RBAC is enabled, you have a role with the following permission: `scorecard.metric.read`.
+
+.Procedure
+
+. Open your {product-very-short} `{my-app-config-file}` file.
+. Under `app.extensions`, add an entry for the `scorecard-layout:catalog/scorecard-entity-layout-grid` extension.
+. Under `config.groups`, define one or more groups. Each group requires a unique key, a `title`, and a `metrics` array listing the metric IDs to include. You can also add an optional `description`.
++
+[source,yaml]
+----
+app:
+  extensions:
+    - scorecard-layout:catalog/scorecard-entity-layout-grid:
+        config:
+          groups:
+            security-compliance:
+              title: Security compliance    # Card header text
+              description: Security posture metrics from OpenSSF Scorecard checks
+              metrics:
+                - openssf.vulnerabilities
+                - openssf.securityPolicy
+                - openssf.signedReleases
+                - openssf.branchProtection
+----
+. Save the `{my-app-config-file}` file.
+. Restart your {product-very-short} instance to apply the changes.
+
+.Verification
+
+. In your {product-very-short} navigation menu, go to *Catalog*.
+. Select a software component that has metrics matching your group configuration.
+. On the component *Service* page, click the *Scorecard* tab.
+. Confirm that the metrics you grouped render as a single card labeled with your group title, showing a tile for each threshold status.
+. Click a status tile to open a dialog listing the underlying data sources for that status.
+
+[NOTE]
+====
+To turn off the grouped grid layout and revert to one card per metric, set `disabled: true` on the `scorecard-layout:catalog/scorecard-entity-layout-grid` extension.
+====
