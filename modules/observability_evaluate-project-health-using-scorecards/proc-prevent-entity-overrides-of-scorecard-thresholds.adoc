@@ -1,0 +1,49 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="prevent-entity-overrides-of-scorecard-thresholds_{context}"]
+= Prevent entity overrides of scorecard thresholds
+
+[role="_abstract"]
+You can mark specific scorecard threshold rules as enforced so that entity owners cannot override them by using annotations, while leaving other metrics customizable.
+
+[NOTE]
+====
+Setting `scorecard.entityAnnotations.enabled` to `false` disables all scorecard entity annotations, including the `scorecard.io/disabled-metrics` annotation. To disallow only threshold overrides, use `entityAnnotations.thresholds.enabled` and `entityAnnotations.thresholds.except` instead. For more information, see {scorecard-plugin-book-link}#disable-scorecard-metrics-globally_install-and-configure-scorecards-to-view-metrics[Disable scorecard metrics globally].
+====
+
+.Prerequisites
+
+* You have {install-category-link}[installed your {product-very-short} instance].
+* You have {scorecard-plugin-book-link}#set-up-scorecards-to-monitor-your-project-health_evaluate-project-health-using-scorecards[set up the Scorecard plugin].
+* You have {configuring-book-link}[added a custom {product-short} application configuration].
+
+.Procedure
+
+* Add the following configuration to your {product-very-short} `{my-app-config-file}` file:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+scorecard:
+  entityAnnotations:
+    thresholds:
+      enabled: true
+      except:
+        - github.openPRs
+----
++
+where:
+
+`entityAnnotations.thresholds.enabled`:: Enter `true` to allow entity owners to override threshold rules by using `scorecard.io/<metricId>.thresholds.rules.<key>` annotations in `catalog-info.yaml`, for metrics not listed in `except`. Enter `false` to prevent entity owners from overriding thresholds for any metric. Defaults to `true`.
+
+`entityAnnotations.thresholds.except`:: Enter a list of metric IDs to enforce. Entity owners cannot customize these metrics by using annotations, even when `enabled` is `true`. Use this list to mark specific rules mandatory while keeping other metrics customizable. For available values, see xref:available-scorecard-metric-providers-and-metric-ids_{scorecard-ref-context}[Available scorecard metric providers and metric IDs].
+
+.Verification
+
+* Add a `scorecard.io/<metricId>.thresholds.rules.<key>` annotation for an enforced metric ID to a component's `catalog-info.yaml` file, and confirm that the Scorecard plugin continues to use the global or provider default threshold instead of the annotation value.
+
+[role="_additional-resources"]
+.Additional resources
+
+* {scorecard-plugin-book-link}#override-rules-to-configure-entity-specific-thresholds-in-scorecards_scorecard-metric-thresholds[Component-specific threshold rules]
+* {scorecard-plugin-book-link}#scorecard-metric-threshold-precedence_scorecard-metric-thresholds[Resolve configuration conflicts by using threshold precedence]
+* {scorecard-plugin-book-link}#disable-scorecard-metrics-globally_install-and-configure-scorecards-to-view-metrics[Disable scorecard metrics globally]
