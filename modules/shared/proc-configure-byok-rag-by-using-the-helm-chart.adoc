@@ -8,7 +8,7 @@ Deploy your BYOK container image as an init container and register the custom kn
 
 .Prerequisites
 * You have packaged your vector store as a container image as described in xref:package-a-byok-rag-container-image_{context}[Package a BYOK RAG container image].
-* You have the generated `vector_db_id` value from xref:generate-a-vector-database-for-byok-rag_{context}[Generate a vector database for BYOK RAG].
+* You have the generated `vector_db_id` value from xref:generate-a-vector-database-for-byok-rag_{context}[Generate a vector store for BYOK RAG].
 * You have access to a running {product-very-short} instance deployed with the Helm chart.
 * The BYOK container image is accessible from your cluster.
 
@@ -32,23 +32,23 @@ inference:
 rag:
   byok:
     stores:
-      - rag_id: custom-docs  <1>
+      - rag_id: custom-docs
         backend: faiss
         embedding_model: sentence-transformers/all-mpnet-base-v2
         embedding_dimension: 768
-        vector_db_id: vs_replace_with_generated_id  <2>
-        db_path: /rag-content/vector_db/custom_docs/faiss_store.db  <3>
+        vector_db_id: vs_replace_with_generated_id
+        db_path: /rag-content/vector_db/custom_docs/faiss_store.db
         score_multiplier: 1.0  # Used by Inline RAG only
   retrieval:
     tool:
       sources:
-        - custom-docs  <4>
+        - custom-docs
 ----
-+
-<1>:: The `rag_id` identifies the retrieval source. Use the same value under `rag.retrieval.tool.sources`.
-<2> Replace with the `vector_db_id` value that you read from the generated `llama-stack.yaml` file. The runtime configuration must use the exact same ID.
-<3> Must match the path where the init container copies the database inside the {ia-short} container.
-<4> Must match `rag_id`. If you have other sources, such as product documentation, list each required source under `sources`.
+
+`rag_id`:: The `rag_id` identifies the retrieval source. Use the same value under `rag.retrieval.tool.sources`.
+`vector_db_id`:: Replace with the `vector_db_id` value that you read from the generated `llama-stack.yaml` file. The runtime configuration must use the exact same ID.
+`db_path`:: Must match the path where the init container copies the database inside the {ia-short} container.
+`rag_id`:: Must match `rag_id`. If you have other sources, such as product documentation, list each required source under `sources`.
 +
 .. Create the `ConfigMap` from the completed local file:
 +
@@ -73,7 +73,7 @@ global:
     configMaps:
       - name: stack
         create: false
-        nameOverride: lightspeed-stack-byok  <1>
+        nameOverride: lightspeed-stack-byok
         mountPath: /app-root/lightspeed-stack.yaml
         subPath: lightspeed-stack.yaml
         sourceFile: lightspeed-stack.yaml
@@ -115,14 +115,14 @@ global:
 The chart exposes a single `global.lightspeed.initContainer`. Overriding it replaces the default init container that delivers the product-provided RAG content. The combined image built from the product RAG init image is therefore required so that the overridden init container can deliver both the product-provided content and your BYOK vector store. Give each custom store its own directory under `vector_db` so that it does not overwrite a product store. Validate the result against your chart version before relying on it in production.
 ====
 +
-<1>:: Replace the default `lightspeed-stack.yaml` `ConfigMap` with your custom one that contains the BYOK configuration.
-<2> Override the default init container so that it copies both the product-provided content and your BYOK vector database into the automatically mounted `/rag-content` RAG volume before {ia-short} starts.
+`lightspeed-stack.yaml`:: Replace the default `lightspeed-stack.yaml` `ConfigMap` with your custom one that contains the BYOK configuration.
+`initContainer`:: Override the default init container so that it copies both the product-provided content and your BYOK vector database into the automatically mounted `/rag-content` RAG volume before {ia-short} starts.
 
 . Run `helm upgrade` to apply the changes:
 +
 [source,terminal,subs="+attributes"]
 ----
-$ helm upgrade <release-name> redhat-developer-hub \
+$ helm upgrade <release_name> redhat-developer-hub \
     --repo https://charts.openshift.io/ \
     --version {product-chart-version} \
     -f values.yaml
