@@ -1,0 +1,32 @@
+= Extra catalog index images
+
+Use the `EXTRA_CATALOG_INDEX_IMAGES` environment variable to create additional catalog index images that provide catalog entities visible in the Extensions UI but are not a part of the default plugin configurations are not installed automatically.
+
+[IMPORTANT]
+====
+Extra catalog index images only make plugins visible in the Extensions UI. They do not provide default plugin configurations or enable automatic plugin installation. To install plugins from extra catalog index images, you must add and configure them explicitly in your dynamic plugins configuration file.
+====
+
+The `EXTRA_CATALOG_INDEX_IMAGES` environment variable accepts a comma-separated list of entries. Each entry can be either a plain image reference or use the `name=<image_ref>` format for a simpler sub-directory name:
+
+[source,code]
+----
+# Auto-derived subdirectory names
+EXTRA_CATALOG_INDEX_IMAGES=quay.io/rhdh-community/plugin-catalog-index:1.10,quay.io/partner/catalog:latest
+
+# Explicit subdirectory names
+EXTRA_CATALOG_INDEX_IMAGES=community=quay.io/rhdh-community/plugin-catalog-index:1.10,partner=quay.io/partner/catalog:latest
+
+# Mixed
+EXTRA_CATALOG_INDEX_IMAGES=community=quay.io/rhdh-community/plugin-catalog-index:1.10,quay.io/partner/catalog:latest
+----
+
+The catalog entities of each image are extracted to a separate subdirectory under `<CATALOG_ENTITIES_EXTRACT_DIR>/extra/`, keeping them isolated from the primary catalog index entities:
+
+* With explicit name: `community=quay.io/rhdh-community/plugin-catalog-index:1.10` will be extracted to `<CATALOG_ENTITIES_EXTRACT_DIR>/extra/community/catalog-entities`
+* Without name: `quay.io/partner/catalog:latest` will be extracted to `<CATALOG_ENTITIES_EXTRACT_DIR>/extra/quay.io_partner_catalog_latest/catalog-entities` (the name is derived by replacing `/`, `:`, and `@` characters with `_`)
+
+[IMPORTANT]
+====
+If multiple entries map to the same subdirectory name, a warning is printed and the later entry overwrites the earlier one.
+====
