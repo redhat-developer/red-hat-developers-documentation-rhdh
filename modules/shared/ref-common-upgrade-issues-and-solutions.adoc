@@ -1,0 +1,158 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="common-upgrade-issues-and-solutions_{context}"]
+= Common upgrade issues and solutions
+
+[role="_abstract"]
+Find solutions for common issues that can occur when upgrading {product} to a later version.
+
+== Quicklinks and starred items missing after upgrade
+
+This issue occurs when upgrading from {product-short} version 1.6 or earlier.
+The global header renders without the star icon or the Quicklinks matrix because the global header plugin and its required mount point components are not enabled by default in older configurations.
+
+To resolve this issue:
+
+* Manually enable the global header plugin and add the required mount point components in your configuration.
++
+For detailed steps, see {customizing-book-link}#enable-quicklinks-and-starred-items-after-an-upgrade_configure-the-global-header-in-rhdh[Enable quicklinks and starred items after an upgrade].
+
+== Front-end system migration from Scalprum to extension blueprints
+
+{product} {product-version} removes the old Scalprum-based front-end system.
+Custom plugins that have not migrated to the extension-based front-end system are not loaded and do not appear in the application.
+
+----
+Could not find manifest for frontend plugin <plugin_name>
+----
+
+If a plugin loads remotely but still does not render, check the browser console for the following debug-level message:
+
+----
+Skipping dynamic plugin remote module '...' since it doesn't export a new 'FrontendFeature' as default export
+----
+
+To resolve this issue:
+
+* Convert your YAML-based mount point definitions to extension blueprints before upgrading.
++
+For the mapping table and conversion steps, see {configuring-book-link}#preserve-custom-integrations-to-maintain-functionality-after-upgrade_migrate-to-the-front-end-system-to-use-blueprint-based-dynamic-routing[Preserve custom integrations to maintain functionality after upgrade].
+
+== OCI plugin image paths change between versions
+
+----
+install-dynamic-plugins: error: failed to pull plugin image: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/...: not found
+----
+
+This issue occurs when plugin OCI image paths, tags, or SHA digests change between {product-short} versions.
+The `install-dynamic-plugins` init container fails to pull plugin images, and pods remain in `Init:Error` state.
+
+To resolve this issue:
+
+* Update the OCI paths and tags in your dynamic plugin configuration to match the target version.
+Check the {dynamic-plugins-reference-book-link}[Dynamic plugins reference] for current package paths.
+
+== Single-database deployments fail with permission errors
+
+----
+backend error: plugin "catalog" startup failed: error: permission denied for CREATE DATABASE
+----
+
+This issue occurs when a single-database deployment uses a restricted database user that does not have `CREATEDB` privileges.
+By default, each backend plugin attempts to create its own database, which fails when the database user lacks the required permissions.
+
+To resolve this issue:
+
+* Set `pluginDivisionMode: schema` in the `backend.database` section of your `{my-app-config-file}` file.
+This mode creates a separate schema for each plugin within the existing database instead of creating new databases.
+The database user needs `CREATE SCHEMA` privileges instead of `CREATEDB`.
++
+For detailed configuration steps, see {configuring-book-link}#configure-schema-based-plugin-isolation-to-simplify-single-database-provisioning_configure-external-postgresql-databases[Configure schema-based plugin isolation to simplify single-database provisioning].
+
+== Orchestrator plugin configuration fails after Operator upgrade from 1.7
+
+This issue occurs when upgrading the {product-short} Operator from version 1.7.
+After approving the Operator install plan, the deployment fails because the Orchestrator plugin configuration format changed between versions.
+
+To resolve this issue:
+
+* Manually update the Orchestrator plugin configuration after approving the install plan.
++
+For detailed steps, see the important notice in {upgrading-book-link}#upgrade-the-rhdh-operator_upgrade-rhdh[Upgrade the {product-short} Operator].
+
+== PostgreSQL DateStyle incompatibility with external database
+
+This issue occurs when an external PostgreSQL instance uses a non-ISO `DateStyle` setting.
+Catalog scheduling tasks fail and catalog items do not refresh because the date format is incompatible with the expected ISO format.
+
+To resolve this issue:
+
+* Configure the external PostgreSQL database to use the ISO `DateStyle` by running the following SQL command:
++
+[source,sql]
+----
+ALTER DATABASE <database_name> SET DateStyle = 'ISO, MDY';
+----
++
+For more information about external database configuration, see {configuring-book-link}#migrate-local-databases-to-an-external-database-server-using-the-operator_configure-external-postgresql-databases[Migrate local databases to an external database server by using the Operator].
+
+== Dynamic Client Registration wildcard redirect URI pattern rejected after upgrade
+
+This issue occurs when the Model Context Protocol (MCP) server's Dynamic Client Registration (DCR) configuration uses a bare wildcard redirect URI pattern, such as `+allowedRedirectUriPatterns: ["*"]+`.
+{product} {product-version} ships a version of {backstage} where `@backstage/plugin-auth-backend` validates each allowlist pattern per URL component and requires every pattern to include an explicit protocol.
+The validation rejects patterns that omit a protocol, including a bare `+*+`, as invalid configuration instead of silently accepting them, and MCP clients can no longer register dynamically until you correct the configuration.
+
+To resolve this issue:
+
+* Replace wildcard patterns with explicit, protocol-qualified patterns that match only the redirect URIs your MCP clients use.
+For example, use `+http://localhost:*/*+` to allow any port and path on localhost, or `https://your-mcp-client.example.com/callback` for a specific client.
++
+For configuration details, see {model-context-protocol-book-link}#configure-mcp-tokens-and-endpoints-to-authorize-client-access_interacting-with-model-context-protocol-tools-for-rhdh[Configure MCP tokens and endpoints to authorize client access].
+
+== Custom dynamic plugin export fails with TypeScript config schema errors
+
+----
+error TS2307: Cannot find module './src' or its corresponding type declarations.
+----
+
+This issue occurs when a custom or community dynamic plugin ships a `config.d.ts` configuration schema file whose imports resolve outside the published package, or resolve to non-primitive types such as browser-only UI library types.
+Plugins built against {product-short} 1.10 and earlier used the Scalprum export path, which did not run strict TypeScript validation of `config.d.ts` files.
+{product} {product-version} uses the standard module federation export path instead.
+This path validates every `config.d.ts` file in the dependency tree with `@backstage/config-loader`.
+The export fails with errors such as the one shown earlier, or `No value declaration found for symbol "matchMedia"`, when the schema file cannot resolve to primitive types.
+
+To resolve this issue:
+
+* Update the plugin's `config.d.ts` file to declare configuration types inline using only primitive TypeScript types, and remove any imports that resolve outside the file itself.
+* Rebuild and re-export the plugin with the latest `@red-hat-developer-hub/cli`, then confirm that the export completes without TypeScript configuration schema errors.
++
+For guidance on authoring plugin configuration schemas, see {develop-and-deploy-dynamic-plugins-book-link}[Develop and deploy dynamic plugins in {product-short}].
+
+== Conditional RBAC policies are silently ignored by if-predicate UI visibility checks
+
+This issue occurs when an administrator configures the new extension `if` predicate syntax for RBAC-driven UI visibility, for example:
+
+[source,yaml]
+----
+if:
+  permissions: { $contains: 'catalog.entity.create' }
+----
+
+for a permission that uses a conditional, resource-scoped policy such as an ownership-based rule.
+The application evaluates `if` predicates a single time, at startup after sign-in, before any resource context exists, so `@backstage-community/plugin-rbac-backend` cannot evaluate conditional decisions for these predicates.
+The condition silently falls back to the policy's default behavior instead of returning an error.
+For the same reason, a mismatch between the user entity reference produced by your sign-in resolver and the subject configured in your RBAC policy causes the gated extension to not appear, with no error reported to the user or in the logs.
+
+To resolve this issue:
+
+* Use `if` predicates only for coarse-grained, non-resource permission checks, such as enabling or disabling an entire page or navigation item.
+* For ownership-based or other resource-scoped conditional policies, enforce the restriction in the backend plugin or component logic instead of relying on the `if` predicate.
+* Confirm that the user entity reference produced by your sign-in resolver matches the subject defined in your RBAC policy.
++
+For the full list of limitations, see {authorization-book-link}#unsupported-scenarios-and-constraints-for-rbac-ui-visibility_hide-pages-and-navigation-elements-using-rbac-to-maintain-a-secure-ui[Unsupported scenarios and constraints for RBAC UI visibility].
+
+If none of these solutions resolve your issue, collect diagnostic data with the must-gather tool and attach it to your support case.
+
+[role="_additional-resources"]
+.Additional resources
+* {diagnostic-data-collection-book-link}[{diagnostic-data-collection-book-title}]
