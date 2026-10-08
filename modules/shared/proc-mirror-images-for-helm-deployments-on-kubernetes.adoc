@@ -18,46 +18,57 @@ Isolate image references, copy them manually to your internal registry, and upda
 ----
 $ helm show values redhat-developer-hub --repo https://charts.openshift.io/ --version {product-chart-version} > values.default.yaml
 
-LS_OKP_IMAGE=$(yq '.global.lightspeed.okp.image | .registry + "/" + .repository' values.default.yaml)
-LS_OKP_DIGEST=$(yq '.global.lightspeed.okp.image.tag' values.default.yaml)
-LS_CORE_IMAGE=$(yq '.global.lightspeed.sidecar.image | .registry + "/" + .repository' values.default.yaml)
-LS_CORE_DIGEST=$(yq '.global.lightspeed.sidecar.image.tag' values.default.yaml)
+LS_OKP_REGISTRY=$(yq -r '.intelligentAssistant.okp.image.registry' values.default.yaml)
+LS_OKP_REPOSITORY=$(yq -r '.intelligentAssistant.okp.image.repository' values.default.yaml)
+LS_OKP_DIGEST=$(yq -r '.intelligentAssistant.okp.image.digest' values.default.yaml)
+LS_OKP_IMAGE="${LS_OKP_REGISTRY}/${LS_OKP_REPOSITORY}"
+
+LS_CORE_REGISTRY=$(yq -r '.intelligentAssistant.core.image.registry' values.default.yaml)
+LS_CORE_REPOSITORY=$(yq -r '.intelligentAssistant.core.image.repository' values.default.yaml)
+LS_CORE_DIGEST=$(yq -r '.intelligentAssistant.core.image.digest' values.default.yaml)
+LS_CORE_IMAGE="${LS_CORE_REGISTRY}/${LS_CORE_REPOSITORY}"
 ----
 
 . Mirror the images to your internal mirror registry:
 +
 [source,terminal]
 ----
-skopeo copy --all docker://${LS_OKP_IMAGE}:${LS_OKP_DIGEST} docker://<mirror_registry_name>/<ls_okp_repo_name>:${LS_OKP_DIGEST}
-skopeo copy --all docker://${LS_CORE_IMAGE}:${LS_CORE_DIGEST} docker://<mirror_registry_name>/<ls_core_repo_name>:${LS_CORE_DIGEST}
+skopeo copy --all docker://${LS_OKP_IMAGE}@${LS_OKP_DIGEST} docker://<mirror_registry_name>/<ls_okp_repo_name>@${LS_OKP_DIGEST}
+skopeo copy --all docker://${LS_CORE_IMAGE}@${LS_CORE_DIGEST} docker://<mirror_registry_name>/<ls_core_repo_name>@${LS_CORE_DIGEST}
 ----
 
 . Update your custom Helm values file with the mirrored registry locations and plugin references. Mirror the dynamic plugins to the local registry before you add their package paths to the file. For mirroring instructions, see {installing-and-viewing-plugins-book-link}#mirror-rhdh-dynamic-plugins-in-disconnected-environments_install-dynamic-plugins-in-rhdh[Mirroring {product} dynamic plugins in disconnected environments]:
 +
 [source,yaml]
 ----
-global:
-  lightspeed:
-    okp:
-      image:
-        registry: "<mirror_registry_name>"
-        repository: <ls_okp_repo_name>
-        tag: "${LS_OKP_DIGEST}"
-    sidecar:
-      image:
-        registry: "<mirror_registry_name>"
-        repository: <ls_core_repo_name>
-        tag: "${LS_CORE_DIGEST}"
-    plugins:
-      - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-intelligent-assistant@<ls_frontend_digest>"
-        disabled: false
-      - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-intelligent-assistant-backend@<ls_backend_digest>"
-        disabled: false
+intelligentAssistant:
+  enabled: true
+  core:
+    image:
+      registry: <mirror_registry_name>
+      repository: <ls_core_repo_name>
+      tag: ""
+      digest: <ls_core_digest>
+  okp:
+    enabled: true
+    image:
+      registry: <mirror_registry_name>
+      repository: <ls_okp_repo_name>
+      tag: ""
+      digest: <ls_okp_digest>
+    ingress:
+      enabled: true
+      host: <okp_ingress_host>
+  plugins:
+    - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-intelligent-assistant@<ls_frontend_digest>"
+      enabled: true
+    - package: "oci://<mirror_registry_name>/rhdh/red-hat-developer-hub-backstage-plugin-intelligent-assistant-backend@<ls_backend_digest>"
+      enabled: true
 ----
 +
 [NOTE]
 ====
-OKP is disabled by default. On non-{platform-generic} platforms, enable it by setting `global.lightspeed.okp.enabled` to `true` and providing an Ingress host.
+OKP is disabled by default. On non-{platform-generic} platforms, enable it by setting `intelligentAssistant.okp.enabled` to `true` and configuring `intelligentAssistant.okp.ingress` with an Ingress host.
 ====
 
 .Additional resources
