@@ -1,0 +1,139 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-dynamic-plugins-inline-operator_{context}"]
+= Configure dynamic plugins inline in {product-custom-resource-type} custom resource
+
+[role="_abstract"]
+Configure dynamic plugins directly in the `spec.application.dynamicPlugins` field of your `{product-custom-resource-type}` custom resource without creating a separate `ConfigMap`.
+
+[NOTE]
+====
+The `spec.application.dynamicPlugins` field and the `spec.application.dynamicPluginsConfigMapName` field are mutually exclusive.
+You must use one or the other, not both.
+For guidance on choosing the appropriate method, see xref:dynamic-plugins-configuration-methods_{context}[Choosing between inline and ConfigMap-based plugin configuration].
+====
+
+.Prerequisites
+
+* You have installed the {product} Operator.
+* You have cluster administrator access to an {ocp-brand-name} cluster or permissions to create and edit `{product-custom-resource-type}` custom resources.
+* You have identified the dynamic plugins you want to install and their package references.
+
+.Procedure
+
+. From the {ocp-short} web console, go to the *Topology* view.
+. Click the overflow menu for the {product} instance that you want to configure and select *Edit {product-custom-resource-type}* to open the YAML view of the {product-custom-resource-type} custom resource.
++
+image::extend_installing-and-viewing-plugins-in-rhdh/operator-install-2.png["Editing {product-custom-resource-type} from the Topology view"]
+
+. Add the `spec.application.dynamicPlugins` field with a list of plugin entries.
++
+The following example configures two plugins inline, one using a built-in plugin reference and one using an OCI image reference:
++
+[source,yaml,subs="+attributes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: my-rhdh
+spec:
+  application:
+    dynamicPlugins:
+      - package: 'ref:catalog-backend-module-github'
+        pluginConfig:
+          catalog:
+            providers:
+              github:
+                organization: "${GITHUB_ORG}"
+                schedule:
+                  frequency:
+                    minutes: 30
+                  timeout:
+                    minutes: 3
+      - package: 'oci://registry.redhat.io/rhdh/rhdh-plugin-quay:1.10.1'
+        enabled: true
+        pluginConfig:
+          quay:
+            uiUrl: 'https://quay.io'
+----
++
+Each plugin entry includes:
++
+--
+* `package`: The package reference identifying the plugin location.
+For available formats, see xref:dynamic-plugin-package-reference-formats_{context}[Dynamic plugin package reference formats].
+* `enabled`: Optional boolean that defaults to `true`.
+Set to `false` to disable the plugin.
+* `pluginConfig`: Optional plugin-specific configuration as arbitrary YAML.
+The Operator merges this configuration into the application configuration.
+* `integrity`: Optional checksum for package verification in the format `algorithm-base64hash` (for example, `sha256-AbC123...`).
+--
+
+. If your plugin configuration references environment variables, ensure they are defined in your secrets.
++
+For example, if your `pluginConfig` uses `${GITHUB_ORG}`, define `GITHUB_ORG` in your `_<my_product_secrets>_` secret:
++
+[source,yaml]
+----
+kind: Secret
+apiVersion: v1
+metadata:
+  name: my-rhdh-secrets
+stringData:
+  GITHUB_ORG: "my-organization"
+type: Opaque
+----
+
+. Click *Save*.
+. Navigate back to the *Topology* view and wait for the {product} pod to restart with the new configuration.
+. Click the *Open URL* icon to access your {product} instance.
+
+.Verification
+
+* Verify that the Operator loaded the dynamic plugins by appending `/api/dynamic-plugins-info/loaded-plugins` to your {product} root URL and checking the list of plugins.
++
+The following example shows a list of loaded plugins:
++
+[source,json]
+----
+[
+  {
+    "name": "backstage-plugin-catalog-backend-module-github-dynamic",
+    "version": "0.5.2",
+    "platform": "node",
+    "role": "backend-plugin-module"
+  },
+  {
+    "name": "backstage-plugin-quay",
+    "version": "1.10.1",
+    "role": "frontend-plugin",
+    "platform": "web"
+  }
+]
+----
+
+.Troubleshooting
+
+If you receive a validation error when applying the `{product-custom-resource-type}` custom resource, check for the following common issues:
+
+* *Both `dynamicPlugins` and `dynamicPluginsConfigMapName` are specified*: The two fields are mutually exclusive.
+Remove one of them from your custom resource.
++
+Example validation error:
++
+----
+spec.application: Invalid value: "object": dynamicPlugins and dynamicPluginsConfigMapName are mutually exclusive
+----
+
+* *Invalid package reference format*: Ensure your package reference uses a supported format.
+See xref:dynamic-plugin-package-reference-formats_{context}[Dynamic plugin package reference formats] for valid syntax.
+
+* *Missing environment variable*: If your `pluginConfig` references an environment variable that is not defined, the plugin might fail to load.
+Check the {product-short} pod logs for configuration errors.
+
+[role="_additional-resources"]
+.Additional resources
+* xref:dynamic-plugin-package-reference-formats_{context}[Dynamic plugin package reference formats]
+* xref:dynamic-plugin-config-fields_{context}[Dynamic plugin configuration fields]
+* xref:dynamic-plugins-configuration-methods_{context}[Choosing between inline and ConfigMap-based plugin configuration]
+* xref:install-dynamic-plugins-with-the-rhdh-operator_{context}[Install dynamic plugins with the {product} Operator using a ConfigMap]
