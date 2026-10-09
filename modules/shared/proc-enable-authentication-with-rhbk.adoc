@@ -1,18 +1,20 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="enable-authentication-with-rhbk_{context}"]
-= Enable authentication with RHBK
+= Enable authentication with {rhbk}
 
 [role="_abstract"]
-Configure {rhbk-brand-name} ({rhbk}) as your {product} sign-in provider by enabling the OIDC authentication provider.
+Configure {rhbk-brand-name} ({rhbk}) as your {product} sign-in provider by enabling the Keycloak authentication provider.
 
 .Prerequisites
+* You have installed the Keycloak authentication provider dynamic plugin.
+For more information, see {authentication-book-link}#authentication-provider-dynamic-plugin-packages_enable-authentication-with-your-identity-provider[the authentication provider dynamic plugin packages reference].
 * You have xref:share-a-secret-with-rhbk_{secrets-context}[shared a secret with {rhbk}].
 * You have {authentication-book-link}#import-users-and-groups-from-your-identity-provider_authentication-in-rhdh[provisioned users and groups to the software catalog].
 
 .Procedure
 
-. The OIDC provider authentication backend plugin requires {product-short} to support sessions.
+. The Keycloak provider authentication backend plugin requires {product-short} to support sessions.
 Enable session support by adding the session secret to your `{my-app-config-file}` file:
 +
 [source,yaml]
@@ -22,27 +24,27 @@ auth:
     secret: ${SESSION_SECRET}
 ----
 
-. Add an OIDC provider section to your  `{my-app-config-file}` file:
+. Add a Keycloak provider section to your  `{my-app-config-file}` file:
 +
 [source,yaml]
 ----
 auth:
   environment: production
   providers:
-    oidc:
+    keycloak:
       production:
         metadataUrl: ${KEYCLOAK_BASE_URL}
         clientId: ${KEYCLOAK_CLIENT_ID}
         clientSecret: ${KEYCLOAK_CLIENT_SECRET}
         prompt: auto
-signInPage: oidc
+signInPage: keycloak
 ----
 
 `environment: production`::
 Mark the environment as `production` to hide the Guest login in the {product-short} home page.
 
 `metadataUrl`, `clientId`, `clientSecret`::
-Configure the OIDC provider with your secrets.
+Configure the Keycloak provider with your secrets.
 
 `prompt`::
 Enter `auto` to allow the identity provider to automatically determine whether to prompt for credentials or bypass the login redirect if an active {rhbk} session exists.
@@ -50,15 +52,15 @@ Enter `auto` to allow the identity provider to automatically determine whether t
 The identity provider defaults to `none`, which assumes that you are already logged in. Sign-in requests without an active session are rejected.
 
 `signInPage`::
-Enter `oidc` to enable the OIDC provider as default sign-in provider.
+Enter `keycloak` to enable the Keycloak provider as default sign-in provider.
 
-. Optional: Add optional fields to the OIDC authentication provider section in your `{my-app-config-file}` file:
+. Optional: Add optional fields to the Keycloak authentication provider section in your `{my-app-config-file}` file:
 +
 [source,yaml]
 ----
 auth:
   providers:
-    oidc:
+    keycloak:
       production:
         metadataUrl: ${KEYCLOAK_BASE_URL}
         clientId: ${KEYCLOAK_CLIENT_ID}
@@ -76,7 +78,7 @@ auth:
               dangerouslyAllowSignInWithoutUserInCatalog: true
         sessionDuration: { hours: 24 }
   backstageTokenExpiration: { minutes: _<user_defined_value>_ }
-signInPage: oidc
+signInPage: keycloak
 ----
 
 `callbackUrl`::
@@ -99,6 +101,8 @@ To best match users securely for your use case, consider configuring a specific 
 Enter the resolver list to override the default resolver: `oidcSubClaimMatchingKeycloakUserId`.
 +
 Available values:
+
+// EDITOR NOTE (RHIDP-5489, pending engineer confirmation): confirm which of these resolvers the Keycloak community auth module (@backstage-community/plugin-auth-backend-module-keycloak-provider) actually ships, and whether oidcLdapUuidMatchingAnnotation (used by the companion LDAP-UUID-matching procedure) is included.
 
 `oidcSubClaimMatchingKeycloakUserId`::::
 Matches the user with the immutable `sub` parameter from OIDC to the {rhbk} user ID.
@@ -163,5 +167,5 @@ auth:
 
 .Verification
 . Go to the {product-short} login page.
-. Your {product-short} sign-in page displays *Sign in using OIDC* and the Guest user sign-in is disabled.
-. Log in with OIDC by using the saved **Username** and **Password** values.
+. Your {product-short} sign-in page displays *Sign in using Keycloak* and the Guest user sign-in is disabled.
+. Log in with Keycloak by using the saved **Username** and **Password** values.

@@ -4,7 +4,7 @@
 = Troubleshoot login failed errors
 
 [role="_abstract"]
-When a user cannot sign in to {product-short}, the sign-in page displays a "Login failed" error message.
+When a user cannot sign in to {product-short}, the sign-in page displays a "Login failed" error message, or, if no authentication provider is available, a descriptive error on the sign-in page itself.
 The following sections describe common login errors and their solutions.
 
 == Login failed: unable to resolve user identity
@@ -36,11 +36,37 @@ catalog info Committed 114 GitHub users and 22 GitHub groups in 0.0 seconds.
 Login failed; caused by Error: The <providerId> provider is not configured to support sign-in.
 ----
 
-This error indicates that the authentication provider has `disableIdentityResolution` set to `true`, meaning it is configured as an auxiliary provider, not for primary sign-in.
+This error indicates that the authentication provider is configured as an auxiliary provider, not for primary sign-in.
+
+// EDITOR NOTE (RHIDP-5489, pending engineer confirmation): confirm that omitting
+// `signIn.resolvers` reproduces this exact error for an auxiliary provider. This mirrors
+// the open question already flagged in
+// proc-enable-user-authentication-with-github-as-an-auxiliary-authentication-provider.adoc
+// about whether omitting `signIn.resolvers` alone prevents identity resolution.
+
+The `disableIdentityResolution` setting is removed in {product-short} 2.1.
+To configure a provider as an auxiliary provider instead of a primary sign-in provider, omit the `signIn.resolvers` field for that provider in your `{my-app-config-file}` file.
 
 To resolve this issue:
 
-* In your `{my-app-config-file}` file, ensure that `disableIdentityResolution` is not set to `true` for your primary sign-in authentication provider.
+* In your `{my-app-config-file}` file, ensure that `signIn.resolvers` is configured for your primary sign-in authentication provider.
+
+== Login failed: authentication provider is not registered
+
+// EDITOR NOTE (RHIDP-5489, pending engineer confirmation): the exact error text that the
+// sign-in page or backend log displays for this scenario is unconfirmed. The following
+// description reflects the `IMPORTANT` admonition in
+// ref-authentication-provider-dynamic-plugin-packages.adoc, not a literal, verified error
+// message.
+
+If a provider is configured under `auth.providers` in your `{my-app-config-file}` file but its dynamic plugin is not installed or is disabled, {product-short} does not register the provider.
+Users cannot sign in with that provider, even though it appears in your configuration.
+
+To resolve this issue:
+
+* Install the authentication provider dynamic plugin for the provider, and set `disabled` to `false` for its package in your `dynamic-plugins.yaml` file.
+For more information, see {authentication-book-link}#authentication-provider-dynamic-plugin-packages_enable-authentication-with-your-identity-provider[the authentication provider dynamic plugin packages reference].
+* Restart the {product-short} application to apply the changes.
 
 == Login failed: user profile does not contain an email
 
@@ -54,3 +80,20 @@ To resolve this issue:
 
 * Grant the necessary email-reading permissions to the authentication client in the identity provider.
 * Or, use a sign-in resolver that does not rely on email, such as `preferredUsernameMatchingUserEntityName` instead of `emailMatchingUserEntityProfileEmail`.
+
+== Login failed: no authentication provider available
+
+// EDITOR NOTE (RHIDP-5489, pending engineer confirmation): the exact message that the
+// sign-in page displays for this scenario is unconfirmed. This entry reflects the
+// engineers' draft statement that the previous automatic fallback to GitHub or the guest
+// user is removed in {product-short} 2.1, but the literal on-screen error text has not
+// been verified against this repo's content.
+
+In previous releases, if no authentication provider was configured or resolvable, the sign-in page silently fell back to GitHub or the guest user.
+In {product-short} 2.1, this fallback is removed.
+If no provider is configured under `auth.providers`, or none of the configured providers can be resolved, the sign-in page displays a descriptive error instead.
+
+To resolve this issue:
+
+* Configure at least one authentication provider under `auth.providers` in your `{my-app-config-file}` file, install its dynamic plugin, and enable it in your `dynamic-plugins.yaml` file.
+For more information, see {authentication-book-link}#authentication-provider-dynamic-plugin-packages_enable-authentication-with-your-identity-provider[the authentication provider dynamic plugin packages reference].
