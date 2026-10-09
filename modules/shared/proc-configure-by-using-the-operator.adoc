@@ -12,7 +12,7 @@ Configure {ia-name} by updating your {backstage} custom resource (CR) to map env
 
 .Procedure
 
-. Create an opaque Kubernetes Secret containing your operational credentials and query safety guardrails before applying the {backstage} CR. Refer to the following key definitions for required environment variables:
+. Create an opaque Kubernetes Secret containing your operational credentials and query validation keys before applying the {backstage} CR. Refer to the following key definitions for required environment variables:
 +
 include::snip-intelligent-assistant-secret-keys.adoc[]
 +
@@ -26,13 +26,16 @@ metadata:
   name: intelligent-assistant-auth-secrets
 type: Opaque
 stringData:
-  ENABLE_VLLM: "true"
   VLLM_URL: "https://<api_endpoint>/v1"
   VLLM_API_KEY: "<api_key>"
-  ENABLE_VALIDATION: "true"
+  ENABLE_VALIDATION: question_validity
   VALIDATION_PROVIDER: "vllm"
   VALIDATION_MODEL_NAME: "llama3.1"
 ----
++
+NOTE: The `VALIDATION_PROVIDER` value is the inference provider type, such as `vllm` or `openai`. A provider of this type must be enabled in the `inference.providers` section of the `lightspeed-stack.yaml` file.
+
+. Enable at least one inference provider by defining it under the `inference.providers` section of the `lightspeed-stack.yaml` file. Creating the Secret alone does not enable a provider. For the provider entry format and the Secret keys that each provider requires, see the inference provider configuration reference for {ia-name}.
 
 . Map your secret inside the `extraEnvs` section of the {backstage} CR to complete container provisioning:
 +
