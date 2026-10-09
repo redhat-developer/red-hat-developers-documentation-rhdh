@@ -1,0 +1,121 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-the-gitlab-events-module-plugin_{context}"]
+
+= Configure the GitLab Events Module plugin
+
+[role="_abstract"]
+Configure GitLab webhooks and system hooks to trigger real-time updates for GitLab Discovery and organizational data.
+
+Learn how to configure Events Module for use with the {product-very-short} GitLab Discovery feature and GitLab organization data.
+
+.Prerequisites
+* You have added your GitLab integration credentials in the `{my-app-config-file}` file.
++
+For self-hosted GitLab instances:
++
+[source,yaml]
+----
+integrations:
+  gitlab:
+    - host: ${GITLAB_HOST}
+      token: ${GITLAB_TOKEN}
+      apiBaseUrl: https://${GITLAB_HOST}/api/v4
+----
++
+For GitLab.com:
++
+[source,yaml]
+----
+integrations:
+  gitlab:
+    - host: gitlab.com
+      token: ${GITLAB_TOKEN}
+----
+* You have defined the `schedule.frequency` in the `{my-app-config-file}` file as a longer time period, such as 24 hours.
+* For GitLab Discovery only: You have enabled GitLab Discovery by adding the `catalog-backend-module-gitlab` plugin with the following configuration in the `{my-app-config-file}` file:
++
+[source,yaml]
+----
+catalog:
+  providers:
+    gitlab:
+      default:
+        host: ${GITLAB_HOST}
+        group: ${GITLAB_ORG}
+        schedule:
+          initialDelay:
+            seconds: 15
+          frequency:
+            hours: 24
+          timeout:
+            minutes: 3
+----
+* For GitLab Organizational Data only: You have enabled {authentication-book-link}#enabling-user-authentication-with-gitlab[GitLab Authentication with user ingestion].
+
+.Procedure
+. Add the GitLab Events Module to your `dynamic-plugins.yaml` configuration file as follows:
++
+[source,yaml]
+----
+data:
+dynamic-plugins.yaml: |
+includes:
+- dynamic-plugins.default.yaml
+plugins:
+- package: oci://registry.access.redhat.com/rhdh/backstage-plugin-events-backend-module-gitlab:<tag>
+disabled: false
+----
++
+include::{docdir}/artifacts/snip-tag-for-quay-and-registry-OCI-paths.adoc[]
+. To create HTTP endpoints to receive events for `gitlab`, add the following to your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+events:
+  http:
+    topics:
+      - gitlab
+  modules:
+    gitlab:
+      webhookSecret: ${GITLAB_WEBHOOK_SECRET}
+----
++
+[IMPORTANT]
+====
+Secure your workflow by adding a webhook secret token to validate webhook deliveries.
+====
+. For GitLab Discovery, create a link:https://docs.gitlab.com/user/project/integrations/webhooks/[GitLab webhook] at the group or project level with the following specifications:
+** *Trigger*: `push` events
+** *Payload URL*: pass:c,a,q[`{my-product-url}/api/events/http/gitlab`]
++
+[NOTE]
+====
+*Payload URL* is the URL exposed after configuring the HTTP endpoint.
+====
+. For GitLab Organizational Data, create a link:https://docs.gitlab.com/ee/administration/system_hooks.html[GitLab system hook] with the following specifications:
+** *Triggers*: `group_create`, `group_destroy`, `group_rename`, `user_create`, `user_destroy`, `user_add_to_group`, `user_remove_from_group` events
+** *URL*: pass:c,a,q[`{my-product-url}/api/events/http/gitlab`]
+
+.Verification
+* Check the log for an entry that confirms that the http endpoint was set up successfully to receive events from the GitLab webhook.
++
+Example of a log of successfully set up http endpoint::
++
+[source,code]
+----
+{"level":"\u001b[32minfo\u001b[39m","message":"Registered /api/events/http/gitlab to receive events","plugin":"events","service":"backstage","timestamp":"2025-11-03 02:19:12"}
+----
+* For GitLab Discovery only:
+** Trigger a GitLab push event by adding, modifying, or deleting the `catalog-info.yaml` file in the repository where you set up your webhook.
+A record of this event should appear in the pod logs of your {product-very-short} instance.
++
+Example of a log with changes to `catalog-info.yaml` file::
++
+[source,code]
+----
+{"level":"\u001b[32minfo\u001b[39m","message":"Processed GitLab push event from https://gitlab.com/backstage-test-catalog/test-repo-1: added 1 - removed 0 - modified 0","plugin":"catalog","service":"backstage","span_id":"abfe425c441ee3e8","target":"GitlabDiscoveryEntityProvider:providerId","timestamp":"2025-09-07 23:03:12","trace_flags":"01","trace_id":"0c21b7c71d7ce8aa626d42e6f4060716"}
+----
+
+* For GitLab Organizational Data only:
+** Newly added users and groups appear in the {product-very-short} catalog.
