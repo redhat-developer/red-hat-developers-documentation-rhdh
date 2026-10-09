@@ -1,0 +1,66 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="complete-the-intelligent-assistant-migration-with-the-operator_{context}"]
+= Complete the {ia-name} migration by using the Operator
+
+[role="_abstract"]
+To finish migrating on the Operator, update your {backstage} custom resource (CR) to use the unified {ia-name} configuration and provider Secret.
+
+.Prerequisites
+
+* You migrated your configuration to the unified `lightspeed-stack.yaml` file. For more information, see xref:migrate-intelligent-assistant-settings-to-remove-direct-llama-stack-configuration_{context}[Migrate {ia-name} settings to remove direct {ogx-short} configuration].
+* The {product-very-short} Operator is installed on your cluster.
+* You have cluster administrator privileges.
+
+.Procedure
+
+. Change any explicit `lightspeed` flavor name to `intelligent-assistant`.
+
+. Create the provider Secret, and inject it into the `lightspeed-core` container through the `spec.application.extraEnvs.secrets` section of the {backstage} CR. For the credential and endpoint keys to include in the Secret, see xref:configure-by-using-the-operator_configure-to-initialize-the-ai-assistant[Configure {ia-name} by using the Operator].
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: {product-custom-resource-type}
+metadata:
+  name: intelligent-assistant-rhdh
+spec:
+  application:
+    extraEnvs:
+      secrets:
+        - name: intelligent-assistant-auth-secrets
+          containers:
+            - lightspeed-core
+----
+
+. If you customized the shipped configuration file, create a unified `lightspeed-stack.yaml` ConfigMap, and mount it at `/app-root` in the `lightspeed-core` container through the `spec.application.extraFiles.configMaps` section:
++
+[source,yaml]
+----
+    extraFiles:
+      configMaps:
+        - name: my-custom-lightspeed-stack
+          mountPath: /app-root
+          key: lightspeed-stack.yaml
+          containers:
+            - lightspeed-core
+----
+
+. Do not carry a custom `llama-stack-config` mount or a `config.yaml` reference into the 2.1 CR.
+
+. Keep the flavor-managed `rhdh-profile.py` file unless you maintain a custom prompt profile.
+
+. Apply the updated custom resource:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc apply -f _<backstage_cr_file>_.yaml
+----
+
+.Verification
+
+* Confirm that the {product-very-short} pod is ready and includes the `lightspeed-core` container, and then continue with xref:verify-the-migration-to-confirm-a-stable-intelligent-assistant-deployment_{context}[Verify the migration to confirm a stable {ia-name} deployment].
+
+[role="_additional-resources"]
+.Additional resources
+* {upgrading-book-link}[{upgrading-book-title}]
