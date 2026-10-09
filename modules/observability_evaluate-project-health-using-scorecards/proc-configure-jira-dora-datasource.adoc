@@ -1,0 +1,153 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-jira-dora-datasource_{context}"]
+= Configure Jira DORA datasource
+
+[role="_abstract"]
+To calculate change failure rate and time to restore service, you must configure Jira as a DORA datasource to collect incident tracking and issue resolution data.
+
+.Prerequisites
+
+* You have xref:install-configure-dora-backend-module_{context}[installed and configured the DORA backend module].
+* You have xref:integrate-jira-health-metrics-using-scorecards_{context}[configured Jira integration] with appropriate permissions to read issue data and status transitions.
+
+.Procedure
+
+. Add the Jira DORA datasource to your `app-config.yaml` file:
++
+[source,yaml]
+----
+scorecard:
+  dora:
+    dataSources:
+      jira:
+        enabled: true
+        incidents:
+          issueTypes:
+            - Bug
+            - Incident
+          priorityFilter:
+            - Critical
+            - High
+        resolution:
+          statusMapping:
+            resolved:
+              - Done
+              - Closed
+              - Resolved
+            in_progress:
+              - In Progress
+              - In Review
+----
++
+Where:
++
+`incidents.issueTypes`:: A list of Jira issue types that represent production failures or incidents. Customize this list based on your organization's issue type configuration.
+`incidents.priorityFilter`:: Filters incidents to specific priority levels. Use this to count only high-severity failures in the change failure rate calculation.
+`resolution.statusMapping.resolved`:: A list of Jira statuses that indicate an incident is resolved.
+`resolution.statusMapping.in_progress`:: A list of Jira statuses that indicate an incident is being worked on.
+
+. Define what constitutes a failure for your organization by configuring issue type and label filters:
++
+[IMPORTANT]
+====
+Organizations define production incidents differently based on their incident management practices.
+The Scorecard plugin allows you to customize which Jira issue types, priorities, labels, and custom fields identify true production failures versus planned maintenance, known issues, or lower-severity bugs.
+Configure filters to ensure Change Failure Rate and Time to Restore Service metrics reflect only the incidents you want to measure.
+====
++
+[source,yaml]
+----
+scorecard:
+  dora:
+    dataSources:
+      jira:
+        incidents:
+          issueTypes:
+            - Bug
+          labels:
+            - production-incident
+          customField:
+            fieldName: Severity
+            values:
+              - Critical
+              - High
+----
++
+Where:
++
+`incidents.labels`:: Filters incidents to issues with specific labels. This is useful when your Jira project uses labels to tag production incidents.
+`customField.fieldName`:: Specifies a custom field to use for additional filtering.
+`customField.values`:: A list of custom field values that identify incidents.
+
+. Configure project mapping to catalog components by adding Jira project annotations to your component `catalog-info.yaml` files:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    jira/project-key: MYPROJ
+    jira/component: my-service
+    scorecard.io/dora-enabled: "true"
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+----
++
+Where:
++
+`jira/project-key`:: Links the component to a Jira project.
+`jira/component`:: Filters Jira issues to a specific component within the project. This field is optional.
+
+. Configure time to restore service calculation by specifying the time window for correlating incidents with deployments:
++
+[source,yaml]
+----
+scorecard:
+  dora:
+    dataSources:
+      jira:
+        timeToRestore:
+          correlationWindow: 86400
+----
++
+Where:
++
+`correlationWindow`:: The number of seconds after a deployment to look for related incidents. The default value is `86400` (24 hours). Incidents created within this window after a deployment are considered related to that deployment.
+
+. Restart your {product-very-short} instance to apply the configuration changes.
+
+.Verification
+
+. Navigate to a component page in your {product-very-short} catalog and select the *Scorecard* tab.
+
+. Verify that change failure rate and time to restore service metrics appear on the scorecard.
++
+[NOTE]
+====
+DORA metrics may take up to one hour to appear after initial configuration, depending on your configured collection interval.
+====
+
+. Check the DORA backend logs for Jira data collection activity:
++
+[source,terminal]
+----
+$ oc logs <rhdh_pod_name> | grep "Jira DORA collector"
+----
++
+You should see log entries indicating successful Jira API calls and incident data processing.
+
+.Troubleshooting
+
+* If change failure rate shows zero, verify that your Jira project contains issues matching your configured issue types, priorities, or labels.
+* If time to restore service metrics do not appear, check that incidents in your Jira project transition to resolved statuses that match your configuration.
+* If you see authentication errors in the logs, verify that the Jira integration credentials have permissions to read issue data and status transitions.
+
+.Additional resources
+
+* link:https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/[Jira REST API documentation]
+* xref:configure-github-dora-datasource_{context}[Configure GitHub DORA datasource]
