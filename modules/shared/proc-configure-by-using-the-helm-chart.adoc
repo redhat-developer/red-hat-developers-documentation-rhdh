@@ -4,7 +4,7 @@
 = Configure {ia-name} by using the Helm chart
 
 [role="_abstract"]
-Configure {ia-name} by using the Helm chart to manage large language model (LLM) providers, enable validation guardrails, and authorize custom role-based access control (RBAC) policies.
+Configure {ia-name} by using the Helm chart to manage large language model (LLM) providers, enable query validation, and authorize custom role-based access control (RBAC) policies.
 
 .Prerequisites
 * You have access to a running {product-very-short} instance deployed with Helm.
@@ -12,51 +12,45 @@ Configure {ia-name} by using the Helm chart to manage large language model (LLM)
 
 .Procedure
 
-. Create a manual Kubernetes Secret to store your provider credentials by adding the required keys to your Secret based on your provider requirements:
+. Create a Kubernetes Secret to store your provider credentials by adding the required keys to your Secret based on your provider requirements:
 +
 include::snip-intelligent-assistant-secret-keys.adoc[]
 +
 [NOTE]
 ====
-* By default, the Helm installation creates a temporary Kubernetes Secret containing keys for various LLM providers. On subsequent `helm upgrade` cycles, the system overwrites this default Secret. Create a manual Kubernetes Secret to persist your credentials.
-* Vertex AI requires custom architecture mapping and has received limited testing.
+Vertex AI requires custom architecture mapping and has received limited testing.
 ====
 +
 [TIP]
 ====
-To filter and reject off-topic user queries, you can optionally configure query safety validation guardrails within this Secret by defining the `ENABLE_VALIDATION`, `VALIDATION_PROVIDER`, and `VALIDATION_MODEL_NAME` keys.
+To filter and reject off-topic user queries, you can optionally configure query validation within this Secret by defining the `ENABLE_VALIDATION`, `VALIDATION_PROVIDER`, and `VALIDATION_MODEL_NAME` keys.
 ====
 
-. Reference your manual secret inside the `values.yaml` file:
+. Reference your Secret inside the `values.yaml` file:
 +
 [source,yaml]
 ----
-global:
-  lightspeed:
-    secret:
-      create: false
-      name: "my-custom-secret"
+intelligentAssistant:
+  existingSecret: "my-custom-secret"
 ----
 
-. Optional: Configuration files such as `lightspeed-stack.yaml`, `config.yaml` and `rhdh-profile.py` are managed by the Helm deployment and overwrites changes on `Helm upgrade` runs. To protect changes to a file, create a custom config map and reference it in the `values.yaml` file:
+. Enable at least one inference provider by defining it under the `inference.providers` section of the `lightspeed-stack.yaml` file. Creating the Secret alone does not enable a provider. For the provider entry format and the Secret keys that each provider requires, see the inference provider configuration reference for {ia-name}.
+
+. Optional: Configuration files such as `lightspeed-stack.yaml` and `rhdh-profile.py` are managed by the Helm deployment and are overwritten on `helm upgrade` runs. To protect changes to a file, create a custom config map and reference it in the `values.yaml` file:
 +
 [IMPORTANT]
 ====
-Only modify the `create` and `nameOverride` fields. Keep the default mount paths and file configurations unchanged.
+Provide only the `name` and `key` of your existing ConfigMap. The chart manages the mount path and file configuration.
 ====
 +
 [source,yaml]
 ----
-global:
-  lightspeed:
-    configMaps:
-      - name: stack
-        create: false
-        nameOverride: "my-custom-stack"
-        mountPath: /app-root/lightspeed-stack.yaml
-        subPath: lightspeed-stack.yaml
-        sourceFile: lightspeed-stack.yaml
-        optional: false
+intelligentAssistant:
+  config:
+    stack:
+      existingConfigMap:
+        name: my-custom-stack
+        key: lightspeed-stack.yaml
 ----
 
 . Configure access rights by updating your RBAC definitions:
