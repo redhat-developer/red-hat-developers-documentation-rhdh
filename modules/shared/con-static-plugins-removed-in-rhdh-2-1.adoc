@@ -1,0 +1,112 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="static-plugins-removed-in-rhdh-2-1_{context}"]
+= Static plugin removal and dynamic plugin migration in {product} {product-version}
+
+[role="_abstract"]
+{product} {product-version} removes all static plugins from app-next and backend packages as part of the new front-end system migration.
+This change affects only custom builds with modified `App.tsx` or `backend/src/index.ts` files.
+Standard installations load all plugins dynamically and are not affected.
+
+== What changed
+
+All frontend and backend plugins that were previously compiled into the `app-next` and `backend` packages are removed.
+These plugins now load exclusively through the dynamic plugin system.
+
+Removed frontend plugins include:
+
+* Home (`@backstage/plugin-home`)
+* Catalog (`@backstage/plugin-catalog`)
+* Scaffolder (`@backstage/plugin-scaffolder`)
+* Search (`@backstage/plugin-search`)
+* User Settings (`@backstage/plugin-user-settings`)
+* App Visualizer (`@red-hat-developer-hub/backstage-plugin-app-visualizer`)
+* Catalog Graph (`@backstage/plugin-catalog-graph`)
+* Catalog Import (`@backstage/plugin-catalog-import`)
+* Catalog Unprocessed Entities (`@backstage/plugin-catalog-unprocessed-entities`)
+
+Removed backend plugins include:
+
+* Catalog Backend (`@backstage/plugin-catalog-backend`)
+* Scaffolder Backend (`@backstage/plugin-scaffolder-backend`)
+* Search Backend (`@backstage/plugin-search-backend`)
+* User Settings Backend (`@backstage/plugin-user-settings-backend`)
+* Additional backend modules
+
+== Why plugins were removed
+
+The new front-end system requires all plugins to load dynamically through extension blueprints.
+Static plugin imports conflict with blueprint-based dynamic routing and prevent full migration to the new architecture.
+Removing static plugins ensures consistent plugin loading across all {product} installations.
+
+== Relationship to new front-end system migration
+
+Static plugin removal is a prerequisite for general availability of the new front-end system in {product} {product-version}.
+The new front-end system uses extension blueprints to define UI contributions, and dynamic loading enables runtime configuration through the `app.extensions` section of your `{my-app-config-file}` file.
+
+== Who is affected
+
+[cols="1,2", options="header"]
+|===
+|Installation type
+|Impact
+
+|Standard installation
+|No impact. Core plugins load dynamically by default.
+
+|Custom build with modified `App.tsx`
+|Migration required. Remove static plugin imports and configure dynamic loading.
+
+|Custom build with modified `backend/src/index.ts`
+|Migration required. Remove static backend plugins and configure dynamic loading.
+
+|Forked repository
+|Migration required. Merge upstream changes and remove static plugin imports.
+|===
+
+== How plugins load now
+
+All plugins load dynamically through the following mechanisms:
+
+Frontend plugins:: Load through the dynamic plugin loader with extension blueprints exported from the `/alpha` entry point. Configuration is in the `app.extensions` section of your `{my-app-config-file}` file.
+
+Backend plugins:: Load through backend plugin configuration in your `dynamic-plugins.yaml` or `{my-app-config-file}` file.
+
+== Assess upgrade impact
+
+Check if you have a custom build that requires migration:
+
+. Check for modified `App.tsx`:
++
+[source,terminal]
+----
+$ git diff upstream/main packages/app/src/App.tsx
+----
++
+If the command shows differences, you have a custom build.
+
+. Check for modified `backend/src/index.ts`:
++
+[source,terminal]
+----
+$ git diff upstream/main packages/backend/src/index.ts
+----
++
+If the command shows differences, you have a custom build.
+
+. Search for static plugin imports:
++
+[source,terminal]
+----
+$ grep -r "@backstage/plugin-" packages/app/src/App.tsx packages/backend/src/index.ts
+----
++
+If the command returns results, you must migrate those plugins to dynamic loading.
+
+If you have no custom modifications, standard {product} installations load all core plugins dynamically without additional configuration.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-config-to-new-frontend-system.md[{product-short} configuration migration guide]
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-plugins-to-new-frontend-system.md[{product-short} plugin migration guide]

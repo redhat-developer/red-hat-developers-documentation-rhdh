@@ -1,0 +1,175 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="user-settings-extension-configuration-options_{context}"]
+= User settings extension configuration parameters
+
+[role="_abstract"]
+Configure user settings extensions through the `app.extensions` section of your `{my-app-config-file}` file to control tab behavior, visibility, and display order.
+
+== Extension ID format
+
+User settings extensions use the following ID format:
+
+----
+settings-tab:<plugin-id>/<tab-name>
+----
+
+Examples:
+
+* `settings-tab:user-settings/general` (default General tab)
+* `settings-tab:user-settings/auth-providers` (default Authentication Providers tab)
+* `settings-tab:my-plugin/custom-tab` (custom tab from my-plugin)
+
+== Configuration parameters
+
+[cols="1,1,2,1", options="header"]
+.User settings extension configuration parameters
+|===
+|Parameter
+|Type
+|Description
+|Required
+
+|`title`
+|string
+|Display name for the settings tab. Appears in the navigation menu.
+|No
+
+|`path`
+|string
+|URL path segment for the tab. Example: `/custom-settings`
+|No
+
+|`priority`
+|number
+|Display priority. Higher values appear first in the navigation. Default priority varies by tab.
+|No
+
+|`icon`
+|string
+|Icon identifier from the icon bundle. Example: `settings`, `notifications`, `security`
+|No
+|===
+
+== Control tab order
+
+List extensions in the `app.extensions` section in your desired display order.
+Tabs appear in the user settings navigation in the order they are listed.
+
+== Reorder user settings tabs
+[source,yaml]
+----
+app:
+  extensions:
+    # Tabs appear in this order
+    - settings-tab:user-settings/auth-providers:
+        config:
+          title: "Authentication"
+    - settings-tab:user-settings/general:
+        config:
+          title: "Profile"
+    - settings-tab:notifications/preferences:
+        config:
+          title: "Notifications"
+    - settings-tab:user-settings/feature-flags:
+        config:
+          title: "Feature Flags"
+----
+
+== Disable settings tabs
+
+Set a settings tab extension to `false` to hide it from the user settings page:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Hide the feature flags tab
+    - settings-tab:user-settings/feature-flags: false
+
+    # Hide a custom settings tab
+    - settings-tab:my-plugin/custom-tab: false
+----
+
+== Customize tab titles and icons
+
+Override the default title and icon for settings tabs:
+
+[source,yaml]
+----
+app:
+  extensions:
+    - settings-tab:user-settings/general:
+        config:
+          title: "My Profile"
+          icon: account_circle
+    - settings-tab:user-settings/auth-providers:
+        config:
+          title: "Connected Accounts"
+          icon: vpn_key
+----
+
+== Filter tab visibility by user properties
+
+Use filter configuration to control which users can see specific settings tabs:
+
+[source,yaml]
+----
+app:
+  extensions:
+    - settings-tab:admin-settings/tenant-config:
+        config:
+          title: "Tenant Configuration"
+          filter:
+            - permission: admin.tenant.configure
+            - group: platform-admins
+----
+
+Filters support the following criteria:
+
+* `permission`: Required permission name
+* `group`: Required user group membership
+* `claim`: Required JWT claim value
+
+== Example configurations
+
+== Streamlined user settings for developers
+[source,yaml]
+----
+app:
+  extensions:
+    # Show only essential settings tabs
+    - settings-tab:user-settings/general: {}
+    - settings-tab:user-settings/auth-providers: {}
+    - settings-tab:notifications/preferences:
+        config:
+          title: "Notifications"
+          priority: 50
+
+    # Hide feature flags tab
+    - settings-tab:user-settings/feature-flags: false
+----
+
+== Custom settings tab with high priority
+[source,yaml]
+----
+app:
+  extensions:
+    # Custom team preferences tab appears first
+    - settings-tab:team-plugin/preferences:
+        config:
+          title: "Team Preferences"
+          path: /team-preferences
+          icon: group
+          priority: 100
+
+    # Default tabs follow
+    - settings-tab:user-settings/general: {}
+    - settings-tab:user-settings/auth-providers: {}
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:user-settings-page-extensibility-in-new-frontend-system_{context}[Extend user settings with custom configuration options]
+* xref:add-custom-settings-tab-using-extension-blueprint_{context}[Add a custom tab to the user settings page]

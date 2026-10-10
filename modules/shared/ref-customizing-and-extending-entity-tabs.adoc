@@ -4,49 +4,118 @@
 = Customize and extend catalog entity tabs
 
 [role="_abstract"]
-You can customize and extend the set of tabs by using the `entityTabs` configuration as in the following example:
+You can customize and extend the set of tabs by using the `app.extensions` configuration in your `{my-app-config-file}` file.
 
-[source,yaml,subs="+quotes"]
+[NOTE]
+====
+{product} {product-version} uses the `app.extensions` configuration format.
+The `dynamicPlugins.frontend.entityTabs` format used in previous versions is no longer supported.
+====
+
+== Configure entity tabs in app.extensions
+
+Entity tabs are configured as `entity-content` extensions in the `app.extensions` section:
+
+[source,yaml]
 ----
-# dynamic-plugins-config.yaml
-plugins:
-  - plugin: <plugin_path_or_url>
-    disabled: false
-    pluginConfig:
-      dynamicPlugins:
-        frontend:
-          __<package_name>__: # The plugin package name
-            entityTabs:
-              # Specifies a new tab
-              - path: /new-path
-                title: My New Tab
-                mountPoint: entity.page.my-new-tab
-              # Changes an existing tab's title or mount point
-              - path: /
-                title: General
-                mountPoint: entity.page.overview # Can be customized
-                # Specifies the sub-path route in the catalog where this tab is available
-              - path: "/pr"
-                title: "Changed Pull/Merge Requests" # Specifies the title you want to display
-                priority: 1
-                # The base mount point name available on the tab
-                mountPoint: "entity.page.pull-requests"
-              - path: "/"
-                title: "Changed Overview"
-                mountPoint: "entity.page.overview"
-                # Specifies the order of tabs. The tabs with higher priority values appear first
-                priority: -6
+app:
+  extensions:
+    # Customize an existing tab title
+    - entity-content:catalog/entity/docs:
+        config:
+          title: "Documentation"
+
+    # Disable an entity tab
+    - entity-content:catalog/entity/ci: false
+
+    # Add a new custom tab
+    - entity-content:my-plugin/custom-tab:
+        config:
+          title: "Custom Tab"
+          filter: kind:component  # Show only for components
 ----
 
-Each entity tab entry requires the following attributes:
-* `path`: Specifies the sub-path route in the catalog where this tab is available.
-* `title`: The title displayed to the user.
-* `mountPoint`: The base mount point name available on the tab.
-This name is expanded to create two mount points per tab,
-one appended with `/context` and the second appended with `/cards`.
-* `priority`: (Optional): Determines the order of tabs. Tabs with higher priority values appear first. You can set a negative priority to hide default tabs.
+== Entity tab configuration parameters
 
-You can configure dynamic front-end plugins to target the mount points exposed by the entityTabs configuration. The following are the default catalog entity routes in the default order:
+Each entity tab extension supports the following configuration parameters:
+
+* `title`: The title displayed to the user in the tab navigation
+* `filter`: Entity filter expression (e.g., `kind:component`, `kind:api,kind:system`)
+* `icon`: Icon identifier for the tab (when `showNavItemIcons` is enabled)
+
+Tabs appear in the order they are listed in the `app.extensions` configuration.
+
+== Filter entity tabs by kind or other properties
+
+Use the `filter` parameter to control which entity kinds display specific tabs:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Show API tab only for API and Component entities
+    - entity-content:catalog/entity/api:
+        config:
+          title: "API"
+          filter: kind:api,kind:component
+
+    # Show Dependencies tab only for Components
+    - entity-content:catalog/entity/dependencies:
+        config:
+          title: "Dependencies"
+          filter: kind:component
+
+    # Show Definition tab only for APIs
+    - entity-content:catalog/entity/definition:
+        config:
+          title: "API Definition"
+          filter: kind:api
+----
+
+== Configure tab icons
+
+Enable tab icons by configuring `showNavItemIcons` and specifying icon identifiers:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Enable tab icons globally
+    - entity-page:catalog/entity-page:
+        config:
+          showNavItemIcons: true
+
+    # Configure individual tab icons
+    - entity-content:catalog/entity/docs:
+        config:
+          title: "Documentation"
+          icon: docs
+    - entity-content:catalog/entity/kubernetes:
+        config:
+          title: "Kubernetes"
+          icon: kubernetes
+----
+
+== Entity validation message extensions
+
+The entity overview tab supports validation message extensions that plugins contribute through the `EntityCardBlueprint`.
+Validation extensions evaluate entity properties and display feedback messages with severity indicators (error, warning, info).
+
+Validation message mount points:
+
+* `entity.page.overview/validation`: Validation message section on the overview tab
+
+Validation extensions use the `entity-card` extension type with the following ID format:
+
+----
+entity-card:<plugin-id>/<validation-name>
+----
+
+See xref:entity-validation-extensibility_{context}[Display validation feedback on catalog entities] for more information on creating and configuring validation extensions.
+
+== Default catalog entity routes
+
+The following are the default catalog entity routes in the default order:
 
 [cols="20%,20%,30%,30%", frame="all", options="header"]
 |===
@@ -133,5 +202,13 @@ You can configure dynamic front-end plugins to target the mount points exposed b
 
 [NOTE]
 ====
-Mount points within Catalog such as _`entity.page.*`_ render as tabs and become visible only if at least one plugin contributes to them, or if they can render static content.
+Entity tabs render and become visible only if at least one plugin contributes content extensions to them, or if they can render static content.
 ====
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:disable-entity-tabs-and-cards_{context}[Remove unused tabs and cards from entity pages]
+* xref:reorder-entity-tabs_{context}[Change the order of tabs on entity pages]
+* xref:configure-entity-tab-titles_{context}[Configure entity tab titles]
+* xref:entity-validation-extensibility_{context}[Display validation feedback on catalog entities]
