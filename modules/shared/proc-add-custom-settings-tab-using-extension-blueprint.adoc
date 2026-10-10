@@ -1,0 +1,191 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="add-custom-settings-tab-using-extension-blueprint_{context}"]
+= Add a custom tab to the user settings page
+
+[role="_abstract"]
+Create a custom settings tab that appears in the user settings page to provide users with plugin-specific configuration options or organizational settings.
+
+.Prerequisites
+
+* You have a plugin with `/alpha` export capability.
+* You have knowledge of extension blueprints and React components.
+* You have a development environment set up for plugin development.
+
+.Procedure
+
+. Create a React component for your settings tab content:
++
+[source,typescript]
+----
+// src/components/CustomSettingsTab.tsx
+import React from 'react';
+import { Content, Header, Page } from '@backstage/core-components';
+
+export const CustomSettingsTab = () => {
+  return (
+    <Page themeId="tool">
+      <Header title="Custom Settings" />
+      <Content>
+        <p>Your custom settings content goes here.</p>
+        {/* Add your settings controls */}
+      </Content>
+    </Page>
+  );
+};
+----
+
+. Import the required blueprints in your plugin's `/alpha` export file:
++
+[source,typescript]
+----
+// src/alpha.ts
+import { createExtension, createPlugin } from '@backstage/frontend-plugin-api';
+import { settingsPageExtensionPoint } from '@backstage/plugin-user-settings-react/alpha';
+----
+
+. Define a settings tab extension using the extension blueprint:
++
+[source,typescript]
+----
+// src/alpha.ts
+const customSettingsTabExtension = createExtension({
+  namespace: 'my-plugin',
+  name: 'custom-settings-tab',
+  attachTo: { id: 'page:user-settings', input: 'tabs' },
+  output: {
+    element: createExtensionOutput({
+      element: 'core.reactElement',
+    }),
+  },
+  factory() {
+    return {
+      element: React.lazy(() =>
+        import('./components/CustomSettingsTab').then(m => ({
+          default: m.CustomSettingsTab,
+        }))
+      ),
+    };
+  },
+  config: {
+    schema: {
+      title: z => z.string().default('Custom Settings'),
+      path: z => z.string().default('/custom-settings'),
+      priority: z => z.number().optional(),
+    },
+  },
+});
+----
+
+. Add the settings tab extension to your plugin's extensions array:
++
+[source,typescript]
+----
+// src/alpha.ts
+export default createPlugin({
+  id: 'my-plugin',
+  extensions: [
+    customSettingsTabExtension,
+    // Other extensions
+  ],
+  routes: {
+    customSettings: settingsCustomRoute,
+  },
+});
+----
+
+. Export your plugin as a dynamic plugin following the dynamic plugin packaging guidelines.
+
+. Install your plugin in the {product} `dynamic-plugins-root` directory.
+
+. Verify that the custom settings tab appears in the user settings page:
++
+.. Navigate to your {product} instance in a web browser.
+.. Click your user profile icon and select Settings.
+.. Verify that the custom settings tab appears in the navigation.
+
+. Configure the settings tab in your `{my-app-config-file}` file to customize its behavior:
++
+[source,yaml]
+----
+app:
+  extensions:
+    # Customize the custom settings tab
+    - settings-tab:my-plugin/custom-settings-tab:
+        config:
+          title: "Team Preferences"
+          path: /team-preferences
+          priority: 100  # Higher priority appears first
+----
+
+.Verification
+
+. Navigate to the user settings page in your {product} instance.
+. Verify that your custom settings tab appears with the configured title.
+. Click the tab to verify that your settings component renders correctly.
+. Verify that settings changes persist as expected.
+
+.Example: Notification preferences tab
+
+To create a notification preferences tab for user notification settings:
+
+[source,typescript]
+----
+// src/components/NotificationSettingsTab.tsx
+import React, { useState } from 'react';
+import { Content, Header, Page } from '@backstage/core-components';
+import { FormControl, FormControlLabel, Switch } from '@material-ui/core';
+
+export const NotificationSettingsTab = () => {
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [slackNotifications, setSlackNotifications] = useState(false);
+
+  return (
+    <Page themeId="tool">
+      <Header title="Notification Preferences" />
+      <Content>
+        <FormControl component="fieldset">
+          <FormControlLabel
+            control={
+              <Switch
+                checked={emailNotifications}
+                onChange={(e) => setEmailNotifications(e.target.checked)}
+              />
+            }
+            label="Email notifications"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={slackNotifications}
+                onChange={(e) => setSlackNotifications(e.target.checked)}
+              />
+            }
+            label="Slack notifications"
+          />
+        </FormControl>
+      </Content>
+    </Page>
+  );
+};
+----
+
+Configure the notification preferences tab in `{my-app-config-file}`:
+
+[source,yaml]
+----
+app:
+  extensions:
+    - settings-tab:notifications/preferences:
+        config:
+          title: "Notifications"
+          path: /notifications
+          priority: 50
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:user-settings-page-extensibility-in-new-frontend-system_{context}[Extend user settings with custom configuration options]
+* xref:user-settings-extension-configuration-options_{context}[User settings extension configuration parameters]
+* link:https://backstage.io/docs/frontend-system/building-plugins/common-extension-blueprints/[Common Extension Blueprints]

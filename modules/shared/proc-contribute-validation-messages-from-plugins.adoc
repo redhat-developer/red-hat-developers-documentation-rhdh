@@ -1,0 +1,213 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="contribute-validation-messages-from-plugins_{context}"]
+= Add validation messages to entity overview from your plugin
+
+[role="_abstract"]
+Create validation message extensions in your plugin to provide immediate feedback about entity health, configuration issues, or compliance status on the entity overview tab.
+
+.Prerequisites
+
+* You have a plugin with `/alpha` export capability.
+* You have knowledge of the entity model and extension blueprints.
+* You have a development environment set up for plugin development.
+
+.Procedure
+
+. Create a validation logic function that evaluates entity properties:
++
+[source,typescript]
+----
+// src/validation/metadataValidator.ts
+import { Entity } from '@backstage/catalog-model';
+
+export interface ValidationMessage {
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  link?: string;
+}
+
+export function validateMetadataCompleteness(entity: Entity): ValidationMessage[] {
+  const messages: ValidationMessage[] = [];
+
+  // Check for required annotations
+  if (!entity.metadata.annotations?.['backstage.io/source-location']) {
+    messages.push({
+      severity: 'error',
+      message: 'Missing required annotation: backstage.io/source-location',
+      link: '/docs/catalog-annotations',
+    });
+  }
+
+  // Check for recommended annotations
+  if (!entity.metadata.annotations?.['backstage.io/techdocs-ref']) {
+    messages.push({
+      severity: 'warning',
+      message: 'Missing recommended annotation: backstage.io/techdocs-ref. Consider adding documentation.',
+      link: '/docs/techdocs',
+    });
+  }
+
+  // Provide best practice suggestions
+  if (!entity.metadata.tags || entity.metadata.tags.length === 0) {
+    messages.push({
+      severity: 'info',
+      message: 'No tags defined. Tags help categorize and discover entities.',
+    });
+  }
+
+  return messages;
+}
+----
+
+. Create a React component that renders the validation messages:
++
+[source,typescript]
+----
+// src/components/EntityValidationCard.tsx
+import React from 'react';
+import { useEntity } from '@backstage/plugin-catalog-react';
+import { validateMetadataCompleteness } from '../validation/metadataValidator';
+import { InfoCard, WarningPanel } from '@backstage/core-components';
+import { Alert } from '@material-ui/lab';
+
+export const EntityValidationCard = () => {
+  const { entity } = useEntity();
+  const validationMessages = validateMetadataCompleteness(entity);
+
+  if (validationMessages.length === 0) {
+    return null;
+  }
+
+  return (
+    <InfoCard title="Metadata Validation">
+      {validationMessages.map((msg, index) => (
+        <Alert key={index} severity={msg.severity}>
+          {msg.message}
+          {msg.link && <a href={msg.link}>Learn more</a>}
+        </Alert>
+      ))}
+    </InfoCard>
+  );
+};
+----
+
+. Import required blueprints in your plugin's `/alpha` export file:
++
+[source,typescript]
+----
+// src/alpha.ts
+import { createExtension, createPlugin } from '@backstage/frontend-plugin-api';
+import { EntityCardBlueprint } from '@backstage/plugin-catalog-react/alpha';
+----
+
+. Define a validation extension using the EntityCardBlueprint:
++
+[source,typescript]
+----
+// src/alpha.ts
+const entityValidationExtension = EntityCardBlueprint.make({
+  namespace: 'my-plugin',
+  name: 'metadata-validation',
+  params: {
+    loader: async () => {
+      const { EntityValidationCard } = await import('./components/EntityValidationCard');
+      return <EntityValidationCard />;
+    },
+    filter: 'kind:component,kind:api,kind:system', // Apply to these entity kinds
+  },
+});
+----
+
+. Add the validation extension to your plugin's extensions array:
++
+[source,typescript]
+----
+// src/alpha.ts
+export default createPlugin({
+  id: 'my-plugin',
+  extensions: [
+    entityValidationExtension,
+    // Other extensions
+  ],
+});
+----
+
+. Export your plugin as a dynamic plugin following the dynamic plugin packaging guidelines.
+
+. Install your plugin in the {product} `dynamic-plugins-root` directory.
+
+.Verification
+
+. Navigate to a catalog entity page in your {product} instance.
+. View the entity overview tab.
+. Verify that validation messages from your plugin appear in the validation section.
+. Check that messages display with the correct severity indicators (error, warning, info).
+. Verify that links in validation messages work correctly.
+
+.Example: Annotation compliance validator
+
+To create a validator that checks for required organizational annotations:
+
+[source,typescript]
+----
+// src/validation/complianceValidator.ts
+import { Entity } from '@backstage/catalog-model';
+import { ValidationMessage } from './types';
+
+const REQUIRED_ANNOTATIONS = [
+  'company.com/owner-team',
+  'company.com/service-tier',
+  'company.com/cost-center',
+];
+
+export function validateCompliance(entity: Entity): ValidationMessage[] {
+  const messages: ValidationMessage[] = [];
+  const annotations = entity.metadata.annotations || {};
+
+  for (const required of REQUIRED_ANNOTATIONS) {
+    if (!annotations[required]) {
+      messages.push({
+        severity: 'error',
+        message: `Missing required annotation: ${required}`,
+        link: '/docs/compliance-requirements',
+      });
+    }
+  }
+
+  // Check for deprecated annotations
+  if (annotations['company.com/legacy-owner']) {
+    messages.push({
+      severity: 'warning',
+      message: 'Using deprecated annotation: company.com/legacy-owner. Migrate to company.com/owner-team.',
+      link: '/docs/annotation-migration',
+    });
+  }
+
+  return messages;
+}
+----
+
+Configure the validation extension to apply only to component entities:
+
+[source,typescript]
+----
+const complianceValidationExtension = EntityCardBlueprint.make({
+  namespace: 'compliance-plugin',
+  name: 'compliance-validation',
+  params: {
+    loader: async () => {
+      const { ComplianceValidationCard } = await import('./components/ComplianceValidationCard');
+      return <ComplianceValidationCard />;
+    },
+    filter: 'kind:component', // Apply only to components
+  },
+});
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:entity-validation-extensibility_{context}[Display validation feedback on catalog entities]
+* xref:entity-validation-extension-api_{context}[Entity validation extension API and configuration]
+* link:https://backstage.io/docs/features/software-catalog/extending-the-model/[Extending the entity model]

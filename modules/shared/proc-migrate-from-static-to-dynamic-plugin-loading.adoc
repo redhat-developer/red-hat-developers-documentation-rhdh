@@ -1,0 +1,196 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-from-static-to-dynamic-plugin-loading_{context}"]
+= Migrate custom builds to load plugins dynamically
+
+[role="_abstract"]
+Migrate your custom {product} build from static plugin imports to dynamic plugin loading to maintain functionality in {product} {product-version}.
+This migration removes static plugin imports from `App.tsx` and `backend/src/index.ts` and configures dynamic loading through `{my-app-config-file}`.
+
+.Prerequisites
+
+* You have a custom {product} build with modified `App.tsx` or `backend/src/index.ts` files.
+* You have {product} {product-version} installed.
+* You have access to modify `{my-app-config-file}` and `dynamic-plugins.yaml` files.
+
+.Procedure
+
+. Identify static plugin imports in your frontend code:
++
+[source,terminal]
+----
+$ grep -n "@backstage/plugin-" packages/app/src/App.tsx
+----
++
+Note the plugin package names from the output.
+
+. Identify static plugin imports in your backend code:
++
+[source,terminal]
+----
+$ grep -n "@backstage/plugin-" packages/backend/src/index.ts
+----
++
+Note the plugin package names from the output.
+
+. Remove frontend static plugin imports from `packages/app/src/App.tsx`:
++
+Before (static imports):
+[source,typescript]
+----
+import { homePage } from '@backstage/plugin-home';
+import { catalogPlugin } from '@backstage/plugin-catalog';
+import { scaffolderPlugin } from '@backstage/plugin-scaffolder';
+
+const app = createApp({
+  features: [
+    homePage,
+    catalogPlugin,
+    scaffolderPlugin,
+    // Other features
+  ],
+});
+----
++
+After (no static imports):
+[source,typescript]
+----
+import { createApp } from '@backstage/frontend-defaults';
+
+const app = createApp({
+  features: [
+    // Core plugins load dynamically
+    // Only custom features remain here
+  ],
+});
+----
+
+. Remove backend static plugin imports from `packages/backend/src/index.ts`:
++
+Before (static imports):
+[source,typescript]
+----
+import catalog from '@backstage/plugin-catalog-backend';
+import scaffolder from '@backstage/plugin-scaffolder-backend';
+
+backend.add(catalog());
+backend.add(scaffolder());
+----
++
+After (no static imports):
+[source,typescript]
+----
+import { createBackend } from '@backstage/backend-defaults';
+
+const backend = createBackend();
+// Core backend plugins load dynamically
+----
+
+. Configure the dynamic home page plugin in your `{my-app-config-file}` file:
++
+[source,yaml]
+----
+app:
+  extensions:
+    - page:home:
+        config:
+          path: /  # Set as landing page
+    - api:home/visits: true  # Enable visit tracking
+    - app-root-element:home/visit-listener: true  # Enable visit listener
+----
++
+The home page is no longer included by default and requires explicit configuration.
+
+. Verify that core plugins are enabled in your `dynamic-plugins.yaml` file:
++
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog'
+    disabled: false
+  - package: '@backstage/plugin-scaffolder'
+    disabled: false
+  - package: '@backstage/plugin-search'
+    disabled: false
+  - package: '@backstage/plugin-user-settings'
+    disabled: false
+----
++
+Most core plugins auto-enable and do not require explicit configuration.
+This step is optional unless you need to customize plugin behavior.
+
+. Configure any additional entity page customizations in `app.extensions`:
++
+[source,yaml]
+----
+app:
+  extensions:
+    # Disable unused entity tabs
+    - entity-content:catalog/entity/ci: false
+    - entity-content:catalog/entity/monitoring: false
+
+    # Reorder entity tabs
+    - entity-content:catalog/entity/docs:
+        config:
+          title: Documentation
+    - entity-content:catalog/entity/dependencies:
+        config:
+          title: Component Dependencies
+----
+
+. Start your {product} instance:
++
+[source,terminal]
+----
+$ yarn workspace backend start
+----
+
+.Verification
+
+. Check the backend logs for plugin loading messages:
++
+[source,terminal]
+----
+$ yarn workspace backend start 2>&1 | grep "plugin-"
+----
++
+You should see messages indicating that plugins loaded successfully.
+
+. Check for missing manifest errors in the backend logs:
++
+[source,terminal]
+----
+$ yarn workspace backend start 2>&1 | grep "Could not find manifest"
+----
++
+If this command returns results, verify that the plugin packages are installed in your `dynamic-plugins-root` directory.
+
+. Open your {product} instance in a web browser and verify that the user interface displays correctly:
++
+* Home page appears at the configured path
+* Catalog is accessible and displays entities
+* Scaffolder templates are available
+* Search functionality works
+* User settings page is accessible
+
+. Check the browser console for any plugin loading errors:
++
+Press F12 to open developer tools, then check the Console tab for messages about skipped plugins or missing exports.
+
+.Troubleshooting
+
+Plugin does not load:: Verify that the plugin package exists in your `dynamic-plugins-root` directory and that it exports an `/alpha` entry point with extension blueprints.
+
+Home page is missing:: Verify that you configured the dynamic home page plugin in your `app.extensions` section as shown in step 5.
+
+Entity pages are empty:: Verify that catalog plugin extensions are not explicitly disabled in your `app.extensions` configuration.
+
+Backend plugin not found:: Verify that backend plugins are listed in your `dynamic-plugins.yaml` file or backend configuration section.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:static-plugins-removed-in-rhdh-2-1_{context}[Static plugin removal and dynamic plugin migration in {product} {product-version}]
+* xref:plugins-removed-from-static-builds_{context}[Plugins removed from static builds in {product} {product-version}]
+* xref:migrate-the-homepage-to-function-as-a-dynamic-plugin-loaded-through-blueprints_{context}[Migrate the Homepage to function as a dynamic plugin loaded through blueprints]
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-config-to-new-frontend-system.md[{product-short} configuration migration guide]

@@ -1,0 +1,132 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="core-plugins-as-dynamic-plugins_{context}"]
+= Core plugins loaded as dynamic plugins in {product} {product-version}
+
+[role="_abstract"]
+{product} {product-version} loads core platform plugins as dynamic plugins through the new front-end system.
+This enables consistent configuration and runtime control of all plugins through the `app.extensions` section of your `{my-app-config-file}` file.
+
+[cols="2,2,1,2", options="header"]
+.Core plugins loaded dynamically
+|===
+|Plugin name
+|Package name
+|Auto-enabled
+|Configuration location
+
+|Catalog
+|`@backstage/plugin-catalog`
+|Yes
+|`app.extensions` for frontend configuration, `dynamic-plugins.yaml` or `{my-app-config-file}` for backend
+
+|Scaffolder
+|`@backstage/plugin-scaffolder`
+|Yes
+|`app.extensions` for frontend configuration, `dynamic-plugins.yaml` or `{my-app-config-file}` for backend
+
+|Search
+|`@backstage/plugin-search`
+|Yes
+|`app.extensions` for frontend configuration, `dynamic-plugins.yaml` or `{my-app-config-file}` for backend
+
+|User Settings
+|`@backstage/plugin-user-settings`
+|Yes
+|`app.extensions` for frontend configuration, `dynamic-plugins.yaml` or `{my-app-config-file}` for backend
+
+|App Visualizer
+|`@red-hat-developer-hub/backstage-plugin-app-visualizer`
+|Yes
+|`app.extensions` for frontend configuration
+
+|Home
+|`@red-hat-developer-hub/backstage-plugin-dynamic-home-page`
+|No
+|`app.extensions` section in `{my-app-config-file}` (requires explicit configuration)
+|===
+
+== Configuration requirements
+
+Auto-enabled plugins:: Load automatically when {product} starts. You can customize their behavior through the `app.extensions` section but do not need to explicitly enable them.
+
+Plugins requiring configuration:: Must be explicitly configured in the `app.extensions` section to load. The home plugin requires configuration to specify the landing page path and widget layout.
+
+== Relationship to new front-end system
+
+Core plugins use extension blueprints to expose their UI contributions:
+
+* **EntityCardBlueprint**: Contributes cards to entity page sections
+* **EntityContentBlueprint**: Contributes tabs to entity pages
+* **PageBlueprint**: Contributes new pages and routes to the application
+* **SettingsTabBlueprint**: Contributes tabs to the user settings page
+
+You control which extensions load and how they behave through the `app.extensions` configuration section.
+
+== Verify that a core plugin is loaded
+
+Check the backend logs for plugin loading messages:
+
+[source,terminal]
+----
+$ oc logs deployment/<rhdh-deployment-name> -n <namespace> | grep "plugin-"
+----
+
+For frontend plugins, open the browser console and check for plugin loading messages:
+
+. Press F12 to open developer tools.
+. Navigate to the Console tab.
+. Type `Backstage.getExtensions()` and press Enter.
+. Review the list of loaded extensions.
+
+Core plugins should appear in the extension list if they loaded successfully.
+
+== Example configuration for core plugins
+
+== Customize catalog plugin entity tabs
+[source,yaml]
+----
+app:
+  extensions:
+    # Disable unused catalog entity tabs
+    - entity-content:catalog/entity/ci: false
+    - entity-content:catalog/entity/monitoring: false
+
+    # Reorder catalog entity tabs
+    - entity-content:catalog/entity/docs:
+        config:
+          title: Documentation
+    - entity-content:catalog/entity/dependencies:
+        config:
+          title: Component Dependencies
+----
+
+== Configure the dynamic home page
+[source,yaml]
+----
+app:
+  extensions:
+    - page:home:
+        config:
+          path: /
+    - api:home/visits: true
+    - app-root-element:home/visit-listener: true
+----
+
+== Customize user settings tabs
+[source,yaml]
+----
+app:
+  extensions:
+    # Reorder user settings tabs
+    - settings-tab:user-settings/general: {}
+    - settings-tab:user-settings/auth-providers: {}
+    - settings-tab:user-settings/feature-flags: {}
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:plugins-removed-from-static-builds_{context}[Plugins removed from static builds in {product} {product-version}]
+* xref:static-plugins-removed-in-rhdh-2-1_{context}[Static plugin removal and dynamic plugin migration in {product} {product-version}]
+* xref:preinstalled-dynamic-plugins_{context}[Preinstalled dynamic plugins]

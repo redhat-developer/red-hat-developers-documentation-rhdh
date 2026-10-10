@@ -4,41 +4,89 @@
 = Customize entity tab titles
 
 [role="_abstract"]
-{product} provides a default opinionated tab set for catalog entity views. For consistency with your organization needs, you can rename, reorder, remove, and add tab titles.
+{product} provides a default opinionated tab set for catalog entity views.
+For consistency with your organization needs, you can rename entity tab titles through the `app.extensions` configuration.
+
+[NOTE]
+====
+{product} {product-version} uses the `app.extensions` configuration format.
+The `dynamicPlugins.frontend.entityTabs` format used in previous versions is no longer supported.
+====
+
+.Prerequisites
+
+* {product} {product-version} or later is installed with the new front-end system enabled.
 
 .Procedure
-* For each tab to modify, enter your required values in the `entityTabs` section in your `{my-app-config-file}` file:
+
+. Identify the extension ID for the tab you want to rename:
 +
-[source,yaml,subs="+quotes"]
+Entity tab extension IDs use the format: `entity-content:<plugin-id>/<tab-name>`
++
+Common entity tab extension IDs:
++
+* `entity-content:catalog/entity/overview` (Overview tab)
+* `entity-content:catalog/entity/docs` (Docs tab)
+* `entity-content:catalog/entity/dependencies` (Dependencies tab)
+* `entity-content:catalog/entity/ci` (CI tab)
+* `entity-content:catalog/entity/kubernetes` (Kubernetes tab)
+
+. Edit your `{my-app-config-file}` file and set the `title` parameter in the `config` section:
++
+[source,yaml]
 ----
-upstream:
-  backstage:
-    appConfig:
-      dynamicPlugins:
-        frontend:
-         _<plugin_name>_:
-            entityTabs:
-              - mountPoint: _<mount_point>_
-                path: _<path>_
-                title: _<title>_
-                priority: _<priority>_
+app:
+  extensions:
+    # Rename the Docs tab to Documentation
+    - entity-content:catalog/entity/docs:
+        config:
+          title: "Documentation"
+
+    # Rename the Dependencies tab to Component Dependencies
+    - entity-content:catalog/entity/dependencies:
+        config:
+          title: "Component Dependencies"
+
+    # Rename the Kubernetes tab to K8s Resources
+    - entity-content:catalog/entity/kubernetes:
+        config:
+          title: "K8s Resources"
 ----
 
-`_<plugin_name>_`::
-Enter the plugin name, such as `backstage-community.plugin-topology`.
+. Save the `{my-app-config-file}` file.
 
-`mountPoint`::
-Enter the tab mount point, such as `entity.page.topology`.
+. Restart your {product} instance to apply the tab title changes.
 
-`path`::
-Enter the tab path, such as `/topology`.
-`title`::
-Enter the tab title, such as `Topology`.
+.Verification
 
-`priority`::
-Optional.
-+
-To reorder tabs, enter the tab priority, such as `42`.
-Higher priority is displayed first.
-+
-To remove a tab, enter a negative value, such as `-1`.
+. Navigate to a catalog entity page in your {product} instance.
+. Verify that tabs display with the customized titles.
+
+== Rename tabs for clarity
+
+To rename tabs using organization-specific terminology:
+
+[source,yaml]
+----
+app:
+  extensions:
+    - entity-content:catalog/entity/overview:
+        config:
+          title: "Summary"
+    - entity-content:catalog/entity/ci:
+        config:
+          title: "Build Pipeline"
+    - entity-content:catalog/entity/cd:
+        config:
+          title: "Deployment Pipeline"
+    - entity-content:catalog/entity/docs:
+        config:
+          title: "Documentation"
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:customizing-and-extending-entity-tabs_{context}[Customize and extend catalog entity tabs]
+* xref:reorder-entity-tabs_{context}[Change the order of tabs on entity pages]
+* xref:disable-entity-tabs-and-cards_{context}[Remove unused tabs and cards from entity pages]

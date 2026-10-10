@@ -1,0 +1,203 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="entity-validation-extension-api_{context}"]
+= Entity validation extension API and configuration
+
+[role="_abstract"]
+Use the entity validation extension API to create validation extensions that evaluate entity properties and display feedback on the entity overview tab.
+
+== Extension type and ID format
+
+Entity validation extensions use the `EntityCardBlueprint` with the following ID format:
+
+----
+entity-card:<plugin-id>/<validation-name>
+----
+
+Examples:
+
+* `entity-card:metadata-validator/completeness` (metadata completeness check)
+* `entity-card:compliance/annotations` (annotation compliance check)
+* `entity-card:security/vulnerability-scan` (security vulnerability check)
+
+== Configuration schema in app.extensions
+
+You can configure validation extensions in the `app.extensions` section of your `{my-app-config-file}` file:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Enable a validation extension with default configuration
+    - entity-card:my-plugin/validation: true
+
+    # Disable a validation extension
+    - entity-card:my-plugin/validation: false
+
+    # Configure validation extension behavior
+    - entity-card:my-plugin/validation:
+        config:
+          filter: kind:component  # Apply only to components
+          title: "Configuration Validation"
+----
+
+== Message severity levels
+
+[cols="1,1,2", options="header"]
+.Validation message severity levels
+|===
+|Severity
+|Type
+|Description
+
+|`error`
+|Error
+|Critical issues that prevent the entity from functioning correctly. Displayed with red exclamation icon.
+
+|`warning`
+|Warning
+|Issues that should be addressed but do not prevent basic functionality. Displayed with yellow warning icon.
+
+|`info`
+|Informational
+|Informational messages about configuration or best practices. Displayed with blue information icon.
+|===
+
+== Visual rendering
+
+Validation messages render in the entity overview tab with the following visual indicators:
+
+[cols="1,2", options="header"]
+|===
+|Severity
+|Visual presentation
+
+|Error
+|Red alert banner with exclamation icon. Critical issues displayed first.
+
+|Warning
+|Yellow alert banner with warning icon. Displayed after errors.
+
+|Info
+|Blue alert banner with information icon. Displayed after warnings and errors.
+|===
+
+== Filter configuration
+
+Control when validation runs using entity filters in your extension configuration:
+
+Entity kind filters:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Run validation only for components
+    - entity-card:my-plugin/validation:
+        config:
+          filter: kind:component
+
+    # Run validation for multiple kinds
+    - entity-card:my-plugin/validation:
+        config:
+          filter: kind:component,kind:api,kind:system
+----
+
+Namespace filters:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Run validation only for production namespace
+    - entity-card:my-plugin/validation:
+        config:
+          filter: metadata.namespace:production
+
+    # Combine kind and namespace filters
+    - entity-card:my-plugin/validation:
+        config:
+          filter: kind:component,metadata.namespace:production
+----
+
+== Disable validation extensions
+
+Set validation extensions to `false` to prevent them from running:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Disable specific validation
+    - entity-card:metadata-validator/completeness: false
+
+    # Disable all validations from a plugin
+    - entity-card:compliance/*: false
+----
+
+== Message structure
+
+[source,typescript]
+.Validation message interface
+----
+interface ValidationMessage {
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  link?: string;          // Optional link to documentation or remediation
+  action?: () => void;    // Optional action button handler
+}
+----
+
+Required fields:
+
+* `severity`: Message severity level (error, warning, or info)
+* `message`: Human-readable description of the validation result
+
+Optional fields:
+
+* `link`: URL to documentation or remediation instructions
+* `action`: Callback function for an action button (e.g., "Fix Now")
+
+== Performance best practices
+
+Cache validation results:: Validation logic runs every time an entity page is rendered. Cache expensive computations to avoid performance degradation.
+
+Asynchronous validation:: Use async functions and lazy loading to prevent blocking the UI while validation runs.
+
+Debounce entity updates:: If validation responds to entity changes, debounce the validation logic to avoid excessive re-computation.
+
+Limit external calls:: Minimize external API calls during validation. Consider using background jobs for expensive validations and displaying cached results.
+
+== Cached validation with debouncing
+[source,typescript]
+----
+import { useEntity } from '@backstage/plugin-catalog-react';
+import { useMemo } from 'react';
+import { debounce } from 'lodash';
+
+export const CachedValidationCard = () => {
+  const { entity } = useEntity();
+
+  const validationMessages = useMemo(() => {
+    // Validation logic runs only when entity changes
+    return validateEntity(entity);
+  }, [entity]);
+
+  return (
+    <InfoCard title="Validation">
+      {validationMessages.map((msg, index) => (
+        <Alert key={index} severity={msg.severity}>
+          {msg.message}
+        </Alert>
+      ))}
+    </InfoCard>
+  );
+};
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:entity-validation-extensibility_{context}[Display validation feedback on catalog entities]
+* xref:contribute-validation-messages-from-plugins_{context}[Add validation messages to entity overview from your plugin]
+* link:https://backstage.io/docs/features/software-catalog/extending-the-model/[Extending the entity model]
