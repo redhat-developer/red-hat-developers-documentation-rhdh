@@ -37,6 +37,67 @@ Each plugin exports its UI contributions through the `/alpha` entry point, and y
 |Provide translation files or override default plugin translations.
 |===
 
+== Entity page customization examples
+
+The `EntityCardBlueprint` and `EntityContentBlueprint` provide fine-grained control over entity pages.
+
+Use `EntityCardBlueprint` to add cards to entity page sections:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Add a monitoring card to the overview tab
+    - entity-card:monitoring-plugin/overview-card:
+        config:
+          filter: kind:component  # Show only for components
+          title: "Service Health"
+
+    # Add a security card filtered by namespace
+    - entity-card:security-plugin/vulnerability-scan:
+        config:
+          filter: kind:component,metadata.namespace:production
+          title: "Security Scan Results"
+----
+
+Filter expressions support the following criteria:
+
+* `kind:<entity-kind>` - Filter by entity kind (component, api, system, etc.)
+* `metadata.namespace:<namespace>` - Filter by entity namespace
+* Multiple filters separated by commas combine with AND logic
+
+Use `EntityContentBlueprint` to add tabs to entity pages with custom titles, icons, and grouping:
+
+[source,yaml]
+----
+app:
+  extensions:
+    # Add a custom deployment tab
+    - entity-content:deployment-plugin/deployments:
+        config:
+          title: "Deployments"
+          filter: kind:component
+          icon: deployment
+
+    # Add a compliance tab with group navigation
+    - entity-content:compliance-plugin/compliance-status:
+        config:
+          title: "Compliance"
+          filter: kind:component,kind:api
+          icon: security
+----
+
+== Auto-discovery for entity extensions
+
+{product} automatically discovers entity extensions from installed dynamic plugins.
+When a plugin is installed in the `dynamic-plugins-root` directory and exports entity card or entity content extensions, they appear automatically on matching entity pages.
+
+You can control extension behavior through the `app.extensions` configuration:
+
+* Disable extensions by setting them to `false`
+* Customize titles, icons, and filters through the `config` section
+* Control display order by listing extensions in your desired order
+
 [id="operator-configuration-for-extensions_{context}"]
 == Operator configuration for extensions
 
@@ -51,3 +112,11 @@ app:
           filter: kind:Component
     - entity-card:my-plugin/unused-component: false
 ----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:customizing-and-extending-entity-tabs_{context}[Customize and extend catalog entity tabs]
+* xref:disable-entity-tabs-and-cards_{context}[Remove unused tabs and cards from entity pages]
+* xref:reorder-entity-tabs_{context}[Change the order of tabs on entity pages]
+* link:https://backstage.io/docs/frontend-system/building-plugins/common-extension-blueprints/[Common Extension Blueprints]
