@@ -1,0 +1,156 @@
+content_type: CONCEPT
+
+= Available workload kinds for Helm chart
+
+Depending on your specific {product-very-short} configuration, you can use one of the two available workload kinds to manage your Kubernetes pods:
+
+* `Deployment` (default)
+* `StatefulSet`
+
+[IMPORTANT]
+====
+The default `Deployment` workload kind is recommended for most {product-very-short} configurations.
+====
+
+These two workload kinds are defined in the `deployment.yaml` file.
+
+Both kinds render the same Backstage pod with identical containers, volumes, probes, dynamic plugins, Intelligent Assistant, and `init` containers. The workload controller is different, however.
+
+Some values, such as `replicaCount`, `autoscaling`, probes, `resources`, `dynamicPlugins`, `extraVolumes`, `podLabels`, `podAnnotations`, and other pod-level settings apply for both workload kinds.
+
+The values listed in the following table depend on your selected workload kind.
+
+Deployment-specific and StatefulSet-specific values::
+
+[cols="1, 1, 1"]
+|===
+| Value
+| Deployment
+| StatefulSet
+
+| Update strategy
+| `strategy`
+| `workload.statefulSet.updateStrategy`
+
+| ReplicaSet revision history
+| `revisionHistoryLimit`
+| Not used
+
+| Controller annotations (not the pod)
+| `deploymentAnnotations`
+| `workload.statefulSet.annotations`
+
+| Shared controller annotations
+| `commonAnnotations`
+| `commonAnnotations`
+
+| PVC claim templates
+| Not used
+|`workload.statefulSet.extraVolumeClaimTemplates`
+
+| PVC retention policy
+| Not used
+| `workload.statefulSet.persistentVolumeClaimRetentionPolicy`
+|===
+
+[IMPORTANT]
+====
+If you change the `workload.kind` value for an existing release, running `helm upgrade` replaces the rendered manifest. Expect a brief cutover while pods are recreated.
+
+If you applied manifests outside Helm (for example GitOps that keeps both objects) or an old controller was left behind, delete the obsolete Deployment or StatefulSet so two controllers do not target the same selector.
+====
+
+content_type: CONCEPT
+
+= StatefulSet workload for Helm chart
+
+[role="_abstract"]
+Use the `StatefulSet` workload kind if you want parity with the {product-very-short} Operator and need to define such values for your {product-very-short} Kubernetes workload, as `workload.statefulSet.updateStrategy`, `podManagementPolicy`, `extraVolumeClaimTemplates`, or optional PVC retention policy.
+
+When `workload.kind` is `StatefulSet`, the Helm chart also renders a headless Service `{fullname}-headless` with `clusterIP: None`. For stable pod network identity, the StatefulSet `serviceName` points at this Service.
+
+[NOTE]
+====
+The existing ClusterIP Service in `templates/service.yaml` is not changed. OpenShift Routes, Ingress, and `helm test` continue using it for application traffic.
+====
+
+content-type: PROCEDURE
+
+= Change StatefulSet Service name
+
+[role="_abstract"]
+If you create your own governing Service, you also need to change `workload.statefulSet.serviceName` in the `deployment.yaml` file.
+
+.Procedure
+* Update `serviceName` value in your `deployment.yaml` file:
++
+[source,yaml]
+----
+workload:
+
+  kind: StatefulSet
+
+  statefulSet:
+
+    serviceName: ""   # default: {fullname}-headless
+
+    podManagementPolicy: OrderedReady   # or Parallel; omit when empty
+
+    updateStrategy:
+
+      type: RollingUpdate
+
+    extraVolumeClaimTemplates: []
+
+    persistentVolumeClaimRetentionPolicy: {}
+
+    annotations: {}
+----
+
+content-type: PROCEDURE
+
+= Create stable storage for dynamic plugins
+
+[role="_abstract"]
+Configure stable storage for dynamic plugins in the `dynamic-plugins-root` directory by using values specific to the StatefulSet workload kind.
+
+[NOTE]
+====
+You can configure additional StatefulSet-owned PVCs with the `workload.statefulSet.extraVolumeClaimTemplates`.
+====
+
+.Prerequisites
+* You use Helm chart.
+* You have set up workload kind as `StatefulSet`.
+
+.Procedure
+* Configure `dynamicPlugins` value in the `deployment.yaml` file:
++
+[source,yaml]
+----
+workload:
+
+  kind: StatefulSet
+
+dynamicPlugins:
+
+  volume:
+
+    type: statefulSetPVC
+
+    statefulSetPVC:
+
+      accessModes:
+
+        - ReadWriteOnce
+
+      resources:
+
+        requests:
+
+          storage: 5Gi
+----
+
+.Verification
+* A `volumeClaimTemplate` named `dynamic-plugins-root` was mounted on the pod.
+* A PVC for each pod was created under the name `dynamic-plugins-root-{fullname}-{ordinal}` (for example `dynamic-plugins-root-my-rhdh-redhat-developer-hub-0`).
