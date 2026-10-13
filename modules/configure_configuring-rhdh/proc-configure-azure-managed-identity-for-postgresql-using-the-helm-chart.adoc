@@ -1,0 +1,139 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-azure-managed-identity-for-postgresql-using-the-helm-chart_{context}"]
+= Configure {azure-short} Managed Identity for PostgreSQL by using the Helm chart
+
+[role="_abstract"]
+Configure passwordless authentication to {azure-short} Database for PostgreSQL by using Microsoft Entra ID with the {product} Helm chart.
+
+.Prerequisites
+
+* You have an {azure-short} Database for PostgreSQL Flexible Server instance with Microsoft Entra ID authentication enabled.
+* You have created a managed identity (system-assigned or user-assigned) or a Microsoft Entra ID service principal, and granted it login access to your PostgreSQL instance. For more information, refer to the link:https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication[{azure-brand-name} documentation].
+* You have configured {azure-short} Workload Identity to federate the managed identity with the Kubernetes service account used by the {product-very-short} pod. For more information, refer to the link:https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview[{azure-short} Workload Identity documentation].
+* You meet the {about-book-link}#rhdh-sizing_about-rhdh[Sizing requirements for external PostgreSQL deployments].
+* You have installed the {product-very-short} application by using the Helm chart.
+
+.Procedure
+
+. Create a credential secret to connect to the PostgreSQL instance:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ cat <<EOF | oc -n <your_namespace> create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {my-product-database-secrets}
+type: Opaque
+stringData:
+  POSTGRES_HOST: <db_host>
+  POSTGRES_PORT: "<db_port>"
+  POSTGRES_USER: <entra_user>
+EOF
+----
++
+Where:
++
+`{my-product-database-secrets}`:: The credential secret name.
+`<db_host>`:: Your {azure-short} Database for PostgreSQL Flexible Server host name.
+`<db_port>`:: Your PostgreSQL instance port number, such as `5432`.
+`<entra_user>`:: The Entra ID user name for database authentication. This is the name of the managed identity, service principal, or Entra ID user that you granted login access to the database.
++
+[NOTE]
+====
+Unlike password-based authentication, this secret does not include `POSTGRES_PASSWORD`. The password is replaced by a short-lived token that {product-very-short} obtains automatically from Entra ID.
+====
+
+. Configure your PostgreSQL instance in the Helm configuration file named `values.yaml`:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+# ...
+upstream:
+  postgresql:
+    enabled: false
+    auth:
+      existingSecret: {my-product-database-secrets}
+  backstage:
+    appConfig:
+      backend:
+        database:
+          connection:
+            type: azure # <1>
+            host: $\{POSTGRES_HOST}
+            port: $\{POSTGRES_PORT}
+            user: $\{POSTGRES_USER}
+    extraEnvVarsSecrets:
+      - {my-product-database-secrets}
+    podLabels: # <2>
+      azure.workload.identity/use: "true"
+    serviceAccount:
+      name: <service_account_name> # <3>
+      # ...
+----
++
+<1> Setting `type` to `azure` enables Entra ID token-based authentication and removes the need for a `password` field.
+<2> Required for {azure-short} Workload Identity to inject the token credentials into the pod.
+<3> The Kubernetes service account federated with your {azure-short} managed identity.
++
+Where:
++
+`upstream.postgresql.enabled`:: Set to `false` to disable the local PostgreSQL instance creation.
+`upstream.postgresql.auth.existingSecret`:: The credentials secret to inject into {product-custom-resource-type}.
+`upstream.backstage.appConfig.backend.database.connection.type`:: Set to `azure` to enable Entra ID passwordless authentication.
+`<service_account_name>`:: The name of the Kubernetes service account federated with your {azure-short} managed identity.
+
+. Optional: To use a user-assigned managed identity, add the `clientId` to the `tokenCredential` configuration:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+# ...
+upstream:
+  backstage:
+    appConfig:
+      backend:
+        database:
+          connection:
+            type: azure
+            host: $\{POSTGRES_HOST}
+            port: $\{POSTGRES_PORT}
+            user: $\{POSTGRES_USER}
+            tokenCredential:
+              clientId: <azure_client_id> # <1>
+    # ...
+----
++
+<1> The client ID of the user-assigned managed identity. Omit this field to use the system-assigned managed identity or `DefaultAzureCredential`.
+
+. Optional: To customize the token renewal interval, add the `tokenRenewableOffsetTime` setting:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+# ...
+          connection:
+            type: azure
+            # ...
+            tokenCredential:
+              tokenRenewableOffsetTime: "5 minutes" # <1>
+----
++
+<1> How early to renew the token before it expires. The default is `5 minutes`. Accepts human-readable strings such as `5 minutes` or ISO durations such as `PT5M`.
+
+. Apply the configuration changes:
++
+[source,terminal,subs="+attributes"]
+----
+$ helm upgrade -n <your_namespace> <your_deploy_name> openshift-helm-charts/redhat-developer-hub -f values.yaml --version {product-chart-version}
+----
+
+.Verification
+
+* Check the {product-very-short} pod logs for successful database connections:
++
+[source,terminal]
+----
+$ oc logs -n <your_namespace> deployment/<your_deploy_name>-backstage -c backstage | grep -i "database"
+----
++
+If the connection is successful, you should not see any password-related errors or authentication failures.
