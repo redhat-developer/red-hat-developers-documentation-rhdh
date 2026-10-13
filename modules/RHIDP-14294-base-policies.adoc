@@ -1,0 +1,94 @@
+= Base network policies in {product-very-short}
+
+[role="_abstract"]
+
+Use the `NetworkPolicy` resource to configure rules for traffic flow in your {product-very-short} pods. Learn what traffic is enabled by default and how to add your own network policies.
+
+content-type: CONCEPT
+
+= Default allowed traffic for Helm chart
+
+[role="_abstract"]
+Learn about the network traffic allowed in {product-very-short} installed with Helm chart.
+
+Helm chart is deployed with a default deny network policy for the {product-very-short} backend pod. All ingress and egress traffic that is not allowed by default or explicitly allowed by you, is blocked.
+
+You can check your current network policies in the `networkpolicy.yaml` file.
+
+[NOTE]
+====
+Helm test `NetworkPolicy` resource uses two Helm test hooks (`allow-test-connection` and `allow-test-connection-ingress`). The hooks are created just before `helm test` runs and cleaned up automatically on success.
+====
+
+Default allowed traffic::
+[cols="1,1,1,1"]
+|===
+d| *Direction* | *Port* | *Destination / Source* | *Purpose*
+
+| Egress | 53 UDP or 5353 TCP | Any | DNS resolution.
+
+| Egress | 443 TCP | Any | HTTPS egress for Git forges, authentication providers, or external APIs.
+
+| Egress | 443 UDP or 6443 TCP | Any | Kubernetes API server used by plugins that query cluster resources. On some managed platforms the API server listens on 443 instead.
+
+| Egress | 5432 TCP | Built-in PostgreSQL pods (scoped) or any (external database) | Database access.
+
+When you enable the built-in PostgreSQL with `postgresql.enabled=true`, the database pods also get their own default deny policy with selective `allow` rules.
+
+| Egress | 6379 TCP | Any | Egress for your Redis instance.
+
+| Egress | 80 TCP | Any destination | LCORE access to an HTTP Offline Knowledge Portal (OKP)Ingress. Network policy is created only if you enable OKP.
+.
+| Egress | 8080 TCP | OKP pods | LCORE access to the internal Offline Knowledge Portal (OKP) Service fallback. Network policy is created only if you enable OKP.
+
+| Ingress | 7007 TCP | OpenShift router namespace or any namespace (non-OpenShift) | User traffic through Route or Ingress.
+
+| Ingress | 8080 TCP | {product-very-short} pods and the OpenShift router namespace or any namespace (non-Openshift) | OKP queries and product-document citations through Route or Ingress.
+
+| Ingress | 9464 TCP | `openshift-monitoring`, `openshift-user-workload-monitoring`, `gmp-system`, `gke-gmp-system`, `monitoring` | Prometheus metrics scraping.
+|===
+
+.Additional resources
+* Network policy values
+* link:https://docs.redhat.com/en/documentation/monitoring_stack_for_red_hat_openshift/4.22/html/configuring_user_workload_monitoring/preparing-to-configure-the-monitoring-stack-uwm[User workload monitoring on Openshift]
+
+
+content-type: PROCEDURE
+
+= Add your own network policies to Helm chart
+
+Use the `extraDeploy` value to add your own allow rules to the default {product-very-short} Helm chart network policies.
+
+[IMPORTANT]
+====
+Kubernetes evaluates `NetworkPolicy` resources additively. If any policy allows a connection, the connection is permitted. You cannot tighten an existing allow rule by adding another `NetworkPolicy`. You can only broaden the existing access.
+
+To add allow rules, use `extraDeploy` or apply your own `NetworkPolicy` resources externally.
+====
+
+.Procedure
+* Create a `yaml` file for the `extraDeploy` value, as shown in the example below:
++
+[source,yaml]
+----
+extraDeploy:
+  - |
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: {{ include "rhdh.fullname" . }}-allow-http-egress
+    spec:
+      podSelector:
+        matchLabels:
+          {{- include "rhdh.selectorLabels" . | nindent 10 }}
+      policyTypes:
+        - Egress
+      egress:
+        - ports:
+            - port: 80
+              protocol: TCP
+----
+
+.Additional sources
+* Network policy values
+
