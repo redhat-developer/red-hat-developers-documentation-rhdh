@@ -1,0 +1,30 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="http2-and-the-frontend-connection-bottleneck_{context}"]
+= HTTP/2 and the front-end connection bottleneck
+
+[role="_abstract"]
+You can use HTTP/2 to eliminate the HTTP/1.1 six-connection bottleneck that slows page loads in plugin-heavy {product-very-short} deployments by multiplexing browser requests over a single connection. This is most useful during the initial page load, when the browser fetches all plugin assets.
+
+[IMPORTANT]
+====
+{product-very-short} does not enable HTTP/2 by default because it requires valid TLS certificates that browsers trust.
+====
+
+Browsers limit HTTP/1.1 to six concurrent connections per origin.
+In plugin-heavy {product-very-short} deployments, the browser must download many JavaScript assets before the page becomes interactive.
+With HTTP/1.1, these downloads queue across the six-connection limit, which can result in page load times of 20 to 30 seconds.
+
+However, enabling HTTP/2 for the entire cluster is not recommended because of connection coalescing.
+Browsers can reuse a single HTTP/2 connection for multiple hostnames if those hostnames resolve to the same IP address and share a TLS certificate.
+When the {ocp-brand-name} router terminates TLS for edge routes, it serves multiple services on a shared set of IP addresses, typically with a wildcard certificate.
+Enabling HTTP/2 cluster-wide can therefore cause browsers to misroute requests across services behind the same router.
+
+To avoid this problem, deploy a reverse proxy in front of {product-very-short}.
+The browser TLS connection terminates at the reverse proxy pod.
+Because that pod has its own cluster IP address and serves only the {product-very-short} hostname, connection coalescing with other services does not occur, even with a wildcard certificate.
+
+.Additional resources
+
+* link:https://access.redhat.com/solutions/2274201[Is it possible to enable HTTP/2 on OpenShift? (Red Hat Knowledgebase)]
+* link:https://access.redhat.com/solutions/7018818[Impact of enabling HTTP/2 Ingress connectivity in OpenShift 4 (Red Hat Knowledgebase)]
