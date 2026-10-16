@@ -4,7 +4,7 @@
 = Configure {ia-name} by using the Helm chart
 
 [role="_abstract"]
-Configure {ia-name} by using the Helm chart to manage large language model (LLM) providers, enable query validation, and authorize custom role-based access control (RBAC) policies.
+Configure {ia-name} by using the Helm chart to manage large language model (LLM) providers, enable validation guardrails, and authorize custom role-based access control (RBAC) policies.
 
 .Prerequisites
 * You have access to a running {product-very-short} instance deployed with Helm.
@@ -12,21 +12,22 @@ Configure {ia-name} by using the Helm chart to manage large language model (LLM)
 
 .Procedure
 
-. Create a Kubernetes Secret to store your provider credentials by adding the required keys to your Secret based on your provider requirements:
+. Create a manual Kubernetes Secret to store your provider credentials by adding the required keys to your Secret based on your provider requirements:
 +
 include::snip-intelligent-assistant-secret-keys.adoc[]
 +
 [NOTE]
 ====
-Vertex AI requires custom architecture mapping and has received limited testing.
+* By default, the Helm installation creates a temporary Kubernetes Secret containing keys for various LLM providers. On subsequent `helm upgrade` cycles, the system overwrites this default Secret. Create a manual Kubernetes Secret to persist your credentials.
+* Vertex AI requires custom architecture mapping and has received limited testing.
 ====
 +
 [TIP]
 ====
-To filter and reject off-topic user queries, you can optionally configure query validation within this Secret by defining the `ENABLE_VALIDATION`, `VALIDATION_PROVIDER`, and `VALIDATION_MODEL_NAME` keys.
+To filter and reject off-topic user queries, you can optionally configure query safety validation guardrails in this Secret by defining the `ENABLE_VALIDATION`, `VALIDATION_PROVIDER`, and `VALIDATION_MODEL_NAME` keys.
 ====
 
-. Reference your Secret inside the `values.yaml` file:
+. Reference your manual secret inside the `values.yaml` file:
 +
 [source,yaml]
 ----
@@ -49,8 +50,8 @@ intelligentAssistant:
   config:
     stack:
       existingConfigMap:
-        name: my-custom-stack
-        key: lightspeed-stack.yaml
+        name: "my-custom-stack"
+        key: "lightspeed-stack.yaml"
 ----
 
 . Configure access rights by updating your RBAC definitions:
