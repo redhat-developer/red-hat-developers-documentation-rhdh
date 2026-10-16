@@ -1,0 +1,159 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-agent-skills-for-the-intelligent-assistant_{context}"]
+= Configure Agent Skills for {ia-short}
+
+[role="_abstract"]
+Configure the {ia-short} to load Agent Skills from the `lightspeed-core` container file system. Mount the skills into the container and declare their location in the `lightspeed-stack.yaml` file so that the skills are available when the {lcs-name} ({lcs-short}) starts.
+
+.Prerequisites
+* You have administrative access to the {product-very-short} deployment.
+* You store your skills in a Git repository that the cluster can access, or you have the skill files available to store in a ConfigMap.
+
+.Procedure
+. In your custom `lightspeed-stack.yaml` file, add the mounted directory under `skills.paths`:
++
+[source,yaml]
+----
+skills:
+  paths:
+    - /app-root/skills
+----
++
+A path can identify either a single skill directory or a parent directory that contains multiple skill directories.
+
+. Make the skills directory available to the `lightspeed-core` container.
++
+[NOTE]
+====
+If you already mount a volume that contains your skills into the `lightspeed-core` container, you can skip the init-container configuration. Mount the existing volume at `/app-root/skills`, or update `skills.paths` to match its mount path.
+====
++
+Otherwise, configure the volume, init container, and mount before you deploy or upgrade {product-very-short}. This configuration ensures that the skills are present when the `lightspeed-core` container starts.
+
+.. For an Operator installation, add a strategic merge patch to the {backstage} custom resource (CR):
++
+[source,yaml,subs="+quotes"]
+----
+apiVersion: rhdh.redhat.com/v1alpha5
+kind: Backstage
+metadata:
+  name: _<rhdh_instance_name>_
+spec:
+  deployment:
+    patch:
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: lightspeed-skills
+                emptyDir: {}
+            initContainers:
+              - name: fetch-lightspeed-skills
+                image: _<image_with_git_client>_
+                imagePullPolicy: IfNotPresent
+                command:
+                  - /bin/sh
+                  - -ec
+                args:
+                  - |
+                    git clone --depth 1 --branch _<repository_ref>_ \
+                      _<skills_repository_url>_ /work/.source
+                    test -d /work/.source/skills
+                    cp -R /work/.source/skills/. /work/
+                    rm -rf /work/.source
+                volumeMounts:
+                  - name: lightspeed-skills
+                    mountPath: /work
+            containers:
+              - name: lightspeed-core
+                volumeMounts:
+                  - name: lightspeed-skills
+                    mountPath: /app-root/skills
+----
+
+.. For a Helm installation, add the following configuration to the `values.yaml` file. The chart appends these entries to the generated pod specification:
++
+[source,yaml,subs="+quotes"]
+----
+intelligentAssistant:
+  enabled: true
+  core:
+    extraVolumeMounts:
+      - name: lightspeed-skills
+        mountPath: /app-root/skills
+
+extraVolumes:
+  - name: lightspeed-skills
+    emptyDir: {}
+
+extraInitContainers:
+  - name: fetch-lightspeed-skills
+    image: _<image_with_git_client>_
+    imagePullPolicy: IfNotPresent
+    command:
+      - /bin/sh
+      - -ec
+    args:
+      - |
+        git clone --depth 1 --branch _<repository_ref>_ \
+          _<skills_repository_url>_ /work/.source
+        test -d /work/.source/skills
+        cp -R /work/.source/skills/. /work/
+        rm -rf /work/.source
+    volumeMounts:
+      - name: lightspeed-skills
+        mountPath: /work
+----
++
+Replace the following values:
++
+`_<image_with_git_client>_`:: An approved image that contains Bash and Git.
+`_<skills_repository_url>_`:: The URL of the repository that contains the skills.
+`_<repository_ref>_`:: The branch or tag to retrieve.
+
+. Optional: Grant a team permission to view skills information by adding the `intelligent-assistant.skills` permission to your RBAC policy:
++
+[source,text,subs="+quotes"]
+----
+p, role:default/_<team>_, intelligent-assistant.skills, use, allow
+----
++
+[NOTE]
+====
+The `intelligent-assistant.skills` permission controls visibility only. It does not control whether {lcs-short} loads skills or whether configured skills influence answers. Users who do not have this permission still benefit from the configured skills when they use the {ia-short}. Do not use this permission as a security boundary for confidential skill names or descriptions.
+====
+
+. Apply the {backstage} CR, or install or upgrade the Helm release.
++
+[IMPORTANT]
+====
+Define the configuration before the {product-very-short} Deployment is created. When you update an existing installation, ensure that the change creates a new {product-very-short} pod. The `lightspeed-core` container reads the mounted skills only during startup and does not reload changed skill files while the pod is running.
+====
+
+.Verification
+. Verify that the {product-very-short} pod is ready:
++
+[source,bash,subs="+quotes"]
+----
+$ oc get pods -l app.kubernetes.io/instance=_<rhdh_instance_name>_
+----
+
+. Verify that the skill files are mounted in the `lightspeed-core` container:
++
+[source,bash,subs="+quotes"]
+----
+$ oc exec _<rhdh_pod_name>_ -c lightspeed-core -- \
+  find /app-root/skills -name SKILL.md -print
+----
+
+. Open the {ia-short} and send the following query:
++
+[source,text]
+----
+List available skills.
+----
++
+Verify that the LLM responds with the skills that are available in the current deployment.
+
+. Ask a question that is covered by one of the configured skills, and verify that the response follows the skill instructions.

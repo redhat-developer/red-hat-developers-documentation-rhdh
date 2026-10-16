@@ -1,0 +1,40 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="plugin-load-failure-signatures-and-fixes-after-upgrade_{context}"]
+= Plugin load failure signatures and fixes after upgrade
+
+[role="_abstract"]
+After you upgrade to {product} {product-version}, front-end plugins that are not migrated to the new front-end system fail to load. Match each symptom to its cause and resolution to restore plugin functionality quickly.
+
+Use the following symptoms to diagnose and resolve the most common plugin load failures.
+
+[cols="1,1,1",options="header"]
+|===
+|Symptom |Cause |Resolution
+
+|The back-end log shows `Could not find manifest for frontend plugin <plugin_name>`.
+|An unmigrated plugin remains in the `dynamic-plugins-root` directory and does not provide a new front-end system manifest.
+|Migrate the plugin to add an `/alpha` export, or remove the plugin from `dynamic-plugins-root` until it is migrated.
+
+|The plugin loads remotely, but no pages, cards, or menu items appear. The browser console shows `Skipping dynamic plugin remote module '...' since it doesn't export a new 'FrontendFeature' as default export`.
+|The plugin does not export a `FrontendFeature` as its default export from the `/alpha` entry point.
+|Add an `/alpha` export that returns a plugin created with `createFrontendPlugin`, and confirm the `/alpha` subpath is declared in the plugin `package.json` file.
+
+|Extensions do not resolve, and the browser console shows extension resolution errors that reference an unknown extension ID.
+|The extension IDs in the `app.extensions` section use the npm package name instead of the front-end system `pluginId`.
+|Use the short `pluginId` declared in `createFrontendPlugin` (for example, `my-plugin`), not the npm package name (for example, `@my-org/backstage-plugin-my-plugin`).
+
+|Configuration under `dynamicPlugins.frontend` has no effect after the upgrade.
+|The `dynamicPlugins.frontend` wiring keys were removed in {product} {product-version}.
+|Move the configuration to the `app.extensions` section and, where required, to `app.routes.bindings`.
+
+|The instance fails to start, or configuration is rejected, after the upgrade.
+|The `{my-app-config-file}` file, environment variables, or plugin `package.json` files still set removed options such as `APP_CONFIG_app_packageName`, `ENABLE_STANDARD_MODULE_FEDERATION`, or Scalprum fields.
+|Remove the obsolete options and rebuild affected plugins so that only the new front-end system configuration remains.
+|===
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-plugins-to-new-frontend-system.md[{product-short} plugin migration guide]
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-config-to-new-frontend-system.md[{product-short} configuration migration guide]

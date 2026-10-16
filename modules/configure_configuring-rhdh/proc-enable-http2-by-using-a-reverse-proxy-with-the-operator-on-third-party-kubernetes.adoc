@@ -1,0 +1,385 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="enable-http2-by-using-a-reverse-proxy-with-the-operator-on-third-party-kubernetes_{context}"]
+= Enable HTTP/2 by using a reverse proxy with the Operator on {aks-short}, {eks-short}, or {gke-short}
+
+[role="_abstract"]
+To enable HTTP/2 for an Operator-based {product-very-short} installation on {aks-short}, {eks-short}, or {gke-short}, deploy a reverse proxy that terminates TLS and negotiates HTTP/2, and expose it through a cloud load balancer.
+
+.Prerequisites
+
+* You installed {product-very-short} on {aks-short}, {eks-short}, or {gke-short} by using the {product-very-short} Operator.
+* You installed the `kubectl` and `openssl` command-line tools.
+* You have a TLS certificate and key for the reverse proxy hostname. For production, use a certificate signed by a certificate authority (CA) that browsers trust.
+* You can create a DNS `A` or `CNAME` record that points the reverse proxy hostname at a cloud load balancer.
+
+.Procedure
+
+. Set namespace and custom resource name environment variables for your installation:
++
+[source,terminal]
+----
+$ export NAMESPACE=<your_rhdh_namespace>
+$ export CR_NAME=<your_backstage_cr_name>
+$ kubectl config set-context --current --namespace="$NAMESPACE"
+----
+
+. Optional: Confirm the custom resource, the {product-very-short} service and its port, the existing Ingress, and the `app-config` config map that the custom resource references:
++
+[source,terminal]
+----
+$ kubectl get backstage "$CR_NAME" -n "$NAMESPACE"
+$ kubectl get svc "backstage-${CR_NAME}" -n "$NAMESPACE" \
+  -o jsonpath='{.spec.ports[?(@.name=="http-backend")].port}{"\n"}'
+$ kubectl get ingress -n "$NAMESPACE"
+$ kubectl get backstage "$CR_NAME" -n "$NAMESPACE" \
+  -o jsonpath='{.spec.application.appConfig.configMaps[*].name}{"\n"}'
+----
++
+The {product-very-short} service is `backstage-<cr_name>` and the expected port is `80` (name: `http-backend`).
+
+. Choose a hostname for the reverse proxy. The hostname must be different from your existing {product-very-short} Ingress hostname and must match a subject alternative name (SAN) in your TLS certificate:
++
+[source,terminal]
+----
+$ export CADDY_HOST="rhdh-h2.<your_domain>"
+----
+
+. Create a TLS secret from your certificate and key:
++
+[source,terminal]
+----
+$ kubectl create secret tls tls-certs \
+  --cert=<path_to_tls_crt> \
+  --key=<path_to_tls_key> \
+  -n "$NAMESPACE"
+----
++
+[IMPORTANT]
+====
+The TLS secret must be in the same namespace as the reverse proxy workload.
+====
+
+. Optional: Verify that the certificate covers the reverse proxy hostname:
++
+[source,terminal]
+----
+$ kubectl get secret tls-certs -n "$NAMESPACE" \
+  -o jsonpath='{.data.tls\.crt}' | base64 -d \
+  | openssl x509 -noout -subject -dates -ext subjectAltName
+----
+
+. Create a `caddy.yaml` file that defines the reverse proxy `Deployment`, `ConfigMap`, and `Service`:
++
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy-fronting-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: caddy-fronting-proxy
+  template:
+    metadata:
+      labels:
+        app: caddy-fronting-proxy
+    spec:
+      volumes:
+        - name: caddy-config
+          configMap:
+            name: caddy-reverse-proxy
+            defaultMode: 420
+        - name: certs
+          secret:
+            secretName: tls-certs
+      serviceAccountName: default
+      containers:
+        - name: caddy-reverse-proxy
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "3Gi"
+              cpu: "1"
+          command:
+            - caddy
+            - run
+            - '--config'
+            - /etc/caddy/Caddyfile
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: proxy
+          imagePullPolicy: Always
+          env:
+            - name: CADDY_ROUTE_HOSTNAME
+              # Set this to the value of the CADDY_HOST variable
+              value: "rhdh-h2.<your_domain>"
+            - name: DEVELOPER_HUB_SERVICE_HOST
+              value: "http://backstage-<cr_name>.<namespace>.svc.cluster.local:80"
+          volumeMounts:
+            - name: caddy-config
+              mountPath: /etc/caddy/Caddyfile
+              subPath: Caddyfile
+              readOnly: true
+            - name: certs
+              mountPath: /opt/app-root/certs
+              readOnly: true
+          image: registry.access.redhat.com/hi/caddy:2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-reverse-proxy
+data:
+  Caddyfile: |
+    {
+      auto_https disable_redirects
+    }
+
+    https://{$CADDY_ROUTE_HOSTNAME}:8080 {
+      tls /opt/app-root/certs/tls.crt /opt/app-root/certs/tls.key
+
+      @scalprum_chunks {
+        path /api/scalprum/*/static/*.js
+      }
+
+      header @scalprum_chunks {
+        # Cache for 1 year (immutable because the hash changes on new builds)
+        >Cache-Control "public, max-age=31536000, immutable"
+      }
+
+      reverse_proxy {
+        to {$DEVELOPER_HUB_SERVICE_HOST}
+        transport http {
+          versions 1.1
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy-fronting-proxy
+  labels:
+    app: caddy-fronting-proxy
+spec:
+  type: ClusterIP
+  ports:
+    - name: caddy-fronting-proxy
+      port: 443
+      targetPort: 8080
+  selector:
+    app: caddy-fronting-proxy
+----
++
+[IMPORTANT]
+====
+Adjust the `resources` requests and limits to suit your environment. On resource-constrained clusters, the default values can prevent the reverse proxy pod from being scheduled.
+====
+where:
+
+`CADDY_ROUTE_HOSTNAME`:: The reverse proxy hostname, which is the value of `$CADDY_HOST`.
+`DEVELOPER_HUB_SERVICE_HOST`:: The internal {product-very-short} service URL, in the format `http://backstage-<cr_name>.<namespace>.svc.cluster.local:80`.
+
+. Apply the manifest and wait for the rollout to complete:
++
+[source,terminal]
+----
+$ kubectl apply -f caddy.yaml -n "$NAMESPACE"
+$ kubectl rollout status deployment/caddy-fronting-proxy -n "$NAMESPACE" --timeout=5m
+----
++
+Optional: Check the reverse proxy pods and logs:
++
+[source,terminal]
+----
+$ kubectl get pods -n "$NAMESPACE" -l app=caddy-fronting-proxy
+$ kubectl logs -n "$NAMESPACE" -l app=caddy-fronting-proxy --tail=50
+----
+
+. Create an `allow-caddy-ingress.yaml` file that defines a network policy to allow the reverse proxy to reach the {product-very-short} backend:
++
+[source,yaml]
+----
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-caddy-ingress
+spec:
+  podSelector:
+    matchLabels:
+      rhdh.redhat.com/app: backstage-<cr_name>
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: caddy-fronting-proxy
+      ports:
+        - port: 7007
+          protocol: TCP
+----
++
+The Operator creates network policies that restrict traffic to the {product-very-short} pods. Because the reverse proxy runs in a separate pod, it requires this rule to proxy requests to {product-very-short}.
+
+. Apply the network policy and verify that it is created:
++
+[source,terminal]
+----
+$ kubectl apply -f allow-caddy-ingress.yaml -n "$NAMESPACE"
+$ kubectl get networkpolicy allow-caddy-ingress -n "$NAMESPACE"
+----
+
+. Create a `caddy-lb-service.yaml` file that defines a `LoadBalancer` service to forward TCP port 443 to the reverse proxy. Add the annotations for your cloud platform:
++
+--
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy-nlb
+  labels:
+    app: caddy-fronting-proxy
+  annotations:
+    # Add the annotations for your cloud platform
+spec:
+  type: LoadBalancer
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: caddy-fronting-proxy
+----
+
+Use the annotations for your cloud platform:
+
+{eks-short} ({aws-short} Network Load Balancer)::
++
+[source,yaml]
+----
+annotations:
+  service.beta.kubernetes.io/aws-load-balancer-type: nlb
+  service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+----
+
+{aks-short} ({azure-short} Load Balancer)::
++
+[source,yaml]
+----
+annotations:
+  service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+----
++
+To use a private load balancer, set the value to `"true"`.
+
+{gke-short} ({gcp-short} external TCP or network load balancer)::
++
+[source,yaml]
+----
+annotations:
+  cloud.google.com/l4-rbs: "enabled"
+----
+--
++
+[IMPORTANT]
+====
+Use a TCP or network load balancer. Do not attach an HTTP or HTTP(S) Ingress to the reverse proxy, because it prevents the browser from negotiating HTTP/2 with the reverse proxy.
+====
+
+. Apply the load balancer service and wait for the external address. Provisioning the external address can take several minutes:
++
+[source,terminal]
+----
+$ kubectl apply -f caddy-lb-service.yaml -n "$NAMESPACE"
+$ kubectl get svc caddy-nlb -n "$NAMESPACE" -w
+----
+
+. Capture the external address of the load balancer:
++
+[source,terminal]
+----
+$ export LB_HOST=$(kubectl get svc caddy-nlb -n "$NAMESPACE" \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+$ if [ -z "$LB_HOST" ]; then
+  export LB_HOST=$(kubectl get svc caddy-nlb -n "$NAMESPACE" \
+    -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  fi
+$ echo "$LB_HOST"
+----
+
+. Create a DNS record that points the reverse proxy hostname at the load balancer address:
++
+--
+`CNAME` record:: If `$LB_HOST` is a hostname, which is typical on {eks-short}, point your reverse proxy hostname at the load balancer hostname.
+`A` record:: If `$LB_HOST` is an IP address, which is typical on {aks-short} and {gke-short}, point your reverse proxy hostname at the load balancer IP address.
+--
+
+. Optional: Verify that the DNS record resolves:
++
+[source,terminal]
+----
+$ dig +short "$CADDY_HOST"
+----
+
+. Update your `{my-app-config-config-map}` ConfigMap to point {product-very-short} at the reverse proxy URL, where `<caddy_host>` is the value of `$CADDY_HOST`:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+app:
+  baseUrl: https://<caddy_host>
+backend:
+  baseUrl: https://<caddy_host>
+  cors:
+    origin: https://<caddy_host>
+----
++
+After you update the ConfigMap, the Operator reconciles the change and recreates the {product-very-short} instance automatically.
+
+. List your existing Ingress resources:
++
+[source,terminal]
+----
+$ kubectl get ingress -n "$NAMESPACE"
+----
+
+. Delete your previous Ingress so that traffic is served only through the reverse proxy:
++
+[source,terminal]
+----
+$ kubectl delete ingress <your_existing_ingress_name> -n "$NAMESPACE"
+----
++
+Alternatively, if you still need the previous Ingress for another purpose, keep it in place and remove the DNS record for its hostname instead.
+
+.Verification
+
+. Confirm that the reverse proxy negotiates HTTP/2:
++
+[source,terminal]
+----
+$ openssl s_client -connect "${CADDY_HOST}:443" -servername "$CADDY_HOST" -alpn h2,http/1.1 </dev/null 2>&1 | grep -i ALPN
+----
++
+If HTTP/2 is active, the output includes `h2`.
+
+. Confirm that {product-very-short} serves HTTP/2:
++
+[source,terminal]
+----
+$ curl --http2 -sk -o /dev/null -w "http_version=%{http_version}\n" "https://${CADDY_HOST}/"
+----
++
+If HTTP/2 is active, the output is `http_version=2`.
+
+.Additional resources
+
+* xref:http2-tls-requirements_{context}[HTTP/2 TLS requirements]
