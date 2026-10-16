@@ -1,0 +1,153 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ai-asset-entity-model_{context}"]
+= AI Asset entity model reference
+
+[role="_abstract"]
+The AI Catalog represents AI assets by using a small set of {backstage} Software Catalog entity kinds. Use this reference to understand which entity kind and `spec.type` value represents each AI asset category, and which annotations each entity requires.
+
+include::{docdir}/artifacts/snip-developer-preview-airesource.adoc[]
+
+The AI Catalog builds on the {backstage} Catalog Model Layer to define AI-specific entity kinds. The `AiResource` entity kind, which already represents AI skills and rules in upstream {backstage}, is extended in {product} ({product-very-short}) {product-version} to also represent AI agents through the `agent` value of `spec.type`. Model servers and Model Context Protocol (MCP) servers are represented by the `AiModelServerAPI` and `API` entity kinds.
+
+== AI asset category-to-entity-kind mapping
+
+The following table maps each AI asset category to the {backstage} entity kind, the `spec.type` value, and the annotation that the AI Catalog requires to classify the entity.
+
+[cols="1,1,1,2", options="header"]
+|===
+| AI asset category | {product-very-short}/{backstage} entity kind | `spec.type` | Required annotation
+
+| Agent
+| `AiResource`
+| `agent`
+| `rhdh.io/ai-asset-category: agent`
+
+| Skill
+| `AiResource`
+| `skill`
+| `rhdh.io/ai-asset-category: skill`
+
+| Rule
+| `AiResource`
+| `rule`
+| `rhdh.io/ai-asset-category: rule`
+
+| MCP server
+| `API`
+| `mcp-server`
+| `rhdh.io/ai-asset-category: mcp-server`
+
+| Model server
+| `AiModelServerAPI`
+| `ai-model-server`
+| `rhdh.io/ai-asset-category: model-server`
+|===
+
+== Common AI asset annotations
+
+In addition to the required `rhdh.io/ai-asset-category` annotation, AI asset entities can set the following optional annotations. The AI Catalog uses these annotations to enrich search, filtering, and the entity detail page.
+
+[cols="1,2", options="header"]
+|===
+| Annotation | Description
+
+| `rhdh.io/ai-asset-category`
+| Required. The AI asset category, as listed in the mapping table. This annotation determines how the AI Catalog classifies and filters the entity.
+
+| `rhdh.io/ai-asset-version`
+| Optional. The version of the AI asset, for example `1.2.0`.
+
+| `rhdh.io/ai-asset-source`
+| Optional. The origin of the AI asset, for example `github`, `internal`, `registry`, or `model-registry`.
+|===
+
+== Example entities
+
+The following examples show one entity for each entity kind. For the complete field reference for the `AiResource` entity kind, see xref:airesource-entity-schema-reference_{context}[AiResource entity schema reference].
+
+*Example: AiResource entity with `spec.type: agent`*
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: developer-assistant
+  title: Developer Assistant Agent
+  description: An AI agent that helps developers with code generation, debugging, and documentation.
+  annotations:
+    rhdh.io/ai-asset-category: agent
+    rhdh.io/ai-asset-version: '3.1.0'
+    rhdh.io/ai-asset-source: internal
+spec:
+  type: agent
+  lifecycle: production
+  owner: team-ai-platform
+  model: openai/vllm-inference/gpt-4.1
+  instructions: An AI agent that helps developers with code generation and debugging.
+  enableRAG: true
+----
+
+*Example: API entity with `spec.type: mcp-server`*
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: github-mcp-server
+  title: GitHub MCP Server
+  description: Model Context Protocol server that provides GitHub repository context.
+  annotations:
+    rhdh.io/ai-asset-category: mcp-server
+spec:
+  type: mcp-server
+  lifecycle: experimental
+  owner: team-integrations
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: GitHub MCP Server
+      version: 0.9.0
+  remotes:
+    - url: https://mcp.example.com/github
+      type: streamable-http
+----
+
+*Example: AiModelServerAPI entity with `spec.type: ai-model-server`*
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiModelServerAPI
+metadata:
+  name: granite-model-server
+  title: Granite Model Server
+  description: Model server that hosts code generation and instruction-following models.
+  annotations:
+    rhdh.io/ai-asset-category: model-server
+spec:
+  type: ai-model-server
+  lifecycle: production
+  owner: team-ml-ops
+  serverType: openai-v1
+  serverUrl: https://granite.example.com/v1
+  requiresApiKey: true
+  models:
+    discoverable: true
+    available:
+      - granite-3-code
+      - granite-3-instruct
+    default: granite-3-instruct
+----
+
+[id="ai-asset-entity-model-usage-tab_{context}"]
+== How the AI Catalog uses the entity model
+
+The *How to use this* tab, also called the Usage tab, in the AI Catalog user interface sources its content from the annotations and `spec` fields that are described in this reference. When you set the `rhdh.io/ai-asset-category` annotation and the corresponding `spec.type` value, the AI Catalog classifies the entity, applies the correct filters, and renders category-specific usage guidance on the entity detail page. For more information about viewing AI assets in the catalog, see xref:discovering-and-viewing-airesource-entities_{context}[Discovering and viewing AiResource entities].
+
+[NOTE]
+====
+The upstream {backstage} RFCs that define these AI asset entity kinds, RFC 32062 and RFC 33060, are in draft and are not finalized. The entity model that is documented here reflects the current draft and might change. A future release might supersede these entity kinds and provide a documented migration path.
+====
