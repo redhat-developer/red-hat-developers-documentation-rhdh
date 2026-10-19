@@ -49,6 +49,33 @@ When you enable the built-in PostgreSQL with `postgresql.enabled=true`, the data
 | Ingress | 8080 TCP | {product-very-short} pods and the OpenShift router namespace or any namespace (non-Openshift) | OKP queries and product-document citations through Route or Ingress.
 
 | Ingress | 9464 TCP | `openshift-monitoring`, `openshift-user-workload-monitoring`, `gmp-system`, `gke-gmp-system`, `monitoring` | Prometheus metrics scraping.
+
+4+| The following rows apply only when Orchestrator is enabled (`orchestrator.enabled=true` for Helm chart, or equivalent Operator configuration).
+
+| Ingress | any | OpenShift router namespace -> SonataFlow pods | Orchestrator / SonataFlow Routes.
+
+| Ingress | any | {product-very-short} pods -> SonataFlow pods | Orchestrator backend to Data Index and workflows.
+
+| Ingress | any | SonataFlow pods -> SonataFlow pods (same or other namespaces) | SonataFlow inter-pod traffic.
+
+| Ingress | any | `knative-eventing`, `knative-serving`, `openshift-serverless-logic` -> SonataFlow pods | Orchestrator infrastructure namespaces.
+
+| Ingress | 8080 TCP | `openshift-monitoring`, `openshift-user-workload-monitoring`, `gmp-system`, `gke-gmp-system`, `monitoring` -> SonataFlow pods | SonataFlow metrics scraping. Network policy is created only when `orchestrator.sonataflowPlatform.monitoring.enabled=true`.
+
+| Ingress | 7007 TCP | SonataFlow pods -> {product-very-short} pods | Workflows calling {product-very-short} APIs.
+
+| Egress | any | {product-very-short} pods -> SonataFlow pods | Orchestrator backend to SonataFlow and Data Index.
+
+| Egress | 53, 5353 (UDP/TCP) | SonataFlow pods -> any | SonataFlow DNS resolution.
+
+| Egress | 443, 6443 TCP | SonataFlow pods -> any | SonataFlow HTTPS and Kubernetes API server.
+
+| Egress | 5432 TCP | SonataFlow pods -> built-in PostgreSQL (scoped) or any (external database) | SonataFlow database access.
+
+| Egress | 7007 TCP | SonataFlow pods -> {product-very-short} pods | Workflows calling {product-very-short} APIs.
+
+| Ingress | 5432 TCP | SonataFlow pods (same or other namespaces) -> built-in PostgreSQL primary | Orchestrator database access. Network policy is created only when built-in PostgreSQL is enabled.
+
 |===
 
 .Additional resources
