@@ -6,14 +6,18 @@
 [role="_abstract"]
 When many {product-short} replicas share a single dynamic plugins cache PVC, updating configurations can trigger temporary 404 errors. This occurs because the replicas might access inconsistent cache states during the update process, before all replicas have synchronized.
 
-The solution is to use an individual cache per pod.
+The solution is to use an individual cache per pod by changing the resource kind from the default `Deployment` to `StatefulSet`.
 
 .Prerequisites
 * Your API version is `v1alpha5` or later.
 
-.Procedure
+For Operator::
 
-. In the `{product-custom-resource-type}` Custom Resource (CR) file, set `spec.deployment` to use the optional `StatefulSet` as a resource kind. For example:
+.Prerequisites
+* You have installed {product-very-short} by using the Operator
+
+.Procedure
+* In the `{product-custom-resource-type}` Custom Resource (CR) file, set `spec.deployment` to use the optional `StatefulSet` as a resource kind:
 +
 [source,terminal,subs="+attributes,+quotes"]
 ----
@@ -52,24 +56,58 @@ spec:
 ====
 Using `StatefulSet` with a single replica can lead to downtime, while the application deletes the old pod and creates a new pod.
 ====
+* (Optional) If you are updating an existing CR, remove the earlier `Deployment` resource from the cluster:
 +
-. Wait a few minutes until the Operator or Helm chart reconciles the CR and the `StatefulSet` resource is ready.
-
-. If you are updating an existing CR, remove the earlier `Deployment` resource from the cluster:
-+
-For Operator::
 [source,terminal,subs="+attributes,+quotes"]
 ----
 oc delete deployment -l app.kubernetes.io/instance=_<CR_name>_
 ----
-+
+
 For Helm chart::
+
+.Prerequisites
+* You have installed {product-very-short} by using the Helm chart
+
+.Procedure
+. In your Helm values file, set the workload kind to `StatefulSet` and configure a StatefulSet-owned PVC for the dynamic plugins cache:
++
 [source,terminal,subs="+attributes,+quotes"]
 ----
-helm delete deployment -l app.kubernetes.io/instance=_<CR_name>_
+replicaCount: 2
+workload:
+  kind: StatefulSet
+dynamicPlugins:
+  volume:
+    type: statefulSetPVC
+    statefulSetPVC:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
 ----
++
 [NOTE]
 ====
-The same requirement applies for changing the resource kind from `StatefulSet` to `Deployment`. You must manually delete the resource created before from the cluster, because legacy resource is not removed automatically.
+The `dynamicPlugins.volume.type: statefulSetPVC` value requires `workload.kind: StatefulSet`. The chart creates a `volumeClaimTemplate` named `dynamic-plugins-root` and Kubernetes creates one PVC per pod, for example `dynamic-plugins-root-_<release>_-0`.
+====
++
+. Upgrade your release so the chart applies the new workload kind:
+[terminal,code]
+----
+helm upgrade _<release_name>_ _<chart>_ -f values.yaml
+----
++
+[NOTE]
+====
+Changing `workload.kind` on an existing Helm-managed release replaces the rendered workload. Expect a brief cutover while pods are recreated.
 ====
 
+.Verification
+* The release uses a `StatefulSet` instead of a `Deployment`.
+* Each pod has its own PVC for `dynamic-plugins-root`.
+
+[IMPORTANT]
+====
+Since legacy resources are not removed automatically, you must manually delete them from the cluster before you switch the resource kind from `StatefulSet` to `Deployment`.
+====
