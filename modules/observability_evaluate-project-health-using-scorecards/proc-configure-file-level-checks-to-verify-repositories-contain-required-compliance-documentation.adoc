@@ -11,12 +11,20 @@ Each configured file generates a boolean metric that reports whether the file is
 
 .Prerequisites
 
-* You have {install-category-link}[installed your {product-very-short} instance].
-* You have xref:set-up-scorecards-to-monitor-your-project-health_evaluate-project-health-using-scorecards[set up the Scorecard plugin].
-* You have {configuring-book-link}[added a custom {product-short} application configuration].
-* Your catalog entities have the `backstage.io/source-location` annotation set. This annotation is usually added automatically during catalog ingestion.
 
 .Procedure
+
+* You have {install-category-link}[installed your {product-very-short} instance].
+
+* You have xref:set-up-scorecards-to-monitor-your-project-health_evaluate-project-health-using-scorecards[set up the Scorecard plugin].
+
+* You have {configuring-book-link}[added a custom {product-short} application configuration].
+
+* Your catalog entities have the `backstage.io/source-location` annotation set. This annotation is usually added automatically during catalog ingestion.
+
+include::../shared/snip-dynamic-plugin-enabled-field-migration.adoc[]
+
+
 
 . Enable the filecheck module: Add the following configuration to your {product-very-short} `dynamic-plugins-config.yaml` file:
 +
@@ -24,10 +32,11 @@ Each configured file generates a boolean metric that reports whether the file is
 ----
 plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-filecheck:<tag>
-    disabled: false
+    enabled: true
 ----
 +
 include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+
 
 . Configure the files to check: Define which files to verify in your {product-very-short} `{my-app-config-file}` file:
 +
@@ -52,6 +61,7 @@ where:
 File paths must be relative. Do not use a leading `/`, `./`, or `../` prefix in the path. When no files are configured, no metrics are registered and the module is inactive.
 ====
 
+
 . Optional: Customize the collection schedule: By default, the filecheck module collects metrics every hour. To override the schedule, add the following configuration to your {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
@@ -72,6 +82,7 @@ scorecard:
 ====
 All configured file checks share one schedule. The module fetches each entity's repository tree once per run and checks all configured paths in that single request.
 ====
+
 
 . Verify the entity annotation: Confirm that your catalog entities have the `backstage.io/source-location` annotation set:
 +
@@ -103,7 +114,11 @@ This annotation is usually added automatically during catalog ingestion. If your
 ====
 Filecheck metrics use the following default thresholds:
 
+
+
+
 * *exist*: File is present (success).
+
 * *missing*: File is absent (error).
 
 You can customize these thresholds in your {product-very-short} `{my-app-config-file}` file. For more information, see xref:scorecard-metric-thresholds_evaluate-project-health-using-scorecards[Scorecard metric thresholds].

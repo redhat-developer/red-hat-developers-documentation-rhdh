@@ -1,0 +1,157 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="dynamic-plugins-configuration-schema_{context}"]
+= Dynamic plugins configuration schema
+
+[role="_abstract"]
+The `dynamic-plugins.yaml` file supports a set of fields for configuring dynamic plugin installation and activation.
+Each plugin entry in the configuration accepts the fields described in this reference.
+
+.Dynamic plugins configuration fields
+[cols="1,1,2,1", options="header"]
+|===
+|Field
+|Type
+|Description
+|Status
+
+|`enabled`
+|Boolean
+|Activates (`true`) or deactivates (`false`) the plugin.
+This is the recommended field for controlling plugin state.
+|{product-short} 2.1+
+
+|`disabled`
+|Boolean
+|Deprecated inverse of `enabled`.
+When `true`, the plugin is deactivated.
+When `false`, the plugin is activated.
+Do not use in new configurations.
+|Deprecated in {product-short} 2.1. Removal planned for {product-short} 2.3.
+
+|`package`
+|String
+|NPM package name and version in the format `<package-name>@<version>`.
+This field is required for each plugin entry.
+|{product-short} 1.0+
+
+|`integrity`
+|String
+|Package integrity hash for verification (SHA-512).
+Use this field to verify the integrity of downloaded packages.
+|{product-short} 1.0+
+
+|`pluginConfig`
+|Object
+|Plugin-specific configuration object.
+The contents of this object are merged into the application configuration and vary by plugin.
+|{product-short} 1.0+
+|===
+
+== Field precedence rules
+
+When both `enabled` and `disabled` fields are present in a plugin entry, the system applies the following precedence rules:
+
+.Field precedence behavior
+[cols="1,1,1,1", options="header"]
+|===
+|`enabled` value
+|`disabled` value
+|Result
+|Plugin active?
+
+|`true`
+|(not present)
+|`enabled` takes effect
+|Yes
+
+|`false`
+|(not present)
+|`enabled` takes effect
+|No
+
+|(not present)
+|`false`
+|`disabled` takes effect
+|Yes
+
+|(not present)
+|`true`
+|`disabled` takes effect
+|No
+
+|`true`
+|`false`
+|`enabled` takes precedence
+|Yes
+
+|`true`
+|`true`
+|`enabled` takes precedence
+|Yes
+
+|`false`
+|`false`
+|`enabled` takes precedence
+|No
+
+|`false`
+|`true`
+|`enabled` takes precedence
+|No
+
+|(not present)
+|(not present)
+|Default behavior
+|Yes
+|===
+
+[IMPORTANT]
+====
+When the `enabled` field is present, it always takes precedence over the `disabled` field.
+When neither field is present, the plugin defaults to `enabled: true`.
+====
+
+== Configuration examples
+
+.Minimal plugin configuration using enabled field
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+----
+
+.Complete plugin configuration with all fields
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+    integrity: 'sha512-abc123...'
+    pluginConfig:
+      catalog:
+        rules:
+          - allow: [Component, API, System]
+----
+
+.Precedence demonstration when both fields are present
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+    disabled: false  # This field is ignored; enabled takes precedence
+----
+
+[WARNING]
+====
+Do not specify both `enabled` and `disabled` fields in the same plugin entry.
+Use only the `enabled` field to avoid confusion and deprecation warnings.
+====
+
+[role="_additional-resources"]
+.Additional resources
+* xref:dynamic-plugins-configuration-file_{context}[]
+* xref:dynamic-plugins-field-precedence_{context}[]
+* xref:migrate-disabled-to-enabled-field_{context}[]

@@ -1,0 +1,169 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="dynamic-plugins-field-precedence_{context}"]
+= Dynamic plugins field precedence
+
+[role="_abstract"]
+When both the `enabled` and `disabled` fields are present in a dynamic plugin configuration entry, {product-short} applies precedence rules to determine which field controls the plugin activation state.
+Understanding these rules helps you maintain backward compatibility while migrating from the deprecated `disabled` field to the recommended `enabled` field.
+
+== Precedence hierarchy
+
+{product-short} evaluates plugin configuration fields in the following order:
+
+. `enabled` field (highest precedence): If present, this field determines the plugin state regardless of other fields.
+. `disabled` field (lower precedence): Only used when the `enabled` field is not present.
+. Default behavior (lowest precedence): When neither field is present, the plugin defaults to `enabled: true`.
+
+[IMPORTANT]
+====
+The `enabled` field always takes precedence over the `disabled` field.
+This ensures backward compatibility while allowing you to migrate configurations gradually.
+====
+
+== Behavior matrix
+
+The following table shows the plugin activation state for all possible combinations of the `enabled` and `disabled` fields:
+
+.Field precedence and plugin activation states
+[cols="1,1,2,1,1", options="header"]
+|===
+|`enabled`
+|`disabled`
+|Evaluation logic
+|Plugin active?
+|Warnings?
+
+|`true`
+|(not present)
+|`enabled` field controls state
+|Yes
+|No
+
+|`false`
+|(not present)
+|`enabled` field controls state
+|No
+|No
+
+|(not present)
+|`false`
+|`disabled` field controls state
+|Yes
+|Yes (deprecated field)
+
+|(not present)
+|`true`
+|`disabled` field controls state
+|No
+|Yes (deprecated field)
+
+|`true`
+|`false`
+|`enabled` takes precedence
+|Yes
+|Yes (both fields present)
+
+|`true`
+|`true`
+|`enabled` takes precedence
+|Yes
+|Yes (both fields present)
+
+|`false`
+|`false`
+|`enabled` takes precedence
+|No
+|Yes (both fields present)
+
+|`false`
+|`true`
+|`enabled` takes precedence
+|No
+|Yes (both fields present)
+
+|(not present)
+|(not present)
+|Default to enabled
+|Yes
+|No
+|===
+
+== Deprecation warnings
+
+{product-short} emits runtime warnings in the following scenarios:
+
+* When the `disabled` field is present (regardless of the `enabled` field).
+* When both `enabled` and `disabled` fields are present in the same plugin entry.
+
+These warnings appear in the {product-short} application logs during startup.
+
+.Example deprecation warning for disabled field
+[source,terminal]
+----
+WARN: Plugin '@backstage/plugin-catalog-backend-dynamic@1.0.0' uses deprecated 'disabled' field. Use 'enabled' field instead. The 'disabled' field will be removed in {product-very-short} 2.3.
+----
+
+.Example warning when both fields are present
+[source,terminal]
+----
+WARN: Plugin '@backstage/plugin-catalog-backend-dynamic@1.0.0' specifies both 'enabled' and 'disabled' fields. The 'enabled' field takes precedence. Remove the 'disabled' field to eliminate this warning.
+----
+
+== Best practices
+
+Follow these practices to avoid confusion and ensure smooth migration:
+
+* Use only the `enabled` field in all plugin configurations.
+* Remove the `disabled` field after adding the `enabled` field.
+* Do not specify both fields in the same plugin entry.
+* Plan to complete migration before {product-short} 2.3, when `disabled` support will be removed.
+
+== Configuration examples
+
+.Recommended: Using only the enabled field
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+  - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+    enabled: false
+----
+
+.Deprecated: Using only the disabled field
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    disabled: false  # Deprecated: emits warning
+  - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+    disabled: true   # Deprecated: emits warning
+----
+
+.Not recommended: Using both fields
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+    disabled: false  # Redundant: emits warning, enabled takes precedence
+----
+
+.Default behavior when neither field is present
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    # No enabled or disabled field: defaults to enabled: true
+    pluginConfig:
+      catalog:
+        rules:
+          - allow: [Component]
+----
+
+[role="_additional-resources"]
+.Additional resources
+* xref:dynamic-plugins-configuration-schema_{context}[]
+* xref:migrate-disabled-to-enabled-field_{context}[]
+* xref:dynamic-plugins-configuration-file_{context}[]

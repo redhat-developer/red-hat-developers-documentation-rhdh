@@ -1,0 +1,282 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-disabled-to-enabled-field_{context}"]
+= Migrate from the disabled field to the enabled field
+
+[role="_abstract"]
+Migrate your dynamic plugins configuration from the deprecated `disabled` field to the recommended `enabled` field before {product-short} 2.3.
+This migration eliminates deprecation warnings and ensures compatibility with future {product-short} releases.
+
+.Prerequisites
+
+
+.Procedure
+
+* {product-short} 2.1 or later is installed.
+
+* You have access to your dynamic plugins configuration (Operator ConfigMap, Helm values file, or {product-local-very-short} configuration file).
+
+* You have created a backup of your current configuration.
+
+* You have a non-production environment available for testing the migration.
+
+
+
+. Identify your deployment method and locate the dynamic plugins configuration:
++
+--
+For Operator deployments:: The configuration is in a ConfigMap referenced by `spec.application.dynamicPluginsConfigMapName` in the `{product-custom-resource-type}` custom resource.
++
+[source,terminal]
+----
+$ oc get configmap <dynamic-plugins-configmap-name> -o yaml
+----
+
+For Helm deployments:: The configuration is in the `values.yaml` file under the `global.dynamic.plugins` section.
+
+For {product-local-very-short}:: The configuration is in the `dynamic-plugins.yaml` file in your {product-local-very-short} directory.
+--
+
+
+. Create a list of all plugin entries that use the `disabled` field:
++
+[source,terminal]
+----
+$ grep -n "disabled:" dynamic-plugins.yaml
+----
+
+
+. For each plugin entry, convert the field values according to the following table:
++
+.Field conversion mapping
+[cols="1,1", options="header"]
+|===
+|Old syntax (disabled)
+|New syntax (enabled)
+
+|`disabled: false`
+|`enabled: true`
+
+|`disabled: true`
+|`enabled: false`
+|===
+
+
+. Update the configuration based on your deployment method:
++
+--
+For Operator deployments::
++
+.. Export the current ConfigMap to a file:
++
+[source,terminal]
+----
+$ oc get configmap <dynamic-plugins-configmap-name> -o yaml > dynamic-plugins-backup.yaml
+----
+
+.. Edit the ConfigMap and replace `disabled` fields with `enabled` fields:
++
+[source,terminal]
+----
+$ oc edit configmap <dynamic-plugins-configmap-name>
+----
++
+.Before migration
+[source,yaml]
+----
+data:
+  dynamic-plugins.yaml: |
+    plugins:
+      - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+        disabled: false
+      - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+        disabled: true
+----
++
+.After migration
+[source,yaml]
+----
+data:
+  dynamic-plugins.yaml: |
+    plugins:
+      - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+        enabled: true
+      - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+        enabled: false
+----
+
+.. Apply the updated ConfigMap:
++
+[source,terminal]
+----
+$ oc apply -f dynamic-plugins-updated.yaml
+----
++
+The {product-short} pods automatically restart to apply the configuration changes.
+
+For Helm deployments::
++
+.. Edit your `values.yaml` file and update the `global.dynamic.plugins` section:
++
+.Before migration
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+      - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+        disabled: false
+      - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+        disabled: true
+----
++
+.After migration
+[source,yaml]
+----
+global:
+  dynamic:
+    plugins:
+      - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+        enabled: true
+      - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+        enabled: false
+----
+
+.. Upgrade the Helm release with the updated values:
++
+[source,terminal]
+----
+$ helm upgrade <release-name> <chart-name> -f values.yaml
+----
+
+For {product-local-very-short}::
++
+.. Edit the `dynamic-plugins.yaml` file in your {product-local-very-short} directory:
++
+.Before migration
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    disabled: false
+  - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+    disabled: true
+----
++
+.After migration
+[source,yaml]
+----
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+  - package: '@backstage/plugin-techdocs-backend-dynamic@1.0.0'
+    enabled: false
+----
+
+.. Restart the {product-local-very-short} instance:
++
+[source,terminal]
+----
+$ rhdh-cli dev --restart
+----
+--
+
+.Verification
+
+
+. Verify that the plugins are loading correctly by checking the {product-short} logs:
++
+[source,terminal]
+----
+$ oc logs <rhdh-pod-name> | grep -i "plugin"
+----
++
+For Helm deployments, use:
++
+[source,terminal]
+----
+$ kubectl logs <rhdh-pod-name> | grep -i "plugin"
+----
+
+
+. Confirm that no deprecation warnings appear in the logs:
++
+[source,terminal]
+----
+$ oc logs <rhdh-pod-name> | grep -i "deprecated.*disabled"
+----
++
+If the migration is successful, this command returns no results.
+
+
+. Verify that the expected plugins are active in the {product-short} UI:
++
+.. Log in to the {product-short} web interface.
+.. Navigate to the catalog or verify that features from the enabled plugins are available.
+
+
+. Test the functionality of migrated plugins to ensure they work as expected.
+
+.Troubleshooting
+
+Plugin fails to activate after migration::
++
+Check the {product-short} logs for errors related to the plugin package name or configuration.
+Verify that the `enabled` field value is a boolean (`true` or `false`), not a string (`"true"` or `"false"`).
+
+Both fields are present in the configuration::
++
+The `enabled` field takes precedence, but you will see warnings in the logs.
+Remove the `disabled` field to eliminate warnings:
++
+[source,yaml]
+----
+# Remove this:
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+    disabled: false  # Remove this line
+
+# Final configuration:
+plugins:
+  - package: '@backstage/plugin-catalog-backend-dynamic@1.0.0'
+    enabled: true
+----
+
+YAML syntax errors::
++
+Validate the YAML syntax using a linter:
++
+[source,terminal]
+----
+$ yamllint dynamic-plugins.yaml
+----
++
+Ensure proper indentation and structure.
+
+Rollback required::
++
+If the migration causes issues, restore the original configuration from the backup:
++
+For Operator deployments:
++
+[source,terminal]
+----
+$ oc apply -f dynamic-plugins-backup.yaml
+----
++
+For Helm deployments:
++
+[source,terminal]
+----
+$ helm rollback <release-name>
+----
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:dynamic-plugins-configuration-schema_{context}[]
+
+* xref:dynamic-plugins-field-precedence_{context}[]
+
+* xref:dynamic-plugins-configuration-file_{context}[]

@@ -43,26 +43,38 @@ $ unpack quay.io/rhdh/plugin-catalog-index:1.10 dynamic-plugins.default.yaml
 Alternatively, you can use an `oci://` plugin reference, and the special `{{inherit}}` tag will fetch the latest compatible plugin, including its default configuration, for your current {product-very-short} version.
 
 .Prerequisites
-* You have deployed the {product-very-short} application, and have access to the logs of the `install-dynamic-plugins` init container.
-* You have the necessary permissions to change plugin configurations and access the application environment.
-* You have identified and set the required environment variables referenced by the plugin's default configuration. You must define these environment variables in the Helm Chart or Operator configuration.
 
 .Procedure
+
+* You have deployed the {product-very-short} application, and have access to the logs of the `install-dynamic-plugins` init container.
+
+* You have the necessary permissions to change plugin configurations and access the application environment.
+
+* You have identified and set the required environment variables referenced by the plugin's default configuration. You must define these environment variables in the Helm Chart or Operator configuration.
+
+include::snip-dynamic-plugin-enabled-field-migration.adoc[lines=3..-1]
+
+
 . Start your {product-very-short} application and access the logs of the `install-dynamic-plugins` init container within the {product-very-short} pod.
+
 . Identify the {dynamic-plugins-reference-book-link}#red-hat-supported-plugins[Red Hat supported plugins] that the system disables by default.
-. If you need to provide additional configuration for the plugin, other than enabling it, copy the package configuration from the `dynamic-plugins.default.yaml` file you extracted above. For plugins which require no configuration, you can simply reference the plugin and set it to `disabled:false` as in the example below.
+
+. If you need to provide additional configuration for the plugin, other than enabling it, copy the package configuration from the `dynamic-plugins.default.yaml` file you extracted above. For plugins which require no configuration, you can simply reference the plugin and set it to `enabled: true` as in the example below.
+
 . To use the latest compatible plugin version, use the special tag `{{inherit}}`; this will also load the default configuration, which you can then override.
+
 . Open the plugin configuration file (Custom Resource or ConfigMap) and locate the plugin entry you want to enable.
 +
 The location of the plugin configuration file varies based on the deployment method. For more details, see {installing-and-viewing-plugins-book-link}[{installing-and-viewing-plugins-book-title}].
-. Change the `disabled` field to `false` and add the package name as follows:
+
+. Set the `enabled` field to `true` and add the package name as follows:
 +
 --
 [source,yaml]
 ----
 plugins:
   - package: oci://registry.access.redhat.com/rhdh/backstage-community-plugin-analytics-provider-segment:{{inherit}}
-    disabled: false
+    enabled: true
 ----
 +
 include::snip-inherit-tag-rollback-warning.adoc[lines=2..-1]
@@ -73,12 +85,14 @@ or using the deprecated wrapper syntax:
 ----
 plugins:
   - package: './dynamic-plugins/dist/backstage-community-plugin-analytics-provider-segment'
-    disabled: false
+    enabled: true
 ----
 
 For more information about how to configure dynamic plugins in {product-short}, see {configuring-dynamic-plugins-book-link}[{configuring-dynamic-plugins-book-title}].
 --
 
 .Verification
+
 . Restart the {product-very-short} application and verify that the plugin is successfully activated and configured.
+
 . Verify the application logs for confirmation and ensure the plugin is functioning as expected.
