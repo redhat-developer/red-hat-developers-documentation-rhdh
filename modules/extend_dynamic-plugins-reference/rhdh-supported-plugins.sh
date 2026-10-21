@@ -104,7 +104,8 @@ COMMUNITY_FILES=(ref-community-supported-plugins.adoc rhdh-community-plugins.csv
 MANIFEST="$SCRIPT_DIR/catalog-index-sources.json"
 
 rhdh_minor() {
-  [[ $1 =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)?$ ]] || return 1
+  local version="$1"
+  [[ $version =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)?$ ]] || return 1
   printf '%s.%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
 }
 
