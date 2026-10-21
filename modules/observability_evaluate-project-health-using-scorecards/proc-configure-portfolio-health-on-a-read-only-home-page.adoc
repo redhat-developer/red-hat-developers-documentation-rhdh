@@ -4,7 +4,7 @@
 = Configure on a read-only home page
 
 [role="_abstract"]
-You can add the aggregated Scorecard widget to a read-only {product-very-short} home page to monitor the collective technical health of your portfolio.
+You can add the aggregated Scorecard card widget to a read-only {product-very-short} home page to monitor the collective technical health of your portfolio.
 
 .Prerequisites
 
@@ -16,71 +16,87 @@ You can add the aggregated Scorecard widget to a read-only {product-very-short} 
 .Procedure
 
 . Open your {product-very-short} `{my-app-config-file}` file. For more information, see {configuring-book-link}[{configuring-book-title}].
-. Add the aggregated Scorecard mount points to the dynamic plugin configuration file:
+
+. In the `app.extensions` section, configure the dynamic home page as read-only by setting `customizable: false`, and define each aggregated Scorecard card under the `widgetLayout` section:
 +
 [source,yaml]
 ----
-plugins:
-  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard:<tag>
-    disabled: false
-    pluginConfig:
-      dynamicPlugins:
-        frontend:
-          red-hat-developer-hub.backstage-plugin-scorecard:
-            entityTabs:
-              - path: "/scorecard"
-                title: Scorecard
-                mountPoint: entity.page.scorecard
-            mountPoints:
-              - mountPoint: entity.page.scorecard/cards
-                importName: EntityScorecardContent
-                config:
-                  layout:
-                    gridColumn: 1 / -1
-              - mountPoint: home.page/cards
-                importName: ScorecardHomepageCard
-                config:
-                  props:
-                    aggregationId: "jira.openIssues"
-                  layouts:
-                    xl: { w: 3, h: 6 }
-                    lg: { w: 4, h: 6 }
-                    md: { w: 6, h: 6 }
-                    sm: { w: 12, h: 6 }
-                    xs: { w: 12, h: 6 }
-                    xxs: { w: 12, h: 6 }
-              - mountPoint: home.page/cards
-                importName: ScorecardHomepageCard
-                config:
-                  props:
-                    aggregationId: "github.openPRs"
-                  layouts:
-                    xl: { w: 3, h: 6, x: 3 }
-                    lg: { w: 4, h: 6, x: 4 }
-                    md: { w: 6, h: 6, x: 6 }
-                    sm: { w: 12, h: 6 }
-                    xs: { w: 12, h: 6 }
-                    xxs: { w: 12, h: 6 }
-  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-dynamic-home-page
-    disabled: false
-    pluginConfig:
-      dynamicPlugins:
-        frontend:
-          red-hat-developer-hub.backstage-plugin-dynamic-home-page:
-            dynamicRoutes:
-              - path: /
-                importName: DynamicHomePage
+app:
+  extensions:
+    - page:home: false
+    - page:homepage:
+        config:
+          path: /
+          title: Home
+    - api:home/visits: true
+    - app-root-element:home/visit-listener: true
+    - home-page-layout:homepage/dynamic-homepage-layout:
+        config:
+          customizable: false
+          widgetLayout:
+            scorecard-aggregated-card:
+              - id: ScorecardGithubOpenPRs
+                props:
+                  aggregationId: github.openPRs
+                priority: 410
+                breakpoints:
+                  xl: { w: 4, h: 6, x: 0, y: 0 }
+                  lg: { w: 4, h: 6, x: 0, y: 0 }
+                  md: { w: 6, h: 6, x: 0, y: 0 }
+                  sm: { w: 6, h: 6, x: 0, y: 0 }
+                  xs: { w: 12, h: 6, x: 0, y: 0 }
+                  xxs: { w: 12, h: 6, x: 0, y: 0 }
+              - id: ScorecardJiraOpenIssues
+                props:
+                  aggregationId: jira.openIssues
+                priority: 410
+                breakpoints:
+                  xl: { w: 4, h: 6, x: 0, y: 0 }
+                  lg: { w: 4, h: 6, x: 0, y: 0 }
+                  md: { w: 6, h: 6, x: 0, y: 0 }
+                  sm: { w: 6, h: 6, x: 0, y: 0 }
+                  xs: { w: 12, h: 6, x: 0, y: 0 }
+                  xxs: { w: 12, h: 6, x: 0, y: 0 }
 ----
 +
-include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
+where:
++
+`id`:: A custom unique card name in upper camel case, for example `ScorecardGithubOpenPRs` or `ScorecardJiraOpenIssues`.
+`props.aggregationId`:: A metric ID, for example `github.openPRs` or `jira.openIssues`, or the key of a custom `scorecard.aggregationKPIs` entry. For the list of metric IDs, see {scorecard-plugin-book-link}#available-scorecard-metric-providers-and-metric-ids_evaluate-project-health-using-scorecards[Available Scorecard metric providers and metric IDs]. To define a custom aggregation ID, see {scorecard-plugin-book-link}#configure-aggregated-kpis-for-the-scorecard_configure-aggregated-scorecard-kpis[Configure aggregated KPIs for the Scorecard].
++
+To display more than one card, add further entries to the `scorecard-aggregated-card` list, as shown in the preceding example.
+
+. Register the aggregated Scorecard card in the `homepage.defaultWidgets` section:
++
+[source,yaml]
+----
+homepage:
+  defaultWidgets:
+    - id: rhdh-onboarding-section
+      ref: rhdh-onboarding-section
+      props:
+        title: Onboarding section
+    - id: rhdh-entity-section
+      ref: rhdh-entity-section
+      props:
+        title: Entity section
+    - id: rhdh-template-section
+      ref: rhdh-template-section
+      props:
+        title: Template section
+    - id: scorecard-aggregated-card
+      ref: scorecard-aggregated-card
+----
+
+. Save the modified configuration file and restart your {product} instance.
 +
 [NOTE]
 ====
-The widget automatically calculates and displays aggregations for the entities you own. You do not have to manually configure filters or specify target owner groups in the widget settings.
+The aggregated Scorecard card widget automatically calculates and displays aggregations for the entities you own. You do not have to manually configure filters or specify target owner groups in the widget settings.
 ====
 
 .Verification
 
 . Log in to {product-very-short}.
-. On the *Home* page, verify that the aggregated Scorecard widget is displayed with the name you provided.
+. On the *Home* page, verify that the aggregated Scorecard card widget is displayed with the name you provided.
 . Confirm that the displayed key performance indicators (KPIs) reflect the status of your owned components, systems, and resources.
