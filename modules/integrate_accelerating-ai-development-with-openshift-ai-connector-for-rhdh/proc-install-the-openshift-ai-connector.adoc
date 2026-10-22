@@ -10,12 +10,20 @@ include::{docdir}/artifacts/snip-developer-preview-rhoai.adoc[]
 
 .Prerequisites
 
-* You have cluster-admin access to a Kubernetes or {ocp-short} cluster where KServe is installed. The cluster can be a {rhoai-brand-name} cluster or a generic KServe installation.
-* You have installed KServe and deployed one or more model servers as `serving.kserve.io` `InferenceService` or `LLMInferenceService` resources.
-* To import model cards as TechDocs, the Kubeflow Model Catalog is available on the cluster and your `InferenceService` or `LLMInferenceService` resources are annotated to reference their model cards.
-* You have installed the {product-very-short} Operator or Helm chart and can update your dynamic plugin configuration.
 
 .Procedure
+
+* You have cluster-admin access to a Kubernetes or {ocp-short} cluster where KServe is installed. The cluster can be a {rhoai-brand-name} cluster or a generic KServe installation.
+
+* You have installed KServe and deployed one or more model servers as `serving.kserve.io` `InferenceService` or `LLMInferenceService` resources.
+
+* To import model cards as TechDocs, the Kubeflow Model Catalog is available on the cluster and your `InferenceService` or `LLMInferenceService` resources are annotated to reference their model cards.
+
+* You have installed the {product-very-short} Operator or Helm chart and can update your dynamic plugin configuration.
+
+include::../shared/snip-dynamic-plugin-enabled-field-migration.adoc[]
+
+
 
 . Configure the Kubernetes role-based access control (RBAC) and credentials that the connector uses to access the cluster.
 +
@@ -89,6 +97,7 @@ metadata:
 type: kubernetes.io/service-account-token
 ----
 
+
 . Update your {product-very-short} dynamic plugin configuration to install the connector and its companion plugins.
 +
 In your {product-very-short} dynamic plugins configuration, add the following plugins:
@@ -96,13 +105,13 @@ In your {product-very-short} dynamic plugins configuration, add the following pl
 [source,yaml]
 ----
 plugins:
-  - disabled: false
+  - enabled: true
     package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-kserve-kubeflow-connector-backend:<tag>
-  - disabled: false
+  - enabled: true
     package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-backend-module-ai-model-server:<tag>
-  - disabled: false
+  - enabled: true
     package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-backend-module-model-catalog:<tag>
-  - disabled: false
+  - enabled: true
     package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-catalog-techdoc-url-reader-backend:<tag>
 ----
 +
@@ -114,6 +123,7 @@ where:
 `catalog-backend-module-ai-model-server`:: The catalog module that registers the `AiModelServerAPI` entity kind so that the catalog accepts the entities that the connector generates.
 `catalog-backend-module-model-catalog`:: The entity provider that calls the connector REST route and emits `AiModelServerAPI` catalog entities.
 `catalog-techdoc-url-reader-backend`:: The TechDocs URL reader that resolves model-card content through the connector for TechDocs generation.
+
 
 . Allow the `AiModelServerAPI` entity kind in your catalog rules by adding it to your `{my-app-config-file}` file:
 +
@@ -136,4 +146,8 @@ catalog:
 
 .Next steps
 
+
+
+
 * Configure the connector with access to your cluster and the Kubeflow Model Catalog. For more information, see xref:configure-the-openshift-ai-connector_{context}[Configure the {openshift-ai-connector-name}].
+

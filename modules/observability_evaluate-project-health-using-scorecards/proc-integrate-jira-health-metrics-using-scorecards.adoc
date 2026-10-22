@@ -10,14 +10,24 @@ The plugin supports Jira Cloud (API v3) and Jira Data Center (API v2).
 
 .Prerequisites
 
-* You must have administrator privileges for Jira and {product-very-short}.
-* You have {install-category-link}[installed your {product-very-short} instance].
-* You have {scorecard-plugin-book-link}#proc-installing-scorecard-plugin-in-rhdh-instance[installed the Scorecard images].
-* You have {configuring-book-link}[added a custom {product-short} application configuration].
 
 .Procedure
 
+* You must have administrator privileges for Jira and {product-very-short}.
+
+* You have {install-category-link}[installed your {product-very-short} instance].
+
+* You have {scorecard-plugin-book-link}#proc-installing-scorecard-plugin-in-rhdh-instance[installed the Scorecard images].
+
+* You have {configuring-book-link}[added a custom {product-short} application configuration].
+
+include::../shared/snip-dynamic-plugin-enabled-field-migration.adoc[]
+
+
+
 . Generate a Jira configuration token by using one of the following methods, depending on your Jira product:
+
+
 ** Jira Cloud: https://id.atlassian.com/manage-profile/security/api-tokens[Create a personal token]. You must create a `Base64-encoded` string by using the following plain text format: `your-atlassian-email:your-jira-api-token`.
 +
 [source,bash]
@@ -26,10 +36,12 @@ $ echo -n 'your-atlassian-email:your-jira-api-token' | base64
 ----
 ** Jira data center: Create a https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html[Personal Access Token (PAT)] in your Jira data center account.
 
+
 . Add Jira secrets: Define the following key/value pairs in {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets]:
 +
 `JIRA_TOKEN`:: Enter your generated Jira token.
 `JIRA_BASE_URL`:: Enter your Jira base URL.
+
 
 . Configure the plugin: In your {product-very-short} `dynamic-plugins-config.yaml` file, enable the plugin by using either a direct setup or a proxy setup.
 +
@@ -44,7 +56,7 @@ You must use the proxy setup to ensure configuration compatibility if you also u
 ----
 plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:<tag>
-    disabled: false
+    enabled: true
 ----
 +
 include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
@@ -63,14 +75,14 @@ where:
 `token`:: The Jira token (Base64 string for Cloud, PAT for Data Center), configured under ${JIRA_TOKEN} in your {product-very-short} secrets.
 `product`:: Enter the supported product: `cloud` or `datacenter`.
 
-** Use a proxy setup: 
+** Use a proxy setup:
 ... In your {product-very-short} `dynamic-plugins-config.yaml` file, add the following code:
 +
 [source,yaml]
 ----
 plugins:
   - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:<tag>
-    disabled: false
+    enabled: true
 ----
 +
 include::{docdir}/artifacts/snip-tag-for-OCI-package-paths.adoc[]
@@ -97,8 +109,11 @@ where:
 
 `target`:: The base URL of your Jira instance, configured under ${JIRA_BASE_URL} in your {product-very-short} secrets.
 `Authorization`:: The Jira token, configured under ${JIRA_TOKEN} in your {product-very-short} secrets. Set the token value as one of the following values:
+
 * For *Cloud*: `Basic YourCreatedCloudToken`
+
 * For *Data Center*: `Bearer YourJiraToken`
+
 
 . Annotate catalog entities: Add the Jira project key to the `metadata.annotations` section of the `catalog-info.yaml` file for your component:
 +
@@ -130,6 +145,7 @@ where:
 `jira/team`:: Optional: Enter the Jira team ID (not the team title).
 `jira/custom-filter`:: Optional: Enter a custom Jira Query Language (JQL) filter.
 
+
 . Import the catalog entity: Add the location of your `catalog-info.yaml` to the `catalog.locations` section in the {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
@@ -139,6 +155,7 @@ catalog:
     - type: url
       target: https://github.com/<owner>/<repository>/catalog-info.yaml
 ----
+
 
 . Optional: Define metric thresholds and filters: To customize health criteria or filter issues, add the *Jira Open Issues* metric thresholds to your {product-very-short} `{my-app-config-file}` file:
 +
@@ -162,6 +179,7 @@ where:
 
 `scorecard:plugins:jira:openIssues:thresholds`:: Lists the default threshold values for the *Jira Open Issues* metric.
 
+
 . Optional: Define global or custom mandatory filters that entities can override by adding the following code to your {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml]
@@ -184,8 +202,11 @@ where:
 ====
 Jira metrics use the following default thresholds for the *Jira Open Issues* (`jira.openIssues`) metric:
 
+
 * *Error*: More than 100 open issues.
+
 * *Warning*: More than 50 open issues.
+
 * *Success*: 50 or fewer open issues.
 
 You can customize these thresholds in your {product-very-short} `{my-app-config-file}` file. For more information, see xref:scorecard-metric-thresholds_evaluate-project-health-using-scorecards[Scorecard metric thresholds].
