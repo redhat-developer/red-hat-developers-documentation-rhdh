@@ -82,16 +82,17 @@ if [[ $SKIP_SUPPORTED_TABLES -eq 1 && $SKIP_COMMUNITY_TABLE -eq 1 ]]; then
   exit 1;
 fi
 if [[ $BRANCH != main && ! $BRANCH =~ ^release-[0-9]+\.[0-9]+$ ]]; then
-  echo -e "${red}[ERROR] Expected main or release-X.Y: $BRANCH${norm}" >&2
+  echo -e "${red}[ERROR] Expected main or release-X.Y, but got: $BRANCH${norm}" >&2
   exit 1
 fi
 
 for tool in skopeo jq tar; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "[ERROR] $tool is required" >&2; exit 1; }
+  command -v "$tool" >/dev/null 2>&1 || { echo "[ERROR] $tool is required. Must install it to proceed. " >&2; exit 1; }
 done
 
 catalogindextmpdir=$(mktemp -d) || exit 1
 trap 'rm -rf "$catalogindextmpdir"' EXIT
+# x.y only as upstream doesn't generate x.y.z tags
 INDEX_TAG="${BRANCH#release-}"
 if [[ $BRANCH == main ]]; then
   INDEX_TAG=next
