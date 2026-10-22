@@ -21,31 +21,16 @@ oc create configmap registry-ca-crt --from-file=ca.crt
 +
 [source,yaml]
 ----
-upstream:
-  backstage:
-    extraVolumes:
-      # IMPORTANT: Due to a Helm limitation with arrays, you must also
-      # include all the volumes defined in the default Helm Chart
-      # before adding the new one
-      # ...
+extraVolumes:
+  - name: registry-ca-crt
+    configMap:
+      name: registry-ca-crt
+dynamicPlugins:
+  initContainer:
+    extraVolumeMounts:
       - name: registry-ca-crt
-        configMap:
-          name: registry-ca-crt
-
-    initContainers:
-      - name: install-dynamic-plugins
-        # IMPORTANT: Due to a Helm limitation with arrays, you must also
-        # include all the other fields defined in the default Helm Chart
-        # ...
-
-        volumeMounts:
-          # IMPORTANT: Due to a Helm limitation with arrays, you must also
-          # include all the volume mounts defined in the default Helm Chart
-          # before adding the new one
-          # ...
-          - name: registry-ca-crt
-            # Hostname and port must match your target registry
-            mountPath: '/etc/containers/certs.d/reg.example.com:5000'
+        # Hostname and port must match your target registry
+        mountPath: '/etc/containers/certs.d/reg.example.com:5000'
 ----
 
 .. For Operator-based installations, update your {product-custom-resource-type} Custom Resource (CR), as follows:
