@@ -1,0 +1,67 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="helm-chart-new-features_{context}"]
+= New features in the standalone Helm chart
+
+[role="_abstract"]
+The {product} 2.1 standalone Helm chart introduces features for StatefulSet workloads, external database configuration, and Offline Knowledge Portal (OKP) integration.
+
+== StatefulSet workload support
+
+You can deploy {product-very-short} as a StatefulSet instead of a Deployment for stable pod identity and persistent volumes.
+
+.Example: StatefulSet configuration
+[source,yaml]
+----
+workload:
+  kind: StatefulSet
+
+volumeClaimTemplates:
+  - metadata:
+      name: dynamic-plugins-root
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+----
+
+StatefulSets provide stable network identities and persistent storage across pod restarts, which is useful for scenarios requiring stable hostnames or local state.
+
+== External database configuration
+
+The new chart includes a dedicated +externalDatabase+ block for connecting to external PostgreSQL databases when the bundled PostgreSQL chart is disabled.
+
+.Example: External database configuration
+[source,yaml]
+----
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: postgres.example.com
+  port: 5432
+  username: backstage
+  database: backstage
+  existingPasswordSecret:
+    name: postgres-secret
+    key: password
+----
+
+This replaces the manual +extraEnvVars+ approach required in the old chart.
+
+== Offline Knowledge Portal configuration
+
+The intelligent assistant supports Offline Knowledge Portal (OKP) configuration for air-gapped deployments.
+
+.Example: OKP configuration
+[source,yaml]
+----
+intelligentAssistant:
+  okp:
+    enabled: true
+    url: https://okp.example.com
+----
+
+OKP provides offline access to documentation and knowledge base content for environments without external internet connectivity.
