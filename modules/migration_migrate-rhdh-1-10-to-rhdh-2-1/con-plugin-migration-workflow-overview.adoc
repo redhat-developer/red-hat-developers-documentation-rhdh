@@ -1,0 +1,154 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="plugin-migration-workflow-overview_{context}"]
+= Plugin migration workflow overview
+
+[role="_abstract"]
+Migrating custom front-end plugins to {product} 2.1 requires a six-step workflow that transforms plugins from the legacy front-end system to the new extension-based architecture. Follow this workflow to ensure complete and correct plugin migration.
+
+== The six-step migration process
+
+The recommended migration workflow follows this sequence:
+
+. *Discover* — Identify all plugin exports and current mount points in your configuration
+. *Choose alpha export* — Create dual-export structure for cross-version compatibility
+. *Migrate extensions* — Convert mount points to extension blueprints
+. *Update package.json* — Add export maps for the +/alpha+ entry point
+. *Update development wiring* — Modify local development entry points
+. *Verify* — Test plugin loading through TypeScript compilation and runtime validation
+
+Each step builds on the previous step. Complete all steps for each custom plugin before moving to the next plugin.
+
+== Step 1: Discover plugin features
+
+Review your current plugin configuration to identify which front-end features the plugin provides:
+
+* Page routes defined in +dynamicRoutes+
+* Entity page content defined in +mountPoints+
+* Entity tabs defined in +entityTabs+
+* Icons registered in +appIcons+
+* API factories in +apiFactories+
+* Scaffolder field extensions in +scaffolderFieldExtensions+
+
+Document the current wiring configuration for each feature. You will convert each configuration block to an extension blueprint in Step 3.
+
+== Step 2: Choose alpha export for dual compatibility
+
+Create an +/alpha+ export file (+src/alpha.ts+ or +src/alpha/index.ts+) in your plugin. The dual-export pattern maintains compatibility across {product-very-short} versions:
+
+* {product-very-short} 1.y reads the root export (+./+) which uses the old front-end system
+* {product} 2.1 reads the +/alpha+ export which uses extension blueprints
+
+This allows the same plugin package to work in both environments during the migration window. After all deployments upgrade to 2.1, you can remove the root export and promote the alpha export to the default.
+
+== Step 3: Migrate extensions to blueprints
+
+Convert each plugin feature to the appropriate extension blueprint type:
+
+[cols="1,2", options="header"]
+|===
+| Plugin feature | Blueprint type
+
+| Entity page cards
+| +EntityCardBlueprint+
+
+| Entity page tabs
+| +EntityContentBlueprint+
+
+| Application pages
+| +PageBlueprint+
+
+| Navigation items
+| +NavItemBlueprint+
+
+| Icons
+| +IconBundleBlueprint+
+
+| API implementations
+| +ApiBlueprint+
+
+| Scaffolder fields
+| +ScaffolderFieldExtensionBlueprint+
+|===
+
+Each blueprint encapsulates the plugin feature's presentation logic, conditional rendering, and configuration in TypeScript code. The blueprint replaces YAML-based mount point configuration.
+
+== Step 4: Update package.json with export maps
+
+Add the +exports+ field to your plugin's +package.json+ to define both entry points:
+
+[source,json]
+----
+{
+  "exports": {
+    ".": "./src/index.ts",
+    "./alpha": "./src/alpha.ts",
+    "./package.json": "./package.json"
+  }
+}
+----
+
+The +./alpha+ export points to the new extension-based entry point. The root +./+ export maintains backward compatibility.
+
+== Step 5: Update development wiring
+
+If your plugin is wired directly into a custom +packages/app/src/App.tsx+ file for local development, update the import path:
+
+[source,typescript]
+----
+// Old import
+import { MyPlugin } from '@my-org/backstage-plugin-my-plugin';
+
+// New import for RHDH 2.1
+import MyPlugin from '@my-org/backstage-plugin-my-plugin/alpha';
+----
+
+Remove any manual +createApp+ wiring that explicitly mounts the plugin. The new front-end system auto-discovers extensions from the plugin's alpha export.
+
+== Step 6: Verify types and exports
+
+Run TypeScript compilation to verify that all imports resolve correctly and type checking passes:
+
+[source,terminal]
+----
+$ yarn tsc --noEmit
+----
+
+Export the plugin as a dynamic plugin:
+
+[source,terminal]
+----
+$ npx @red-hat-developer-hub/cli plugin export
+----
+
+Verify that the +plugin-manifest.yaml+ file generates successfully and includes the +/alpha+ export.
+
+== Migration sequencing
+
+For deployments with multiple custom plugins:
+
+. Migrate and test one plugin at a time
+. Deploy the dual-export plugin version to {product-very-short} 1.y to verify backward compatibility
+. After all plugins are migrated, upgrade the platform to {product} 2.1
+. Update configuration to remove +dynamicPlugins.frontend+ blocks and use +app.extensions+ for overrides only
+
+Do not attempt to upgrade the platform before completing plugin migration. {product} 2.1 will fail to load unmigrated plugins.
+
+== Automation tools
+
+The {product-very-short} community provides two tools to accelerate migration:
+
++rhdh-plugin-nfs-migration+ skill::
+Generates extension blueprint code from existing mount point configuration. Automates Step 3 for common plugin patterns.
+
++rhdh-upgrade-helper+ skill::
+Converts legacy +dynamicPlugins.frontend+ configuration to +app.extensions+ format. Flags references to +./dynamic-plugins/dist/+ wrappers. Removes unsupported configuration keys.
+
+These tools handle repetitive migration tasks but require manual review and adjustment for complex plugin scenarios.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:proc-migrate-custom-plugins-to-ensure-compatibility-after-upgrade_{context}[Migrate custom plugins to ensure compatibility after upgrade]
+* xref:ref-pre-upgrade-checklist-custom-plugins_{context}[Pre-upgrade checklist for custom plugins]
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-plugins-to-new-frontend-system.md[{product-short} plugin migration guide]

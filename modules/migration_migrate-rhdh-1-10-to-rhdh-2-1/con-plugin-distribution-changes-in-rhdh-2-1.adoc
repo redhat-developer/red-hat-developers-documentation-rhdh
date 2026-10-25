@@ -1,0 +1,52 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="plugin-distribution-changes-in-rhdh-2-1_{context}"]
+= Plugin distribution changes in {product} 2.1
+
+[role="_abstract"]
+{product} 2.1 changes how dynamic plugins are distributed and installed. Plugins are now published as standalone OCI container images instead of being bundled in the main {product-very-short} container image, enabling independent plugin updates without requiring platform upgrades.
+
+== Removal of bundled plugin wrappers
+
+{product-very-short} 1.y bundled all dynamic plugins in the main container image at the +./dynamic-plugins/dist/+ directory. Each plugin included a wrapper that adapted it to the {product-very-short} dynamic loading system.
+
+{product} 2.1 removes the bundled plugin directory and all pre-packaged wrappers. The platform no longer includes any plugins by default. You must explicitly declare which plugins to install in your configuration.
+
+[IMPORTANT]
+====
+Any configuration that references the +./dynamic-plugins/dist/+ path will fail after upgrading to {product} 2.1. You must update all plugin references to use the new OCI image format.
+====
+
+== Standalone OCI container images
+
+Each dynamic plugin is now published as a standalone OCI container image in the Red Hat container registry at +quay.io/rhdh+. Plugins follow this naming pattern:
+
+* +quay.io/rhdh/rhdh-plugin-<plugin-name>:2.1+
+
+The {product-very-short} platform pulls plugin container images at startup using the OCI registry protocol. This allows plugins to be updated, patched, and versioned independently from the platform.
+
+== Decoupled plugin release cycles
+
+The standalone distribution model decouples plugin patch cycles from platform releases. Red Hat can publish plugin updates to fix bugs or add features without requiring a full {product-very-short} platform upgrade.
+
+This provides the following benefits:
+
+* *Faster security patches* — Critical plugin vulnerabilities can be patched immediately without waiting for a platform release
+* *Independent feature delivery* — New plugin features ship as they become available
+* *Reduced testing scope* — Plugin updates require testing only the affected plugin, not the entire platform
+* *Smaller container images* — The base {product-very-short} container image no longer includes all plugins, reducing image size and pull time
+
+== Migration impact
+
+When migrating from {product-very-short} 1.y to 2.1, you must:
+
+. Remove all references to +./dynamic-plugins/dist/+ from your configuration
+. Update plugin declarations to use OCI image references
+. Verify that all required plugins are explicitly listed in your configuration
+
+The platform no longer auto-discovers plugins from the bundled directory. Any plugin not explicitly declared in your configuration will not be installed.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:proc-migrate-dynamic-plugin-references-to-oci-images_{context}[Migrating dynamic plugin references to OCI images]
