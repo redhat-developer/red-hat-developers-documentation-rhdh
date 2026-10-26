@@ -19,6 +19,8 @@ from pathlib import Path
 
 import yaml
 
+from changelog_paths import MODULE_DIR, REPORT_NAME, require_document_path
+
 
 PACKAGE_DIR = "catalog-entities/extensions/packages/"
 BUILD_INFO_FILE = "build-info.json"
@@ -38,10 +40,6 @@ DETAIL_WIDTHS = ("1", "2", "1", "2", "1", "3")
 EMPTY = "—"
 SUPPORTED_INDEX = "quay.io/rhdh/plugin-catalog-index"
 COMMUNITY_INDEX = "ghcr.io/redhat-developer/rhdh-plugin-export-overlays/plugin-catalog-index"
-MODULE_DIR = Path("modules/extend_dynamic-plugins-reference")
-REPORT_NAME = re.compile(
-    r"ref-dynamic-plugin-changes-[0-9]+-[0-9]+(?:-[0-9]+)?-to-[0-9]+-[0-9]+(?:-[0-9]+)?\.adoc$"
-)
 OVERLAYS_REPO = "https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 OVERLAYS_SOURCE = re.compile(
     rf"{re.escape(OVERLAYS_REPO)}/tree/(main|release-\d+\.\d+) @ ([0-9a-f]{{8,40}})$"
@@ -91,18 +89,7 @@ def required_file(files: dict[str, bytes], name: str) -> bytes:
 def output_path(path: Path) -> Path:
     """Allow report writes only to version-named files in the docs module."""
 
-    module = Path.cwd().resolve() / MODULE_DIR
-    expected = f"--output must be a version-named report under {MODULE_DIR} in this checkout"
-    # A bad CLI path must not escape the docs module or overwrite its index.
-    # Resolving ensures any symlinked parent still leads into this module.
-    if ".." in path.parts or not REPORT_NAME.fullmatch(path.name):
-        raise CatalogError(expected)
-    if not module.is_dir() or module.resolve() != module or path.is_symlink():
-        raise CatalogError(expected)
-    resolved = path.resolve()
-    if resolved.parent != module:
-        raise CatalogError(expected)
-    return resolved
+    return require_document_path("--output", path, MODULE_DIR, REPORT_NAME)
 
 
 def image_repository(reference: str) -> str:

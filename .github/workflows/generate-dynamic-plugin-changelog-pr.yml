@@ -89,13 +89,14 @@ jobs:
           ref: main
           path: tools
           sparse-checkout: |
+            modules/extend_dynamic-plugins-reference/changelog_paths.py
             modules/extend_dynamic-plugins-reference/generate-dynamic-plugin-changelog.py
             modules/extend_dynamic-plugins-reference/update-dynamic-plugin-changelog.py
           sparse-checkout-cone-mode: false
 
       - name: Install dependencies
         run: |
-          python3 -m pip install 'PyYAML>=6.0.2'
+          python3 -m pip install --only-binary :all: 'PyYAML==6.0.3'
           sudo apt-get update
           sudo apt-get install -y skopeo
 
@@ -128,18 +129,24 @@ jobs:
           from pathlib import Path
           import sys
 
-          report = sys.argv[1]
-          include = f"include::{report}[leveloffset=+1]"
+          sys.path.insert(0, str(Path("../tools/modules/extend_dynamic-plugins-reference").resolve()))
+          from changelog_paths import MODULE_DIR, REPORT_NAME, TITLE_PATHS, require_document_path
+
+          report = require_document_path("report", Path(sys.argv[1]), MODULE_DIR, REPORT_NAME)
+          include = f"include::{report.relative_to(Path.cwd().resolve()).as_posix()}[leveloffset=+1]"
           rolling = "include::modules/extend_dynamic-plugins-reference/ref-dynamic-plugin-changes.adoc[leveloffset=+1]"
-          titles = (
-              Path("titles/extend_dynamic-plugins-reference/master.adoc"),
-              Path("titles/product_product/category-maps/reference/nav-dynamic-plugin-parameter-reference-for-configuration-paths.adoc"),
-          )
-          found = False
-          for title in titles:
+          titles = []
+          for relative in TITLE_PATHS:
+              title = require_document_path("title path", relative, relative.parent, relative.name)
               if not title.exists():
                   continue
-              found = True
+              if not title.is_file():
+                  raise ValueError(f"Title is not a file: {title}")
+              titles.append(title)
+          if not titles:
+              raise SystemExit("No dynamic plugin reference title exists in this checkout")
+
+          for title in titles:
               content = title.read_text(encoding="utf-8")
               if include in content:
                   continue
@@ -148,8 +155,6 @@ jobs:
               else:
                   content = content.rstrip() + f"\n\n{include}\n"
               title.write_text(content, encoding="utf-8")
-          if not found:
-              raise SystemExit("No dynamic plugin reference title exists in this checkout")
           PY
 
       - name: Create or update pull request

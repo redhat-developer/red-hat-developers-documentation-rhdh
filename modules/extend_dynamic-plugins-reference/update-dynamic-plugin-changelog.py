@@ -8,18 +8,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+from changelog_paths import INDEX_NAME, MODULE_DIR, REPORT_NAME, TITLE_PATHS, require_document_path
+
 
 SUPPORTED_INDEX = "quay.io/rhdh/plugin-catalog-index"
 GENERATOR = Path(__file__).with_name("generate-dynamic-plugin-changelog.py")
-MODULE_DIR = Path("modules/extend_dynamic-plugins-reference")
-INDEX_NAME = "ref-dynamic-plugin-changes.adoc"
 PATCH = re.compile(r"(\d+)\.(\d+)\.(\d+)$")
 RELEASE_BRANCH = re.compile(r"release-(\d+)\.(\d+)$")
 INCLUDE = f"include::{(MODULE_DIR / INDEX_NAME).as_posix()}[leveloffset=+1]"
-TITLE_PATHS = (
-    Path("titles/extend_dynamic-plugins-reference/master.adoc"),
-    Path("titles/product_product/category-maps/reference/nav-dynamic-plugin-parameter-reference-for-configuration-paths.adoc"),
-)
 
 
 class ChangelogError(Exception):
@@ -51,18 +47,7 @@ def patch_tags(tags: list[str], line: str) -> list[str]:
 def output_path(path: Path) -> Path:
     """Keep the index and its generated comparison files in the docs module."""
 
-    module = Path.cwd().resolve() / MODULE_DIR
-    expected = f"--output must be {MODULE_DIR / INDEX_NAME} in this checkout"
-    # Reject traversal, unexpected names, and symlinks before writing files.
-    # The workflow passes the exact path inside this documentation checkout.
-    if ".." in path.parts or path.name != INDEX_NAME:
-        raise ChangelogError(expected)
-    if not module.is_dir() or module.resolve() != module or path.is_symlink():
-        raise ChangelogError(expected)
-    resolved = path.resolve()
-    if resolved.parent != module:
-        raise ChangelogError(expected)
-    return resolved
+    return require_document_path("--output", path, MODULE_DIR, INDEX_NAME)
 
 
 def comparisons(branch: str, tags: list[str], next_version: str = "") -> tuple[str, list[tuple[str, str]]]:
@@ -164,7 +149,7 @@ def comparison_path(output: Path, before: str, after: str, next_version: str = "
     # use its declared patch version in the filename.
     endpoint = next_version if after == "next" else after
     name = f"{output.stem}-{before.replace('.', '-')}-to-{endpoint.replace('.', '-')}.adoc"
-    return output.with_name(name)
+    return require_document_path("comparison report", output.with_name(name), MODULE_DIR, REPORT_NAME)
 
 
 def render(branch: str, line: str, reports: list[Path]) -> str:
@@ -199,16 +184,22 @@ def render(branch: str, line: str, reports: list[Path]) -> str:
 def include_in_titles() -> None:
     """Publish the generated reference in whichever documentation titles exist."""
 
-    found = False
-    for path in TITLE_PATHS:
+    titles = []
+    for relative in TITLE_PATHS:
+        # Validate all existing titles before writing either one.
+        path = require_document_path("title path", relative, relative.parent, relative.name)
         if not path.exists():
             continue
-        found = True
+        if not path.is_file():
+            raise ChangelogError(f"Title is not a file: {path}")
+        titles.append(path)
+    if not titles:
+        raise ChangelogError("No dynamic plugin reference title exists in this checkout")
+
+    for path in titles:
         content = path.read_text(encoding="utf-8")
         if INCLUDE not in content:
             path.write_text(content.rstrip() + f"\n\n{INCLUDE}\n", encoding="utf-8")
-    if not found:
-        raise ChangelogError("No dynamic plugin reference title exists in this checkout")
 
 
 def main() -> int:
