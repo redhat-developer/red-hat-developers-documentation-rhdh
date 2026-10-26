@@ -12,7 +12,9 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-from dataclasses import dataclass, replace
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -36,6 +38,10 @@ DETAIL_WIDTHS = ("1", "2", "1", "2", "1", "3")
 EMPTY = "—"
 SUPPORTED_INDEX = "quay.io/rhdh/plugin-catalog-index"
 COMMUNITY_INDEX = "ghcr.io/redhat-developer/rhdh-plugin-export-overlays/plugin-catalog-index"
+MODULE_DIR = Path("modules/extend_dynamic-plugins-reference")
+REPORT_NAME = re.compile(
+    r"ref-dynamic-plugin-changes-[0-9]+-[0-9]+(?:-[0-9]+)?-to-[0-9]+-[0-9]+(?:-[0-9]+)?\.adoc$"
+)
 OVERLAYS_REPO = "https://github.com/redhat-developer/rhdh-plugin-export-overlays"
 OVERLAYS_SOURCE = re.compile(
     rf"{re.escape(OVERLAYS_REPO)}/tree/(main|release-\d+\.\d+) @ ([0-9a-f]{{8,40}})$"
@@ -56,6 +62,7 @@ class Image:
     files: dict[str, bytes]
     labels: dict[str, str]
     environment: tuple[str, ...]
+    selection: str = "Specified image"
 
     @property
     def immutable_reference(self) -> str:
@@ -79,6 +86,23 @@ def required_file(files: dict[str, bytes], name: str) -> bytes:
     if name not in files:
         raise CatalogError(f"Catalog image is missing {name}")
     return files[name]
+
+
+def output_path(path: Path) -> Path:
+    """Allow report writes only to version-named files in the docs module."""
+
+    module = Path.cwd().resolve() / MODULE_DIR
+    expected = f"--output must be a version-named report under {MODULE_DIR} in this checkout"
+    # A bad CLI path must not escape the docs module or overwrite its index.
+    # Resolving ensures any symlinked parent still leads into this module.
+    if ".." in path.parts or not REPORT_NAME.fullmatch(path.name):
+        raise CatalogError(expected)
+    if not module.is_dir() or module.resolve() != module or path.is_symlink():
+        raise CatalogError(expected)
+    resolved = path.resolve()
+    if resolved.parent != module:
+        raise CatalogError(expected)
+    return resolved
 
 
 def image_repository(reference: str) -> str:
@@ -107,8 +131,12 @@ def archive_files(path: Path) -> dict[str, bytes]:
             with tarfile.open(fileobj=layer_file, mode="r:*") as layer:
                 for member in layer:
                     # Match ./index.json and /index.json as the same relative file.
-                    # The normalized name is only a lookup key
+                    # The normalized name is only a lookup key; no archive
+                    # member is extracted to the filesystem. Ignore entries
+                    # containing .. rather than treating them as catalog files.
                     name = member.name.removeprefix("./").lstrip("/")
+                    if ".." in name.split("/"):
+                        continue
                     if not member.isfile() or not (
                         name in {"index.json", "dynamic-plugins.default.yaml", BUILD_INFO_FILE}
                         or name.startswith(PACKAGE_DIR) and name.endswith(".yaml")
@@ -120,21 +148,34 @@ def archive_files(path: Path) -> dict[str, bytes]:
     return files
 
 
-def fetch_image(reference: str) -> Image:
-    """Read a public registry image, then extract files from its pinned digest."""
+def inspect_image(reference: str) -> dict:
+    """Read public image metadata without downloading its layers."""
 
-    reference = reference.removeprefix("docker://")
-    repository = image_repository(reference)
     inspected = subprocess.run(
         ["skopeo", "inspect", "--no-creds", "--no-tags", f"docker://{reference}"],
         check=True,
         capture_output=True,
         text=True,
     )
-    metadata = json.loads(inspected.stdout)
+    return json.loads(inspected.stdout)
+
+
+def image_digest(metadata: dict, reference: str) -> str:
+    """Require a usable immutable digest from registry metadata."""
+
     digest = metadata.get("Digest", "")
     if not DIGEST.fullmatch(digest):
         raise CatalogError(f"Invalid digest for {reference}: {digest}")
+    return digest
+
+
+def fetch_image(reference: str, selection: str = "Specified image") -> Image:
+    """Read a public registry image, then extract files from its pinned digest."""
+
+    reference = reference.removeprefix("docker://")
+    repository = image_repository(reference)
+    metadata = inspect_image(reference)
+    digest = image_digest(metadata, reference)
     if "@" in reference and reference.rsplit("@", 1)[1] != digest:
         raise CatalogError(f"Digest changed while inspecting {reference}")
     # Copy by digest so a moving tag cannot change the content after inspection.
@@ -152,7 +193,7 @@ def fetch_image(reference: str) -> Image:
         files = archive_files(archive)
     return Image(
         reference, repository, digest, files, metadata.get("Labels") or {},
-        tuple(metadata.get("Env") or ()),
+        tuple(metadata.get("Env") or ()), selection,
     )
 
 
@@ -271,6 +312,64 @@ def validate_derived_community(supported: Image, community: Image) -> None:
             f"{community.reference} does not match the overlays source or Backstage version "
             f"declared by {supported.reference}; supply the community image explicitly"
         )
+
+
+def created_at(value: str, reference: str) -> datetime:
+    """Parse an OCI creation timestamp to order community builds."""
+
+    try:
+        created = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise CatalogError(f"Invalid creation time for {reference}: {value}") from error
+    if created.tzinfo is None:
+        raise CatalogError(f"Missing creation time zone for {reference}: {value}")
+    return created
+
+
+def latest_community_image(supported: Image, release: str) -> Image:
+    """Find the newest published community build for this release line.
+
+    A workflow-only overlays commit can appear in UPSTREAM_REPO without having
+    produced a community image. Match the release line and Backstage version,
+    then choose the newest community build independently of when the supported
+    image was created.
+    """
+
+    line = release_minor(release)
+    backstage = supported.labels.get("backstage.version", "")
+    pattern = re.compile(rf"{re.escape(line)}-bs_{re.escape(backstage)}-[0-9a-f]{{7}}$")
+    listed = subprocess.run(
+        ["skopeo", "list-tags", "--no-creds", f"docker://{COMMUNITY_INDEX}"],
+        check=True, capture_output=True, text=True,
+    )
+    tags = json.loads(listed.stdout).get("Tags")
+    if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+        raise CatalogError(f"Cannot read community tags from {COMMUNITY_INDEX}")
+    matches = [tag for tag in tags if pattern.fullmatch(tag)]
+    # A publisher might retain only its moving release tag. Use it when no
+    # build-specific tag remains, then verify its Backstage metadata below.
+    if not matches and line in tags:
+        matches = [line]
+    if not matches:
+        raise CatalogError(f"No community builds found for RHDH {line} and Backstage {backstage}")
+
+    def candidate(tag: str) -> tuple[datetime, str, str]:
+        reference = f"{COMMUNITY_INDEX}:{tag}"
+        metadata = inspect_image(reference)
+        return created_at(metadata.get("Created") or "", reference), tag, image_digest(metadata, reference)
+
+    # Registry tag order is unspecified, so rank matching builds by their OCI
+    # creation time. Do not use the supported image's creation time as a bound.
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        latest = max(pool.map(candidate, matches))
+    _, tag, digest = latest
+    # Fetch by the inspected digest, so even a retag cannot change this run.
+    community = fetch_image(f"{COMMUNITY_INDEX}@{digest}", selection=f"Fallback (`:{tag}`)")
+    validate_release(community, "Community", release)
+    info = json.loads(required_file(community.files, BUILD_INFO_FILE))
+    if info.get("backstage-version") != backstage:
+        raise CatalogError(f"{community.reference} does not match Backstage {backstage}")
+    return community
 
 
 def package_entities(files: dict[str, bytes]) -> list[dict]:
@@ -397,7 +496,15 @@ def release_plugins(supported: Image, community: Image) -> dict[str, Plugin]:
             plugin.version, plugin.support, plugin.lifecycle, plugin.variables
         ):
             raise CatalogError(f"Supported and community catalogs disagree about {package}")
-        plugins[package] = replace(previous, catalogs=previous.catalogs | plugin.catalogs)
+        plugins[package] = Plugin(
+            package=previous.package,
+            version=previous.version,
+            support=previous.support,
+            lifecycle=previous.lifecycle,
+            variables=previous.variables,
+            default=previous.default,
+            catalogs=previous.catalogs | plugin.catalogs,
+        )
     return plugins
 
 
@@ -451,11 +558,12 @@ def plugin_changes(before: Plugin, after: Plugin) -> tuple[str, ...]:
 
 
 def render_table(
-    title: str, rows: list[tuple[str, tuple[str, ...]]], fields: tuple[int, ...]
+    title: str, rows: list[tuple[str, tuple[str, ...]]], fields: tuple[int, ...],
+    heading_level: int = 2,
 ) -> list[str]:
     """Render one change category with its selected detail columns."""
 
-    output = [f"== {title}", ""]
+    output = [f"{'=' * heading_level} {title}", ""]
     if not rows:
         return output + ["None.", ""]
     widths = ",".join(["3", *(DETAIL_WIDTHS[index] for index in fields)])
@@ -471,6 +579,7 @@ def render(
     from_release: str, to_release: str,
     before: dict[str, Plugin], after: dict[str, Plugin],
     images: dict[tuple[str, str], Image],
+    section: bool = False,
 ) -> str:
     """Classify package changes and render the report with image provenance."""
 
@@ -497,41 +606,52 @@ def render(
     to_version = images[(to_release, "Supported")].labels.get(RHDH_VERSION_LABEL) or to_release
 
     identifier = f"dynamic-plugin-changes-{from_release.replace('.', '-')}-to-{to_release.replace('.', '-')}"
-    output = [
-        ":_mod-docs-content-type: REFERENCE",
-        "",
-        "// Generated by generate-dynamic-plugin-changelog.py; do not edit manually.",
-        "",
+    output = [] if section else [
+        ":_mod-docs-content-type: REFERENCE", "",
+        "// Generated by generate-dynamic-plugin-changelog.py; do not edit manually.", "",
+    ]
+    heading_level = 2 if section else 1
+    output += [
         f'[id="{identifier}"]',
-        f"= Dynamic plugin changes from {from_version} to {to_version}",
-        "",
-        "The comparison covers packages in the supported catalog's default plugin configuration and packages in the community catalog. "
-        "`Not listed` means the package is absent from the supported default configuration. "
-        "`Removed` means the package is absent from both inventories in the later release; a catalog move appears under `Updated`. "
-        "Package renames appear as a removal and an addition. "
-        "Variables are names found in the published configuration examples. "
-        "An em dash means no change or no variables.",
-        "",
-        f"{len(added)} added; {len(removed)} removed; {len(updated)} updated.",
+        f"{'=' * heading_level} Dynamic plugin changes from {from_version} to {to_version}",
         "",
     ]
-    output += render_table("Added", added, fields)
-    output += render_table("Removed", removed, fields)
-    output += render_table("Updated", updated, fields)
+    if not section:
+        output += [
+            "The comparison covers packages in the supported catalog's default plugin configuration and packages in the community catalog. "
+            "`Not listed` means the package is absent from the supported default configuration. "
+            "`Removed` means the package is absent from both inventories in the later release; a catalog move appears under `Updated`. "
+            "Package renames appear as a removal and an addition. "
+            "Variables are names found in the published configuration examples. "
+            "An em dash means no change or no variables. "
+            "When the exact community image is absent, the fallback is the newest community build for the same release line and Backstage version.",
+            "",
+        ]
+    if added or removed or updated:
+        output += [f"{len(added)} added; {len(removed)} removed; {len(updated)} updated.", ""]
+        output += render_table("Added", added, fields, heading_level + 1)
+        output += render_table("Removed", removed, fields, heading_level + 1)
+        output += render_table("Updated", updated, fields, heading_level + 1)
+    else:
+        output += ["No plugins were updated in this release.", ""]
     output += [
-        "== Catalog images", "",
+        f"{'=' * (heading_level + 1)} Catalog images", "",
         "The supported images record the RHDH patch version; community images record the release line.",
-        "", '[cols="1,1,1,5",options="header"]', "|===",
-        "|Release line |Catalog |Image RHDH version |Immutable image reference",
+        "", '[cols="1,1,1,2,5",options="header"]', "|===",
+        "|Release line |Catalog |Image RHDH version |Selection |Immutable image reference",
     ]
     for release in (from_release, to_release):
         for catalog in ("Supported", "Community"):
             image = images[(release, catalog)]
             if catalog == "Supported":
                 version = image.labels.get(RHDH_VERSION_LABEL) or release
+                selection = "Published patch image"
             else:
                 version = json.loads(required_file(image.files, BUILD_INFO_FILE))["rhdh-version"]
-            output += [f"|{release_minor(release)} |{catalog} |{version} |`{image.immutable_reference}`"]
+                selection = image.selection
+            output += [
+                f"|{release_minor(release)} |{catalog} |{version} |{selection} |`{image.immutable_reference}`"
+            ]
     output += ["|===", ""]
     return "\n".join(output)
 
@@ -548,14 +668,20 @@ def main() -> int:
         )
         parser.add_argument(
             f"--{side}-community",
-            help="Community catalog image tag or digest (default: derive from the supported overlays commit)",
+            help="Community image tag or digest (default: exact overlays commit, then latest eligible build)",
         )
-    parser.add_argument("--output", type=Path, help="Write AsciiDoc here instead of stdout")
+    parser.add_argument(
+        "--output", type=Path,
+        help=f"Write a version-named AsciiDoc report under {MODULE_DIR} (default: stdout)",
+    )
+    parser.add_argument("--section", action="store_true", help="Emit a section for a combined changelog")
     args = parser.parse_args()
     for side in ("from", "to"):
         if getattr(args, f"{side}_release") is None and getattr(args, f"{side}_supported") is None:
             parser.error(f"one of --{side}-release or --{side}-supported is required")
     try:
+        if args.output is not None:
+            args.output = output_path(args.output)
         supported_images = {}
         releases = {}
         for side in ("from", "to"):
@@ -581,25 +707,30 @@ def main() -> int:
             supported = supported_images[side]
             community_ref = getattr(args, f"{side}_community")
             images[(release, "Supported")] = supported
-            # Some releases lack an exact community image; an explicit ref handles those.
-            reference = community_ref or derived_community_reference(supported, release)
-            try:
-                community = fetch_image(reference)
-            except subprocess.CalledProcessError as error:
-                if community_ref:
-                    raise
-                detail = error.stderr.strip() if error.stderr else str(error)
-                raise CatalogError(
-                    f"Cannot fetch derived community image {reference}: {detail}. "
-                    f"Supply --{side}-community explicitly."
-                ) from error
+            if community_ref:
+                community = fetch_image(community_ref)
+            else:
+                reference = derived_community_reference(supported, release)
+                try:
+                    community = fetch_image(reference, selection="Exact overlays commit")
+                except subprocess.CalledProcessError as error:
+                    # Not all overlay commits (ex: workflow-only change) publish a new
+                    # community catalog. Fall back only when its tag is absent.
+                    if "manifest unknown" not in (error.stderr or "").lower():
+                        raise
+                    try:
+                        community = latest_community_image(supported, release)
+                    except CatalogError as fallback_error:
+                        raise CatalogError(
+                            f"Exact community image {reference} is absent; {fallback_error}"
+                        ) from fallback_error
+                else:
+                    validate_derived_community(supported, community)
             validate_release(community, "Community", release)
-            if not community_ref:
-                validate_derived_community(supported, community)
             images[(release, "Community")] = community
         before = release_plugins(images[(releases["from"], "Supported")], images[(releases["from"], "Community")])
         after = release_plugins(images[(releases["to"], "Supported")], images[(releases["to"], "Community")])
-        report = render(releases["from"], releases["to"], before, after, images)
+        report = render(releases["from"], releases["to"], before, after, images, args.section)
         if args.output:
             args.output.write_text(report, encoding="utf-8")
             print(f"Wrote {args.output}")
