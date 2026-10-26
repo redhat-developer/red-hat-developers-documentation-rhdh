@@ -4,72 +4,34 @@
 = Enable Quicklinks and starred items after an upgrade
 
 [role="_abstract"]
-If you upgrade from {product} `1.6` or earlier, {product} does not automatically enable the *Quicklinks* and *Starred Items* features. You must manually configure these features to display them in the global header.
+If *Quicklinks* or *Starred Items* are missing after upgrading to {product-very-short} 2.1, check your dynamic plugin overrides. The Global Header plugin and these controls are enabled by default in 2.1, but an existing override can leave the plugin disabled.
 
 .Prerequisites
 
-* You have access to your {product} configuration files.
-* You have administrative permissions to modify ConfigMaps (if using the Operator).
+* You have access to your dynamic plugin configuration.
+* You can update the configuration through the Operator or Helm chart.
 
 .Procedure
 
-. Locate your `dynamic-plugin` configuration.
-
-. Operator deployment: The configuration is stored in a ConfigMap referenced by your {product-custom-resource-type} custom resource (CR).
-. Helm deployment: The configuration is in your `values.yaml` file or separate configuration files.
-
-. Enable the global header plugin. Ensure that the `red-hat-developer-hub-backstage-plugin-global-header` entry exists under the `plugins: list` and that `disabled` is set to `false`.
-
-. Verify that you enabled the global header plugin.
-Confirm that you listed the `red-hat-developer-hub-backstage-plugin-global-header` plugin under `plugins:` with `disabled: false` (or without a `disabled` property):
+. Find the `red-hat-developer-hub-backstage-plugin-global-header` entry in your dynamic plugin configuration.
+. If the entry disables the plugin, remove the override or enable the plugin. For example, use the following `dynamic-plugins.yaml` configuration:
 +
 [source,yaml]
 ----
+includes:
+  - dynamic-plugins.default.yaml
+
+plugins:
   - package: ref://red-hat-developer-hub-backstage-plugin-global-header
-    disabled: false
+    enabled: true
 ----
-
-. Add the required components. Under the `mountPoints` section of the plugin, add the components as shown in the following example:
 +
-[source,yaml,subs="+attributes"]
-----
-  mountPoints:
-    - mountPoint: application/header
-      importName: GlobalHeader
-      config:
-        position: above-sidebar
-    - mountPoint: global.header/component
-      importName: StarredDropdown
-      config:
-        priority: 85
-    - mountPoint: global.header/component
-      importName: ApplicationLauncherDropdown
-      config:
-        priority: 82
-    - mountPoint: global.header/application-launcher
-      importName: MenuItemLink
-      config:
-        section: Documentation
-        priority: 150
-        props:
-          title: {product-short}
-          icon: developerHub
-          link: https://docs.redhat.com/en/documentation/red_hat_developer_hub
-    - mountPoint: global.header/application-launcher
-      importName: MenuItemLink
-      config:
-        section: Developer Tools
-        priority: 100
-        props:
-          title: "{product-local-very-short}"
-          icon: developerHub
-          link: https://github.com/redhat-developer/rhdh-local
-----
+The `ref://` package resolves against the default catalog included in {product-very-short} 2.1.
 
-. Apply the configuration.
+. Remove any `mountPoints` configuration for the Global Header plugin that you carried forward from earlier releases. The 2.1 plugin supplies *Quicklinks* and *Starred Items* through front-end extensions.
+. Apply the configuration by updating the Operator ConfigMap or upgrading the Helm release.
 
-. Operator deployment: Update the ConfigMap and allow the Operator to reconcile the changes.
-. Helm deployment: Apply your updated configuration using `helm upgrade`.
+.Verification
 
-. Verify the features are enabled.
-After the {product} instance restarts, confirm that the star icon and *Quicklinks* matrix appear in the global header.
+. Restart {product-very-short} if your deployment does not restart automatically.
+. Confirm that the *Starred Items* drop-down list and *Quicklinks* application launcher appear in the global header.
