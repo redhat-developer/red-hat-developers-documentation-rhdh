@@ -5,6 +5,8 @@
 [role="_abstract"]
 Configure a scorecard aggregation card to calculate a single weighted portfolio score across multiple components.
 
+The following steps configure the card on a read-only home page. On a customizable home page, you do not define a `widgetLayout` section; instead, you add the card from the user interface and set its aggregation ID. For more information, see {scorecard-plugin-book-link}#configure-portfolio-health-on-a-customizable-home-page_configure-portfolio-health[Configure on a customizable home page].
+
 [IMPORTANT]
 ====
 This tracking type was previously named `average`. If your `{my-app-config-file}` file still uses `type: average` for a weighted portfolio score, update it to `type: weightedStatusScore`. Otherwise, the backend does not fail startup: it silently falls back to the new scalar `average` type, which calculates the numeric mean of the metric instead of the weighted portfolio score, changing the value shown on the homepage card without any warning. For more information, see {scorecard-plugin-book-link}#configure-an-aggregation-card-with-a-scalar-tracking-type_configure-scorecard-cards-on-the-homepage[Configure an aggregation card with a scalar tracking type].
@@ -12,6 +14,7 @@ This tracking type was previously named `average`. If your `{my-app-config-file}
 
 .Prerequisites
 * The scorecard plugin is installed and configured in your {product} instance.
+* You configured the dynamic home page layout and registered the aggregated Scorecard card in the `homepage.defaultWidgets` section. For more information, see {scorecard-plugin-book-link}#configure-a-default-scorecard-aggregation-card_configure-aggregated-scorecard-kpis[Configure a default scorecard aggregation card].
 
 .Procedure
 
@@ -25,7 +28,7 @@ This tracking type was previously named `average`. If your `{my-app-config-file}
 ----
 scorecard:
   aggregationKPIs:
-    portfolio-average-health:
+    portfolioAverageHealth:
       title: "Portfolio Health KPI"
       description: "Weighted average score across portfolio components"
       type: weightedStatusScore
@@ -62,27 +65,31 @@ options:
       color: '#ff0000'
 ----
 
-. Open your dynamic plugin configuration file.
-
-. Reference your weighted status score aggregation ID inside the homepage card properties block under the `home.page/cards` mount point:
+. In the `app.extensions` section, reference your weighted status score aggregation ID in the `aggregationId` property of the aggregation card under the `widgetLayout` section of the dynamic home page layout:
 +
 [source,yaml]
 ----
-- mountPoint: home.page/cards
-  importName: ScorecardHomepageCard
-  config:
-    props:
-      aggregationId: "portfolio-average-health"
-    layouts:
-      xl: { w: 3, h: 6 }
-      lg: { w: 4, h: 6 }
-      md: { w: 6, h: 6 }
-      sm: { w: 12, h: 6 }
-      xs: { w: 12, h: 6 }
-      xxs: { w: 12, h: 6 }
+app:
+  extensions:
+    - home-page-layout:homepage/dynamic-homepage-layout:
+        config:
+          customizable: false
+          widgetLayout:
+            scorecard-aggregated-card:
+              - id: ScorecardPortfolioAverageHealth
+                props:
+                  aggregationId: portfolioAverageHealth
+                priority: 410
+                breakpoints:
+                  xl: { w: 4, h: 6, x: 0, y: 0 }
+                  lg: { w: 4, h: 6, x: 0, y: 0 }
+                  md: { w: 6, h: 6, x: 0, y: 0 }
+                  sm: { w: 6, h: 6, x: 0, y: 0 }
+                  xs: { w: 12, h: 6, x: 0, y: 0 }
+                  xxs: { w: 12, h: 6, x: 0, y: 0 }
 ----
 
-. Save the modified configuration files and restart your {product} instance.
+. Save the modified configuration file and restart your {product} instance.
 
 .Verification
 . Access your {product-short} homepage interface.
