@@ -19,7 +19,7 @@ usage() {
 
 Compare the generated dynamic plugin .csv files in this checkout with files
 from a shallow checkout of another Git ref. The comparison includes plugin
-availability, name, version, support level, and delivery method changes.
+availability, version, support level, and delivery method changes.
 
 Requires:
 * git
@@ -210,12 +210,11 @@ normalize_csv() {
         exit 2
       }
       for (i = 1; i <= field_count; i++) column[field[i]] = i
-      required[1] = "Name"
-      required[2] = "Plugin"
-      required[3] = "Version"
-      required[4] = "Support Level"
-      required[5] = "Path"
-      for (i = 1; i <= 5; i++) {
+      required[1] = "Plugin"
+      required[2] = "Version"
+      required[3] = "Support Level"
+      required[4] = "Path"
+      for (i = 1; i <= 4; i++) {
         if (!(required[i] in column)) {
           print "[ERROR] Missing CSV column " required[i] " in " FILENAME > "/dev/stderr"
           exit 2
@@ -230,7 +229,7 @@ normalize_csv() {
         print "[ERROR] Invalid CSV row " FNR " in " FILENAME > "/dev/stderr"
         exit 2
       }
-      print field[column["Plugin"]], field[column["Name"]], field[column["Version"]], \
+      print field[column["Plugin"]], field[column["Version"]], \
         field[column["Support Level"]], delivery_method(field[column["Path"]])
     }
   ' OFS="$(printf '\034')" "$@" > "$destination"
@@ -253,41 +252,43 @@ awk -F "$FIELD_SEPARATOR" -v OFS="$FIELD_SEPARATOR" \
   FILENAME == previous_file {
     remember("previous", $1)
     previous[$1] = 1
-    for (i = 2; i <= 5; i++) previous_value[$1, i] = $i
+    for (i = 2; i <= 4; i++) previous_value[$1, i] = $i
     next
   }
   {
     remember("current", $1)
     current[$1] = 1
-    for (i = 2; i <= 5; i++) current_value[$1, i] = $i
+    for (i = 2; i <= 4; i++) current_value[$1, i] = $i
   }
 
   END {
     if (duplicate) exit 2
-    label[2] = "Name"
-    label[3] = "Version"
-    label[4] = "Support level"
-    label[5] = "Delivery method"
 
     for (plugin in previous) {
       if (!(plugin in current)) {
-        print plugin, 0, "Availability", "Included", "Not included"
+        print plugin, previous_value[plugin, 2], previous_value[plugin, 3], \
+          previous_value[plugin, 4], "n/a", "n/a", "n/a"
         continue
       }
-      for (i = 2; i <= 5; i++) {
-        if (previous_value[plugin, i] != current_value[plugin, i]) {
-          print plugin, i, label[i], previous_value[plugin, i], current_value[plugin, i]
-        }
+      if (previous_value[plugin, 2] != current_value[plugin, 2] || \
+          previous_value[plugin, 3] != current_value[plugin, 3] || \
+          previous_value[plugin, 4] != current_value[plugin, 4]) {
+        print plugin, previous_value[plugin, 2], previous_value[plugin, 3], \
+          previous_value[plugin, 4], current_value[plugin, 2], \
+          current_value[plugin, 3], current_value[plugin, 4]
       }
     }
     for (plugin in current) {
-      if (!(plugin in previous)) print plugin, 0, "Availability", "Not included", "Included"
+      if (!(plugin in previous)) {
+        print plugin, "n/a", "n/a", "n/a", current_value[plugin, 2], \
+          current_value[plugin, 3], current_value[plugin, 4]
+      }
     }
   }
 ' "$comparisontmpdir/previous.csv" "$comparisontmpdir/current.csv" \
   > "$comparisontmpdir/changes.unsorted" || exit 1
 
-sort -t "$FIELD_SEPARATOR" -k1,1 -k2,2n "$comparisontmpdir/changes.unsorted" \
+sort -t "$FIELD_SEPARATOR" -k1,1 "$comparisontmpdir/changes.unsorted" \
   > "$comparisontmpdir/changes" || exit 1
 CHANGE_COUNT=$(wc -l < "$comparisontmpdir/changes")
 CHANGE_COUNT=${CHANGE_COUNT//[[:space:]]/}
@@ -308,19 +309,21 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
     print "= Dynamic plugin changes between " previous_ref " and " current_ref
     print ""
     print "[role=\"_abstract\"]"
-    print "The following table lists " change_count " dynamic plugin changes between `" previous_ref "` and `" current_ref "`."
+    print "The following table lists " change_count " dynamic plugins with changes between `" previous_ref "` and `" current_ref "`."
     print ""
-    print "[%header,cols=\"2,1,2,2\"]"
+    print "[%header,cols=\"2,1,2,1,1,2,1\"]"
     print "|==="
-    print "|*Plugin package* |*Changed field* |*" escape(previous_ref) "* |*" escape(current_ref) "*"
+    print ".2+|*Plugin package* 3+|*" escape(previous_ref) "* 3+|*" escape(current_ref) "*"
+    print "|*Version* |*Support* |*Method* |*Version* |*Support* |*Method*"
   }
 
   {
-    print "|`" escape($1) "` |" escape($3) " |" escape($4) " |" escape($5)
+    print "|`" escape($1) "` |" escape($2) " |" escape($3) " |" escape($4) \
+      " |" escape($5) " |" escape($6) " |" escape($7)
   }
 
   END {
-    if (NR == 0) print "4+|No dynamic plugin changes were found."
+    if (NR == 0) print "7+|No dynamic plugin changes were found."
     print "|==="
   }
 ' "$comparisontmpdir/changes" > "$comparisontmpdir/output.adoc" || exit 1
