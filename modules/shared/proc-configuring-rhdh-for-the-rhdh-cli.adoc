@@ -4,7 +4,14 @@
 = Configure {product} to authenticate {product-cli}
 
 [role="_abstract"]
-To allow {product-cli} to sign in to an instance, enable the authentication plugin and the OAuth2 flows that the command-line interface (CLI) uses to obtain and refresh tokens.
+To sign in to a {product} instance from {product-cli}, enable the authentication plugin. The CLI uses OAuth2 flows to obtain and refresh tokens.
+
+[IMPORTANT]
+====
+Old front-end system (OFS) configuration examples do not apply to {product} 2.1, and direct replacements might not exist for every option. In {product} 2.1, the new front-end system removes the previous `dynamicPlugins.frontend` configuration. The plugin provides the `/oauth2/*` route for the consent flow through extension blueprints, so you do not wire it manually.
+
+For documented configuration changes, see {configuring-book-link}#configuration-key-mapping-from-old-to-new-front-end-system_migrate-to-the-front-end-system-to-use-blueprint-based-dynamic-routing[Configuration key mapping from old to new front-end system]. If you develop custom plugins, see {configuring-book-link}#migrate-custom-plugins-to-ensure-compatibility-after-upgrade_migrate-to-the-front-end-system-to-use-blueprint-based-dynamic-routing[Migrate custom plugins to ensure compatibility after upgrade].
+====
 
 .Prerequisites
 * You are running {product} ({product-very-short}) 2.1 or later.
@@ -13,25 +20,18 @@ To allow {product-cli} to sign in to an instance, enable the authentication plug
 * You can install dynamic plugins on your instance.
 
 .Procedure
-. Install the `backstage-plugin-auth` front-end plugin as a dynamic plugin so that your instance can serve the OAuth2 consent page. Add the following entry to your `dynamic-plugins.yaml` file, which registers the `/oauth2/*` route that the consent flow requires:
+. Install the `backstage-plugin-auth` front-end plugin as a dynamic plugin so that your instance can serve the OAuth2 consent page. Add the following entry to your `dynamic-plugins.yaml` file:
 +
 [NOTE]
 ====
-The plugin image tags in the following examples target {product} 2.1, which uses {backstage} 1.54.6. For any new {product-very-short} release, use plugin images built for that release's {backstage} version.
+The plugin image tag in the following example is published for {product} 2.1 and built against {backstage} 1.54.9. For any new {product-very-short} release, use a plugin image built for that release's {backstage} version.
 ====
 +
 [source,yaml]
 ----
 plugins:
-  - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-auth:bs_1.54.6__0.1.11'
-    disabled: false
-    pluginConfig:
-      dynamicPlugins:
-        frontend:
-          backstage.plugin-auth:
-            dynamicRoutes:
-              - path: /oauth2/*
-                importName: Router
+  - package: 'oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-auth:bs_1.54.9__0.1.11'
+    enabled: true
 ----
 +
 For more information about installing dynamic plugins, see {installing-and-viewing-plugins-book-link}[{installing-and-viewing-plugins-book-title}].
