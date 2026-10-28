@@ -1,0 +1,187 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configure-github-dora-datasource_{context}"]
+= Configure GitHub data collection for DORA
+
+[role="_abstract"]
+Configure GitHub collectors to provide deployment and pull request data for DORA metrics. GitHub data supports Deployment Frequency, Lead Time for Changes, and the deployment side of Change Failure Rate.
+
+.Prerequisites
+
+* You have xref:install-configure-dora-backend-module_{context}[installed and configured the DORA backend module].
+* You have xref:integrate-github-health-metrics-using-scorecards_{context}[installed the Scorecard backend module for GitHub]:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-github:<tag>
+    enabled: true
+----
+
+* Your GitHub integration has the following permissions:
+** *Contents* — Read commits and commit comparisons
+** *Pull requests* — Read PRs associated with deployed commits
+** *Deployments* — Read deployment events (when using `github:doraDeployments`)
+** *Actions* — Read workflow runs (when using `github:doraDeploymentWorkflowRuns`)
+** *Metadata* — Read access (automatically included for GitHub Apps)
+
+.Procedure
+
+. Configure GitHub DORA collectors in your +{my-app-config-file}+ file.
++
+The default configuration uses GitHub deployment events and requires no explicit configuration:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      collectors:
+        deployments:
+          id: github:doraDeployments
+        deploymentPullRequests:
+          id: github:doraDeploymentPullRequests
+----
++
+[NOTE]
+====
+If you do not specify collectors, the DORA backend module uses the default GitHub collectors shown above.
+====
+
+. (Optional) Configure production environment filtering.
++
+By default, the DORA backend module counts deployments to environments named `production` (case-insensitive). To count deployments to other environments, configure +productionEnvironments+:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      productionEnvironments:
+        - production
+        - prod
+        - live
+----
+
+. (Optional) Use GitHub Actions workflow runs instead of deployment events.
++
+If your deployment process does not create GitHub deployment events, you can use workflow run completion as a deployment signal:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      collectors:
+        deployments:
+          id: github:doraDeploymentWorkflowRuns
+          input:
+            workflowName: Deploy to Production
+----
++
+Where +workflowName+ is the name of the GitHub Actions workflow that deploys to production.
++
+[NOTE]
+====
+The +github:doraDeploymentWorkflowRuns+ collector tracks workflow run completion, not individual workflow jobs. The workflow itself determines when it runs based on branch, tag, or event filters configured in GitHub Actions.
+
+The following deployment patterns are **not directly supported** and require custom collectors:
+
+. Release tags
+. Branch merge filters
+. Tag pattern matching
+. Custom deployment event patterns
+
+You can indirectly support these patterns by configuring a GitHub Actions workflow that runs on those events and using +github:doraDeploymentWorkflowRuns+.
+====
+
+. Add required annotations to component catalog entities.
++
+[IMPORTANT]
+====
+These annotations are **REQUIRED**. DORA metrics will not calculate without them.
+====
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    github.com/project-slug: my-org/my-repo
+    scorecard.io/dora: "true"
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+----
++
+Where:
++
+`github.com/project-slug`:: Links the component to a GitHub repository in the format `organization/repository`. **Required** by all GitHub DORA collectors.
+`scorecard.io/dora`:: Enables DORA metric collection for this component. **Required** for DORA metrics to calculate.
+
+. (Optional) Configure metric calculation schedules.
++
+DORA metrics use the Scorecard provider schedule, which runs hourly by default. To configure a different schedule:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      deploymentFrequency:
+        schedule:
+          frequency: { minutes: 30 }
+          timeout: { minutes: 10 }
+----
++
+For more information about scheduling metrics, see the collective health monitoring documentation.
+
+.Verification
+
+. Navigate to a component page in your {product-very-short} catalog and select the *Scorecard* tab.
+
+. Verify that DORA metrics appear on the scorecard.
++
+[NOTE]
+====
+GitHub data provides the following DORA metrics:
+
+. *Deployment Frequency* — ✅ Full support
+. *Lead Time for Changes* — ✅ Full support
+. *Change Failure Rate* — ⚠️ **Shows ERROR** without incident collector (requires Jira or custom)
+. *Time to Restore Service* — ⚠️ **Shows ERROR** without incident collector (requires Jira or custom)
+
+If you configure only GitHub collectors, Change Failure Rate and Time to Restore Service will display errors because they require incident data.
+====
+
+. Check the DORA backend logs for metric calculation:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc logs _<rhdh_pod_name>_ | grep "Completed metric pull for dora."
+----
++
+Successful metric calculation produces log entries for each DORA metric.
+
+.Troubleshooting
+
+Deployment Frequency shows zero or no data::
+. For `github:doraDeployments` — Verify that your GitHub repository has deployment events with environment names matching your +productionEnvironments+ configuration
+. For `github:doraDeploymentWorkflowRuns` — Verify that the configured +workflowName+ exists and has successful workflow runs
+
+Lead Time for Changes shows no data::
+Verify that your repository contains at least two consecutive successful production deployments with valid commit SHAs. Also verify that commits introduced between those deployments are associated with merged pull requests in GitHub.
+
+Rate limit errors in logs::
+GitHub API rate limits may affect data collection frequency. Consider configuring metric schedules or increasing the calculation interval. See the collective health monitoring documentation for information about scheduling metrics.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/scorecard/plugins/scorecard-backend-module-github/README.md#collectors[GitHub collector implementations]
+* link:https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/scorecard/plugins/scorecard-backend-module-dora/docs/dora-collectors.md[DORA collector contracts]
+* xref:proc-configure-jira-dora-datasource_{context}[Configure Jira data collection for DORA]
+* xref:con-dora-overview_{context}[Understanding DORA metrics]
