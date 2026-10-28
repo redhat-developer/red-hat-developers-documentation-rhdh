@@ -1,20 +1,33 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="implement-a-plugin-component_{context}"]
-= Implement a plugin component
+= Implement an entity card with an extension blueprint
 
 [role="_abstract"]
-By default, the frontend plugin already has a sample page component defined in `src/components/ExampleComponent/`. This page is automatically registered in `src/plugin.ts` as `SimpleExamplePage`.
+To display a custom entity card in Catalog, define a React component and register it with `EntityCardBlueprint`. Add the blueprint to the generated plugin's `createFrontendPlugin` extensions so {product} 2.1 can discover it.
 
-One of the common extensions is to create a new entity card component.
+.Prerequisites
+* You have generated an NFS front-end plugin for {product} 2.1.
+
+The blueprint attaches the card to the Catalog entity overview by default. Use a dynamic `import()` in the loader so the card's React code is not part of the plugin's synchronous entry bundle. Do not use `createComponentExtension` or `dynamicPlugins.frontend.mountPoints` for {product} 2.1.
 
 .Procedure
-. In the `src/components/` directory create an `ExampleCard` sub-directory.
-. Create an `ExampleCard.tsx` file, as follows:
+. Add the Catalog React package to the generated plugin project:
 +
-[source, javascript]
+[source,terminal,subs="+quotes"]
 ----
-import React from 'react';
+$ *yarn add @backstage/plugin-catalog-react*
+----
+. Align the added dependency with the {product-very-short} 2.1 release manifest:
++
+[source,terminal,subs="+quotes"]
+----
+$ *npx @red-hat-developer-hub/cli@2.1.0 plugin upgrade --rhdh-version 2.1.0*
+----
+. Create `src/components/ExampleCard/ExampleCard.tsx`:
++
+[source,tsx]
+----
 import { InfoCard } from '@backstage/core-components';
 import { useEntity } from '@backstage/plugin-catalog-react';
 
@@ -27,43 +40,30 @@ export const ExampleCard = () => {
   );
 };
 ----
-. In the `src/components/ExampleCard` directory, create and edit the `index.ts` file, as follows:
+. In `src/plugin.tsx`, define the entity card blueprint alongside the generated page blueprint:
 +
-[source, javascript]
+[source,tsx]
 ----
-export { ExampleCard } from './ExampleCard';
-----
+import { EntityCardBlueprint } from '@backstage/plugin-catalog-react/alpha';
 
-. To register the new entity card component, edit the `src/plugin.ts` file to add the new component to the plugin, as follows:
-+
-[source, javascript]
-----
-import { createComponentExtension } from '@backstage/core-plugin-api';
-
-// ...
-// ...
-export const ExampleCard = simpleExamplePlugin.provide(
-  createComponentExtension({
-    name: 'ExampleCard',
-    component: {
-      lazy: () =>
-        import('./components/ExampleCard').then(m => m.ExampleCard),
+const exampleCard = EntityCardBlueprint.make({
+  name: 'example-card',
+  params: {
+    filter: { kind: 'component' },
+    loader: async () => {
+      const { ExampleCard } = await import('./components/ExampleCard/ExampleCard');
+      return <ExampleCard />;
     },
-  }),
-);
+  },
+});
+----
+. Add `exampleCard` to the `extensions` array of the existing `createFrontendPlugin` call in `src/plugin.tsx`. Keep the generated `page` extension:
++
+[source,tsx]
+----
+extensions: [page, exampleCard],
 ----
 
-. Export all components in `src/index.ts` so they can be loaded dynamically:
-+
-[source, javascript]
-----
-export { simpleExamplePlugin, SimpleExamplePage, ExampleCard } from './plugin';
-----
 
 .Verification
-Your plugin should have the following new files:
-
-. `src/components/ExampleCard/ExampleCard.tsx`
-. `src/components/ExampleCard/index.ts`.
-
-The `src/plugin.ts` should export `ExampleCard`, and `src/index.ts` should re-export it.
+Confirm that `package.json` points its `main` field to `src/index.ts` and that `src/index.ts` default-exports the plugin created in `src/plugin.tsx`. To test the card with a Catalog entity, load the plugin in {product-local-very-short} by following xref:verify-plugins-locally_develop-custom-dynamic-plugins-to-support-custom-workflows[Verify plugins locally].
