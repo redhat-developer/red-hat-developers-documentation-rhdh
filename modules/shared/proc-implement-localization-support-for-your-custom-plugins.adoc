@@ -6,6 +6,8 @@
 [role="_abstract"]
 You can implement localization support in your custom {product-very-short} plugins so that your plugins are accessible to a diverse, international user base and follow recommended best practices.
 
+This procedure is intended for plugin developers. {product} {product-version} uses the new front-end system, so you register plugin translations with `TranslationBlueprint` in your plugin code instead of the removed `dynamicPlugins.frontend.<plugin>.translationResources` configuration. Administrators do not need to add any `{my-app-config-file}` configuration to load plugin-provided translations.
+
 .Procedure
 . Create the following translation files in your plugin's `src/translations/` directory:
 +
@@ -168,35 +170,59 @@ const CardComponent = ({ config }) => {
 };
 ----
 
-. Export the translation resources
+. Export the translation resource and reference from your plugin so that the translations module can use them:
 +
-[source,json]
+[source,typescript]
 ----
 // Export your plugin
 export { myPlugin } from "./plugin";
 
-// Export translation resources for the application
+// Export translation resources
 export { myPluginTranslations, myPluginTranslationRef } from "./translations";
 ----
 
-. Update your `dynamic-plugins.default.yaml` file, as follows:
+. Register the plugin translations with `TranslationBlueprint`. Translations target the `app` plugin rather than your plugin, so wrap `TranslationBlueprint` in `createFrontendModule({ pluginId: 'app' })` and export the module separately in your `src/alpha.tsx` file:
 +
-[source,json]
+[source,typescript]
 ----
-backstage-community.plugin-my-plugin:
- translationResources:
-   - importName: myPluginTranslations
-     ref: myPluginTranslationRef
-     module: Alpha
-----
+import { TranslationBlueprint } from '@backstage/plugin-app-react';
+import { createFrontendModule } from '@backstage/frontend-plugin-api';
+import { myPluginTranslations } from './translations';
 
-. Update your `package.json` file as follows:
+const myPluginTranslationsExtension = TranslationBlueprint.make({
+  params: {
+    resource: myPluginTranslations,
+  },
+});
+
+export const myPluginTranslationsModule = createFrontendModule({
+  pluginId: 'app',
+  extensions: [myPluginTranslationsExtension],
+});
+----
++
+[IMPORTANT]
+====
+Keep the translations module export separate from your plugin's `createFrontendPlugin` definition. Translations that you add to your plugin's own `extensions` array do not load.
+====
+
+. Enable automatic discovery of your translations module. Because the module targets `pluginId: 'app'`, it is not discovered through your plugin's main entry point. Expose the module as the default export of a separate entry point so that {product-short} loads it automatically, without requiring administrators to add any `{my-app-config-file}` configuration:
++
+.. Re-export the module as a default export from a dedicated file, for example `src/myPluginTranslationsModuleExport.ts`:
++
+[source,typescript]
+----
+export { myPluginTranslationsModule as default } from './alpha';
+----
++
+.. Add the new entry point to the `exports` and `typesVersions` sections of your `package.json` file:
 +
 [source,json]
 ----
 "exports": {
     ".": "./src/index.ts",
-    "./alpha": "./src/alpha.ts",
+    "./alpha": "./src/alpha.tsx",
+    "./my-plugin-translations-module": "./src/myPluginTranslationsModuleExport.ts",
     "./package.json": "./package.json"
   },
   "main": "src/index.ts",
@@ -204,7 +230,10 @@ backstage-community.plugin-my-plugin:
   "typesVersions": {
     "*": {
       "alpha": [
-        "src/alpha.ts"
+        "src/alpha.tsx"
+      ],
+      "my-plugin-translations-module": [
+        "src/myPluginTranslationsModuleExport.ts"
       ],
       "package.json": [
         "package.json"
@@ -212,6 +241,11 @@ backstage-community.plugin-my-plugin:
     }
   }
 ----
++
+[NOTE]
+====
+Module federation treats each entry point as a separate remote module. This separate entry point lets {product-short} load your translations automatically without adding the module to the application's `features` array.
+====
 
 .Verification
 To verify your translations, create a test mock file. For example:
