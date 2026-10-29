@@ -84,38 +84,42 @@ $ cd plugins/_<new_techdocs_add-on_directory>_
 $ yarn add @backstage/plugin-techdocs-react
 ----
 . In the directory containing the components of your custom TechDocs add-on, delete any default files or file components that are not required for your add-on, such as the `routes.ts` file or components of the `index.tsx` and `plugin.ts` files.
-. In the `plugin.ts` file, register your add-on in code by using `AddonBlueprint` from `@backstage/plugin-techdocs-react/alpha`:
+In the `plugin.ts` file, register your add-on with `AddonBlueprint` and expose it through `createFrontendModule` with `pluginId: 'techdocs'`:
 +
 [source,typescript,subs="+attributes,+quotes"]
 ----
+import { createFrontendModule } from '@backstage/frontend-plugin-api';
 import { AddonBlueprint } from '@backstage/plugin-techdocs-react/alpha';
 import { TechDocsAddonLocations } from '@backstage/plugin-techdocs-react';
 import { _<new_techdocs_add-on_component>_ } from './components/_<new_techdocs_add-on_component>_';
-
-export const _<new_techdocs_add-on>_ = AddonBlueprint.make({
-  name: '_<new_techdocs_add-on>_',
-  params: {
-    name: '_<new_techdocs_add-on>_',
-    location: TechDocsAddonLocations.Content,
-    component: _<new_techdocs_add-on_component>_,
-  },
+const _<new_techdocs_add-on>_ = AddonBlueprint.make({
+ name: '_<new_techdocs_add-on>_',
+ params: {
+   name: '_<new_techdocs_add-on>_',
+   location: TechDocsAddonLocations.Content,
+   component: _<new_techdocs_add-on_component>_,
+ },
+});
+export const _<new_techdocs_add-on>_Module = createFrontendModule({
+ pluginId: 'techdocs',
+ extensions: [_<new_techdocs_add-on>_],
 });
 ----
 +
 where
-
 _<new_techdocs_add-on>_ :: Specifies the custom TechDocs add-on that you want to create. The blueprint produces an extension ID in the format `addon:techdocs/_<new_techdocs_add-on>_`, which adopters reference in the `app.extensions` section of their application configuration.
 _<new_techdocs_add-on_component>_ :: Specifies the React component for the custom TechDocs add-on that you want to create. You will create this component in a `.tsx` file in a later step.
+_<new_techdocs_add-on>_Module :: Specifies the front-end module that exposes the add-on extension under the TechDocs plugin ID so the new front-end system can discover it.
 +
 [NOTE]
 ====
-The new front-end system collects add-ons through `techdocsAddonsApiRef` and merges them into the TechDocs reader and entity content extensions automatically. You no longer use `createPlugin` or `createTechDocsAddonExtension`, and you no longer wire the add-on through the `dynamicPlugins.frontend.<plugin>.techdocsAddons` section. Any React props for the add-on are set in code through the add-on component.
+The plugin creator registers each add-on in code by using `AddonBlueprint.make` from `@backstage/plugin-techdocs-react/alpha` and exposing the resulting extensions through `createFrontendModule({ pluginId: 'techdocs', extensions: [...] })`. The new front-end system collects add-ons through `techdocsAddonsApiRef` and merges them into the TechDocs reader and entity content extensions automatically. You no longer use `createPlugin` or `createTechDocsAddonExtension`, and you no longer wire the add-on through the `dynamicPlugins.frontend.<plugin>.techdocsAddons` section. Any React props for the add-on are set in code through the add-on component. For an example, see the upstream link:https://github.com/backstage/backstage/blob/master/plugins/techdocs-module-addons-contrib/src/alpha.ts[`alpha.ts` module in the {backstage} repository].
 ====
-. In the `index.ts` file, export the custom TechDocs add-on that you want to create by adding the following code:
+. In the `index.ts` file, export the front-end module for your add-on by adding the following code:
 +
 [source,typescript,subs="+attributes,+quotes"]
 ----
-export { _<new_techdocs_add-on>_ } from './plugin';
+export { _<new_techdocs_add-on>_Module } from './plugin';
 ----
 . Create a new `_<new_techdocs_add-on>_.tsx` file and add the code for your new TechDocs add-on component.
 +
