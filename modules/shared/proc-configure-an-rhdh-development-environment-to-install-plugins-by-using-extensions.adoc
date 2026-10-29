@@ -21,25 +21,23 @@ For more information about the dynamic plugins cache, see {configuring-book-link
 .Procedure
 . Create the extensions configuration file and save it as `dynamic-plugins.extensions.yaml`. For example:
 +
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
 includes:
   - dynamic-plugins.default.yaml
 
 plugins:
-  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-extensions
-    enabled: true
-  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-extensions-backend-dynamic
+  - package: ref://red-hat-developer-hub-backstage-plugin-extensions-backend
     enabled: true
     pluginConfig:
       extensions:
         installation:
           enabled: true
           saveToSingleFile:
-            file: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
+            file: ${{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH}
 ----
 +
-The Extensions front-end plugin provides its page, sidebar item, and translations through the new front-end system. You do not need to add `dynamicPlugins.frontend` entries for these features.
+The Extensions front-end plugin is enabled by default and provides its page, sidebar item, and translations through the new front-end system. You do not need `dynamicPlugins.frontend` entries for these features. Set `{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH` to the file path used in the following deployment steps.
 
 . Copy the file to your cluster by running the following commands:
 +
@@ -69,6 +67,8 @@ spec:
       envs:
         - name: NODE_ENV
           value: "development"
+        - name: "{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH"
+          value: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
       secrets:
         - name: secrets-rhdh
     extraFiles:
@@ -100,7 +100,7 @@ data:
 
 ... Upgrade the Helm release to include your extensions configuration file and update the `NODE_ENV` environment variable  to `development`:
 +
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
 auth:
   backend:
@@ -114,6 +114,8 @@ dynamicPlugins:
 extraEnv:
   - name: NODE_ENV
     value: development
+  - name: "{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH"
+    value: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
 ----
 ... Click *Upgrade*
 
