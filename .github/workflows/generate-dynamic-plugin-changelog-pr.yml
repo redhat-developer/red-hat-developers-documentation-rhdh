@@ -1,0 +1,188 @@
+name: Generate dynamic plugin changelog PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Documentation branch to update
+        required: true
+        default: main
+      from_release:
+        description: Optional major/minor release comparison start (for example, 1.10)
+        required: false
+      to_release:
+        description: Optional major/minor release comparison end (for example, 2.1)
+        required: false
+  # Sunday 20:00 UTC is Sunday afternoon in North American time zones.
+  schedule:
+    - cron: "0 20 * * 0"
+
+jobs:
+  branches:
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.select.outputs.branches }}
+      run_type: ${{ steps.select.outputs.run_type }}
+      suffix: ${{ steps.select.outputs.suffix }}
+    steps:
+      - name: Select branches
+        id: select
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_BRANCH: ${{ inputs.branch }}
+          FROM_RELEASE: ${{ inputs.from_release }}
+          TO_RELEASE: ${{ inputs.to_release }}
+        run: |
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            # Weekly runs update each branch's patch changelog. The main branch
+            # also starts with a baseline from the previous release line.
+            # Keep this list to the current documentation release branches.
+            echo 'branches=["main","release-2.1"]' >> "$GITHUB_OUTPUT"
+            echo 'run_type=patch_changelog' >> "$GITHUB_OUTPUT"
+          else
+            if [[ ! "$REQUESTED_BRANCH" =~ ^(main|release-[0-9]+\.[0-9]+)$ ]]; then
+              echo "Expected main or release-X.Y, got: $REQUESTED_BRANCH" >&2
+              exit 1
+            fi
+            printf 'branches=["%s"]\n' "$REQUESTED_BRANCH" >> "$GITHUB_OUTPUT"
+            if [[ -n "$FROM_RELEASE" || -n "$TO_RELEASE" ]]; then
+              # Both release inputs request one comparison across major/minor
+              # lines, such as 1.10 -> 2.1, without refreshing the patch series.
+              if [[ ! "$FROM_RELEASE" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ||
+                    ! "$TO_RELEASE" =~ ^([0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
+                echo "Supply both from_release and to_release as RHDH versions" >&2
+                exit 1
+              fi
+              [[ "$FROM_RELEASE" =~ ^([0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]
+              from_line="${BASH_REMATCH[1]}"
+              [[ "$TO_RELEASE" =~ ^([0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]
+              to_line="${BASH_REMATCH[1]}"
+              if [[ "$from_line" == "$to_line" ]]; then
+                echo "Release changelogs must compare different major/minor versions; use the patch changelog for .z updates" >&2
+                exit 1
+              fi
+              if [[ "$REQUESTED_BRANCH" == release-* && "$REQUESTED_BRANCH" != "release-$to_line" ]]; then
+                echo "The comparison end must match $REQUESTED_BRANCH" >&2
+                exit 1
+              fi
+              echo 'run_type=release_changelog' >> "$GITHUB_OUTPUT"
+              echo "suffix=-${FROM_RELEASE//./-}-to-${TO_RELEASE//./-}" >> "$GITHUB_OUTPUT"
+            else
+              # A manual run without release inputs refreshes one patch series.
+              echo 'run_type=patch_changelog' >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  generate:
+    needs: branches
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target_branch: ${{ fromJSON(needs.branches.outputs.branches) }}
+    concurrency:
+      group: dynamic-plugin-changelog-${{ matrix.target_branch }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout target documentation branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ matrix.target_branch }}
+          path: docs
+          fetch-depth: 0
+
+      - name: Checkout changelog scripts from main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          path: tools
+          sparse-checkout: |
+            modules/extend_dynamic-plugins-reference/changelog_paths.py
+            modules/extend_dynamic-plugins-reference/generate-dynamic-plugin-changelog.py
+            modules/extend_dynamic-plugins-reference/update-dynamic-plugin-changelog.py
+          sparse-checkout-cone-mode: false
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --only-binary :all: 'PyYAML==6.0.3'
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      - name: Update branch patch changelog
+        if: needs.branches.outputs.run_type == 'patch_changelog'
+        working-directory: docs
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          python3 ../tools/modules/extend_dynamic-plugins-reference/update-dynamic-plugin-changelog.py \
+            --branch "$TARGET_BRANCH" \
+            --output modules/extend_dynamic-plugins-reference/ref-dynamic-plugin-changes.adoc \
+            --update-includes
+
+      - name: Generate major/minor release changelog
+        if: needs.branches.outputs.run_type == 'release_changelog'
+        working-directory: docs
+        env:
+          FROM_RELEASE: ${{ inputs.from_release }}
+          TO_RELEASE: ${{ inputs.to_release }}
+        run: |
+          report="modules/extend_dynamic-plugins-reference/ref-dynamic-plugin-changes-${FROM_RELEASE//./-}-to-${TO_RELEASE//./-}.adoc"
+          python3 ../tools/modules/extend_dynamic-plugins-reference/generate-dynamic-plugin-changelog.py \
+            --from-release "$FROM_RELEASE" \
+            --to-release "$TO_RELEASE" \
+            --output "$report"
+          # Keep this major/minor comparison before the rolling patch changelog
+          # when both are included in the same documentation title.
+          python3 - "$report" <<'PY'
+          from pathlib import Path
+          import sys
+
+          sys.path.insert(0, str(Path("../tools/modules/extend_dynamic-plugins-reference").resolve()))
+          from changelog_paths import MODULE_DIR, REPORT_NAME, TITLE_PATHS, require_document_path
+
+          report = require_document_path("report", Path(sys.argv[1]), MODULE_DIR, REPORT_NAME)
+          include = f"include::{report.relative_to(Path.cwd().resolve()).as_posix()}[leveloffset=+1]"
+          rolling = "include::modules/extend_dynamic-plugins-reference/ref-dynamic-plugin-changes.adoc[leveloffset=+1]"
+          titles = []
+          for relative in TITLE_PATHS:
+              title = require_document_path("title path", relative, relative.parent, relative.name)
+              if not title.exists():
+                  continue
+              if not title.is_file():
+                  raise ValueError(f"Title is not a file: {title}")
+              titles.append(relative)
+          if not titles:
+              raise SystemExit("No dynamic plugin reference title exists in this checkout")
+
+          for relative in titles:
+              title = require_document_path("title path", relative, relative.parent, relative.name)
+              safe_title = title.resolve(strict=True)
+              if title.is_symlink() or safe_title != Path.cwd().resolve() / relative or not safe_title.is_file():
+                  raise ValueError(f"Title is not a regular file in this checkout: {title}")
+              content = safe_title.read_text(encoding="utf-8")
+              if include in content:
+                  continue
+              if rolling in content:
+                  content = content.replace(rolling, f"{include}\n\n{rolling}", 1)
+              else:
+                  content = content.rstrip() + f"\n\n{include}\n"
+              safe_title.write_text(content, encoding="utf-8")
+          PY
+
+      - name: Create or update pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ secrets.RHDH_BOT_TOKEN || github.token }}
+          path: docs
+          base: ${{ matrix.target_branch }}
+          branch: update-dynamic-plugin-changelog-${{ matrix.target_branch }}${{ needs.branches.outputs.suffix }}
+          delete-branch: true
+          commit-message: "docs: update dynamic plugin changelog"
+          title: "Update dynamic plugin changelog for ${{ matrix.target_branch }}"
+          body: |
+            Generated from published supported and community catalog indexes.
+            Each comparison records immutable image digests. The generator prefers
+            the exact overlays commit and labels any community build fallback.
