@@ -13,8 +13,8 @@ The `disabled` status is controlled at the plugin level, therefore, disabling th
 . From the Developer perspective in the {ocp-short} web console, click *ConfigMaps*.
 . From the *ConfigMaps* page, click the ConfigMap that contains the TechDocs add-on that you want to remove.
 . Select the *YAML view* option in the *Configure via* field.
-. In the `plugins` section of the ConfigMap, do one of the following actions based on whether you want to disable or remove a TechDocs add-on:
-** To temporarily disable all of the TechDocs add-ons in a particular plugin package, change the value of the `disabled` field to `true`. For example:
+. In the ConfigMap, do one of the following actions based on whether you want to disable all of the add-ons in a package or a single add-on:
+** To temporarily disable all of the TechDocs add-ons in a particular plugin package, in the `plugins` section, change the value of the `disabled` field to `true`. For example:
 +
 [source,yaml,subs="+quotes,+attributes"]
 ----
@@ -27,47 +27,26 @@ data:
     includes:
       - dynamic-plugins.default.yaml
     plugins:
-      - package: ref://backstage-plugin-techdocs-module-addons-contrib
-        enabled: false
-        pluginConfig:
-          dynamicPlugins:
-            frontend:
-              backstage.plugin-techdocs-module-addons-contrib:
-                techdocsAddons:
-                  - importName: ReportIssue
-                  - importName: _<external_techdocs_add-on>_
+      - package: ./dynamic-plugins/dist/backstage-plugin-techdocs-module-addons-contrib
+        disabled: true
 ----
-+
-where:
-
-_<external_techdocs_add-on>_:: Specifies the external TechDocs add-on that you want to remove, for example, `TextSize`.
-** To remove one or more TechDocs add-ons from your {product} instance, delete `importName: _<external_techdocs_add-on>_` for each external TechDocs add-on that you want to remove from the `techdocsAddons` section of your ConfigMap. For example:
+** To remove a single TechDocs add-on while keeping the rest of the package enabled, set its extension ID to `false` in the `app.extensions` section of your application configuration. For example:
 +
 [source,yaml,subs="+quotes,+attributes"]
 ----
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: dynamic-plugins-rhdh
-data:
-  dynamic-plugins.yaml: |
-    includes:
-      - dynamic-plugins.default.yaml
-    plugins:
-      - package: ref://backstage-plugin-techdocs-module-addons-contrib
-        enabled: true
-        pluginConfig:
-          dynamicPlugins:
-            frontend:
-              backstage.plugin-techdocs-module-addons-contrib:
-                techdocsAddons:
-                  - importName: ReportIssue
-                  - importName: _<external_techdocs_add-on>_
+app:
+  extensions:
+    - addon:techdocs/_<external_techdocs_add-on>_: false
 ----
 +
 where:
 
-_<external_techdocs_add-on>_:: Specifies the external TechDocs add-on that you want to remove, for example, `TextSize`.
+_<external_techdocs_add-on>_:: Specifies the extension name of the external TechDocs add-on that you want to remove, for example, `text-size`.
++
+[NOTE]
+====
+In {product} {product-version}, the new front-end system no longer uses the `dynamicPlugins.frontend.<plugin>.techdocsAddons` wiring. You disable individual add-ons by their extension ID in the `app.extensions` section.
+====
 . Click *Save*.
 . In the web console navigation menu, click *Topology* and wait for the {product} pod to start.
 . Click the *Open URL* icon to start using the {product} platform with the new configuration changes.
