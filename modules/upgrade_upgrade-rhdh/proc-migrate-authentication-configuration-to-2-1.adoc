@@ -14,6 +14,11 @@ Complete this checklist before you upgrade to {product-version}.
 .Procedure
 
 . For each identity provider that you use, install its authentication backend dynamic plugin.
++
+[NOTE]
+====
+If you use the GitHub or GitLab catalog provider, complete a full re-sync (clear the database and re-commit all users and groups) to pick up the new `github.com/user-id` annotation, which the `userIdMatchingUserEntityAnnotation` sign-in resolver requires.
+====
 
 . If Keycloak or PingFederate is configured under `auth.providers.oidc`, migrate the configuration to `auth.providers.keycloak` or `auth.providers.pingfederate`, and update the redirect URI and `signInPage` value to match the dedicated provider.
 +
@@ -33,7 +38,7 @@ Authentication providers are not installed by default in {product-version}.
 
 . Remove `ENABLE_AUTH_PROVIDER_MODULE_OVERRIDE` from your Helm values or Operator configuration, if present.
 
-. Replace `disableIdentityResolution` on auxiliary providers with an omitted `signIn.resolvers` field.
+. Replace `disableIdentityResolution` on auxiliary providers with `signIn.resolvers` set to an empty array.
 +
 For example, for an auxiliary provider such as GitHub used only for source control or API access, not for sign-in:
 +
@@ -60,9 +65,12 @@ auth:
       production:
         clientId: ${GITHUB_APP_CLIENT_ID}
         clientSecret: ${GITHUB_APP_CLIENT_SECRET}
+        signIn:
+          resolvers: []
 ----
 +
-Do not omit `signIn.resolvers` on your primary sign-in provider.
+Set `signIn.resolvers` to an empty array to override the provider's default resolver; without an explicit empty array, the default resolver still applies and the provider still resolves identities.
+Do not set `signIn.resolvers` to an empty array on your primary sign-in provider.
 +
 For more information, see {authentication-book-link}#enable-user-authentication-with-github-as-an-auxiliary-authentication-provider_enable-authentication-with-external-services[Enable GitHub as an auxiliary authentication provider].
 
