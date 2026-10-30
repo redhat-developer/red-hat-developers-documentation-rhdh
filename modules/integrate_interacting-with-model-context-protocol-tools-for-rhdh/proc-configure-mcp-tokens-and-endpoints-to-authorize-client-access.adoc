@@ -37,21 +37,24 @@ where:
 $ node -p `require("crypto").randomBytes(24).toString("base64")`
 ----
 
-.. To enable *OIDC user token* authentication so that individual developers can connect their own AI clients with their user identity, ensure that an OIDC identity provider is configured as the sign-in provider. The MCP server uses the `IdentityApi` to resolve each incoming OIDC token to the corresponding {backstage} user entity (for example, `user:default/alice`) and enforces that user's RBAC permissions for every tool call:
+.. To enable *OIDC user token* authentication so that individual developers can connect their own AI clients with their user identity, ensure that an OIDC-based identity provider, such as {rhbk}, PingFederate, or a generic OIDC provider, is configured as your primary sign-in provider. The MCP server uses the `IdentityApi` to resolve each incoming OIDC token to the corresponding {backstage} user entity (for example, `user:default/alice`) and enforces that user's RBAC permissions for every tool call.
++
+For example, with {rhbk} configured as the sign-in provider:
 +
 [source,yaml]
 ----
-signInPage: oidc
+signInPage: keycloak
 auth:
   environment: production
   session:
     secret: "${BACKEND_SECRET}"
   providers:
-    oidc:
+    keycloak:
       production:
-        clientId: ${OIDC_CLIENT_ID}
-        clientSecret: ${OIDC_CLIENT_SECRET}
-        metadataUrl: ${OIDC_METADATA_URL}
+        baseUrl: ${KEYCLOAK_BASE_URL}
+        realm: ${KEYCLOAK_REALM}
+        clientId: ${KEYCLOAK_CLIENT_ID}
+        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
 ----
 +
 [NOTE]
@@ -183,7 +186,6 @@ backend:
   baseUrl: "${{product-very-short}_BASE_URL}"
   cors:
     origin: "${{product-very-short}_BASE_URL}"
-signInPage: oidc
 ----
 
 . Apply an action filter to limit which MCP tools are exposed to AI clients. {company-name} recommends exposing only read-only tools by default to minimize risk:

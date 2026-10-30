@@ -12,6 +12,15 @@ Configure GitLab as your {product} sign-in provider.
 
 .Procedure
 
+. Enable the GitLab authentication provider plugin in your `dynamic-plugins.yaml` file:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://quay.io/rhdh/backstage-plugin-auth-backend-module-gitlab-provider:{{inherit}}
+    enabled: true
+----
+
 . Add a GitLab authentication provider section to your {product-very-short} `{my-app-config-file}` file:
 +
 [source,yaml,subs="+quotes,+attributes"]
@@ -29,6 +38,9 @@ auth:
         clientId: $\{GITLAB_CLIENT_ID}
         clientSecret: $\{GITLAB_CLIENT_SECRET}
         callbackUrl: {my-product-url}/api/auth/gitlab/handler/frame
+        signIn:
+          resolvers:
+            - resolver: userIdMatchingUserEntityAnnotation
 ----
 +
 
@@ -43,6 +55,10 @@ Enter the configured secret variable name: `${GITLAB_CLIENT_SECRET}`.
 
 `callbackUrl`::
 Enter your {product-short} authentication backend URL: `pass:c,a,q[{my-product-url}/api/auth/gitlab/handler/frame]`
+
+`signIn.resolvers`::
+Enter the resolver list to override the default resolver: `userIdMatchingUserEntityAnnotation`.
+In production mode, configure only one resolver to make sure users are securely matched.
 
 . To disable the guest login option, in the `{my-app-config-file}` file, set the authentication environment to `production`:
 +
