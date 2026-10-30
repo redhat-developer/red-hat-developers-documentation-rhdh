@@ -1,0 +1,63 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="display-the-front-end-plugin_{context}"]
+= Display the front-end plugin
+
+[role="_abstract"]
+To gather user feedback directly within {product}, install and display the Entity Feedback plugin in the {product} UI.
+
+After you install the *Entity Feedback* plugin, the *Feedback* entity tab and a ratings card appear in the {product} UI by default. The ratings card is added to the *Overview* tab and shows like and dislike buttons, and the *Feedback* tab loads the feedback response table directly. To show a starred rating instead of like and dislike buttons, set `variant: starred` under the `app.extensions` section. For more information, see the extensions configuration in the plugin README.
+
+[IMPORTANT]
+====
+Old front-end system (OFS) configuration examples do not apply to {product} 2.1, and direct replacements might not exist for every option. In {product} 2.1, the new front-end system removes the previous `dynamicPlugins.frontend` configuration. The plugin provides the *Feedback* entity tab and feedback cards through extension blueprints, so you do not wire them manually.
+
+For documented configuration changes, see {configuring-book-link}#configuration-key-mapping-from-old-to-new-front-end-system_migrate-to-the-front-end-system-to-use-blueprint-based-dynamic-routing[Configuration key mapping from old to new front-end system]. If you develop custom plugins, see {configuring-book-link}#migrate-custom-plugins-to-ensure-compatibility-after-upgrade_migrate-to-the-front-end-system-to-use-blueprint-based-dynamic-routing[Migrate custom plugins to ensure compatibility after upgrade].
+====
+
+.Procedure
+. Add the *Entity Feedback* plugin package to the `plugins` section of your `dynamic-plugins.yaml` file:
++
+.`dynamic-plugins.yaml` file fragment
+[source,yaml]
+----
+- package: oci://quay.io/_<user_name>_/_<entity_feedback_plugin>_:0.5.0
+  disabled: false
+----
++
+where:
+`<user_name>`:: Specifies your Quay.io username or organization.
+
+. To complete installing the *Entity Feedback* plugin, you must redeploy your {product} instance.
+
+. Optional: If you need to disable, reorder, or override the default extension configuration, use the `app.extensions` section of your `{my-app-config-file}` file. For example, to change the *Feedback* tab title:
++
+[source,yaml]
+----
+app:
+  extensions:
+    - entity-content:entity-feedback:
+        config:
+          title: Feedbacks
+----
++
+For more information about extension blueprints and the `app.extensions` section, see xref:dynamic-front-end-plugins-for-application-use_{context}[Dynamic front-end plugins for application use].
+
+
+.Verification
+When your new instance of {product} has started, you can check that your plugins install and enable by visiting the *Administration > Extensions* screen and searching for “entity” on the *Installed* tab.
+
+image::extend_installing-and-viewing-plugins-in-rhdh/custom-extensions.png["Custom extensions in the Extensions page"]
+
+When you click *Catalog*, you should see the new *Feedback* tab, and the ratings card with like and dislike buttons displayed on the *Overview* tab, as follows:
+
+image::extend_installing-and-viewing-plugins-in-rhdh/custom-entity-view.png["Entity view showing the Feedback tab and the like and dislike ratings card"]
+
+Selecting a dislike rating prompts the user to offer feedback, as follows:
+
+image::extend_installing-and-viewing-plugins-in-rhdh/custom-feedback-overlay.png["Feedback overlay dialog prompting for user feedback"]
+
+[NOTE]
+====
+The system does not save user feedback if you log in as the Guest user.
+====
