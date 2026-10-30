@@ -1,0 +1,49 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="helm-chart-behavioral-changes_{context}"]
+= Behavioral changes in the standalone Helm chart
+
+[role="_abstract"]
+The {product} 2.1 standalone Helm chart introduces behavioral changes that affect network connectivity, schema validation, and image handling. These changes can cause silent failures if not addressed during migration.
+
+== Network policies
+
+The new chart deploys default-deny NetworkPolicies by default. Additional connectivity to external APIs, custom sidecars, or cross-namespace services requires explicit NetworkPolicy rules.
+
+[IMPORTANT]
+====
+Connections fail silently when NetworkPolicy rules are missing. If your {product-very-short} deployment connects to external services or uses custom sidecars, you must define NetworkPolicy rules to allow the traffic.
+====
+
+== Schema validation
+
+JSON Schema validation catches type errors for known configuration keys, but leftover top-level keys from the old chart structure might pass silently without warnings.
+
+[IMPORTANT]
+====
+Remove all old configuration paths manually. Do not rely solely on schema validation to detect invalid keys. Keys like +upstream.*+ might not trigger validation errors but will not apply to the new chart.
+====
+
+== Image digest and tag interaction
+
+When both +image.tag+ and +image.digest+ are set, the chart renders the image reference as +tag@digest+. If the tag and digest do not match the same image, image pull operations fail.
+
+.Resolution strategies
+* Clear the default digest: +digest: ""+ and rely on the tag alone
+* Set the correct digest for your custom tag
+
+== Air-gapped environments
+
+The +global.imageRegistry+ and +global.imagePullSecrets+ settings apply to chart-managed images but do not affect dynamic plugin OCI image references.
+
+Dynamic plugin images require separate mirroring and individual reference updates in the +dynamicPlugins.plugins+ configuration.
+
+== Default configuration changes
+
+The following defaults change between chart versions and might affect your deployment:
+
+Intelligent Assistant::
+Remains enabled by default (+intelligentAssistant.enabled: true+). If you previously disabled it, set +intelligentAssistant.enabled: false+ in your new values file.
+
+PostgreSQL image version::
+Defaults to PostgreSQL 18. If you are not ready to upgrade your database, pin +postgresql.image.tag+ to your current version (for example, +15+).

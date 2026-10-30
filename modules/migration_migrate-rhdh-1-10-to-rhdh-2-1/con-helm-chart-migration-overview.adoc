@@ -1,0 +1,32 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="helm-chart-migration-overview_{context}"]
+= Helm chart migration overview
+
+[role="_abstract"]
+The {product} 2.1 standalone Helm chart represents a structural break from the {product-very-short} 1.y +backstage+ chart. You cannot upgrade directly using the same values file.
+
+The new +redhat-developer-hub+ chart owns all Kubernetes resource templates directly instead of delegating to an upstream Backstage subchart. Configuration paths flatten to root-level keys, and the chart manages system resources automatically.
+
+.Prerequisites
+* Kubernetes 1.31 or later (OpenShift 4.18 or later)
+
+.Key differences between the charts
+
+[cols="1,2,2", options="header"]
+|===
+| Aspect | Old +backstage+ chart | New +redhat-developer-hub+ chart
+
+| Chart name | +backstage+ | +redhat-developer-hub+ (nameOverride defaults to +developer-hub+)
+| Template ownership | Delegates to upstream Backstage subchart | Owns all templates directly
+| System resources | User lists everything in +extra*+ fields | Chart manages system resources; +extra*+ fields contain only user additions
+| Database environment variables | Manual injection via +extraEnvVars+ | Auto-injected (+POSTGRES_*+ variables)
+|===
+
+.Impact on migration
+
+You must migrate your Helm values file before upgrading. Values files from the +backstage+ chart cannot be passed directly to the +redhat-developer-hub+ chart because:
+
+* Configuration paths have changed
+* System resources are now managed by the chart
+* Schema validation expects the new structure

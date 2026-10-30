@@ -1,0 +1,110 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="helm-chart-structural-changes_{context}"]
+= Structural changes in the standalone Helm chart
+
+[role="_abstract"]
+The {product} 2.1 standalone Helm chart reorganizes configuration paths and removes the upstream subchart dependency. Most paths move from nested structures to root-level keys.
+
+== Flattened configuration structure
+
+Configuration paths that were nested under +upstream.backstage.*+ or +global.*+ move to root-level keys in the new chart.
+
+.Example: Image configuration
+[source,yaml]
+----
+# Old chart (backstage)
+upstream:
+  backstage:
+    image:
+      registry: quay.io
+      repository: rhdh/rhdh-hub-rhel9
+      tag: 1.10
+
+# New chart (redhat-developer-hub)
+image:
+  registry: quay.io
+  repository: rhdh/rhdh-hub-rhel10
+  tag: 2.1
+----
+
+.Example: Host and route configuration
+[source,yaml]
+----
+# Old chart (backstage)
+global:
+  host: developer-hub.example.com
+  clusterRouterBase: apps.cluster.example.com
+route:
+  enabled: true
+
+# New chart (redhat-developer-hub)
+host: developer-hub.example.com
+openshift:
+  clusterRouterBase: apps.cluster.example.com
+  route:
+    enabled: true
+----
+
+== Rebranding paths
+
+Paths that reference the AI assistant rebrand from +lightspeed+ to +intelligentAssistant+.
+
+.Example: AI assistant configuration
+[source,yaml]
+----
+# Old chart (backstage)
+global:
+  lightspeed:
+    enabled: true
+    servers:
+      - url: https://assistant.example.com
+
+# New chart (redhat-developer-hub)
+intelligentAssistant:
+  enabled: true
+  servers:
+    - url: https://assistant.example.com
+----
+
+== Dynamic plugins configuration
+
+Dynamic plugins configuration moves from +global.dynamic.plugins+ to +dynamicPlugins.plugins+ and flattens the structure.
+
+.Example: Dynamic plugins
+[source,yaml]
+----
+# Old chart (backstage)
+global:
+  dynamic:
+    plugins:
+      - package: "@janus-idp/backstage-plugin-rbac-backend-dynamic@1.2.3"
+        disabled: false
+
+# New chart (redhat-developer-hub)
+dynamicPlugins:
+  plugins:
+    - package: "@janus-idp/backstage-plugin-rbac-backend-dynamic@1.2.3"
+      disabled: false
+----
+
+== Authentication backend secret reference
+
+The authentication backend secret reference changes from a simple string to a structured object.
+
+.Example: Backend secret
+[source,yaml]
+----
+# Old chart (backstage)
+global:
+  auth:
+    backend:
+      existingSecret: rhdh-backend-secret
+
+# New chart (redhat-developer-hub)
+auth:
+  backend:
+    existingSecretRef:
+      name: rhdh-backend-secret
+      key: backend-secret
+----
