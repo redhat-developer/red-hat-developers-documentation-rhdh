@@ -215,8 +215,8 @@ normalize_csv() {
     }
 
     function delivery_method(path) {
-      if (path ~ /^oci:\/\//) return "OCI artifact"
-      if (path ~ /^\.\/dynamic-plugins\/dist\//) return "Embedded wrapper"
+      if (path ~ /^oci:\/\//) return "OCI"
+      if (path ~ /^\.\/dynamic-plugins\/dist\//) return "Embed"
       if (path == "") return "Not specified"
       return "Other"
     }
@@ -328,12 +328,6 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
     return value
   }
 
-  function display_method(value) {
-    if (value == "Embedded wrapper") return "Embed"
-    if (value == "OCI artifact") return "OCI"
-    return value
-  }
-
   BEGIN {
     print ":_mod-docs-content-type: REFERENCE"
     print ""
@@ -355,8 +349,8 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
   }
 
   {
-    print "|`" escape($1) "` |" escape($2) " |" escape(display_support($3)) " |" escape(display_method($4)) \
-      " |" escape($5) " |" escape(display_support($6)) " |" escape(display_method($7))
+    print "|`" escape($1) "` |" escape($2) " |" escape(display_support($3)) " |" escape($4) \
+      " |" escape($5) " |" escape(display_support($6)) " |" escape($7)
   }
 
   END {
