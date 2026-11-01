@@ -321,6 +321,19 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
     return value
   }
 
+  function display_support(value) {
+    if (value == "Red Hat Tech Preview" || value == "Technology Preview") return "Tech Preview"
+    if (value == "Community Support") return "Community"
+    if (value == "Red Hat Developer Preview" || value == "Developer Preview") return "Dev Preview"
+    return value
+  }
+
+  function display_method(value) {
+    if (value == "Embedded wrapper") return "Embed"
+    if (value == "OCI artifact") return "OCI"
+    return value
+  }
+
   BEGIN {
     print ":_mod-docs-content-type: REFERENCE"
     print ""
@@ -333,6 +346,8 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
     print "[role=\"_abstract\"]"
     print "The following table lists " change_count " dynamic plugins with changes between `" previous_version "` and `" current_version "`."
     print ""
+    print "Delivery method may be one of \"Embed\" for an embedded wrapper, \"OCI\" for an OCI artifact, or \"n/a\" if that plugin is not available in that release."
+    print ""
     print "[%header,cols=\"2,1,2,1,1,2,1\"]"
     print "|==="
     print "| 3+|*" escape(previous_version) "* 3+|*" escape(current_version) "*"
@@ -340,8 +355,8 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
   }
 
   {
-    print "|`" escape($1) "` |" escape($2) " |" escape($3) " |" escape($4) \
-      " |" escape($5) " |" escape($6) " |" escape($7)
+    print "|`" escape($1) "` |" escape($2) " |" escape(display_support($3)) " |" escape(display_method($4)) \
+      " |" escape($5) " |" escape(display_support($6)) " |" escape(display_method($7))
   }
 
   END {
