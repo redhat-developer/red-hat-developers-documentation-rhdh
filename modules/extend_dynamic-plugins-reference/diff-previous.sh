@@ -357,14 +357,17 @@ if [[ ! -f $NAV_FILE ]]; then
   exit 1
 fi
 
+# --diff-previous maintains one rolling cross-release file per release pair.
+# Example: 1-10-6-to-2-1-1 replaces 1-10-6-to-2-1-0 and its navigation link.
+# Explicit --diff TAG files are patch history: 2-1-0-to-2-1-1 persists when
+# 2-1-1-to-2-1-2 is later added, so the repository can contain more than two.
 if [[ $DIFF_PREVIOUS -eq 1 ]]; then
-  PREVIOUS_SERIES=${PREVIOUS_VERSION%.*}
-  CURRENT_SERIES=${CURRENT_VERSION%.*}
-  PREVIOUS_SERIES_ID=${PREVIOUS_SERIES//./-}
-  CURRENT_SERIES_ID=${CURRENT_SERIES//./-}
+  PREVIOUS_SERIES_ID=${PREVIOUS_VERSION%.*}
+  CURRENT_SERIES_ID=${CURRENT_VERSION%.*}
+  PREVIOUS_SERIES_ID=${PREVIOUS_SERIES_ID//./-}
+  CURRENT_SERIES_ID=${CURRENT_SERIES_ID//./-}
   shopt -s nullglob
   stale_outputs=(
-    "$SCRIPT_DIR"/ref-dynamic-plugin-changes-"$PREVIOUS_SERIES".*-to-"$CURRENT_SERIES".*.adoc
     "$SCRIPT_DIR"/ref-dynamic-plugin-changes-"$PREVIOUS_SERIES_ID"-*-to-"$CURRENT_SERIES_ID"-*.adoc
   )
   for stale_output in "${stale_outputs[@]}"; do

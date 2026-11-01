@@ -86,6 +86,9 @@ jobs:
           fi
 
           diff_script="modules/extend_dynamic-plugins-reference/diff-previous.sh"
+
+          # First output: one rolling cross-release comparison. For 2.1.1,
+          # 1-10-6-to-2-1-1 replaces the earlier 1-10-6-to-2-1-0 file and link.
           bash "$diff_script" -b "$TARGET_BRANCH" --diff-previous
 
           product_version=$(awk '$1 == ":product-bundle-version:" { print $2; exit }' artifacts/attributes.adoc)
@@ -103,6 +106,9 @@ jobs:
 
           previous_tag="${major}.${minor}.$((patch - 1))"
           if git rev-parse -q --verify "refs/tags/${previous_tag}^{commit}" >/dev/null; then
+            # Optional second output: the current patch delta. For 2.1.1, this
+            # creates 2-1-0-to-2-1-1. Patch files remain as release history, so
+            # a later 2-1-1-to-2-1-2 file does not replace this one.
             bash "$diff_script" -b "$TARGET_BRANCH" --diff "$previous_tag"
           else
             echo "Tag $previous_tag does not exist; skipping patch comparison."
