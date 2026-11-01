@@ -82,7 +82,8 @@ for tool in git awk sort mktemp; do
 done
 
 product_bundle_version() {
-  awk '$1 == ":product-bundle-version:" { print $2; exit }' "$1/artifacts/attributes.adoc"
+  local repo_root=$1
+  awk '$1 == ":product-bundle-version:" { print $2; exit }' "$repo_root/artifacts/attributes.adoc"
 }
 
 REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null) || {
