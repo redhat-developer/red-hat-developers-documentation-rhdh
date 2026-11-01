@@ -153,6 +153,9 @@ for version in "$PREVIOUS_VERSION" "$CURRENT_VERSION"; do
   fi
 done
 OUTPUT="$SCRIPT_DIR/ref-dynamic-plugin-changes-${PREVIOUS_VERSION}-to-${CURRENT_VERSION}.adoc"
+OUTPUT_BASENAME=$(basename "$OUTPUT")
+NAV_FILE="$REPO_ROOT/titles/product_product/category-maps/reference/nav-dynamic-plugin-parameter-reference-for-configuration-paths.adoc"
+INCLUDE_LINE="include::modules/extend_dynamic-plugins-reference/${OUTPUT_BASENAME}[leveloffset=+1]"
 PREVIOUS_VERSION_ID=${PREVIOUS_VERSION//./-}
 CURRENT_VERSION_ID=${CURRENT_VERSION//./-}
 
@@ -347,4 +350,29 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
 ' "$comparisontmpdir/changes" > "$comparisontmpdir/output.adoc" || exit 1
 
 mv "$comparisontmpdir/output.adoc" "$OUTPUT" || exit 1
-echo -e "${green}Wrote $CHANGE_COUNT changes to $OUTPUT${norm}"
+
+if [[ ! -f $NAV_FILE ]]; then
+  echo -e "${red}[ERROR] Navigation file not found: $NAV_FILE${norm}" >&2
+  exit 1
+fi
+
+if [[ $DIFF_PREVIOUS -eq 1 ]]; then
+  PREVIOUS_SERIES=${PREVIOUS_VERSION%.*}
+  CURRENT_SERIES=${CURRENT_VERSION%.*}
+  shopt -s nullglob
+  for stale_output in "$SCRIPT_DIR"/ref-dynamic-plugin-changes-"$PREVIOUS_SERIES".*-to-"$CURRENT_SERIES".*.adoc; do
+    [[ $stale_output == "$OUTPUT" ]] && continue
+    stale_include="include::modules/extend_dynamic-plugins-reference/$(basename "$stale_output")[leveloffset=+1]"
+    grep -vF "$stale_include" "$NAV_FILE" > "$comparisontmpdir/nav.adoc" || true
+    mv "$comparisontmpdir/nav.adoc" "$NAV_FILE" || exit 1
+    rm -f "$stale_output" || exit 1
+    echo -e "${green}Removed superseded comparison $stale_output${norm}"
+  done
+  shopt -u nullglob
+fi
+
+if ! grep -qxF "$INCLUDE_LINE" "$NAV_FILE"; then
+  printf '\n%s\n' "$INCLUDE_LINE" >> "$NAV_FILE"
+fi
+
+echo -e "${green}Wrote $CHANGE_COUNT changes to $OUTPUT and linked it from $NAV_FILE${norm}"
