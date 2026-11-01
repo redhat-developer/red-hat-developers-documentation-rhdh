@@ -17,7 +17,7 @@ bash modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh -b relea
 
 The script updates both sources by default. Use `--skip-supported-tables` or `--skip-community-table` to update only one source. Run the script with `--help` for all options.
 
-Use `--diff-previous` to also generate `ref-dynamic-plugin-changes-<previous-version>-to-<current-version>.adoc`, using each ref's `product-bundle-version`. For a `release-X.Y` branch, the script sorts the available release branches with `sort -V` and compares against the preceding release. For `main`, it compares against the latest stable release branch. Use `--diff TAG` to select a specific tag or Git ref instead.
+Use `--diff-previous` to also generate a file such as `ref-dynamic-plugin-changes-1-10-6-to-2-1-0.adoc`, using each ref's `product-bundle-version` with periods replaced by hyphens. For a `release-X.Y` branch, the script sorts the available release branches with `sort -V` and compares against the preceding release. For `main`, it compares against the latest stable release branch. Use `--diff TAG` to select a specific tag or Git ref instead.
 
 To regenerate only the comparison from existing CSV files without fetching the catalog indexes, call the comparison script directly:
 

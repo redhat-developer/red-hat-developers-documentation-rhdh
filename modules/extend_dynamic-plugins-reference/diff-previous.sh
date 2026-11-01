@@ -152,12 +152,12 @@ for version in "$PREVIOUS_VERSION" "$CURRENT_VERSION"; do
     exit 1
   fi
 done
-OUTPUT="$SCRIPT_DIR/ref-dynamic-plugin-changes-${PREVIOUS_VERSION}-to-${CURRENT_VERSION}.adoc"
+PREVIOUS_VERSION_ID=${PREVIOUS_VERSION//./-}
+CURRENT_VERSION_ID=${CURRENT_VERSION//./-}
+OUTPUT="$SCRIPT_DIR/ref-dynamic-plugin-changes-${PREVIOUS_VERSION_ID}-to-${CURRENT_VERSION_ID}.adoc"
 OUTPUT_BASENAME=$(basename "$OUTPUT")
 NAV_FILE="$REPO_ROOT/titles/product_product/category-maps/reference/nav-dynamic-plugin-parameter-reference-for-configuration-paths.adoc"
 INCLUDE_LINE="include::modules/extend_dynamic-plugins-reference/${OUTPUT_BASENAME}[leveloffset=+1]"
-PREVIOUS_VERSION_ID=${PREVIOUS_VERSION//./-}
-CURRENT_VERSION_ID=${CURRENT_VERSION//./-}
 
 PREVIOUS_DIR="$comparisontmpdir/previous/modules/extend_dynamic-plugins-reference"
 CURRENT_CSVS=()
@@ -359,8 +359,14 @@ fi
 if [[ $DIFF_PREVIOUS -eq 1 ]]; then
   PREVIOUS_SERIES=${PREVIOUS_VERSION%.*}
   CURRENT_SERIES=${CURRENT_VERSION%.*}
+  PREVIOUS_SERIES_ID=${PREVIOUS_SERIES//./-}
+  CURRENT_SERIES_ID=${CURRENT_SERIES//./-}
   shopt -s nullglob
-  for stale_output in "$SCRIPT_DIR"/ref-dynamic-plugin-changes-"$PREVIOUS_SERIES".*-to-"$CURRENT_SERIES".*.adoc; do
+  stale_outputs=(
+    "$SCRIPT_DIR"/ref-dynamic-plugin-changes-"$PREVIOUS_SERIES".*-to-"$CURRENT_SERIES".*.adoc
+    "$SCRIPT_DIR"/ref-dynamic-plugin-changes-"$PREVIOUS_SERIES_ID"-*-to-"$CURRENT_SERIES_ID"-*.adoc
+  )
+  for stale_output in "${stale_outputs[@]}"; do
     [[ $stale_output == "$OUTPUT" ]] && continue
     stale_include="include::modules/extend_dynamic-plugins-reference/$(basename "$stale_output")[leveloffset=+1]"
     grep -vF "$stale_include" "$NAV_FILE" > "$comparisontmpdir/nav.adoc" || true
