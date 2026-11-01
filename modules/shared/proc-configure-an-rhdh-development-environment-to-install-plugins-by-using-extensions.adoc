@@ -3,15 +3,15 @@
 [id="configure-an-rhdh-development-environment-to-install-plugins-by-using-extensions_{context}"]
 = Configure persistent storage for plugin installations
 
+[role="_abstract"]
+To retain plugins installed through the Extensions UI across application restarts, configure persistent storage for the dynamic plugin cache. A persistent volume claim (PVC) stores the Extensions configuration file.
+
 [IMPORTANT]
 ====
-This feature is supported in development environments only. In a production environment, the interface prevents plugin installation and is not supported.
+Installing plugins through Extensions is supported only in development environments. The Extensions interface prevents plugin installations in production environments.
 ====
 
-[role="_abstract"]
-When you install a plugin using Extensions UI, the system saves the configuration to a persistent volume, preserving it across application restarts.
-
-You must create a persistent volume claim (PVC) to ensure that the cache persists when you restart the {product-very-short} application. For more information about using the dynamic plugins cache, see {configuring-book-link}#using-the-dynamic-plugins-cache_running-behind-a-proxy[Using the dynamic plugins cache].
+For more information about the dynamic plugins cache, see {configuring-book-link}#using-the-dynamic-plugins-cache_running-behind-a-proxy[Using the dynamic plugins cache].
 
 .Prerequisites
 * You have created a persistent volume claim (PVC) for the dynamic plugins cache with the name *dynamic-plugins-root*.
@@ -21,46 +21,23 @@ You must create a persistent volume claim (PVC) to ensure that the cache persist
 .Procedure
 . Create the extensions configuration file and save it as `dynamic-plugins.extensions.yaml`. For example:
 +
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
 includes:
   - dynamic-plugins.default.yaml
 
 plugins:
-  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-extensions
-    enabled: true
-    pluginConfig:
-      dynamicPlugins:
-        frontend:
-          red-hat-developer-hub.backstage-plugin-marketplace:
-            translationResources:
-              - importName: marketplaceTranslations
-                ref: marketplaceTranslationRef
-                module: Alpha
-            appIcons:
-              - name: pluginsIcon
-                importName: PluginsIcon
-            dynamicRoutes:
-              - path: /extensions
-                importName: DynamicMarketplacePluginRouter
-                menuItem:
-                  icon: pluginsIcon
-                  text: Extensions
-                  textKey: menuItem.extensions
-            menuItems:
-              extensions:
-                parent: default.admin
-  - package: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-extensions-backend-dynamic
+  - package: ref://red-hat-developer-hub-backstage-plugin-extensions-backend
     enabled: true
     pluginConfig:
       extensions:
         installation:
           enabled: true
           saveToSingleFile:
-            file: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
+            file: ${{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH}
 ----
-where:
-`translationResources`:: Sets the extension point for localization.
++
+The Extensions front-end plugin is enabled by default and provides its page, sidebar item, and translations through the new front-end system. You do not need `dynamicPlugins.frontend` entries for these features. Set `{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH` to the file path used in the following deployment steps.
 
 . Copy the file to your cluster by running the following commands:
 +
@@ -90,6 +67,8 @@ spec:
       envs:
         - name: NODE_ENV
           value: "development"
+        - name: "{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH"
+          value: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
       secrets:
         - name: secrets-rhdh
     extraFiles:
@@ -121,7 +100,7 @@ data:
 
 ... Upgrade the Helm release to include your extensions configuration file and update the `NODE_ENV` environment variable  to `development`:
 +
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
 auth:
   backend:
@@ -135,6 +114,8 @@ dynamicPlugins:
 extraEnv:
   - name: NODE_ENV
     value: development
+  - name: "{product-very-short}_EXTENSIONS_INSTALL_EXPORT_PATH"
+    value: /opt/app-root/src/dynamic-plugins-root/dynamic-plugins.extensions.yaml
 ----
 ... Click *Upgrade*
 
