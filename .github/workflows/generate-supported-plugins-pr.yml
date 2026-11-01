@@ -12,47 +12,67 @@ on:
     - cron: "0 4 * * 1"
 
 jobs:
+  discover-branches:
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.discover.outputs.branches }}
+    steps:
+      - name: Discover target branches
+        id: discover
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            refs="$(git ls-remote --heads "$REPOSITORY_URL" 'refs/heads/release-*')"
+            mapfile -t releases < <(
+              printf '%s\n' "$refs" |
+                sed 's#.*refs/heads/##' |
+                grep -E '^release-[0-9]+\.[0-9]+$' |
+                sort -V |
+                tail -n 3
+            )
+
+            ((${#releases[@]} > 0)) || {
+              echo "No release-X.Y branches found" >&2
+              exit 1
+            }
+            branches=(main "${releases[@]}")
+          else
+            [[ "$INPUT_BRANCH" =~ ^(main|release-[0-9]+\.[0-9]+)$ ]] || {
+              echo "Invalid branch: $INPUT_BRANCH" >&2
+              exit 1
+            }
+            git ls-remote --exit-code --heads \
+              "$REPOSITORY_URL" "refs/heads/$INPUT_BRANCH" >/dev/null
+            branches=("$INPUT_BRANCH")
+          fi
+
+          branches_json="$(
+            python3 -c \
+              'import json, sys; print(json.dumps(sys.argv[1:]))' \
+              "${branches[@]}"
+          )"
+          echo "branches=$branches_json" >> "$GITHUB_OUTPUT"
+
   run-script:
+    needs: discover-branches
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Add or remove rows when release branches change. Job can only run for branches listed here.
-          - target_branch: main
-            script_path: modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh
-          - target_branch: release-1.8
-            script_path: modules/dynamic-plugins/rhdh-supported-plugins.sh
-          - target_branch: release-1.9
-            script_path: modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh
-          - target_branch: release-1.10
-            script_path: modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh
-          - target_branch: release-2.1
-            script_path: modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh
+        target_branch: ${{ fromJSON(needs.discover-branches.outputs.branches) }}
     steps:
-      # matrix is not available in job-level `if`, so we gate steps with this output instead.
-      - name: Decide whether this matrix leg should run
-        id: gate
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          TARGET_BRANCH: ${{ matrix.target_branch }}
-          INPUT_BRANCH: ${{ github.event.inputs.branch }}
-        run: |
-          if [ "$EVENT_NAME" = "schedule" ] || [ "$TARGET_BRANCH" = "$INPUT_BRANCH" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Checkout repository
-        if: steps.gate.outputs.run == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ matrix.target_branch }}
           fetch-depth: 0
 
       - name: Install dependencies
-        if: steps.gate.outputs.run == 'true'
         run: |
           python3 -m pip install --upgrade pip
           pip install yq
@@ -63,21 +83,17 @@ jobs:
           echo "Installed jq version: $(jq --version)"
 
       - name: Set up Git user
-        if: steps.gate.outputs.run == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Generate timestamp
-        if: steps.gate.outputs.run == 'true'
         run: echo "TIMESTAMP=$(date +'%Y%m%d-%H%M%S' -u)" >> $GITHUB_ENV
 
       - name: Run the script on branch
-        if: steps.gate.outputs.run == 'true'
-        run: bash ${{ matrix.script_path }} -b ${{ matrix.target_branch }}
+        run: bash modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh -b ${{ matrix.target_branch }}
 
       - name: Generate dynamic plugin comparisons
-        if: steps.gate.outputs.run == 'true'
         env:
           TARGET_BRANCH: ${{ matrix.target_branch }}
         run: |
@@ -115,7 +131,6 @@ jobs:
           fi
 
       - name: Create Pull Request
-        if: steps.gate.outputs.run == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           commit-message: "chore: automated update of dynamic plugin tables"
