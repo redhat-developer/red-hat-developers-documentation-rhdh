@@ -93,6 +93,37 @@ jobs:
       - name: Run the script on branch
         run: bash modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh -b ${{ matrix.target_branch }}
 
+      - name: Generate dynamic plugin comparisons
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          if [[ "$TARGET_BRANCH" != "main" && ! "$TARGET_BRANCH" =~ ^release-2\..+$ ]]; then
+            exit 0
+          fi
+
+          diff_script="modules/extend_dynamic-plugins-reference/diff-previous.sh"
+          bash "$diff_script" -b "$TARGET_BRANCH" --diff-previous
+
+          product_version=$(awk '$1 == ":product-bundle-version:" { print $2; exit }' artifacts/attributes.adoc)
+          if [[ ! "$product_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Invalid or missing product-bundle-version: ${product_version:-empty}" >&2
+            exit 1
+          fi
+
+          major=${BASH_REMATCH[1]}
+          minor=${BASH_REMATCH[2]}
+          patch=$((10#${BASH_REMATCH[3]}))
+          if (( patch == 0 )); then
+            exit 0
+          fi
+
+          previous_tag="${major}.${minor}.$((patch - 1))"
+          if git rev-parse -q --verify "refs/tags/${previous_tag}^{commit}" >/dev/null; then
+            bash "$diff_script" -b "$TARGET_BRANCH" --diff "$previous_tag"
+          else
+            echo "Tag $previous_tag does not exist; skipping patch comparison."
+          fi
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
