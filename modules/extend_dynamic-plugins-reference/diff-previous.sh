@@ -217,8 +217,8 @@ normalize_csv() {
     function delivery_method(path) {
       if (path ~ /^oci:\/\//) return "OCI"
       if (path ~ /^\.\/dynamic-plugins\/dist\//) return "Embed"
-      if (path == "") return "Not specified"
-      return "Other"
+      if (path == "") return "Unknown"
+      return "Unknown"
     }
 
     FNR == 1 {
