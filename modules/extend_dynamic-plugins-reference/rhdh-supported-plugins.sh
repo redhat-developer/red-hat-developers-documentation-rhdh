@@ -290,6 +290,7 @@ generate_community_table() {
             case $support in
                 community) display_support="Community Support";;
                 dev-preview) display_support="Developer Preview";;
+                *) display_support="Unknown";;
             esac
             required_variables_csv=${Required_Variables//\\n\\n/;}
             required_variables_csv=${required_variables_csv%;}
