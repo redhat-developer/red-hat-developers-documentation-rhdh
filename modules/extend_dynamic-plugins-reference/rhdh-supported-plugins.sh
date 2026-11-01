@@ -184,6 +184,11 @@ get_required_variables() {
     printf '%s' "$Required_Variables"
 }
 
+csv_escape() {
+    local value=${1//\"/\"\"}
+    printf '"%s"' "$value"
+}
+
 generate_community_table() {
     if [[ ! -d "$overlaystmpdir" ]]; then
         echo -e "${red}[ERROR] Overlays repo not found: $overlaystmpdir${norm}"
@@ -193,10 +198,11 @@ generate_community_table() {
     echo -e "${green}Generating community plugins table from $overlaystmpdir (branch: $BRANCH)${norm}"
 
     COMMUNITY_TABLE_FILE="/tmp/community_table_${BRANCH}.txt"
+    COMMUNITY_CSV_FILE="/tmp/community_plugins_${BRANCH}.csv"
     BUNDLED_PLUGINS_FILE="/tmp/bundled_plugins_${BRANCH}.txt"
 
-    rm -f "$COMMUNITY_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
-    touch "$COMMUNITY_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
+    rm -f "$COMMUNITY_TABLE_FILE" "$COMMUNITY_CSV_FILE" "$BUNDLED_PLUGINS_FILE"
+    touch "$COMMUNITY_TABLE_FILE" "$COMMUNITY_CSV_FILE" "$BUNDLED_PLUGINS_FILE"
 
     # Read the community packages list
     COMMUNITY_PACKAGES_FILE="$overlaystmpdir/rhdh-community-packages.txt"
@@ -244,9 +250,12 @@ generate_community_table() {
             # Extract data from the metadata file
             plugin_title=$(yq -r '.metadata.title // ""' "$metadata_file")
             plugin_name=$(yq -r '.metadata.name // ""' "$metadata_file")
+            package_name=$(yq -r '.spec.packageName // ""' "$metadata_file")
+            plugin_role=$(yq -r '.spec.backstage.role // ""' "$metadata_file")
             plugin_version=$(yq -r '.spec.version // ""' "$metadata_file")
             dynamic_artifact=$(yq -r '.spec.dynamicArtifact // ""' "$metadata_file")
             support=$(yq -r '.spec.support // "unknown"' "$metadata_file")
+            lifecycle=$(yq -r '.spec.lifecycle // "unknown"' "$metadata_file")
             Required_Variables=$(get_required_variables "$metadata_file")
 
             # Skip if not a community plugin or no dynamic artifact
@@ -273,6 +282,18 @@ generate_community_table() {
 
             # Format title for display
             display_title="${plugin_title:-$plugin_name}"
+            case $plugin_role in
+                backend-plugin|backend-plugin-module) display_role="Backend";;
+                frontend-plugin|frontend-plugin-module) display_role="Frontend";;
+                *) display_role="$plugin_role";;
+            esac
+            case $support in
+                community) display_support="Community Support";;
+                dev-preview) display_support="Developer Preview";;
+                *) display_support="Unknown";;
+            esac
+            required_variables_csv=${Required_Variables//\\n\\n/;}
+            required_variables_csv=${required_variables_csv%;}
 
             if [[ $QUIET -eq 0 ]]; then
                 echo    " * Plugin: $display_title"
@@ -283,6 +304,12 @@ generate_community_table() {
             # Add to community table (sorted by title)
             # shellcheck disable=SC2028
             echo "|*${display_title}*\n|${plugin_version}|\`${new_path}\`\n\n${Required_Variables}\`" >> "$COMMUNITY_TABLE_FILE"
+            printf '%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+                "$(csv_escape "$display_title")" "$(csv_escape "$package_name")" \
+                "$(csv_escape "$display_role")" "$(csv_escape "$plugin_version")" \
+                "$(csv_escape "$display_support")" "$(csv_escape "$lifecycle")" \
+                "$(csv_escape "$dynamic_artifact")" "$(csv_escape "$required_variables_csv")" \
+                '"N/A"' >> "$COMMUNITY_CSV_FILE"
 
             community_count=$((community_count + 1))
         done
@@ -312,9 +339,13 @@ generate_community_table() {
 
     echo -e "${green}Generated $community_output with $community_count migrated plugins${norm}"
 
+    community_csv_output="${0/rhdh-supported-plugins.sh/rhdh-community-plugins.csv}"
+    printf '%s\n' '"Name","Plugin","Role","Version","Support Level","Lifecycle","Path","Required Variables","Default"' > "$community_csv_output"
+    LC_ALL=C sort -t, -k1,1 "$COMMUNITY_CSV_FILE" >> "$community_csv_output"
+    echo -e "${green}Generated $community_csv_output with $community_count migrated plugins${norm}"
 
     # Cleanup temp files
-    rm -f "$COMMUNITY_TABLE_FILE" "$COMMUNITY_TABLE_SORTED" "$BUNDLED_PLUGINS_FILE"
+    rm -f "$COMMUNITY_TABLE_FILE" "$COMMUNITY_TABLE_SORTED" "$COMMUNITY_CSV_FILE" "$BUNDLED_PLUGINS_FILE"
 }
 
 # Call function if not skipped
