@@ -335,8 +335,8 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
     print ""
     print "[%header,cols=\"2,1,2,1,1,2,1\"]"
     print "|==="
-    print ".2+|*Plugin package* 3+|*" escape(previous_version) "* 3+|*" escape(current_version) "*"
-    print "|*Version* |*Support* |*Method* |*Version* |*Support* |*Method*"
+    print "| 3+|*" escape(previous_version) "* 3+|*" escape(current_version) "*"
+    print "|*Plugin package* |*Version* |*Support* |*Method* |*Version* |*Support* |*Method*"
   }
 
   {
