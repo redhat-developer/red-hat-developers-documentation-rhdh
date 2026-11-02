@@ -4,9 +4,34 @@
 = Update custom Helm chart configurations
 
 [role="_abstract"]
-Update custom Helm chart configurations to ensure compatibility with the new version.
+Update your custom Helm chart configurations to ensure compatibility with the new version. In {product-very-short} 2.1, the standalone Helm chart changes the structure of the `values.yaml` file, so you must translate your existing configuration keys to the new format.
+
+[NOTE]
+====
+If you are migrating from version 1.10 to version 2.1, the Helm chart reinstallation and the complete key-by-key `values.yaml` mapping are covered in link:{migrating-book-link}[{migrating-book-title}]. Use this procedure as a summary of the configuration update.
+====
+
+.Prerequisites
+
+* You exported your current Helm chart values by running `helm get values`.
 
 .Procedure
 
-* TO DO: Update procedure steps
+. Export your current configuration if you have not already done so:
++
+[source,terminal,subs="attributes+"]
+----
+$ helm get values rhdh -n {my-product-namespace} -o yaml > old-values.yaml
+----
 
+. Translate each configuration key in your exported values to its {product-very-short} 2.1 equivalent. For the full mapping of old keys to new keys, grouped by section such as `global`, `upstream`, networking, plugins, and PostgreSQL, see the Helm chart values mapping reference in link:{migrating-book-link}[{migrating-book-title}].
++
+// TODO (SME): Confirm whether any 1.10 values keys are removed in 2.1 with no replacement, and list them here.
+
+. Replace plugin references that use a local wrapper path, such as `package: ./dynamic-plugins/dist/<plugin-name>`, with an Open Container Initiative (OCI) reference. Bundled plugin wrappers are removed from the {product-very-short} image in 2.1.
+
+. Save the translated configuration to a new values file, for example `new-values.yaml`, and use it when you install the 2.1 chart.
+
+.Verification
+
+* After you install the 2.1 chart with your translated values, confirm that {product-short} starts without configuration errors and that all expected plugins are loaded.
