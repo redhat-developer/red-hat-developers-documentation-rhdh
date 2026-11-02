@@ -19,7 +19,7 @@ read -r removed added promoted total < <(awk -F'|' '
   END { printf "%d %d %d %d\n", removed + 0, added + 0, promoted + 0, total + 0 }
 ' "$FILE")
 
-if [ "$((removed + added + promoted))" -ne "$total" ]; then
+if [[ "$((removed + added + promoted))" -ne "$total" ]]; then
   printf 'Unrecognized Change value in %s: %d rows, %d categorized\n' \
     "$FILE" "$total" "$((removed + added + promoted))" >&2
   exit 1
