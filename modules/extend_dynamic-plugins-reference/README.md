@@ -36,7 +36,7 @@ The generated tables pin an immutable `@sha256:` digest per plugin and name the 
 bash modules/extend_dynamic-plugins-reference/check-plugin-digests.sh
 ```
 
-Use `-f` to check a single table, `--all` to print matching rows too, `--warn-only` to exit 0 on drift, and `--trigger` to dispatch the GitHub catalog index and documentation workflows. Run the script with `--help` for all options.
+The report is a markdown table. Use `-f` to check a single table, `--all` to include matching rows, `--output FILE` to write the report to a file, `--warn-only` to exit 0 on drift, and `--trigger` to dispatch the GitHub catalog index and documentation workflows. Run the script with `--help` for all options.
 
 ## Run through GitHub Actions
 

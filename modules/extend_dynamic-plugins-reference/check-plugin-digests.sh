@@ -14,7 +14,6 @@ set -uo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
 norm="\033[0;39m"
-green="\033[1;32m"
 red="\033[1;31m"
 blue="\033[1;34m"
 
@@ -39,6 +38,7 @@ Options:
       --arch ARCH    Platform whose manifest digest is compared (default: $ARCH)
       --os OS        Platform whose manifest digest is compared (default: $OS)
       --all          Print matching rows too
+      --output FILE  Write the markdown report to FILE instead of stdout
       --warn-only    Exit 0 even when digests differ (report only)
       --trigger      Dispatch the GitHub catalog index and documentation workflows
                      with gh, using TRIGGER_DOCS_REF as the documentation branch
@@ -71,6 +71,10 @@ while (($# > 0)); do
       shift 2
       ;;
     --all) VERBOSE=1; shift ;;
+    --output)
+      OUTPUT_FILE=$2
+      shift 2
+      ;;
     --warn-only) WARN_ONLY=1; shift ;;
     --trigger) TRIGGER=1; shift ;;
     -h | --help) usage; exit 0 ;;
@@ -259,8 +263,8 @@ while IFS=$'\t' read -r repository digest tag source; do
 
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$verdict" "${repository##*/}" "$tag" \
-    "${pinned_digest:0:19}" "${pinned_created:-unknown}" \
-    "${tag_digest:0:19}" "${tag_created:-unknown}" \
+    "${pinned_digest:-n/a}" "${pinned_created:-unknown}" \
+    "${tag_digest:-n/a}" "${tag_created:-unknown}" \
     "$source" "$repository" >> "$result_file"
 done < "$TMP_DIR/pins.tsv"
 
@@ -270,70 +274,94 @@ stale=$(awk -F'\t' '$1 == "STALE_PIN"' "$result_file" | wc -l)
 mismatch=$(awk -F'\t' '$1 == "DIGEST_MISMATCH" || $1 == "PIN_NEWER_THAN_TAG"' "$result_file" | wc -l)
 unresolvable=$(awk -F'\t' '$1 ~ /_UNRESOLVABLE$/' "$result_file" | wc -l)
 
-print_rows() {
-  awk -F'\t' -v verbose="$1" '
+report_file="$TMP_DIR/report.md"
+
+{
+  echo "## Dynamic plugin digest check"
+  echo
+  if ((drift > 0)); then
+    echo "**$drift of $total** pinned plugin artifacts no longer match their artifact tag."
+    echo
+    ((stale > 0)) && echo "- $stale were rebuilt under the tag after the tables were generated."
+    ((mismatch > 0)) && echo "- $mismatch differ without a newer tag build time (re-tagged or older tag)."
+    ((unresolvable > 0)) && echo "- $unresolvable reference either the pinned digest or the tag failed to resolve."
+    echo
+    echo "Sources: $(awk -F'\t' '$1 != "OK" { print $8 }' "$result_file" | sort -u | tr '\n' ' ')"
+  else
+    echo "All **$total** pinned plugin artifacts match their artifact tag."
+  fi
+  echo
+
+  awk -F'\t' -v verbose="$VERBOSE" '
+    function when(value) {
+      if (value == "" || value == "unknown") return "unknown"
+      gsub(/T/, " ", value)
+      return substr(value, 1, 16)
+    }
     BEGIN {
-      printf "%-22s %-46s %-22s %-19s %-21s %-19s %s\n", \
-        "VERDICT", "PLUGIN IMAGE", "TAG", "PINNED DIGEST", "PINNED BUILT", \
-        "TAG DIGEST", "TAG BUILT"
+      print "| Verdict | Plugin image | Tag | Pinned built (UTC) | Tag built (UTC) | Pinned digest | Tag digest |"
+      print "| --- | --- | --- | --- | --- | --- | --- |"
     }
     verbose == 1 || $1 != "OK" {
-      printf "%-22s %-46s %-22s %-19s %-21s %-19s %s\n", $1, $2, $3, $4, $5, $6, $7
+      printf "| %s | %s | %s | %s | %s | `%s` | `%s` |\n", $1, $2, $3, when($5), when($7), $4, $6
     }
   ' "$result_file"
-}
 
-echo
-print_rows "$VERBOSE"
-echo
+  if ((drift > 0)); then
+    cat <<'EOF'
 
-if ((drift > 0)); then
-  echo -e "${red}[DRIFT] $drift of $total pinned plugin artifacts do not match their current tag${norm}"
-  echo -e "${red}        $stale were rebuilt under the tag after the tables were generated${norm}"
-  if ((mismatch > 0)); then
-    echo -e "${red}        $mismatch differ without a newer tag build time (re-tagged or older tag)${norm}"
-  fi
-  if ((unresolvable > 0)); then
-    echo -e "${red}        $unresolvable reference either the pinned digest or the tag failed to resolve${norm}"
-  fi
-  echo "        Sources: $(awk -F'\t' '$1 != "OK" { print $8 }' "$result_file" | sort -u | tr '\n' ' ')"
-  echo
-  cat <<'EOF'
-Next steps:
+### Next steps
 
-1. Rebuild the community catalog index so the published index carries the current digests for the appropriate branch (main, release-2.y):
-   https://github.com/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml
-     # OR
+1. Rebuild the community catalog index for the matching branch (`main` or `release-2.y`):
+   [generate-catalog-index.yaml](https://github.com/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml)
+
+   ```bash
    gh workflow run generate-catalog-index.yaml \
      --repo redhat-developer/rhdh-plugin-export-overlays --ref release-2.1
-     # OR
+   ```
+
+   ```bash
    curl -X POST \
      -H "Authorization: Bearer $GH_TOKEN" \
      -H "Accept: application/vnd.github+json" \
      https://api.github.com/repos/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml/dispatches \
      -d '{"ref":"release-2.1"}'
+   ```
 
-2. Rebuild the downstream community index with the "update index" schedule for the branch:
-   https://gitlab.cee.redhat.com/rhidp/rhdh-plugin-catalog/-/pipeline_schedules
-     # OR
+2. Rebuild the downstream community index with the "update index" schedule:
+   [pipeline schedules](https://gitlab.cee.redhat.com/rhidp/rhdh-plugin-catalog/-/pipeline_schedules)
+
+   ```bash
    glab api "projects/rhidp%2Frhdh-plugin-catalog/pipeline_schedules" |
      jq '.[] | select(.description | test("update index"; "i")) | {id, description, ref}'
-     # THEN 
+   ```
+
+   ```bash
    curl -X POST -H "PRIVATE-TOKEN: $GITLAB_TOKEN" \
      "https://gitlab.cee.redhat.com/api/v4/projects/rhidp%2Frhdh-plugin-catalog/pipeline_schedules/<SCHEDULE_ID>/play"
+   ```
 
 3. Regenerate the plugin tables from the rebuilt index:
-   https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml
-     # OR
+   [generate-supported-plugins-pr.yml](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml)
+
+   ```bash
    gh workflow run generate-supported-plugins-pr.yml \
      --repo redhat-developer/red-hat-developers-documentation-rhdh \
      --ref release-2.1 -f branch=release-2.1
+   ```
 
 Re-run this script after step 3 to confirm every pinned digest matches its tag.
 EOF
+  fi
+} > "$report_file"
+
+if [[ -n ${OUTPUT_FILE:-} ]]; then
+  cp "$report_file" "$OUTPUT_FILE"
+  echo -e "${blue}Report written to $OUTPUT_FILE${norm}"
 else
-  echo -e "${green}[OK] All $total pinned plugin artifacts match their current tag.${norm}"
+  cat "$report_file"
 fi
+
 
 if ((TRIGGER == 1)); then
   command -v gh >/dev/null 2>&1 || { echo -e "${red}[ERROR] gh is required for --trigger.${norm}" >&2; exit 2; }
