@@ -38,7 +38,7 @@ Options:
       --arch ARCH    Platform whose manifest digest is compared (default: $ARCH)
       --os OS        Platform whose manifest digest is compared (default: $OS)
       --all          Print matching rows too
-      --output FILE  Write the markdown report to FILE instead of stdout
+      --output FILE  Also write the markdown report to FILE (default: report.md)
       --warn-only    Exit 0 even when digests differ (report only)
       --trigger      Dispatch the GitHub catalog index and documentation workflows
                      with gh, using TRIGGER_DOCS_REF as the documentation branch
@@ -355,12 +355,11 @@ EOF
   fi
 } > "$report_file"
 
-if [[ -n ${OUTPUT_FILE:-} ]]; then
-  cp "$report_file" "$OUTPUT_FILE"
-  echo -e "${blue}Report written to $OUTPUT_FILE${norm}"
-else
-  cat "$report_file"
-fi
+[[ -n ${OUTPUT_FILE:-} ]] || OUTPUT_FILE=report.md
+cp "$report_file" "$OUTPUT_FILE"
+cat "$report_file"
+echo
+echo -e "${blue}Report also written to $OUTPUT_FILE${norm}"
 
 
 if ((TRIGGER == 1)); then
