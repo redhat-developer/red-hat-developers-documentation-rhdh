@@ -27,6 +27,17 @@ To regenerate only the comparison from existing CSV files without fetching the c
 bash modules/extend_dynamic-plugins-reference/diff-previous.sh -b release-2.1 --diff-previous
 ```
 
+
+## Check pinned digests against published tags
+
+The generated tables pin an immutable `@sha256:` digest per plugin and name the artifact tag in the next column. `check-plugin-digests.sh` resolves each tag and reports rows whose pinned manifest digest or build time no longer matches the tag, which means the catalog index or the tables are stale. It requires `skopeo` and `jq`.
+
+```bash
+bash modules/extend_dynamic-plugins-reference/check-plugin-digests.sh
+```
+
+Use `-f` to check a single table, `--all` to print matching rows too, `--warn-only` to exit 0 on drift, and `--trigger` to dispatch the GitHub catalog index and documentation workflows. Run the script with `--help` for all options.
+
 ## Run through GitHub Actions
 
 The [Generate update PR for the Dynamic Plugins tables workflow](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml) opens a pull request for generated changes. For a manual `release-2.1` run, select `release-2.1` as the workflow ref and enter `release-2.1` in the `branch` input. Scheduled `release-2.1` runs also need this matrix entry on the default branch, because GitHub schedules use that branch's workflow file.
