@@ -12,8 +12,9 @@ red="\033[1;31m"
 BRANCH=main
 DIFF_PREVIOUS=0
 DIFF_REF=""
-# Customer-facing catalog index image shown next to each compared version. The
-# tables are fetched from SUPPORTED_CATALOG_INDEX, but the docs cite this one.
+# Catalog index image cited next to each compared version. GA documentation
+# refers to registry.access.redhat.com, not the quay.io index that the tables
+# are fetched from.
 CATALOG_INDEX="${CATALOG_INDEX:-registry.access.redhat.com/rhdh/plugin-catalog-index}"
 
 usage() {
