@@ -12,6 +12,9 @@ red="\033[1;31m"
 BRANCH=main
 DIFF_PREVIOUS=0
 DIFF_REF=""
+# Customer-facing catalog index image shown next to each compared version. The
+# tables are fetched from SUPPORTED_CATALOG_INDEX, but the docs cite this one.
+CATALOG_INDEX="${CATALOG_INDEX:-registry.access.redhat.com/rhdh/plugin-catalog-index}"
 
 usage() {
   cat <<EOF
@@ -315,7 +318,7 @@ CHANGE_COUNT=${CHANGE_COUNT//[[:space:]]/}
 awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANCH" \
   -v previous_version="$PREVIOUS_VERSION" -v current_version="$CURRENT_VERSION" \
   -v previous_version_id="$PREVIOUS_VERSION_ID" -v current_version_id="$CURRENT_VERSION_ID" \
-  -v change_count="$CHANGE_COUNT" '
+  -v change_count="$CHANGE_COUNT" -v catalog_index="$CATALOG_INDEX" '
   function escape(value) {
     gsub(/\|/, "\\|", value)
     return value
@@ -338,7 +341,7 @@ awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANC
     print "= Dynamic plugin changes between " previous_version " and " current_version
     print ""
     print "[role=\"_abstract\"]"
-    print "The following table lists " change_count " dynamic plugins with changes between `" previous_version "` and `" current_version "`."
+    print "The following table lists " change_count " dynamic plugins with changes between `" catalog_index ":" previous_version "` and `" current_version "`."
     print ""
     print "Delivery method may be one of \"Embed\" for an embedded wrapper, \"OCI\" for an OCI artifact, or \"n/a\" if that plugin is not available in that release."
     print ""
