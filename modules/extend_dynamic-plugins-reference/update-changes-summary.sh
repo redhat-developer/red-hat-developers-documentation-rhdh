@@ -25,7 +25,7 @@ if [[ "$((removed + added + promoted))" -ne "$total" ]]; then
   exit 1
 fi
 
-if [ "$total" -eq 1 ]; then
+if [[ $total -eq 1 ]]; then
   counts="There is 1 change in this release: $removed removed, $added added, $promoted promoted."
 else
   counts="There are $total changes in this release: $removed removed, $added added, $promoted promoted."
