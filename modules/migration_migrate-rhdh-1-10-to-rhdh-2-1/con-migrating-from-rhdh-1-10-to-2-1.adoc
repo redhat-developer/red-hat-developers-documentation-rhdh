@@ -4,6 +4,42 @@
 = Migrating from {product-very-short} 1.10 to 2.1
 
 [role="_abstract"]
-{product} 2.1 introduces breaking changes that affect Helm charts, custom plugins, RBAC policies, AI assistant settings, and container images. Understanding these changes helps you plan the migration and avoid silent failures.
+{product-very-short} 2.1 introduces breaking changes to Helm charts, custom plugins, RBAC policies, AI assistant settings, container images, and plugin distribution. None provide a backward-compatible shim and some fail silently, so review the changes that apply to your deployment.
 
-// Overview: scope, audience, breaking change summary, silent-failure warnings, recommended migration sequence with dependency explanations.
+== Breaking changes quick reference
+
+The following table summarizes the breaking changes in {product-very-short} 2.1 and links to the procedure that resolves each one. Use it to scope the work and confirm that you have addressed every change that applies to your deployment.
+
+[options="header"]
+|===
+| Breaking change | Impact | Action
+
+| Bundled plugin wrappers are removed
+| The {product-very-short} image no longer ships bundled plugin wrappers. A plugin that uses a local wrapper path, such as `package: ./dynamic-plugins/dist/<plugin-name>`, no longer resolves after the upgrade.
+| *Must fix.* Replace each local wrapper path with an OCI reference. See xref:proc-migrate-plugins-to-oci-references_phase-4-update-configuration[Migrate plugin references to OCI format].
+
+| New Frontend System (NFS) hard cut-over
+| The Old Frontend System (OFS) is removed. Custom plugins that use OFS APIs stop working silently. Red Hat supported plugins work with both systems; only custom plugins are affected.
+| *Must fix for custom plugins.* Rewrite custom plugins for the NFS before you upgrade.
+
+| Container images renamed
+| The RHEL 9 base images are replaced with RHEL 10 images, and the image names change. Disconnected environments that mirror by image name receive 404 errors.
+| *Must fix for disconnected environments.* Update your mirrored image references to the new names.
+
+| RBAC permissions renamed
+| CRUD-style permission names are replaced with behavior-linked names. Old permission names fail silently, and users lose access with no error.
+| *Must fix.* Update your RBAC policies to the new permission names.
+
+| Lightspeed rebranded to the intelligent assistant
+| Plugin names, configuration keys, route paths, and permissions change. Any configuration that references `lightspeed` is silently ignored.
+| *Must fix.* Rename the affected configuration keys and permissions.
+
+| Llama Stack removed
+| The Llama Stack integration is removed. Lightspeed Core Service (LCORE) provides equivalent API gateway functionality.
+| *Must fix if you use Llama Stack.* Reconfigure your deployment to point to LCORE.
+
+| Standalone Helm chart
+| The {product-very-short} 2.1 Helm chart is a standalone chart. Running `helm upgrade` from a 1.x release is not supported.
+| *Must fix for Helm deployments.* Export your values, uninstall the 1.x release, and perform a fresh install.
+
+|===

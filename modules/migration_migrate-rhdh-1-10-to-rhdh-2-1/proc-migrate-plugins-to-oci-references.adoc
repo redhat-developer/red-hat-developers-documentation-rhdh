@@ -4,25 +4,59 @@
 = Migrate plugin references to OCI format
 
 [role="_abstract"]
-To migrate your plugin references to {product} 2.1, replace npm and wrapper package references in `dynamic-plugins.yaml` with OCI artifact URLs. This includes updating references for disconnected environment mirroring.
+Because {product-very-short} 2.1 removes the bundled plugin wrappers from the image, replace every local wrapper path in your plugin configuration with an Open Container Initiative (OCI) reference, by using either an `oci://` reference or a `ref://<plugin-name>` reference.
 
 .Prerequisites
 
-* You have completed the platform migration and installed the 2.1 Helm chart.
-* You have access to your `dynamic-plugins.yaml` configuration file.
+* You identified every plugin entry that uses a local wrapper path or a Janus IDP wrapper package name. These entries can appear in the `dynamic-plugins.yaml` file, in the `global.dynamic.plugins` values of your Helm chart configuration, or in the `dynamicPlugins` configuration of your Operator custom resource (CR).
+* You have the OCI artifact reference for each plugin. Use the reference that the plugin catalog or the generated plugin tables provide. For discontinued Janus IDP wrappers, see xref:ref-janus-idp-to-rhdh-2-1-plugin-mapping_{context}[Janus IDP wrapper to {product-very-short} 2.1 OCI plugin mapping].
 
 .Procedure
 
-. Update plugin references in `dynamic-plugins.yaml`:
-.. Replace `npm install @janus-idp/...` references with OCI artifact URLs.
-.. Refer to the xref:ref-janus-idp-to-rhdh-2-1-plugin-mapping_{context}[Janus IDP to RHDH 2.1 plugin mapping] for the complete mapping.
+. For each plugin that uses a local wrapper path, replace the `package` value with an OCI reference.
++
+--
+* To reference a plugin that is packaged as a pinned OCI image, use an `oci://` reference.
+* To reference a catalog plugin by using a stable, name-based reference, use a `ref://<plugin-name>` reference.
+--
++
+For example, the following plugin entry uses a local wrapper path, which is no longer valid in 2.1:
++
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/<plugin-name>
+    disabled: false
+    pluginConfig: {}
+----
++
+To reference the same plugin as a pinned OCI image, use an `oci://` reference:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://quay.io/<account-name>/<image-name>:<tag>!<plugin-name>
+    disabled: false
+    pluginConfig: {}
+----
++
+To reference the same plugin as a catalog plugin, use a `ref://<plugin-name>` reference:
++
+[source,yaml]
+----
+plugins:
+  - package: ref://<plugin-name>
+    disabled: false
+    pluginConfig: {}
+----
 
-. For disconnected environments:
-.. Update your mirroring scripts to reference the new OCI artifact URLs.
-.. Mirror the OCI artifacts to your internal registry.
+. If you install plugins from Janus IDP wrapper packages, replace each `@janus-idp/<plugin-name>` reference with the OCI artifact for the equivalent {product-very-short} 2.1 plugin.
+
+. Apply the same change in every location that references plugins by a local path, including the `dynamic-plugins.yaml` file, the Helm chart values, and the Operator CR.
+
+. For disconnected environments, mirror the OCI artifacts to your internal registry and update your references to point to the mirrored location.
 
 .Verification
 
-* Verify that all expected plugins are loaded when {product} starts.
-
-// Replace npm/wrapper references in dynamic-plugins.yaml with OCI artifact URLs. Includes disconnected environment mirroring.
+. Start {product-very-short} and confirm that it starts without plugin resolution errors.
+. Confirm that all expected plugins are loaded. In the `install-dynamic-plugins` init container log, verify that each migrated plugin is installed and that no entry reports a missing local wrapper path.
