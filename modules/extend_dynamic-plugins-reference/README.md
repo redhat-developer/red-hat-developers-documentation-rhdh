@@ -17,6 +17,16 @@ bash modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh -b main
 
 The script updates both sources by default. Use `--skip-supported-tables` or `--skip-community-table` to update only one source. Run the script with `--help` for all options.
 
+Use `--diff-previous` to also generate a file such as `ref-dynamic-plugin-changes-2-1-0-to-2-2-0.adoc`, using each ref's `product-bundle-version` with periods replaced by hyphens. For a `release-X.Y` branch, the script sorts the available release branches with `sort -V` and compares against the preceding release. For `main`, it compares against the latest stable release branch. Use `--diff TAG` to select a specific tag or Git ref instead - this allows comparing the tip of a release branch against an older tag.
+
+When `--diff-previous` compares two different series, it also writes `ref-preinstalled-dynamic-plugin-changes-<previous>-to-<current>.adoc` from `con-preinstalled-dynamic-plugins.adoc` at both refs. The table lists only the plugins that are enabled by default in one release but not the other, and its summary sentence counts them. A patch comparison such as 2.1.2 against 2.1.1 keeps the existing file, because being enabled by default does not change within a series.
+
+To regenerate only the comparison from existing CSV files without fetching the catalog indexes, call the comparison script directly:
+
+```bash
+bash modules/extend_dynamic-plugins-reference/diff-previous.sh -b main --diff-previous
+```
+
 ## Run through GitHub Actions
 
 The [Generate update PR for the Dynamic Plugins tables workflow](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml) opens a pull request for generated changes. For a manual run, enter a branch listed in the workflow matrix in the `branch` input. Scheduled runs use the workflow configuration on the default branch.
