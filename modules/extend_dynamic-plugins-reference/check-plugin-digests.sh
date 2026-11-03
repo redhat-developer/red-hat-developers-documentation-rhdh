@@ -109,12 +109,21 @@ extract_pins() {
   awk '
     function trim(value) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); return value }
 
+    # Emit the pending pin. A pin with no following tag row is emitted with the
+    # "-" sentinel instead of being dropped, so it still shows up in the report.
+    function emit(tag) {
+      if (tag == "") tag = "-"
+      print repository, digest, tag, FILENAME
+      have_pin = 0
+    }
+
     BEGIN { OFS = "\t" }
 
     {
       line = $0
 
       if (match(line, /oci:\/\/[^`@[:space:]]+@sha256:[0-9a-f]+/)) {
+        if (have_pin) emit("")
         reference = substr(line, RSTART, RLENGTH)
         reference = substr(reference, 7)
         separator = index(reference, "@")
@@ -124,26 +133,29 @@ extract_pins() {
         next
       }
 
+      # A |=== table break ends the current row.
+      if (line ~ /^\|===/) {
+        if (have_pin) emit("")
+        next
+      }
+
       # A single-cell row holds the artifact tag, for example |bs_1.54.9__1.28.1.
       # Plugin names (|*ACR*) and required variables (`TOKEN`) are not tags.
       if (line ~ /^\|[^|]+$/ && line !~ /[`*]/) {
         cell = trim(substr(line, 2))
-        if (have_pin && cell ~ /^[A-Za-z0-9][A-Za-z0-9._-]*$/) {
-          print repository, digest, cell, FILENAME
-          have_pin = 0
-        }
+        if (have_pin && cell ~ /^[A-Za-z0-9][A-Za-z0-9._-]*$/) emit(cell)
         next
       }
 
       # Some tables put the tag in the last cell of a multi-cell plugin row.
-      if (line ~ /^\|/ && split(line, cells, "|") >= 3 && have_pin) {
-        candidate = trim(cells[length(cells)])
-        if (candidate ~ /^[A-Za-z0-9][A-Za-z0-9._-]*$/) {
-          print repository, digest, candidate, FILENAME
-          have_pin = 0
-        }
+      if (have_pin && line ~ /^\|/) {
+        cells = split(line, parts, "|")
+        candidate = trim(parts[cells])
+        if (cells >= 3 && candidate ~ /^[A-Za-z0-9][A-Za-z0-9._-]*$/) emit(candidate)
       }
     }
+
+    END { if (have_pin) emit("") }
   ' "$file"
 }
 
@@ -199,7 +211,7 @@ inspect_ref() {
 }
 
 mkdir -p "$TMP_DIR/inspect"
-awk -F'\t' '{ print $1 "@" $2; print $1 ":" $3 }' "$TMP_DIR/pins.tsv" \
+awk -F'\t' '{ print $1 "@" $2; if ($3 != "-") print $1 ":" $3 }' "$TMP_DIR/pins.tsv" \
   | sort -u > "$TMP_DIR/refs.txt"
 
 running=0
@@ -235,6 +247,13 @@ while IFS=$'\t' read -r repository digest tag source; do
     verdict=PINNED_UNRESOLVABLE
     pinned_digest=$digest
     pinned_created=""
+    tag_digest=""
+    tag_created=""
+  elif [[ $tag == - ]]; then
+    # The pin has no artifact tag in its table, so there is nothing to compare.
+    verdict=NO_TAG
+    IFS=$'\t' read -r _ pinned_created pinned_digest < "$pinned_cache"
+    tag=""
     tag_digest=""
     tag_created=""
   elif grep -q '^INSPECT_FAILED' "$tag_cache" 2>/dev/null; then
@@ -275,6 +294,7 @@ drift=$(awk -F'\t' '$1 != "OK"' "$result_file" | wc -l)
 stale=$(awk -F'\t' '$1 == "STALE_PIN"' "$result_file" | wc -l)
 mismatch=$(awk -F'\t' '$1 == "DIGEST_MISMATCH" || $1 == "PIN_NEWER_THAN_TAG"' "$result_file" | wc -l)
 unresolvable=$(awk -F'\t' '$1 ~ /_UNRESOLVABLE$/' "$result_file" | wc -l)
+notag=$(awk -F'\t' '$1 == "NO_TAG"' "$result_file" | wc -l)
 
 report_file="$TMP_DIR/report.md"
 
@@ -287,6 +307,7 @@ report_file="$TMP_DIR/report.md"
     ((stale > 0)) && echo "- $stale were rebuilt under the tag after the tables were generated."
     ((mismatch > 0)) && echo "- $mismatch differ without a newer tag build time (re-tagged or older tag)."
     ((unresolvable > 0)) && echo "- $unresolvable reference either the pinned digest or the tag failed to resolve."
+    ((notag > 0)) && echo "- $notag pins have no artifact tag in their table, so nothing was compared."
     echo
     echo "Sources: $(awk -F'\t' '$1 != "OK" { print $8 }' "$result_file" | sort -u | tr '\n' ' ')"
   else
