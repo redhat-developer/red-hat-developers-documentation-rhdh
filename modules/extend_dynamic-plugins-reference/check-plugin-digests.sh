@@ -105,6 +105,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 # Emit repository, pinned digest, artifact tag, and source table for every row
 # that pins a digest and names the tag in a following table cell.
 extract_pins() {
+  local file=$1
   awk '
     function trim(value) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); return value }
 
@@ -143,7 +144,7 @@ extract_pins() {
         }
       }
     }
-  ' "$1"
+  ' "$file"
 }
 
 for file in "${FILES[@]}"; do
@@ -215,7 +216,8 @@ wait
 # Seconds since epoch for an ISO 8601 timestamp, so nanosecond precision does not
 # break the comparison. Returns an empty string for unknown values.
 epoch() {
-  jq -rn --arg value "${1:-}" '
+  local value=${1:-}
+  jq -rn --arg value "$value" '
     if $value == "" then "" else ($value | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) end
   ' 2>/dev/null
 }
