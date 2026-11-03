@@ -1,0 +1,555 @@
+#!/bin/bash
+
+# Set consistent locale for sorting across different systems
+export LC_ALL=C
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+
+norm="\033[0;39m"
+green="\033[1;32m"
+red="\033[1;31m"
+
+BRANCH=main
+DIFF_PREVIOUS=0
+DIFF_REF=""
+# Catalog index image cited next to each compared version. GA documentation
+# refers to registry.access.redhat.com, not the quay.io index that the tables
+# are fetched from.
+CATALOG_INDEX="${CATALOG_INDEX:-registry.access.redhat.com/rhdh/plugin-catalog-index}"
+
+usage() {
+  cat <<EOF
+
+Compare the generated dynamic plugin .csv files in this checkout with files
+from a shallow checkout of another Git ref. The comparison includes plugin
+availability, version, support level, and delivery method changes.
+
+Requires:
+* git
+* awk
+* sort -V
+
+Usage:
+
+$0 -b stable-ref-branch (--diff-previous | --diff TAG)
+
+Options:
+  -b, --ref-branch : Current documentation branch, like release-2.1; default: main
+  --diff-previous  : Compare with the previous release-X.Y branch. For main,
+                     compare with the latest release-X.Y branch.
+  --diff TAG       : Compare with a specific tag or Git ref, like 1.10.5
+  -h, --help       : Show this help
+
+Examples:
+
+  $0 -b release-2.1 --diff-previous
+  $0 -b release-2.1 --diff 1.10.5
+  $0 -b main --diff-previous
+
+EOF
+}
+
+if [[ "$#" -lt 1 ]]; then usage; exit 1; fi
+
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    '-b'|'--ref-branch')
+      if [[ -z ${2:-} || ${2:-} == -* ]]; then echo -e "${red}[ERROR] $1 requires a value.${norm}" >&2; usage; exit 1; fi
+      BRANCH="$2"; shift 1;;
+    '--diff-previous') DIFF_PREVIOUS=1;;
+    '--diff')
+      if [[ -z ${2:-} || ${2:-} == -* ]]; then echo -e "${red}[ERROR] --diff requires a value.${norm}" >&2; usage; exit 1; fi
+      DIFF_REF="$2"; shift 1;;
+    '-h'|'--help') usage; exit 0;;
+    *) echo -e "${red}[ERROR] Unknown parameter used: $1.${norm}" >&2; usage; exit 1;;
+  esac
+  shift 1
+done
+
+if [[ $DIFF_PREVIOUS -eq 1 && $DIFF_REF ]]; then
+  echo -e "${red}[ERROR] --diff-previous and --diff cannot be used together.${norm}" >&2
+  usage
+  exit 1
+fi
+if [[ $DIFF_PREVIOUS -eq 0 && ! $DIFF_REF ]]; then
+  echo -e "${red}[ERROR] Specify either --diff-previous or --diff TAG.${norm}" >&2
+  usage
+  exit 1
+fi
+if [[ $BRANCH != main && ! $BRANCH =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+  echo -e "${red}[ERROR] Expected main or release-X.Y, but got: $BRANCH${norm}" >&2
+  exit 1
+fi
+
+for tool in git awk sort mktemp; do
+  command -v "$tool" >/dev/null 2>&1 || { echo "[ERROR] $tool is required. Must install it to proceed." >&2; exit 1; }
+done
+
+product_bundle_version() {
+  local repo_root=$1
+  awk '$1 == ":product-bundle-version:" { print $2; exit }' "$repo_root/artifacts/attributes.adoc"
+}
+
+REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null) || {
+  echo -e "${red}[ERROR] $SCRIPT_DIR is not in a Git checkout.${norm}" >&2
+  exit 1
+}
+REMOTE_URL=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null) || {
+  echo -e "${red}[ERROR] Cannot resolve the origin remote.${norm}" >&2
+  exit 1
+}
+
+comparisontmpdir=$(mktemp -d) || exit 1
+trap 'rm -rf "$comparisontmpdir"' EXIT
+
+if [[ $DIFF_PREVIOUS -eq 1 ]]; then
+  if ! git ls-remote --heads "$REMOTE_URL" 'refs/heads/release-*' > "$comparisontmpdir/release-refs"; then
+    echo -e "${red}[ERROR] Cannot list release branches from origin.${norm}" >&2
+    exit 1
+  fi
+
+  mapfile -t RELEASE_BRANCHES < <(
+    awk '{sub("refs/heads/", "", $2); if ($2 ~ /^release-[0-9]+\.[0-9]+$/) print $2}' \
+      "$comparisontmpdir/release-refs" | sort -V
+  )
+  if [[ ${#RELEASE_BRANCHES[@]} -eq 0 ]]; then
+    echo -e "${red}[ERROR] No release-X.Y branches found on origin.${norm}" >&2
+    exit 1
+  fi
+
+  if [[ $BRANCH == main ]]; then
+    PREVIOUS_REF=${RELEASE_BRANCHES[${#RELEASE_BRANCHES[@]}-1]}
+  else
+    PREVIOUS_REF=""
+    CURRENT_FOUND=0
+    for release_branch in "${RELEASE_BRANCHES[@]}"; do
+      if [[ $release_branch == "$BRANCH" ]]; then
+        CURRENT_FOUND=1
+        break
+      fi
+      PREVIOUS_REF=$release_branch
+    done
+    if [[ $CURRENT_FOUND -eq 0 ]]; then
+      echo -e "${red}[ERROR] $BRANCH is not a release branch on origin.${norm}" >&2
+      exit 1
+    fi
+    if [[ ! $PREVIOUS_REF ]]; then
+      echo -e "${red}[ERROR] No release branch exists before $BRANCH.${norm}" >&2
+      exit 1
+    fi
+  fi
+else
+  PREVIOUS_REF=$DIFF_REF
+fi
+
+echo -e "${green}Comparing $BRANCH with $PREVIOUS_REF...${norm}"
+if ! git clone --quiet --depth 1 --single-branch --branch "$PREVIOUS_REF" \
+  "$REMOTE_URL" "$comparisontmpdir/previous"; then
+  echo -e "${red}[ERROR] Cannot create a shallow checkout for $PREVIOUS_REF.${norm}" >&2
+  exit 1
+fi
+
+CURRENT_VERSION=$(product_bundle_version "$REPO_ROOT")
+PREVIOUS_VERSION=$(product_bundle_version "$comparisontmpdir/previous")
+for version in "$PREVIOUS_VERSION" "$CURRENT_VERSION"; do
+  if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+    echo -e "${red}[ERROR] Invalid or missing product-bundle-version: ${version:-empty}${norm}" >&2
+    exit 1
+  fi
+done
+PREVIOUS_VERSION_ID=${PREVIOUS_VERSION//./-}
+CURRENT_VERSION_ID=${CURRENT_VERSION//./-}
+PREVIOUS_SERIES_ID=${PREVIOUS_VERSION%.*}
+CURRENT_SERIES_ID=${CURRENT_VERSION%.*}
+PREVIOUS_SERIES_ID=${PREVIOUS_SERIES_ID//./-}
+CURRENT_SERIES_ID=${CURRENT_SERIES_ID//./-}
+OUTPUT="$SCRIPT_DIR/ref-dynamic-plugin-changes-${PREVIOUS_VERSION_ID}-to-${CURRENT_VERSION_ID}.adoc"
+OUTPUT_BASENAME=$(basename "$OUTPUT")
+NAV_FILE="$REPO_ROOT/titles/product_product/category-maps/reference/nav-dynamic-plugin-parameter-reference-for-configuration-paths.adoc"
+INCLUDE_LINE="include::modules/extend_dynamic-plugins-reference/${OUTPUT_BASENAME}[leveloffset=+1]"
+
+PREVIOUS_DIR="$comparisontmpdir/previous/modules/extend_dynamic-plugins-reference"
+CURRENT_CSVS=()
+PREVIOUS_CSVS=()
+for csv in "$SCRIPT_DIR"/rhdh-*-plugins.csv; do
+  [[ -f $csv ]] && CURRENT_CSVS+=("$csv")
+done
+for csv in "$PREVIOUS_DIR"/rhdh-*-plugins.csv; do
+  [[ -f $csv ]] && PREVIOUS_CSVS+=("$csv")
+done
+if [[ ${#CURRENT_CSVS[@]} -eq 0 ]]; then
+  echo -e "${red}[ERROR] No generated plugin .csv files found in $SCRIPT_DIR.${norm}" >&2
+  exit 1
+fi
+if [[ ${#PREVIOUS_CSVS[@]} -eq 0 ]]; then
+  echo -e "${red}[ERROR] No generated plugin .csv files found at $PREVIOUS_REF.${norm}" >&2
+  exit 1
+fi
+
+normalize_csv() {
+  local destination="$1"
+  shift
+  awk '
+    function parse_csv(line, fields,    count, i, character, value, quoted) {
+      delete fields
+      count = 1
+      value = ""
+      quoted = 0
+      sub(/\r$/, "", line)
+      for (i = 1; i <= length(line); i++) {
+        character = substr(line, i, 1)
+        if (quoted) {
+          if (character == "\"") {
+            if (substr(line, i + 1, 1) == "\"") {
+              value = value "\""
+              i++
+            } else {
+              quoted = 0
+            }
+          } else {
+            value = value character
+          }
+        } else if (character == "\"") {
+          quoted = 1
+        } else if (character == ",") {
+          fields[count++] = value
+          value = ""
+        } else {
+          value = value character
+        }
+      }
+      fields[count] = value
+      return quoted ? -1 : count
+    }
+
+    function delivery_method(path) {
+      if (path ~ /^oci:\/\//) return "OCI"
+      if (path ~ /^\.\/dynamic-plugins\/dist\//) return "Embed"
+      if (path == "") return "Unknown"
+      return "Unknown"
+    }
+
+    FNR == 1 {
+      delete column
+      field_count = parse_csv($0, field)
+      if (field_count < 1) {
+        print "[ERROR] Invalid CSV header in " FILENAME > "/dev/stderr"
+        exit 2
+      }
+      for (i = 1; i <= field_count; i++) column[field[i]] = i
+      required[1] = "Plugin"
+      required[2] = "Version"
+      required[3] = "Support Level"
+      required[4] = "Path"
+      for (i = 1; i <= 4; i++) {
+        if (!(required[i] in column)) {
+          print "[ERROR] Missing CSV column " required[i] " in " FILENAME > "/dev/stderr"
+          exit 2
+        }
+      }
+      next
+    }
+
+    NF {
+      field_count = parse_csv($0, field)
+      if (field_count < 1) {
+        print "[ERROR] Invalid CSV row " FNR " in " FILENAME > "/dev/stderr"
+        exit 2
+      }
+      print field[column["Plugin"]], field[column["Version"]], \
+        field[column["Support Level"]], delivery_method(field[column["Path"]])
+    }
+  ' OFS="$(printf '\034')" "$@" > "$destination"
+}
+
+normalize_csv "$comparisontmpdir/previous.csv" "${PREVIOUS_CSVS[@]}" || exit 1
+normalize_csv "$comparisontmpdir/current.csv" "${CURRENT_CSVS[@]}" || exit 1
+
+FIELD_SEPARATOR=$(printf '\034')
+awk -F "$FIELD_SEPARATOR" -v OFS="$FIELD_SEPARATOR" \
+  -v previous_file="$comparisontmpdir/previous.csv" '
+  function remember(side, key,    seen_key) {
+    seen_key = side SUBSEP key
+    if (seen[seen_key]++) {
+      print "[ERROR] Duplicate plugin package in " side " CSV files: " key > "/dev/stderr"
+      duplicate = 1
+    }
+  }
+
+  FILENAME == previous_file {
+    remember("previous", $1)
+    previous[$1] = 1
+    for (i = 2; i <= 4; i++) previous_value[$1, i] = $i
+    next
+  }
+  {
+    remember("current", $1)
+    current[$1] = 1
+    for (i = 2; i <= 4; i++) current_value[$1, i] = $i
+  }
+
+  END {
+    if (duplicate) exit 2
+
+    for (plugin in previous) {
+      if (!(plugin in current)) {
+        print plugin, previous_value[plugin, 2], previous_value[plugin, 3], \
+          previous_value[plugin, 4], "n/a", "n/a", "n/a"
+        continue
+      }
+      if (previous_value[plugin, 2] != current_value[plugin, 2] || \
+          previous_value[plugin, 3] != current_value[plugin, 3] || \
+          previous_value[plugin, 4] != current_value[plugin, 4]) {
+        print plugin, previous_value[plugin, 2], previous_value[plugin, 3], \
+          previous_value[plugin, 4], current_value[plugin, 2], \
+          current_value[plugin, 3], current_value[plugin, 4]
+      }
+    }
+    for (plugin in current) {
+      if (!(plugin in previous)) {
+        print plugin, "n/a", "n/a", "n/a", current_value[plugin, 2], \
+          current_value[plugin, 3], current_value[plugin, 4]
+      }
+    }
+  }
+' "$comparisontmpdir/previous.csv" "$comparisontmpdir/current.csv" \
+  > "$comparisontmpdir/changes.unsorted" || exit 1
+
+sort -t "$FIELD_SEPARATOR" -k1,1 "$comparisontmpdir/changes.unsorted" \
+  > "$comparisontmpdir/changes" || exit 1
+CHANGE_COUNT=$(wc -l < "$comparisontmpdir/changes")
+CHANGE_COUNT=${CHANGE_COUNT//[[:space:]]/}
+
+awk -F "$FIELD_SEPARATOR" -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANCH" \
+  -v previous_version="$PREVIOUS_VERSION" -v current_version="$CURRENT_VERSION" \
+  -v previous_version_id="$PREVIOUS_VERSION_ID" -v current_version_id="$CURRENT_VERSION_ID" \
+  -v change_count="$CHANGE_COUNT" -v catalog_index="$CATALOG_INDEX" '
+  function escape(value) {
+    gsub(/\|/, "\\|", value)
+    return value
+  }
+
+  function display_support(value) {
+    if (value == "Red Hat Tech Preview" || value == "Technology Preview") return "Tech Preview"
+    if (value == "Community Support") return "Community"
+    if (value == "Red Hat Developer Preview" || value == "Developer Preview") return "Dev Preview"
+    return value
+  }
+
+  BEGIN {
+    print ":_mod-docs-content-type: REFERENCE"
+    print ""
+    print "// Generated by diff-previous.sh. Do not edit this file directly."
+    print "// Compared " previous_ref " (" previous_version ") with " current_ref " (" current_version ")."
+    print ""
+    print "[id=\"dynamic-plugin-changes-" previous_version_id "-to-" current_version_id "_{context}\"]"
+    print "= Dynamic plugin changes between " previous_version " and " current_version
+    print ""
+    print "[role=\"_abstract\"]"
+    print "The following table lists " change_count " dynamic plugins with changes between `" catalog_index ":" previous_version "` and `" current_version "`."
+    print ""
+    print "Delivery method may be one of \"Embed\" for an embedded wrapper, \"OCI\" for an OCI artifact, or \"n/a\" if that plugin is not available in that release."
+    print ""
+    print "[%header,cols=\"2,1,2,1,1,2,1\"]"
+    print "|==="
+    print "| 3+|*" escape(previous_version) "* 3+|*" escape(current_version) "*"
+    print "|*Plugin package* |*Version* |*Support* |*Method* |*Version* |*Support* |*Method*"
+  }
+
+  {
+    print "|`" escape($1) "` |" escape($2) " |" escape(display_support($3)) " |" escape($4) \
+      " |" escape($5) " |" escape(display_support($6)) " |" escape($7)
+  }
+
+  END {
+    if (NR == 0) print "7+|No dynamic plugin changes were found."
+    print "|==="
+  }
+' "$comparisontmpdir/changes" > "$comparisontmpdir/output.adoc" || exit 1
+
+mv "$comparisontmpdir/output.adoc" "$OUTPUT" || exit 1
+
+if [[ ! -f $NAV_FILE ]]; then
+  echo -e "${red}[ERROR] Navigation file not found: $NAV_FILE${norm}" >&2
+  exit 1
+fi
+
+# --diff-previous maintains one rolling cross-release file per release pair.
+# Example: 1-10-6-to-2-1-1 replaces 1-10-6-to-2-1-0 and its navigation link.
+# Explicit --diff TAG files are patch history: 2-1-0-to-2-1-1 persists when
+# 2-1-1-to-2-1-2 is later added, so the repository can contain more than two.
+if [[ $DIFF_PREVIOUS -eq 1 ]]; then
+  shopt -s nullglob
+  stale_outputs=(
+    "$SCRIPT_DIR"/ref-dynamic-plugin-changes-"$PREVIOUS_SERIES_ID"-*-to-"$CURRENT_SERIES_ID"-*.adoc
+  )
+  for stale_output in "${stale_outputs[@]}"; do
+    [[ $stale_output == "$OUTPUT" ]] && continue
+    stale_include="include::modules/extend_dynamic-plugins-reference/$(basename "$stale_output")[leveloffset=+1]"
+    grep -vF "$stale_include" "$NAV_FILE" > "$comparisontmpdir/nav.adoc" || true
+    mv "$comparisontmpdir/nav.adoc" "$NAV_FILE" || exit 1
+    rm -f "$stale_output" || exit 1
+    echo -e "${green}Removed superseded comparison $stale_output${norm}"
+  done
+  shopt -u nullglob
+fi
+
+if ! grep -qxF "$INCLUDE_LINE" "$NAV_FILE"; then
+  printf '\n%s\n' "$INCLUDE_LINE" >> "$NAV_FILE"
+fi
+
+echo -e "${green}Wrote $CHANGE_COUNT changes to $OUTPUT and linked it from $NAV_FILE${norm}"
+
+# Second output: which plugins are enabled by default in one release but not the
+# other. Derived from con-preinstalled-dynamic-plugins.adoc, so a plugin that
+# stops being enabled by default shows up as Removed even if it is still shipped.
+PREINSTALLED_SOURCE="con-preinstalled-dynamic-plugins.adoc"
+PREVIOUS_PREINSTALLED="$PREVIOUS_DIR/$PREINSTALLED_SOURCE"
+CURRENT_PREINSTALLED="$SCRIPT_DIR/$PREINSTALLED_SOURCE"
+PREINSTALLED_OUTPUT="$SCRIPT_DIR/ref-preinstalled-dynamic-plugin-changes-${PREVIOUS_VERSION_ID}-to-${CURRENT_VERSION_ID}.adoc"
+
+if [[ $DIFF_PREVIOUS -eq 1 ]] && [[ $PREVIOUS_SERIES_ID != "$CURRENT_SERIES_ID" ]] \
+  && [[ -f $PREVIOUS_PREINSTALLED ]] && [[ -f $CURRENT_PREINSTALLED ]]; then
+  awk -F "$FIELD_SEPARATOR" -v OFS="$FIELD_SEPARATOR" \
+    -v previous_adoc="$PREVIOUS_PREINSTALLED" \
+    -v current_adoc="$CURRENT_PREINSTALLED" \
+    -v previous_csv="$comparisontmpdir/previous.csv" \
+    -v counts_file="$comparisontmpdir/preinstalled-counts" '
+    function enabled_plugin(line,    plugin) {
+      if (line !~ /^\* `/) return ""
+      plugin = line
+      sub(/^\* `/, "", plugin)
+      sub(/`.*$/, "", plugin)
+      return plugin
+    }
+
+    FILENAME == previous_adoc {
+      plugin = enabled_plugin($1)
+      if (plugin != "") { previous_on[plugin] = 1; previous_count++ }
+      next
+    }
+    FILENAME == current_adoc {
+      plugin = enabled_plugin($1)
+      if (plugin != "") { current_on[plugin] = 1; current_count++ }
+      next
+    }
+    FILENAME == previous_csv { previous_version[$1] = $2; shipped[$1] = 1; next }
+    { current_version[$1] = $2; still_shipped[$1] = 1 }
+
+    END {
+      printf "%d %d\n", previous_count, current_count > counts_file
+      for (plugin in previous_on) {
+        if (!(plugin in current_on)) {
+          if (plugin in still_shipped) {
+            print plugin, "Enabled", previous_version[plugin], \
+              "Disabled", current_version[plugin], "No longer enabled by default"
+          } else {
+            print plugin, "Enabled", previous_version[plugin], "n/a", "n/a", "Removed"
+          }
+        }
+      }
+      for (plugin in current_on) {
+        if (plugin in previous_on) continue
+        if (plugin in shipped) {
+          print plugin, "Disabled", previous_version[plugin], \
+            "Enabled", current_version[plugin], "Promoted to enabled"
+        } else {
+          print plugin, "n/a", "n/a", "Enabled", current_version[plugin], "Added"
+        }
+      }
+    }
+  ' "$PREVIOUS_PREINSTALLED" "$CURRENT_PREINSTALLED" \
+    "$comparisontmpdir/previous.csv" "$comparisontmpdir/current.csv" \
+    > "$comparisontmpdir/preinstalled.unsorted" || exit 1
+
+  sort -t "$FIELD_SEPARATOR" -k1,1 "$comparisontmpdir/preinstalled.unsorted" \
+    > "$comparisontmpdir/preinstalled" || exit 1
+
+  awk -F "$FIELD_SEPARATOR" \
+    -v previous_ref="$PREVIOUS_REF" -v current_ref="$BRANCH" \
+    -v previous_version="$PREVIOUS_VERSION" -v current_version="$CURRENT_VERSION" \
+    -v previous_version_id="$PREVIOUS_VERSION_ID" -v current_version_id="$CURRENT_VERSION_ID" \
+    -v counts_file="$comparisontmpdir/preinstalled-counts" '
+    BEGIN {
+      if ((getline counts < counts_file) > 0) {
+        split(counts, counts_field, " ")
+        previous_count = counts_field[1]
+        current_count = counts_field[2]
+      }
+      print ":_mod-docs-content-type: REFERENCE"
+      print ""
+      print "// Generated by diff-previous.sh. Do not edit this file directly."
+      print "// Compared " previous_ref " (" previous_version ") with " current_ref " (" current_version ")."
+      print ""
+      print "[id=\"preinstalled-dynamic-plugin-changes-" previous_version_id "-to-" current_version_id "_{context}\"]"
+      print "= Preinstalled dynamic plugin changes between " previous_version " and " current_version
+      print ""
+    }
+
+    {
+      total++
+      if ($6 == "Removed" || $6 == "No longer enabled by default") removed++
+      else if ($6 == "Added") added++
+      else if ($6 == "Promoted to enabled") promoted++
+      else unknown++
+      rows[NR] = $0
+    }
+
+    END {
+      if (unknown > 0 || removed + added + promoted != total) {
+        print "[ERROR] Unrecognized Change value in the preinstalled comparison" > "/dev/stderr"
+        exit 1
+      }
+      print "[role=\"_abstract\"]"
+      printf "{product} %s enables %d dynamic plugins by default; {product} %s enables %d. ", \
+        previous_version, previous_count, current_version, current_count
+      printf "The following table lists the plugins that are enabled by default in one release but not the other. "
+      if (total == 1) printf "There is 1 change in this release: "
+      else printf "There are %d changes in this release: ", total
+      printf "%d removed, %d added, %d promoted.\n", removed, added, promoted
+      print ""
+      print "\"n/a\" indicates that the plugin is not shipped in that release at all."
+      print ""
+      print "[%header,cols=\"3,1,1,1,1,2\"]"
+      print "|==="
+      print "| 2+|*" previous_version "* 2+|*" current_version "* |"
+      print "|*Plugin package* |*Default* |*Version* |*Default* |*Version* |*Change*"
+      for (line = 1; line <= NR; line++) {
+        split(rows[line], cell, FS)
+        print "|`" cell[1] "` |" cell[2] " |" cell[3] " |" cell[4] " |" cell[5] " |" cell[6]
+      }
+      if (NR == 0) print "6+|No change to the plugins that are enabled by default was found."
+      print "|==="
+    }
+  ' "$comparisontmpdir/preinstalled" > "$PREINSTALLED_OUTPUT" || exit 1
+
+  shopt -s nullglob
+  stale_preinstalled=(
+    "$SCRIPT_DIR"/ref-preinstalled-dynamic-plugin-changes-"$PREVIOUS_SERIES_ID"-*-to-"$CURRENT_SERIES_ID"-*.adoc
+  )
+  for stale_preinstalled_output in "${stale_preinstalled[@]}"; do
+    [[ $stale_preinstalled_output == "$PREINSTALLED_OUTPUT" ]] && continue
+    stale_preinstalled_include="include::modules/extend_dynamic-plugins-reference/$(basename "$stale_preinstalled_output")[leveloffset=+1]"
+    grep -vF "$stale_preinstalled_include" "$NAV_FILE" > "$comparisontmpdir/nav.adoc" || true
+    mv "$comparisontmpdir/nav.adoc" "$NAV_FILE" || exit 1
+    rm -f "$stale_preinstalled_output" || exit 1
+    echo -e "${green}Removed superseded comparison $stale_preinstalled_output${norm}"
+  done
+  shopt -u nullglob
+
+  PREINSTALLED_ANCHOR="include::modules/extend_dynamic-plugins-reference/${PREINSTALLED_SOURCE}[leveloffset=+1]"
+  PREINSTALLED_INCLUDE="include::modules/extend_dynamic-plugins-reference/$(basename "$PREINSTALLED_OUTPUT")[leveloffset=+1]"
+  if ! grep -qxF "$PREINSTALLED_INCLUDE" "$NAV_FILE"; then
+    if grep -qxF "$PREINSTALLED_ANCHOR" "$NAV_FILE"; then
+      awk -v anchor="$PREINSTALLED_ANCHOR" -v line="$PREINSTALLED_INCLUDE" '
+        { print }
+        $0 == anchor && !done { print ""; print line; done = 1 }
+      ' "$NAV_FILE" > "$comparisontmpdir/nav.adoc" || exit 1
+      mv "$comparisontmpdir/nav.adoc" "$NAV_FILE" || exit 1
+    else
+      printf '\n%s\n' "$PREINSTALLED_INCLUDE" >> "$NAV_FILE"
+    fi
+  fi
+
+  echo -e "${green}Wrote the preinstalled plugin comparison to $PREINSTALLED_OUTPUT${norm}"
+fi
