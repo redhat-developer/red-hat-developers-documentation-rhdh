@@ -4,66 +4,624 @@
 = Helm chart values mapping from 1.x to 2.1
 
 [role="_abstract"]
-This reference maps Helm chart values from the 1.x format to the 2.1 format, grouped by configuration section.
+The {product-very-short} 2.1 `redhat-developer-hub` chart is a clean break from the 1.x `backstage` chart. Values that lived under `upstream.backstage` and `global` paths are flattened to root-level keys, so you cannot reuse your 1.x values file. Use this reference to translate each value.
 
-== Global configuration
+[NOTE]
+====
+Fields that are not listed in the following tables keep the same path. Where a table shows a new path, use that path. If a field you use is not mentioned at all, carry it over as-is.
+====
 
-[options="header"]
-|===
-| 1.x Key | 2.1 Key | Notes
+== Default changes to review before upgrading
 
-| `global.key1`
-| `global.newKey1`
-| Mapping example
+Before you translate your values, check these default changes:
 
-|===
+* *Intelligent Assistant* (formerly Lightspeed) remains enabled by default. If you explicitly disabled it in your 1.x chart, set `intelligentAssistant.enabled: false`.
+* *PostgreSQL image* defaults to `fedora/postgresql-18`, but PostgreSQL 15 remains supported. For an existing PostgreSQL 15 data directory, either upgrade the database during this migration or set `postgresql.image.repository: fedora/postgresql-15` to keep PostgreSQL 15.
+* *Autoscaling* (`autoscaling.maxReplicas`) default changed from `100` to `3`.
 
-== Upstream configuration
-
-[options="header"]
-|===
-| 1.x Key | 2.1 Key | Notes
-
-| `upstream.key1`
-| `upstream.newKey1`
-| Mapping example
-
-|===
-
-== Networking configuration
+== Key structural changes
 
 [options="header"]
 |===
-| 1.x Key | 2.1 Key | Notes
+| Aspect | 1.x chart (`backstage`) | 2.1 chart (`redhat-developer-hub`)
 
-| `networking.key1`
-| `networking.newKey1`
-| Mapping example
+| Chart name
+| `backstage`
+| `redhat-developer-hub` (but `nameOverride` defaults to `developer-hub`, so resource names and Route URLs are preserved)
 
+| Template ownership
+| Delegates to the upstream Backstage subchart
+| Owns all templates directly
+
+| System volumes, mounts, and env vars
+| You listed them in full under `upstream.backstage.extraVolumes`, `extraVolumeMounts`, and `extraEnvVars`
+| Hardcoded in templates; the `extra{asterisk}` keys only add your custom values
+
+| Init containers
+| You specified the full init container array
+| System init containers are managed by the chart; use `preInitContainers` and `extraInitContainers` to add custom ones
+
+| Lightspeed
+| `global.lightspeed.{asterisk}`
+| Rebranded to `intelligentAssistant.{asterisk}`
+
+| OpenShift Route
+| `route.{asterisk}`
+| `openshift.route.{asterisk}`
 |===
 
-== Plugin configuration
+== Container image
 
 [options="header"]
 |===
-| 1.x Key | 2.1 Key | Notes
+| 1.x key | 2.1 key | Notes
 
-| `plugins.key1`
-| `plugins.newKey1`
-| Mapping example
+| `upstream.backstage.image.registry`
+| `image.registry`
+|
 
+| `upstream.backstage.image.repository`
+| `image.repository`
+|
+
+| `upstream.backstage.image.tag`
+| `image.tag`
+|
+
+| `upstream.backstage.image.digest`
+| `image.digest`
+|
+
+| `upstream.backstage.image.pullPolicy`
+| `image.pullPolicy`
+|
+
+| `upstream.backstage.image.pullSecrets`
+| `imagePullSecrets`
+| Promoted to root
 |===
 
-== PostgreSQL configuration
+== Chart-level overrides
 
 [options="header"]
 |===
-| 1.x Key | 2.1 Key | Notes
+| 1.x key | 2.1 key | Notes
 
-| `postgresql.key1`
-| `postgresql.newKey1`
-| Mapping example
+| `upstream.nameOverride`
+| `nameOverride`
+| Defaults to `developer-hub` to preserve resource names
 
+| `upstream.fullnameOverride`
+| `fullnameOverride`
+|
+
+| `upstream.commonLabels`
+| `commonLabels`
+|
+
+| `upstream.commonAnnotations`
+| `commonAnnotations`
+|
+
+| `upstream.extraDeploy`
+| `extraDeploy`
+|
 |===
 
-// Old Helm values key to new key, grouped by section (global, upstream, networking, plugins, PostgreSQL).
+== Global parameters
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `global.clusterRouterBase`
+| `openshift.clusterRouterBase`
+|
+
+| `global.host`
+| `host`
+| Promoted to root
+
+| `global.imagePullSecrets`
+| `global.imagePullSecrets`
+| Unchanged (used by Bitnami subcharts)
+
+| `global.imageRegistry`
+| `global.imageRegistry`
+| Now documented and applied consistently to all container images, which is useful for disconnected or air-gapped environments
+|===
+
+== App config
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.backstage.appConfig`
+| `appConfig`
+| Entire tree flattened to root
+
+| `upstream.backstage.extraAppConfig`
+| `extraAppConfig`
+| Same format (list of `filename` and `configMapRef`)
+
+| `upstream.backstage.appConfig.backend.database.connection.password`
+| `appConfig.backend.database.connection.password`
+| Env var changed from `POSTGRESQL_ADMIN_PASSWORD` to `POSTGRES_PASSWORD`
+
+| `upstream.backstage.appConfig.backend.database.connection.user`
+| `appConfig.backend.database.connection.user`
+| Env var changed from a hardcoded `postgres` to `POSTGRES_USER`
+|===
+
+== Authentication
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `global.auth.backend.enabled`
+| `auth.backend.enabled`
+|
+
+| `global.auth.backend.existingSecret`
+| `auth.backend.existingSecretRef.name`
+| Now an object with `name` and `key`
+
+| _(none)_
+| `auth.backend.existingSecretRef.key`
+| Defaults to `backend-secret`
+
+| `global.auth.backend.value`
+| `auth.backend.value`
+|
+|===
+
+== Dynamic plugins
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `global.dynamic.includes`
+| `dynamicPlugins.includes`
+|
+
+| `global.dynamic.plugins`
+| `dynamicPlugins.plugins`
+| Replace bundled Dynamic Plugin Wrapper paths with OCI references. See xref:proc-migrate-plugins-to-oci-references_phase-4-update-configuration[Migrate plugin references to OCI format].
+
+| `upstream.backstage.extraVolumes` _(dynamic-plugins-root)_
+| `dynamicPlugins.volume.{asterisk}`
+| Declarative config replaces the raw volume spec
+
+| `upstream.backstage.initContainers[0].resources`
+| `dynamicPlugins.initContainer.resources`
+|
+
+| `upstream.backstage.initContainers[0].securityContext`
+| `dynamicPlugins.initContainer.securityContext`
+|
+
+| `upstream.backstage.initContainers[0].env`
+| `dynamicPlugins.initContainer.extraEnv`
+| System env vars auto-injected
+|===
+
+== Pod scheduling, replicas, and metadata
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.backstage.replicas`
+| `replicaCount`
+| Renamed
+
+| `upstream.backstage.annotations`
+| `deploymentAnnotations`
+| Renamed to clarify these are on the Deployment, not the pod
+
+| `upstream.backstage.podAnnotations`
+| `podAnnotations`
+|
+
+| `upstream.backstage.podLabels`
+| `podLabels`
+|
+
+| `upstream.backstage.nodeSelector`
+| `nodeSelector`
+|
+
+| `upstream.backstage.tolerations`
+| `tolerations`
+|
+
+| `upstream.backstage.affinity`
+| `affinity`
+|
+
+| `upstream.backstage.topologySpreadConstraints`
+| `topologySpreadConstraints`
+|
+
+| `upstream.backstage.priorityClassName`
+| `priorityClassName`
+|
+|===
+
+== Service account
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.serviceAccount.create`
+| `serviceAccount.create`
+| Defaults to `false`
+
+| `upstream.serviceAccount.name`
+| `serviceAccount.name`
+|
+
+| `upstream.serviceAccount.annotations`
+| `serviceAccount.annotations`
+|
+
+| `upstream.serviceAccount.automountServiceAccountToken`
+| `serviceAccount.automount`
+| Renamed
+|===
+
+== Container command, args, and environment
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.backstage.command`
+| `commandOverride`
+|
+
+| `upstream.backstage.args`
+| `extraArgs` or `argsOverride`
+| Prefer `extraArgs`, which appends after the system `--config` flags. `argsOverride` replaces all arguments, including system ones.
+
+| `upstream.backstage.extraEnvVars`
+| `extraEnv`
+| System env vars auto-injected; only add custom ones
+
+| `upstream.backstage.extraEnvVarsSecrets`
+| `extraEnvFrom`
+| Use `secretRef` entries instead of secret name strings
+
+| `upstream.backstage.extraEnvVarsCM`
+| `extraEnvFrom`
+| Use `configMapRef` entries instead of ConfigMap name strings
+|===
+
+== Volumes, mounts, init containers, and sidecars
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.backstage.extraVolumes`
+| `extraVolumes`
+| Only user additions; system volumes are hardcoded
+
+| `upstream.backstage.extraVolumeMounts`
+| `extraVolumeMounts`
+| Only user additions; system mounts are hardcoded
+
+| `upstream.backstage.initContainers`
+| `dynamicPlugins.initContainer.{asterisk}`
+| Configure the `install-dynamic-plugins` init container through `dynamicPlugins.initContainer.{asterisk}` rather than a raw array
+
+| _(none)_
+| `preInitContainers`
+| Runs before the system init containers
+
+| _(none)_
+| `extraInitContainers`
+| Runs after the system init containers
+
+| `upstream.backstage.extraContainers`
+| `extraContainers`
+|
+|===
+
+== Security contexts, resources, and probes
+
+[options="header"]
+|===
+| 1.x key | 2.1 key
+
+| `upstream.backstage.podSecurityContext`
+| `podSecurityContext`
+
+| `upstream.backstage.containerSecurityContext`
+| `containerSecurityContext`
+
+| `upstream.backstage.resources`
+| `resources`
+
+| `upstream.backstage.startupProbe`
+| `startupProbe`
+
+| `upstream.backstage.readinessProbe`
+| `readinessProbe`
+
+| `upstream.backstage.livenessProbe`
+| `livenessProbe`
+|===
+
+== Service
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.service.type`
+| `service.type`
+|
+
+| `upstream.service.ports.backend`
+| `service.port`
+| Flattened from `ports.backend` to `port`
+
+| `upstream.service.nodePorts.backend`
+| `service.nodePort`
+| Flattened from `nodePorts.backend` to `nodePort`
+
+| `upstream.service.extraPorts`
+| `service.extraPorts`
+|
+|===
+
+== OpenShift Route
+
+[options="header"]
+|===
+| 1.x key | 2.1 key
+
+| `route.enabled`
+| `openshift.route.enabled`
+
+| `route.annotations`
+| `openshift.route.annotations`
+
+| `route.host`
+| `openshift.route.host`
+
+| `route.path`
+| `openshift.route.path`
+
+| `route.wildcardPolicy`
+| `openshift.route.wildcardPolicy`
+
+| `route.tls.{asterisk}`
+| `openshift.route.tls.{asterisk}`
+|===
+
+== Autoscaling and Pod Disruption Budget
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.backstage.autoscaling.enabled`
+| `autoscaling.enabled`
+|
+
+| `upstream.backstage.autoscaling.minReplicas`
+| `autoscaling.minReplicas`
+|
+
+| `upstream.backstage.autoscaling.maxReplicas`
+| `autoscaling.maxReplicas`
+| Default changed from `100` to `3`
+
+| `upstream.backstage.autoscaling.targetCPUUtilizationPercentage`
+| `autoscaling.targetCPUUtilizationPercentage`
+|
+
+| `upstream.backstage.pdb.create`
+| `podDisruptionBudget.create`
+|
+
+| `upstream.backstage.pdb.minAvailable`
+| `podDisruptionBudget.minAvailable`
+|
+
+| `upstream.backstage.pdb.maxUnavailable`
+| `podDisruptionBudget.maxUnavailable`
+|
+|===
+
+== Ingress and Gateway API HTTPRoute
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.ingress.enabled`
+| `ingress.enabled`
+|
+
+| `upstream.ingress.className`
+| `ingress.className`
+|
+
+| `upstream.ingress.host`
+| `ingress.hosts[].host`
+| Now an array of host objects
+
+| `upstream.ingress.path`
+| `ingress.hosts[].paths[].path`
+| Nested under the hosts array
+
+| `upstream.ingress.tls.{asterisk}`
+| `ingress.tls[]`
+| Now a list of `{hosts, secretName}` entries
+
+| `upstream.httpRoute.{asterisk}`
+| `httpRoute.{asterisk}`
+| Flattened from `upstream.httpRoute`
+|===
+
+== Catalog index
+
+[options="header"]
+|===
+| 1.x key | 2.1 key
+
+| `global.catalogIndex.image.registry`
+| `catalogIndex.image.registry`
+
+| `global.catalogIndex.image.repository`
+| `catalogIndex.image.repository`
+
+| `global.catalogIndex.image.tag`
+| `catalogIndex.image.tag`
+
+| `global.catalogIndex.extraImages`
+| `catalogIndex.extraImages`
+|===
+
+== PostgreSQL (Bitnami subchart)
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.postgresql.enabled`
+| `postgresql.enabled`
+|
+
+| `upstream.postgresql.postgresqlDataDir`
+| `postgresql.postgresqlDataDir`
+|
+
+| `upstream.postgresql.image.{asterisk}`
+| `postgresql.image.{asterisk}`
+| *Warning:* the default image changed from `fedora/postgresql-15` to `fedora/postgresql-18` (PostgreSQL 15 is still supported). For an existing PostgreSQL 15 data directory, upgrade the database or set `postgresql.image.repository: fedora/postgresql-15`.
+
+| `upstream.postgresql.auth.{asterisk}`
+| `postgresql.auth.{asterisk}`
+|
+
+| `upstream.postgresql.primary.{asterisk}`
+| `postgresql.primary.{asterisk}`
+|
+|===
+
+== Metrics and monitoring
+
+[options="header"]
+|===
+| 1.x key | 2.1 key
+
+| `upstream.metrics.serviceMonitor.enabled`
+| `metrics.serviceMonitor.enabled`
+
+| `upstream.metrics.serviceMonitor.path`
+| `metrics.serviceMonitor.path`
+
+| `upstream.metrics.serviceMonitor.port`
+| `metrics.serviceMonitor.port`
+
+| `upstream.metrics.serviceMonitor.interval`
+| `metrics.serviceMonitor.interval`
+
+| `upstream.metrics.serviceMonitor.labels`
+| `metrics.serviceMonitor.labels`
+|===
+
+== Network policies
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `upstream.networkPolicy.enabled`
+| _(removed)_
+| The 2.1 chart always deploys default-deny NetworkPolicies. If your deployment relies on additional connectivity, such as external APIs or cross-namespace services, you must add the corresponding NetworkPolicy rules or the connections are silently blocked.
+
+| `upstream.networkPolicy.ingressRules.{asterisk}`
+| _(removed)_
+|
+
+| `upstream.networkPolicy.egressRules.{asterisk}`
+| _(removed)_
+|
+|===
+
+== Intelligent Assistant (formerly Lightspeed)
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `global.lightspeed.enabled`
+| `intelligentAssistant.enabled`
+| Renamed
+
+| `global.lightspeed.plugins`
+| `intelligentAssistant.plugins`
+| Plugin format changed from OCI to `ref://`
+
+| `global.lightspeed.sidecar.image`
+| `intelligentAssistant.core.image.{registry,repository,tag}`
+| Single string split into structured image fields
+
+| `global.lightspeed.sidecar.resources`
+| `intelligentAssistant.core.resources`
+|
+
+| `global.lightspeed.sidecar.env`
+| `intelligentAssistant.core.extraEnv`
+|
+
+| `global.lightspeed.initContainer.{asterisk}`
+| _(removed)_
+| The RAG init container no longer exists
+
+| `global.lightspeed.ragVolume.{asterisk}`
+| _(removed)_
+| No longer needed without the RAG init container
+
+| `global.lightspeed.runtimeVolume.{asterisk}`
+| `intelligentAssistant.runtimeVolume.{asterisk}`
+| Volume `name` and `mountPath` are now hardcoded
+
+| `global.lightspeed.configMaps`
+| `intelligentAssistant.config.{stack,profile}.existingConfigMap`
+| The array of three ConfigMaps is replaced with two structured entries
+
+| `global.lightspeed.secret.create` / `.name`
+| `intelligentAssistant.existingSecret`
+| The 2.1 chart does not create a placeholder secret. Create the secret before upgrading, then set `intelligentAssistant.existingSecret` to its name.
+|===
+
+[NOTE]
+====
+The 1.x chart used flat `lightspeed.{asterisk}` paths and some settings are restructured rather than simply renamed. When migrating AI assistant configuration, map Helm values to `intelligentAssistant.{asterisk}` as shown in this table. The app-config renames from `lightspeed` to `intelligent-assistant` are a separate step. See xref:proc-migrate-ai-assistant-configuration_phase-4-update-configuration[Migrate AI assistant configuration].
+====
+
+== Removed values with no equivalent
+
+[options="header"]
+|===
+| 1.x key | Notes
+
+| `upstream.backstage.installDir`
+| Hardcoded in the 2.1 chart
+
+| `upstream.backstage.containerPorts.backend`
+| Hardcoded to `7007`
+
+| `upstream.diagnosticMode.{asterisk}`
+| Not supported
+|===

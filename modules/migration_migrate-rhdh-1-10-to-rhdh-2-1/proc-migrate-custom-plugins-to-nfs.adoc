@@ -4,25 +4,44 @@
 = Migrate custom plugins to the New Frontend System
 
 [role="_abstract"]
-Custom plugins built with Old Frontend System (OFS) APIs must be rewritten to use New Frontend System (NFS) extensions and re-exported as dynamic plugins before you can deploy them on {product} 2.1.
+Custom plugins built with Old Frontend System (OFS) APIs must support the New Frontend System (NFS) before you deploy them on {product} 2.1. You do not rewrite the plugins: you add an NFS entry point and extensions alongside your existing code, move YAML wiring into them, and re-export the plugin.
 
 .Prerequisites
 
 * You have access to the source code of your custom plugins.
-* You have {product} Local or a separate {product} instance for testing migrated plugins.
+* You have an NFS-enabled {product} instance for testing. {product} 2.1 ships the New Frontend System by default, so use a {product} 2.1 instance or {product} Local (`rhdh-local`) configured for 2.1. Testing only against an Old Frontend System instance does not verify that the NFS entry point works.
 
 .Procedure
 
-. Rewrite OFS plugin registration to NFS extensions.
-.. Replace `dynamicRoutes`, `mountPoints`, `routeBindings`, `appIcons`, and `apiFactories` with their NFS equivalents.
-.. Refer to the xref:ref-ofs-to-nfs-config-key-mapping_{context}[OFS to NFS configuration key mapping] for the complete mapping.
+. Add an NFS entry point to each custom plugin:
+.. Create a `src/alpha.tsx` file that defines the plugin with `createFrontendPlugin` and the NFS extension blueprints, such as `PageBlueprint`, `EntityCardBlueprint`, `EntityContentBlueprint`, and `ApiBlueprint`.
+.. Export the `./alpha` entry point from `package.json`.
+.. Keep the entry point lightweight by loading page and card UI with `import()` instead of static imports.
++
+You can keep the existing `PluginRoot` export so the plugin continues to work with the Old Frontend System during the transition.
 
-. Re-export your plugin as a dynamic plugin.
+. Move your frontend wiring from YAML into plugin extensions. For each item in your `dynamicPlugins.frontend` configuration, implement the equivalent NFS extension in `src/alpha.tsx`:
++
+--
+* Replace `dynamicRoutes` and `menuItem` entries with `PageBlueprint` extensions.
+* Replace `mountPoints` and `entityTabs` entries with `EntityCardBlueprint`, `EntityContentBlueprint`, or `HomePageWidgetBlueprint` extensions.
+* Replace `routeBindings` with route references bound through `app.routes.bindings`.
+* Replace `appIcons` with page extension icons.
+* Replace `apiFactories` with `ApiBlueprint` extensions.
+--
++
+For the complete key-by-key mapping, see xref:ref-ofs-to-nfs-config-key-mapping_{context}[Old Frontend System to New Frontend System configuration key mapping].
 
-. Test your migrated plugin using {product} Local or a separate {product} instance.
+. Re-export your plugin as a dynamic plugin by using the {product} CLI.
+
+. Test your updated plugin on an NFS-enabled instance. Add the plugin to a {product} 2.1 instance or to {product} Local configured for 2.1, set `app.packages: all` (or include your package explicitly), and verify routes, entity tabs, cards, APIs, and cross-plugin links.
 
 .Verification
 
-* Confirm that the plugin loads without errors and all functionality works as expected.
+* Confirm that the plugin loads without errors on the NFS-enabled instance and that all functionality works as expected.
 
-// Rewrite OFS plugin registration to NFS extensions, re-export as dynamic plugin. Test using RHDH Local or a separate RHDH instance.
+[role="_additional-resources"]
+.Additional resources
+
+* For plugin authors updating plugin code, see link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-plugins-to-new-frontend-system.md[Migrating Plugins to the New Frontend System].
+* For operators migrating `dynamicPlugins.frontend` configuration, see link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-config-to-new-frontend-system.md[Migrating RHDH Frontend Configuration to the New Frontend System].

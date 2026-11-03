@@ -8,8 +8,9 @@ To migrate your Helm chart configuration to {product} 2.1, export your current H
 
 .Prerequisites
 
+* Your cluster meets the minimum version that the {product-very-short} 2.1 chart requires: Kubernetes 1.31 or later, or OpenShift 4.18 or later. If you are running an older cluster, upgrade it before you migrate.
 * You have completed the pre-upgrade checklist and created a backup of your database.
-* You have migrated your custom plugins to the New Frontend System.
+* You have added New Frontend System support to your custom plugins.
 
 .Procedure
 
@@ -21,6 +22,13 @@ $ helm get values <release-name> -n <namespace> > values-1.x.yaml
 ----
 
 . Translate your configuration keys using the xref:ref-helm-chart-values-mapping-1-x-to-2-1_{context}[Helm chart values mapping].
+
+. Decide how to handle PostgreSQL. The 2.1 chart changes the default PostgreSQL image from `fedora/postgresql-15` to `fedora/postgresql-18`, but PostgreSQL 15 remains supported. For an existing PostgreSQL 15 data directory, choose one of the following options:
++
+--
+* To keep PostgreSQL 15, set `postgresql.image.repository: fedora/postgresql-15` in your translated values.
+* To move to PostgreSQL 18, upgrade your existing database before you change the image. Pointing PostgreSQL 18 at a PostgreSQL 15 data directory does not perform an in-place upgrade.
+--
 
 . Update your container image references from RHEL 9 to RHEL 10 names using the xref:ref-container-image-renames-rhel-9-to-rhel-10_{context}[container image renames reference].
 

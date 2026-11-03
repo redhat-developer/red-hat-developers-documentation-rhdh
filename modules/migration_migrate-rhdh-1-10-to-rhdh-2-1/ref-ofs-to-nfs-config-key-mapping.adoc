@@ -4,32 +4,61 @@
 = Old Frontend System to New Frontend System configuration key mapping
 
 [role="_abstract"]
-This table maps every Old Frontend System (OFS) configuration key to its New Frontend System (NFS) equivalent or indicates when a feature is removed.
+This reference maps Old Frontend System (OFS) `dynamicPlugins.frontend` configuration keys to their New Frontend System (NFS) equivalents under the `app.*` model. In the NFS, plugins declare extensions, and you configure them through `app.extensions`, `app.routes.bindings`, and related keys.
+
+[NOTE]
+====
+Configuration alone cannot add UI that a plugin does not register as an NFS extension. If a customization previously required `mountPoints` and `importName`, the plugin must now expose that UI as an extension. If the extension does not appear after you install the plugin, the plugin needs an update. For custom plugins, see xref:proc-migrate-custom-plugins-to-nfs_{context}[Migrate custom plugins to the New Frontend System].
+====
+
+== Configuration key mapping
 
 [options="header"]
 |===
-| Old Frontend System (OFS) | New Frontend System (NFS) | Notes
+| Old Frontend System (OFS) key | New Frontend System (NFS) equivalent | Notes
 
 | `dynamicRoutes`
-| NFS route extensions
-| Use route extension API
+| `page:*` extensions configured in `app.extensions`
+| Routes come from `page:*` extensions declared by the plugin. Override the title, path, or visibility, for example `page:my-plugin: false` to disable a page.
 
-| `mountPoints`
-| NFS mount point extensions
-| Use mount point extension API
+| `menuItem` (under `dynamicRoutes`)
+| Page `title` and `icon`
+| Sidebar navigation is derived from each page's `title` and `icon`. To set the navigation order, list the page extensions in the wanted order in `app.extensions`. Nested menu groups (`menuItems.parent`) have no direct equivalent.
+
+| `mountPoints` on `entity.page.*`
+| `entity-card:*` and `entity-content:*` extensions in `app.extensions`
+| Entity overview cards become `entity-card:*` extensions. Entity tabs become `entity-content:*` extensions. Set visibility filters with `config.filter` instead of `config.if`.
+
+| `mountPoints` on `home.page/cards` and `home.page/widgets`
+| `home-page-widget:*` extensions in `app.extensions`
+| The NFS places only cards that a plugin registers as `home-page-widget:*` extensions. You cannot attach an arbitrary `importName` from YAML. Tune layout with `home-page-layout:home/dynamic-homepage-layout`.
+
+| `entityTabs`
+| `entity-content:*` extensions and `page:catalog/entity` groups
+| Tab order follows the list order in `app.extensions`.
 
 | `routeBindings`
-| NFS route bindings
-| Use route binding extension API
+| `app.routes.bindings`
+| Use `pluginId.routeName` syntax, for example `catalog.viewTechDoc: techdocs.docRoot`. Set a binding to `false` to disable it.
 
 | `appIcons`
-| NFS icon extensions
-| Use icon extension API
+| Page extension `icon` (or `config.icon` string IDs)
+| Page icons come from each `page:*` extension. For most operators, icon customization is limited to `config.icon` string IDs.
 
 | `apiFactories`
-| NFS API factory extensions
-| Use API factory extension API
+| `api:*` extensions in `app.extensions`
+| APIs are `api:*` extensions that are auto-discovered with the plugin. Adopters rarely configure them directly. A plugin that still relies on legacy `apiFactories` YAML needs a plugin update.
 
+| `translationResources` and `i18n`
+| `app.*` translation and language configuration
+| Translation resources are provided by the plugin as extensions. Configure available locales under the `app.*` keys.
 |===
 
-// Two-column table mapping every OFS config key to its NFS equivalent or removal note.
+== Configuration file merging
+
+Backstage merges configuration files by replacing entire arrays when the same key appears in more than one file. If `app.extensions` is defined in both `app-config.yaml` and `app-config.production.yaml`, the higher-priority file's array replaces the lower-priority one; entries are not merged individually. Because unlisted extensions are still auto-discovered, a local override file can contain only the extensions that you want to change.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh/blob/main/docs/dynamic-plugins/migrating-config-to-new-frontend-system.md[Migrating RHDH Frontend Configuration to the New Frontend System]
