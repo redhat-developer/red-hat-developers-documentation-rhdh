@@ -18,6 +18,8 @@ QUIET=1; # suppress debug output
 BRANCH=main
 SKIP_SUPPORTED_TABLES=0
 SKIP_COMMUNITY_TABLE=0
+DIFF_PREVIOUS=0
+DIFF_REF=""
 
 SUPPORTED_CATALOG_INDEX="${SUPPORTED_CATALOG_INDEX:-quay.io/rhdh/plugin-catalog-index}"
 COMMUNITY_CATALOG_INDEX="${COMMUNITY_CATALOG_INDEX:-ghcr.io/redhat-developer/rhdh-plugin-export-overlays/plugin-catalog-index}"
@@ -50,6 +52,8 @@ Options:
   -b, --ref-branch          : Branch against which plugin versions should be incremented, like release-1.y; default: main
   --skip-supported-tables   : Skip re-generating supported dynamic plugin tables and .csv
   --skip-community-table    : Skip re-generating the community dynamic plugins table and .csv
+  --diff-previous           : Compare the generated .csv files with the previous release-X.Y branch
+  --diff TAG                : Compare the generated .csv files with a specific tag or Git ref
   -v                        : more verbose output
   -h, --help                : Show this help
 
@@ -58,6 +62,8 @@ Examples:
   $0 -b release-2.1                                  # Fetch both supported and community tables (default behavior)
   $0 -b release-2.1 --skip-community-table           # Skip fetching community table
   $0 -b main        --skip-supported-tables          # Skip fetching supported tables
+  $0 -b release-2.1 --diff-previous                  # Also compare with the previous release branch
+  $0 -b release-2.1 --diff 1.10.5                    # Also compare with the 1.10.5 tag
 
 EOF
 }
@@ -66,9 +72,15 @@ if [[ "$#" -lt 1 ]]; then usage; exit 1; fi
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
-    '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
+    '-b'|'--ref-branch')
+      if [[ -z ${2:-} || ${2:-} == -* ]]; then echo -e "${red}[ERROR] $1 requires a value.${norm}" >&2; usage; exit 1; fi
+      BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
     '--skip-supported-tables') SKIP_SUPPORTED_TABLES=1;;
     '--skip-community-table') SKIP_COMMUNITY_TABLE=1;;
+    '--diff-previous') DIFF_PREVIOUS=1;;
+    '--diff')
+      if [[ -z ${2:-} || ${2:-} == -* ]]; then echo -e "${red}[ERROR] --diff requires a value.${norm}" >&2; usage; exit 1; fi
+      DIFF_REF="$2"; shift 1;;
     '-v') QUIET=0;;
     '-h'|'--help') usage; exit 0;;
     *) echo "Unknown parameter used: $1."; usage; exit 1;;
@@ -77,6 +89,11 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [[ ! $BRANCH ]]; then usage; exit 1; fi
+if [[ $DIFF_PREVIOUS -eq 1 && $DIFF_REF ]]; then
+  echo -e "${red}[ERROR] --diff-previous and --diff cannot be used together.${norm}" >&2
+  usage
+  exit 1
+fi
 if [[ $SKIP_SUPPORTED_TABLES -eq 1 && $SKIP_COMMUNITY_TABLE -eq 1 ]]; then
   echo -e "${red}[ERROR] Cannot skip both supported and community tables.${norm}" >&2
   exit 1;
@@ -290,4 +307,10 @@ rm -rf "$TEMP_DIR"
 warnings=$(grep -c "WARN" "/tmp/warnings_${BRANCH}.txt" 2>/dev/null || echo "0")
 if [[ $warnings -gt 0 ]]; then
     echo; echo -e "${blue}[WARN] $warnings warnings collected in /tmp/warnings_${BRANCH}.txt ! Consider upgrading upstream project to newer plugin versions !${norm}"
+fi
+
+if [[ $DIFF_PREVIOUS -eq 1 ]]; then
+  "$SCRIPT_DIR/diff-previous.sh" -b "$BRANCH" --diff-previous || exit 1
+elif [[ $DIFF_REF ]]; then
+  "$SCRIPT_DIR/diff-previous.sh" -b "$BRANCH" --diff "$DIFF_REF" || exit 1
 fi
