@@ -20,6 +20,9 @@ blue="\033[1;34m"
 JOBS=8
 ARCH=amd64
 OS=linux
+# Field separator for cached skopeo output. A tab cannot be used: it is IFS
+# whitespace, so `read` collapses an empty Created field.
+SEP=$'\x1f'
 WARN_ONLY=0
 VERBOSE=0
 TRIGGER=0
@@ -199,15 +202,15 @@ inspect_ref() {
   ' <<<"$raw" 2>/dev/null)
 
   image=$(skopeo inspect --no-tags "docker://$ref" 2>>"$cache.err" |
-    jq -r '[.Digest // "", .Created // ""] | @tsv' 2>/dev/null)
+    jq -r '[.Digest // "", .Created // ""] | join("\u001f")' 2>/dev/null)
 
   if [[ -z $image ]]; then
     printf 'INSPECT_FAILED\t%s\n' "$(tr '\n' ' ' < "$cache.err")" > "$cache"
     return 0
   fi
 
-  [[ -n $manifest ]] || manifest=${image%%$'\t'*}
-  printf '%s\t%s\n' "$image" "$manifest" > "$cache"
+  [[ -n $manifest ]] || manifest=${image%%"$SEP"*}
+  printf '%s%s%s\n' "$image" "$SEP" "$manifest" > "$cache"
 }
 
 mkdir -p "$TMP_DIR/inspect"
@@ -252,18 +255,18 @@ while IFS=$'\t' read -r repository digest tag source; do
   elif [[ $tag == - ]]; then
     # The pin has no artifact tag in its table, so there is nothing to compare.
     verdict=NO_TAG
-    IFS=$'\t' read -r _ pinned_created pinned_digest < "$pinned_cache"
+    IFS=$SEP read -r _ pinned_created pinned_digest < "$pinned_cache"
     tag=""
     tag_digest=""
     tag_created=""
   elif grep -q '^INSPECT_FAILED' "$tag_cache" 2>/dev/null; then
     verdict=TAG_UNRESOLVABLE
-    IFS=$'\t' read -r _ pinned_created pinned_digest < "$pinned_cache"
+    IFS=$SEP read -r _ pinned_created pinned_digest < "$pinned_cache"
     tag_digest=""
     tag_created=""
   else
-    IFS=$'\t' read -r _ pinned_created pinned_digest < "$pinned_cache"
-    IFS=$'\t' read -r _ tag_created tag_digest < "$tag_cache"
+    IFS=$SEP read -r _ pinned_created pinned_digest < "$pinned_cache"
+    IFS=$SEP read -r _ tag_created tag_digest < "$tag_cache"
 
     if [[ $pinned_digest == "$tag_digest" ]]; then
       verdict=OK
