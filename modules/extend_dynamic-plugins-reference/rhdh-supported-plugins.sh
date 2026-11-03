@@ -3,10 +3,7 @@
 # Set consistent locale for sorting across different systems
 export LC_ALL=C
 
-# script to generate rhdh-supported-plugins.adoc from content in
-# https://github.com/redhat-developer/rhdh/tree/main/catalog-entities/extensions/packages/
-# and optionally generate ref-community-supported-plugins.adoc from
-# https://github.com/redhat-developer/rhdh-plugin-export-overlays
+# Fetch the supported tables from Quay and the community table from GHCR.
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
@@ -19,12 +16,11 @@ orange="\033[1;35m"
 QUIET=1; # suppress debug output
 
 BRANCH=main
-SKIP_TABLES=0
+SKIP_SUPPORTED_TABLES=0
 SKIP_COMMUNITY_TABLE=0
 
-overlaysRepo="https://github.com/redhat-developer/rhdh-plugin-export-overlays"
-
-CATALOG_INDEX_REGISTRY="${CATALOG_INDEX_REGISTRY:-quay.io/rhdh}"
+SUPPORTED_CATALOG_INDEX="${SUPPORTED_CATALOG_INDEX:-quay.io/rhdh/plugin-catalog-index}"
+COMMUNITY_CATALOG_INDEX="${COMMUNITY_CATALOG_INDEX:-ghcr.io/redhat-developer/rhdh-plugin-export-overlays/plugin-catalog-index}"
 
 debug() {
   if [[ $QUIET -eq 0 ]]; then
@@ -32,27 +28,19 @@ debug() {
   fi
 }
 
-  if ! command -v yq >/dev/null 2>&1; then
-    echo -e "${red}[ERROR] yq is required but not found. Please install yq (jq wrapper, NOT the mikefarah version) from https://kislyuk.github.io/yq/${norm}"
-    exit 1
-  elif yq --help 2>&1 | grep -q mikefarah; then
-    echo -e "${red}[ERROR] mikefarah version of yq found. Please install the jq wrapper from https://kislyuk.github.io/yq/ ${norm}"
-    exit 1
-  fi
-
 usage() {
   cat <<EOF
 
-Generate an updated table of dynamic plugins from content in:
-* $CATALOG_INDEX_REGISTRY/plugin-catalog-index:${INDEX_TAG}
-* $overlaysRepo:${OVERLAYS_BRANCH}
+Fetch dynamic plugin tables from the supported and community catalog indexes:
+* $SUPPORTED_CATALOG_INDEX
+* $COMMUNITY_CATALOG_INDEX
 
-By default, both repos are processed. Use --skip-tables or --skip-community-table to skip either.
+Both indexes must match the documentation branch's RHDH major.minor version.
+Use --skip-supported-tables or --skip-community-table to skip either source.
 
 Requires:
 * skopeo
 * jq 1.6+
-* yq from https://pypi.org/project/yq/ - not the mikefarah version
 
 Usage:
 
@@ -60,17 +48,16 @@ $0 -b stable-ref-branch [options]
 
 Options:
   -b, --ref-branch          : Branch against which plugin versions should be incremented, like release-1.y; default: main
-  --skip-tables             : Skip re-generating dynamic plugin tables and .csv
-  --skip-community-table    : Skip re-generating the community plugins table
+  --skip-supported-tables   : Skip re-generating supported dynamic plugin tables and .csv
+  --skip-community-table    : Skip re-generating the community dynamic plugins table and .csv
   -v                        : more verbose output
   -h, --help                : Show this help
 
 Examples:
 
-  $0 -b release-1.10
-  $0 -b release-1.10 --clean
-  $0 -b release-1.10 --skip-community-table   # Only regen dynamic plugin tables
-  $0 -b main        --skip-tables            # Only regen community table
+  $0 -b release-2.1                                  # Fetch both supported and community tables (default behavior)
+  $0 -b release-2.1 --skip-community-table           # Skip fetching community table
+  $0 -b main        --skip-supported-tables          # Skip fetching supported tables
 
 EOF
 }
@@ -80,7 +67,7 @@ if [[ "$#" -lt 1 ]]; then usage; exit 1; fi
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     '-b'|'--ref-branch') BRANCH="$2"; shift 1;;        # reference branch, eg., 1.1.x
-    '--skip-tables') SKIP_TABLES=1;;
+    '--skip-supported-tables') SKIP_SUPPORTED_TABLES=1;;
     '--skip-community-table') SKIP_COMMUNITY_TABLE=1;;
     '-v') QUIET=0;;
     '-h'|'--help') usage; exit 0;;
@@ -90,27 +77,54 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [[ ! $BRANCH ]]; then usage; exit 1; fi
+if [[ $SKIP_SUPPORTED_TABLES -eq 1 && $SKIP_COMMUNITY_TABLE -eq 1 ]]; then
+  echo -e "${red}[ERROR] Cannot skip both supported and community tables.${norm}" >&2
+  exit 1;
+fi
+if [[ $BRANCH != main && ! $BRANCH =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+  echo -e "${red}[ERROR] Expected main or release-X.Y, but got: $BRANCH${norm}" >&2
+  exit 1
+fi
 
-catalogindextmpdir="/tmp/plugin-catalog-index_${BRANCH}"
+for tool in skopeo jq tar; do
+  command -v "$tool" >/dev/null 2>&1 || { echo "[ERROR] $tool is required. Must install it to proceed. " >&2; exit 1; }
+done
 
+catalogindextmpdir=$(mktemp -d) || exit 1
+trap 'rm -rf "$catalogindextmpdir"' EXIT
+# x.y only as upstream doesn't generate x.y.z tags
 INDEX_TAG="${BRANCH#release-}"
-if [[ $INDEX_TAG == "main" ]]; then
-  INDEX_TAG="next"
+if [[ $BRANCH == main ]]; then
+  INDEX_TAG=next
 fi
+SUPPORTED_IMAGE="${SUPPORTED_CATALOG_INDEX}:${INDEX_TAG}"
+COMMUNITY_IMAGE="${COMMUNITY_CATALOG_INDEX}:${INDEX_TAG}"
+SUPPORTED_FILES=(con-preinstalled-dynamic-plugins.adoc ref-deprecated-plugins.adoc
+  ref-ga-plugins.adoc ref-technology-preview-plugins.adoc rhdh-supported-plugins.csv)
+COMMUNITY_FILES=(ref-community-supported-plugins.adoc rhdh-community-plugins.csv)
+MANIFEST="$SCRIPT_DIR/catalog-index-sources.json"
 
-# Set temp directory paths based on BRANCH
-overlaystmpdir="/tmp/rhdh-plugin-export-overlays_$BRANCH" # for catalog metadata
+rhdh_minor() {
+  local version="$1"
+  [[ $version =~ ^([0-9]+)\.([0-9]+)(\.[0-9]+)?$ ]] || return 1
+  printf '%s.%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+}
 
-# need this for BOTH the community table generation AND the dynamic plugin tables generation
-if [[ ! -d "$overlaystmpdir" ]]; then
-    echo -e "${green}Cloning $overlaysRepo (branch: $BRANCH)...${norm}"
-    pushd /tmp >/dev/null || exit
-        git clone "$overlaysRepo" --depth 1 -b "$BRANCH" "rhdh-plugin-export-overlays_${BRANCH}" --quiet
-    popd >/dev/null || exit
-fi
-
+#######################################
+# Resolves a catalog index image tag to a digest and extracts that image.
+# Removes the downloaded archive and unpacked layers after extraction.
+# Arguments:
+#   $1: Tagged catalog index image reference.
+#   $2: Destination directory for metadata and extracted files.
+# Outputs:
+#   Writes fetch progress to stdout.
+#   Creates $2/inspect.json, $2/digest, and extracted files under $2/catalog-index.
+# Returns:
+#   0 on success; nonzero if inspection, download, or extraction fails.
+#######################################
 fetch_catalog_index() {
-  local image="${CATALOG_INDEX_REGISTRY}/plugin-catalog-index:${INDEX_TAG}"
+  local image="$1" destination="$2" digest layer
+
   if ! command -v skopeo >/dev/null 2>&1; then
     echo -e "${red}[ERROR] skopeo is required but not found.${norm}" >&2
     exit 1
@@ -119,207 +133,121 @@ fetch_catalog_index() {
     echo -e "${red}[ERROR] jq is required but not found.${norm}" >&2
     exit 1
   fi
-  echo -e "${green}Fetching $image...${norm}"
-  rm -rf "$catalogindextmpdir"
-  mkdir -p "$catalogindextmpdir"
-  local archive="${catalogindextmpdir}/image.tar"
-  local unpack="${catalogindextmpdir}/unpack"
-  skopeo copy "docker://${image}" "docker-archive:${archive}"
-  mkdir -p "$unpack"
-  tar xf "$archive" -C "$unpack"
-  for layer in $(jq -r '.[0].Layers[]' "$unpack/manifest.json"); do
-    tar xf "$unpack/$layer" -C "$catalogindextmpdir"
+
+  mkdir -p "$destination/unpack" "$destination/catalog-index" || return 1
+  skopeo inspect --no-tags "docker://$image" > "$destination/inspect.json" || return 1
+  digest=$(jq -er '.Digest | select(test("^sha256:[0-9a-f]{64}$"))' "$destination/inspect.json") || return 1
+  printf '%s\n' "$digest" > "$destination/digest"
+  echo -e "${green}Fetching $image@$digest...${norm}"
+
+  skopeo copy "docker://${image%:*}@$digest" "docker-archive:$destination/image.tar" || return 1
+  tar xf "$destination/image.tar" -C "$destination/unpack" || return 1
+  jq -e '.[0].Layers | type == "array" and length > 0' "$destination/unpack/manifest.json" >/dev/null || return 1
+  for layer in $(jq -r '.[0].Layers[]' "$destination/unpack/manifest.json"); do
+    tar xf "$destination/unpack/$layer" -C "$destination/catalog-index" || return 1
   done
-  rm -rf "$unpack" "$archive"
+  rm -rf "$destination/image.tar" "$destination/unpack"
 }
 
-generate_dynamic_plugins_table() {
-  fetch_catalog_index
-  local src="${catalogindextmpdir}/extend_dynamic-plugins-reference"
-  local -a files=(
-    con-preinstalled-dynamic-plugins.adoc
-    ref-deprecated-plugins.adoc
-    ref-ga-plugins.adoc
-    ref-technology-preview-plugins.adoc
-    rhdh-supported-plugins.csv
-  )
-  ls "${catalogindextmpdir}"
-  if [[ ! -d "$src" ]]; then
-    echo -e "${red}[ERROR] Missing directory in catalog index image: $src${norm}" >&2
+EXPECTED_RELEASE=""
+if [[ $SKIP_SUPPORTED_TABLES -eq 0 ]]; then
+  fetch_catalog_index "$SUPPORTED_IMAGE" "$catalogindextmpdir/supported" || exit 1
+  SUPPORTED_VERSION=$(jq -er '.Labels["rhdh.version"] | strings' "$catalogindextmpdir/supported/inspect.json") || exit 1
+  EXPECTED_RELEASE=$(rhdh_minor "$SUPPORTED_VERSION") || { echo "[ERROR] Invalid supported RHDH version: $SUPPORTED_VERSION" >&2; exit 1; }
+fi
+
+if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
+  fetch_catalog_index "$COMMUNITY_IMAGE" "$catalogindextmpdir/community" || exit 1
+  COMMUNITY_INFO="$catalogindextmpdir/community/catalog-index/build-info.json"
+  [[ -f $COMMUNITY_INFO ]] || { echo "[ERROR] Missing $COMMUNITY_INFO" >&2; exit 1; }
+  COMMUNITY_VERSION=$(jq -er '."rhdh-version" | strings' "$COMMUNITY_INFO") || exit 1
+  COMMUNITY_RELEASE=$(rhdh_minor "$COMMUNITY_VERSION") || { echo "[ERROR] Invalid community RHDH version: $COMMUNITY_VERSION" >&2; exit 1; }
+  [[ -z $EXPECTED_RELEASE || $COMMUNITY_RELEASE == "$EXPECTED_RELEASE" ]] || { echo "[ERROR] $COMMUNITY_IMAGE has RHDH $COMMUNITY_VERSION, expected $EXPECTED_RELEASE" >&2; exit 1; }
+  EXPECTED_RELEASE="$COMMUNITY_RELEASE"
+fi
+[[ $INDEX_TAG == next || $EXPECTED_RELEASE == "$INDEX_TAG" ]] || { echo "[ERROR] Catalog index has RHDH $EXPECTED_RELEASE, expected $INDEX_TAG" >&2; exit 1; }
+
+# Validate both images before changing generated files.
+for file in "${SUPPORTED_FILES[@]}"; do
+  if [[ $SKIP_SUPPORTED_TABLES -eq 0 && ! -f "$catalogindextmpdir/supported/catalog-index/extend_dynamic-plugins-reference/$file" ]]; then
+    echo "[ERROR] Missing supported catalog file: $file" >&2
     exit 1
   fi
-  for f in "${files[@]}"; do
-    if [[ ! -f "$src/$f" ]]; then
-      echo -e "${red}[ERROR] Missing file in catalog index image: $src/$f${norm}" >&2
+done
+if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
+  for file in "${COMMUNITY_FILES[@]}"; do
+    if [[ ! -f "$catalogindextmpdir/community/catalog-index/extend_dynamic-plugins-reference/$file" ]]; then
+      echo "[ERROR] Missing community catalog file: $file" >&2
       exit 1
     fi
-    cp "$src/$f" "${SCRIPT_DIR}/$f"
-    echo -e "${green}Copied $f from catalog index${norm}"
   done
-}
-
-# Call function if not skipped
-if [[ $SKIP_TABLES -eq 0 ]]; then
-    generate_dynamic_plugins_table
 fi
 
-# ============================================================================
-# Generate ref-community-supported-plugins.adoc from rhdh-plugin-export-overlays
-# ============================================================================
+# Update tracking manifest with new catalog index digests
+# Keep the previous source record when this run skips an index.
+SUPPORTED_ENTRY=null
+COMMUNITY_ENTRY=null
+if [[ -f $MANIFEST ]]; then
+  SUPPORTED_ENTRY=$(jq -c '.sources.supported // null' "$MANIFEST") || exit 1
+  COMMUNITY_ENTRY=$(jq -c '.sources.community // null' "$MANIFEST") || exit 1
+fi
 
-# Extract ${VAR_NAME} placeholders from spec.appConfigExamples[0].content for docs tables.
-get_required_variables() {
-    local metadata_file="$1"
-    local Required_Variables=""
-    local appConfig
-    appConfig=$(yq -r '.spec.appConfigExamples[0].content // empty' "$metadata_file" 2>/dev/null)
-    if [[ -n "$appConfig" && "$appConfig" != "null" ]]; then
-        # Extract ${VARIABLE_NAME} patterns
-        # shellcheck disable=SC2016
-        while IFS= read -r var; do
-            [[ -n "$var" ]] && Required_Variables="${Required_Variables}\`${var}\`\\n\\n"
-        done < <(echo "$appConfig" | grep -o '\${[^}]*}' | sed 's/\${//g' | sed 's/}//g' | LC_ALL=C sort -u)
-    fi
-    printf '%s' "$Required_Variables"
-}
+# Replace each fetched source record with its image, digest, and versions.
+# The supported image stores its Backstage version in an image label.
+if [[ $SKIP_SUPPORTED_TABLES -eq 0 ]]; then
+  SUPPORTED_DIGEST=$(cat "$catalogindextmpdir/supported/digest")
+  SUPPORTED_BACKSTAGE=$(jq -r '.Labels["backstage.version"] // ""' "$catalogindextmpdir/supported/inspect.json")
+  SUPPORTED_ENTRY=$(jq -nc \
+    --arg image "$SUPPORTED_IMAGE" \
+    --arg digest "$SUPPORTED_DIGEST" \
+    --arg rhdh "$SUPPORTED_VERSION" \
+    --arg backstage "$SUPPORTED_BACKSTAGE" \
+    '{image: $image, digest: $digest,
+      rhdhVersion: $rhdh, backstageVersion: $backstage}') || exit 1
+  printf 'Supported index: %s@%s (RHDH %s, Backstage %s)\n' \
+    "${SUPPORTED_IMAGE%:*}" "$SUPPORTED_DIGEST" "$SUPPORTED_VERSION" "$SUPPORTED_BACKSTAGE"
+fi
 
-generate_community_table() {
-    if [[ ! -d "$overlaystmpdir" ]]; then
-        echo -e "${red}[ERROR] Overlays repo not found: $overlaystmpdir${norm}"
-        return 1
-    fi
-
-    echo -e "${green}Generating community plugins table from $overlaystmpdir (branch: $BRANCH)${norm}"
-
-    COMMUNITY_TABLE_FILE="/tmp/community_table_${BRANCH}.txt"
-    BUNDLED_PLUGINS_FILE="/tmp/bundled_plugins_${BRANCH}.txt"
-
-    rm -f "$COMMUNITY_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
-    touch "$COMMUNITY_TABLE_FILE" "$BUNDLED_PLUGINS_FILE"
-
-    # Read the community packages list
-    COMMUNITY_PACKAGES_FILE="$overlaystmpdir/rhdh-community-packages.txt"
-
-    if [[ ! -f "$COMMUNITY_PACKAGES_FILE" ]]; then
-        echo -e "${red}[ERROR] Community packages file not found: $COMMUNITY_PACKAGES_FILE${norm}"
-        return 1
-    fi
-
-    community_count=0
-
-    # Track processed plugins to avoid duplicates using a temp file
-    PROCESSED_PLUGINS_FILE="/tmp/processed_plugins_${BRANCH}.txt"
-    rm -f "$PROCESSED_PLUGINS_FILE"
-    touch "$PROCESSED_PLUGINS_FILE"
-
-    # Process each line in the community packages file
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Skip empty lines and comments
-        [[ -z "$line" || "$line" =~ ^# ]] && continue
-
-        # Parse the workspace path (e.g., "jenkins/plugins/jenkins" or "gitlab/packages/gitlab")
-        workspace_path="$line"
-
-        # Extract workspace name (first part before /)
-        workspace_name="${workspace_path%%/*}"
-
-        # Find metadata files in this workspace
-        metadata_dir="$overlaystmpdir/workspaces/$workspace_name/metadata"
-
-        if [[ ! -d "$metadata_dir" ]]; then
-            if [[ $QUIET -eq 0 ]]; then
-                echo -e "${blue}[WARN] Metadata directory not found for workspace: $workspace_name${norm}"
-            fi
-            continue
-        fi
-
-        if [[ $QUIET -eq 0 ]]; then
-            echo -e "${blue}[WARN] Check overlay metadata: $metadata_dir${norm}"
-        fi
-        # Process each metadata YAML file in the workspace
-        for metadata_file in "$metadata_dir"/*.yaml; do
-            [[ ! -f "$metadata_file" ]] && continue
-
-            # Extract data from the metadata file
-            plugin_title=$(yq -r '.metadata.title // ""' "$metadata_file")
-            plugin_name=$(yq -r '.metadata.name // ""' "$metadata_file")
-            plugin_version=$(yq -r '.spec.version // ""' "$metadata_file")
-            dynamic_artifact=$(yq -r '.spec.dynamicArtifact // ""' "$metadata_file")
-            support=$(yq -r '.spec.support // "unknown"' "$metadata_file")
-            Required_Variables=$(get_required_variables "$metadata_file")
-
-            # Skip if not a community plugin or no dynamic artifact
-            [[ "$support" != "community" && "$support" != "dev-preview" ]] && continue
-            [[ -z "$dynamic_artifact" || "$dynamic_artifact" == "null" ]] && continue
-            [[ "$dynamic_artifact" != "oci://ghcr.io"* ]] && continue
-
-            # Skip if already processed (avoid duplicates)
-            if grep -qxF "$plugin_name" "$PROCESSED_PLUGINS_FILE" 2>/dev/null; then
-                continue
-            fi
-
-            # only include this plugin if its metadata matches the entry we're looking for
-            echo "$plugin_name" >> "$PROCESSED_PLUGINS_FILE"
-
-
-            # Extract new path - get the base URL without the version/integrity part
-            # Format: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:bs_1.45.3__0.26.0
-            # We want: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-jenkins:<tag>
-            # Remove the tag to get the base path
-            artifact_without_hash="${dynamic_artifact%%!*}"
-            new_path_base="${artifact_without_hash%:*}"
-            new_path="${new_path_base}:<tag>"
-
-            # Format title for display
-            display_title="${plugin_title:-$plugin_name}"
-
-            if [[ $QUIET -eq 0 ]]; then
-                echo    " * Plugin: $display_title"
-                echo    "   Version: $plugin_version"
-                printf  '   Path: %s\n\n%b\n' "$new_path" "$Required_Variables"
-            fi
-
-            # Add to community table (sorted by title)
-            # shellcheck disable=SC2028
-            echo "|*${display_title}*\n|${plugin_version}|\`${new_path}\`\n\n${Required_Variables}\`" >> "$COMMUNITY_TABLE_FILE"
-
-            community_count=$((community_count + 1))
-        done
-    done < "$COMMUNITY_PACKAGES_FILE"
-
-    # Cleanup processed plugins tracking file
-    rm -f "$PROCESSED_PLUGINS_FILE"
-
-
-    # LC_ALL=C sort the community table by plugin title and format for adoc
-    COMMUNITY_TABLE_SORTED="/tmp/community_table_sorted_${BRANCH}.txt"
-    if [[ -f "$COMMUNITY_TABLE_FILE" ]]; then
-        LC_ALL=C sort -t '|' -k1,1 "$COMMUNITY_TABLE_FILE" | while read -r line; do
-            echo -e "${line#*||}\n" >> "$COMMUNITY_TABLE_SORTED"
-        done
-    fi
-
-    # Generate the community supported plugins adoc file from template
-    community_template="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.template.adoc}"
-    community_output="${0/rhdh-supported-plugins.sh/ref-community-supported-plugins.adoc}"
-
-
-    # Replace placeholders in template
-    sed -e "/%%COMMUNITY_TABLE_CONTENT%%/{r $COMMUNITY_TABLE_SORTED" -e 'd;}' \
-        -e "s/%%COMMUNITY_TABLE_COUNT%%/$community_count/g" \
-        "$community_template" > "$community_output"
-
-    echo -e "${green}Generated $community_output with $community_count migrated plugins${norm}"
-
-
-    # Cleanup temp files
-    rm -f "$COMMUNITY_TABLE_FILE" "$COMMUNITY_TABLE_SORTED" "$BUNDLED_PLUGINS_FILE"
-}
-
-# Call function if not skipped
+# The community image stores its Backstage version in build-info.json.
 if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
-    generate_community_table
+  COMMUNITY_DIGEST=$(cat "$catalogindextmpdir/community/digest")
+  COMMUNITY_BACKSTAGE=$(jq -r '."backstage-version" // ""' "$COMMUNITY_INFO")
+  COMMUNITY_ENTRY=$(jq -nc \
+    --arg image "$COMMUNITY_IMAGE" \
+    --arg digest "$COMMUNITY_DIGEST" \
+    --arg rhdh "$COMMUNITY_VERSION" \
+    --arg backstage "$COMMUNITY_BACKSTAGE" \
+    '{image: $image, digest: $digest,
+      rhdhVersion: $rhdh, backstageVersion: $backstage}') || exit 1
+  printf 'Community index: %s@%s (RHDH %s, Backstage %s)\n' \
+    "$COMMUNITY_CATALOG_INDEX" "$COMMUNITY_DIGEST" "$COMMUNITY_VERSION" "$COMMUNITY_BACKSTAGE"
 fi
+
+# Combine refreshed entries with preserved entries for skipped indexes.
+# --argjson keeps each entry as a JSON object or null rather than a string.
+jq -n \
+  --arg branch "$BRANCH" \
+  --arg release "$EXPECTED_RELEASE" \
+  --argjson supported "$SUPPORTED_ENTRY" \
+  --argjson community "$COMMUNITY_ENTRY" \
+  '{
+    branch: $branch,
+    rhdhRelease: $release,
+    sources: {supported: $supported, community: $community}
+  }' \
+  > "$catalogindextmpdir/manifest.json" || exit 1
+
+if [[ $SKIP_SUPPORTED_TABLES -eq 0 ]]; then
+  for file in "${SUPPORTED_FILES[@]}"; do
+    cp "$catalogindextmpdir/supported/catalog-index/extend_dynamic-plugins-reference/$file" "$SCRIPT_DIR/$file" || exit 1
+  done
+fi
+if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
+  for file in "${COMMUNITY_FILES[@]}"; do
+    cp "$catalogindextmpdir/community/catalog-index/extend_dynamic-plugins-reference/$file" "$SCRIPT_DIR/$file" || exit 1
+  done
+fi
+cp "$catalogindextmpdir/manifest.json" "$MANIFEST" || exit 1
 
 # summary of changes since last time
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)

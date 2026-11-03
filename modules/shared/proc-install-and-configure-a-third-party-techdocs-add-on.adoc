@@ -63,22 +63,27 @@ $ docker push quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
 plugins:
       - package: oci://quay.io/_<user_name>_/_<techdocs_add-on_image>_:latest
         disabled: false
-        pluginConfig:
-          dynamicPlugins:
-            frontend:
-             _<techdocs_add-on_package>_
-                techdocsAddons:
-                  - importName: _<third-party_add-on_name>_
-                   config:
-                      props:
-                       _<techdocs_add-on_property_key>_: _<techdocs_add-on_property_value>_
 ----
 +
 where
 
 _<user_name>_ :: Specifies your Quay user name or organization name.
 _<techdocs_add-on_image>_ :: Specifies the name of the image for the third-party add-on that you want to use, for example, `mermaid`.
-_<techdocs_add-on_package>_ :: Specifies the , for example, `backstage-plugin-techdocs-addon-mermaid`.
-_<third-party_add-on_name>_ :: Specifies the name of the third-party add-on that you want to use, for example, `Mermaid`.
-_<techdocs_add-on_property_key>_ :: Specifies the name of the custom property that can be passed to the third-party add-on, for example, `themeVariables`. Properties are specific to each add-on. You can list multiple properties for an add-on.
-_<techdocs_add-on_property_value>_ :: Specifies the value of a property key for the third-party add-on, for example, `lineColor: #000000`.
++
+[NOTE]
+====
+In {product} {product-version}, the new front-end system no longer uses the `dynamicPlugins.frontend.<plugin>.techdocsAddons` wiring. The plugin creator registers each add-on in code by using `AddonBlueprint.make` from `@backstage/plugin-techdocs-react/alpha` and exposing the resulting extensions through `createFrontendModule({ pluginId: 'techdocs', extensions: [...] })`. Each add-on produces an extension ID in the format `addon:techdocs/_<add-on_name>_`. Any React props for the add-on are also set in code by the plugin creator. For an example, see the upstream link:https://github.com/backstage/backstage/blob/master/plugins/techdocs-module-addons-contrib/src/alpha.ts[`alpha.ts` module in the {backstage} repository].
+====
+. TechDocs add-ons are enabled by default when their module is installed in the application.
++
+. Optional: To disable a TechDocs add-on or to override its configuration, add an entry for its extension ID to the `app.extensions` key in your `{my-app-config-file}` file. For example:
+[source,yaml,subs="+quotes,+attributes"]
+----
+app:
+  extensions:
+    - addon:techdocs/_<add-on_name>_: false
+----
++
+where
+
+_<add-on_name>_ :: Specifies the extension name of the third-party add-on, for example, `mermaid`.

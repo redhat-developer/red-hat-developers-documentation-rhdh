@@ -3,27 +3,30 @@
 = ServiceNow configuration parameters
 
 [role="_abstract"]
-The ServiceNow integration requires specific parameters in your configuration files to establish a connection between {product} and your ServiceNow instances. Use these parameters to define authentication methods, instance URLs, and UI layouts.
+The ServiceNow integration uses configuration parameters to connect {product} to your ServiceNow instance. These parameters define the instance URL and authentication method. The front-end plugin provides the ServiceNow entity tab.
 
 [id="servicenow-backend-and-frontend-configuration_{context}"]
-== ServiceNow backend and frontend configuration
+== ServiceNow backend configuration
 
-Define the following parameters in the `app-config.yaml` file or the `dynamic-plugins.yaml` section of the `{product}` ConfigMap to enable the backend and frontend plugins.
+Configure the ServiceNow backend plugin with these parameters in the `app-config.yaml` file or the `dynamic-plugins.yaml` section of the {product} ConfigMap.
 
 |===
 | Parameter | Description | Requirement
 
 | `instanceUrl` | The base URL of your ServiceNow instance. For example, `https://dev12345.service-now.com`. | Required
-| `basicAuth.username` | The service account username for Basic authentication. | Optional
-| `basicAuth.password` | The service account password for Basic authentication. | Optional
-| `oauth.grantType` | The OAuth 2.0 grant type. Supports `client_credentials` or `password`. | Optional
-| `oauth.clientId` | The client ID for OAuth authentication. | Optional
-| `oauth.clientSecret` | The client secret for OAuth authentication. | Optional
+| `basicAuth.username` | The service account username for Basic authentication. | Required for Basic authentication
+| `basicAuth.password` | The service account password for Basic authentication. | Required for Basic authentication
+| `oauth.grantType` | The OAuth 2.0 grant type. Supports `client_credentials` or `password`. | Required for OAuth authentication
+| `oauth.clientId` | The client ID for OAuth authentication. | Required for OAuth authentication
+| `oauth.clientSecret` | The client secret for OAuth authentication. | Required for OAuth authentication
+| `oauth.tokenUrl` | The URL of the OAuth token endpoint. | Optional
+| `oauth.username` | The service account username for the OAuth password grant. | Required for the `password` grant
+| `oauth.password` | The service account password for the OAuth password grant. | Required for the `password` grant
 |===
 
 [id="servicenow-scaffolder-configuration_{context}"]
 == ServiceNow scaffolder configuration
-The ServiceNow Scaffolder module requires a separate configuration block. Note that this module uses `baseUrl` instead of `instanceUrl`.
+The ServiceNow Scaffolder module requires a separate configuration block. It uses `baseUrl` instead of `instanceUrl`.
 
 |===
 | Parameter | Description | Requirement
@@ -48,7 +51,7 @@ servicenow:
 ----
 
 [id="servicenow-oauth-client-credentials_{context}"]
-== OAuth with Client Credentials
+== OAuth with client credentials
 [source,yaml]
 ----
 servicenow:
@@ -60,7 +63,7 @@ servicenow:
 ----
 
 [id="servicenow-oauth-password-grant_{context}"]
-== OAuth with Password Grant
+== OAuth with password grant
 [source,yaml]
 ----
 servicenow:
@@ -74,23 +77,17 @@ servicenow:
 ----
 
 [id="servicenow-frontend-ui-configuration_{context}"]
-== Frontend UI configuration
-The frontend plugin configuration defines how ServiceNow data appears on component entity pages.
+== ServiceNow front-end tab
 
-[source,yaml]
-----
-dynamicPlugins:
-  frontend:
-    backstage-community.plugin-servicenow:
-      entityTabs:
-        - path: /servicenow
-          title: ServiceNow
-          mountPoint: entity.page.servicenow
-      mountPoints:
-        - mountPoint: entity.page.servicenow/cards
-          importName: ServicenowPage
-          config:
-            layout:
-              gridColumn: 1 / -1
-              height: 75vh
-----
+When you enable the ServiceNow front-end plugin, its entity-content extension adds a *ServiceNow* tab at `/servicenow` on catalog entity pages with a `servicenow.com/` annotation.
+
+[IMPORTANT]
+====
+Old front-end system (OFS) configuration examples do not apply to {product} 2.1. The new front-end system removes the `dynamicPlugins.frontend` configuration, and some options might not have direct replacements. You do not wire the ServiceNow tab manually with `entityTabs` or `mountPoints`.
+
+For documented configuration changes, see {configuring-book-link}#configuration-key-mapping-from-old-to-new-front-end-system_migrate-to-the-front-end-system-to-use-blueprint-based-dynamic-routing[Configuration key mapping from old to new front-end system].
+
+If you develop custom plugins, see {configuring-book-link}#migrate-custom-plugins-to-ensure-compatibility-after-upgrade_migrate-to-the-front-end-system-to-use-blueprint-based-dynamic-routing[Migrate custom plugins to ensure compatibility after upgrade].
+====
+
+To add the annotation to a catalog entity, see xref:link-servicenow-tickets-to-catalog-entities_{context}[Link ServiceNow tickets to catalog entities].

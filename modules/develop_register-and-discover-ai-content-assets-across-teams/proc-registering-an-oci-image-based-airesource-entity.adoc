@@ -1,0 +1,61 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="registering-an-oci-image-based-airesource-entity_{context}"]
+= Register an OCI image AI content asset
+
+[role="_abstract"]
+Register an AI content asset that is packaged as an OCI image by adding a `catalog-info.yaml` file with `kind: AiResource` and a `backstage.io/source-location` annotation that uses the `url:oci://` form, and then registering it through the standard catalog self-service flow or a catalog location.
+
+.Prerequisites
+
+* You have installed and configured the {product} instance.
+* You have enabled the `AiResource` catalog backend plugin. See xref:installing-the-airesource-plugin_{context}[Install the AiResource catalog backend plugin].
+* You have published your AI content as an OCI image to a container registry, such as Quay.io.
+* You have a repository that you use for catalog configuration, where you can store the `catalog-info.yaml` file.
+* If RBAC is enabled, you have a role with the following permissions: `catalog.entity.create`, `catalog.location.create`.
+
+.Procedure
+
+. In your catalog configuration repository, create a file named `catalog-info.yaml`:
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: _<your_ai_content_asset>_
+  description: _<asset_brief_description>_
+  tags:
+    - ai-rules
+  annotations:
+    backstage.io/source-location: url:oci://quay.io/_<your_org>_/_<your_asset>_:_<tag>_
+spec:
+  type: skill
+  lifecycle: experimental
+  owner: _<your_team_name>_
+----
++
+[NOTE]
+====
+Use the location-reference form `url:oci://...`. The `url:` prefix is required. The catalog records the OCI image reference as-is. {product-very-short} does not pull, extract, or run the image content, and it does not verify that the reference is reachable during ingestion.
+====
+. Commit the `catalog-info.yaml` file to your repository.
+. Register the entity by using one of the following methods:
++
+--
+* In your {product} navigation menu, go to *Catalog* > *Self-service*, click *Register Existing Component*, enter the full URL of the `catalog-info.yaml` file in your repository, and complete the wizard instructions.
+* Add the location to your `app-config` file:
++
+[source,yaml]
+----
+catalog:
+  locations:
+    - type: url
+      target: _<repository_url>_/blob/main/catalog-info.yaml
+----
+--
+
+.Verification
+
+. The asset is listed in the Software Catalog when you filter by *Kind* = *AiResource*.
+. On the entity detail page, the asset location is shown as the OCI image reference.

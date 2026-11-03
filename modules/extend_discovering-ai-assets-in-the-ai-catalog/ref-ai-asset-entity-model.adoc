@@ -1,0 +1,108 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-ai-asset-entity-model_{context}"]
+= AI Asset entity model
+
+[role="_abstract"]
+AI assets are represented as Software Catalog entities. The entity kind and `spec.type` determine how the AI Catalog classifies and displays each asset.
+
+AI Agent and AI Skill assets use the `AiResource` entity kind with `spec.type` values corresponding to their category:
+
+[cols="1,1,3",options="header"]
+|===
+| Category | `spec.type` | Description
+
+| AI Agent
+| `ai-agent`
+| Autonomous systems that perform tasks by using tools and skills
+
+| AI Skill
+| `ai-skill`
+| Reusable capabilities invoked by agents to accomplish tasks
+|===
+
+The following example shows an AI skill entity:
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: python-testing-skill
+  namespace: default
+spec:
+  type: ai-skill
+  owner: team-ai
+  lifecycle: production
+----
+
+MCP Server assets use the `API` entity kind with `spec.type: mcp-server`:
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: github-mcp-server
+  title: GitHub MCP Server
+  description: Model Context Protocol server providing GitHub repository context, pull request data, and issue tracking integration.
+  tags:
+    - github
+    - mcp
+    - context
+spec:
+  type: mcp-server
+  lifecycle: experimental
+  owner: team-integrations
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: GitHub MCP Server
+      version: 0.9.0
+  remotes:
+    - url: https://mcp.example.com/github
+      type: streamable-http
+----
+
+Model Server assets use the `AiModelServerAPI` entity kind. AI Model assets do not have their own entity kind. Instead, each model is listed under the model server's `spec.models.available` field:
+
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: AiModelServerAPI
+metadata:
+  name: granite-model-server
+  title: Granite Model Server
+  description: IBM Granite model server hosting code generation and instruction-following models.
+  tags:
+    - model-server
+    - code-generation
+    - ibm
+  links:
+    - title: API
+      url: https://granite.example.com/v1
+spec:
+  type: ai-model-server
+  lifecycle: production
+  owner: team-ml-ops
+  serverType: openai-v1
+  serverUrl: https://granite.example.com/v1
+  requiresApiKey: true
+  models:
+    discoverable: true
+    available:
+      - granite-3-code
+      - granite-3-instruct
+    default: granite-3-instruct
+----
+
+To display rich usage documentation in the AI Catalog detail page, add a TechDocs reference to the entity:
+
+[source,yaml]
+----
+metadata:
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+----
+
+When a TechDocs reference is present, the AI Catalog renders the documentation inline in the "How to use this" panel. Without a TechDocs reference, the catalog displays links to the source registry, repository, or download location.
