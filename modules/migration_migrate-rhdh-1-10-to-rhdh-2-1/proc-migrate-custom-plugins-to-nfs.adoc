@@ -6,6 +6,38 @@
 [role="_abstract"]
 Custom plugins built with Old Frontend System (OFS) APIs must support the New Frontend System (NFS) before you deploy them on {product} 2.1. You do not rewrite the plugins: you add an NFS entry point and extensions alongside your existing code, move YAML wiring into them, and re-export the plugin.
 
+In the OFS, a plugin used `createPlugin` with extension helpers in `src/index.ts`, and you declared its UI placement in `dynamicPlugins.frontend` YAML. In the NFS, the plugin declares its own extensions by using blueprints in a `src/alpha.tsx` entry point, and operators only enable, disable, or override them through `app.*` configuration. The following table summarizes the main changes:
+
+[options="header"]
+|===
+| Aspect | Old Frontend System | New Frontend System
+
+| Plugin definition
+| `createPlugin` in `src/index.ts`
+| `createFrontendPlugin` in `src/alpha.tsx`
+
+| Package export
+| `PluginRoot` export (default)
+| `./alpha` entry point with a `createFrontendPlugin` default export
+
+| Pages and routes
+| `dynamicRoutes` and `menuItem` in YAML
+| `PageBlueprint`; navigation comes from the page `title` and `icon`
+
+| Entity UI
+| `mountPoints` and `entityTabs`
+| `EntityCardBlueprint` and `EntityContentBlueprint`
+
+| APIs
+| `apiFactories`
+| `ApiBlueprint` extensions, which are auto-discovered
+|===
+
+[IMPORTANT]
+====
+Some blueprint parameters were renamed in recent releases. For example, `PageBlueprint` now uses `path` instead of `defaultPath`, and `EntityContentBlueprint` uses `path`, `title`, and `group` instead of `defaultPath`, `defaultTitle`, and `defaultGroup`. Check the current blueprint parameters when you write your extensions.
+====
+
 .Prerequisites
 
 * You have access to the source code of your custom plugins.
@@ -19,6 +51,61 @@ Custom plugins built with Old Frontend System (OFS) APIs must support the New Fr
 .. Keep the entry point lightweight by loading page and card UI with `import()` instead of static imports.
 +
 You can keep the existing `PluginRoot` export so the plugin continues to work with the Old Frontend System during the transition.
++
+For example, an OFS plugin that defines a routable page as follows:
++
+[source,typescript]
+----
+// src/plugin.ts (Old Frontend System)
+export const myPlugin = createPlugin({
+  id: 'my-plugin',
+  routes: { root: rootRouteRef },
+});
+
+export const MyPage = myPlugin.provide(
+  createRoutableExtension({
+    name: 'MyPage',
+    component: () => import('./components/MyPage').then(m => m.MyPage),
+    mountPoint: rootRouteRef,
+  }),
+);
+----
++
+becomes a `PageBlueprint` extension in the NFS entry point:
++
+[source,tsx]
+----
+// src/alpha.tsx (New Frontend System)
+import { createFrontendPlugin, PageBlueprint } from '@backstage/frontend-plugin-api';
+
+const myPage = PageBlueprint.make({
+  params: {
+    path: '/my-plugin',
+    routeRef: rootRouteRef,
+    title: 'My Plugin',
+    loader: () => import('./components/MyPage').then(m => <m.MyPage />),
+  },
+});
+
+export default createFrontendPlugin({
+  pluginId: 'my-plugin',
+  extensions: [myPage],
+  routes: { root: rootRouteRef },
+});
+----
++
+Add the `./alpha` entry point to the `exports` field of `package.json`:
++
+[source,json]
+----
+{
+  "exports": {
+    ".": "./src/index.ts",
+    "./alpha": "./src/alpha.tsx",
+    "./package.json": "./package.json"
+  }
+}
+----
 
 . Move your frontend wiring from YAML into plugin extensions. For each item in your `dynamicPlugins.frontend` configuration, implement the equivalent NFS extension in `src/alpha.tsx`:
 +
