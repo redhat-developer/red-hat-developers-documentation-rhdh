@@ -316,38 +316,28 @@ report_file="$TMP_DIR/report.md"
    [generate-catalog-index.yaml](https://github.com/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml)
 
    ```bash
+   branch="release-2.1"
    gh workflow run generate-catalog-index.yaml \
-     --repo redhat-developer/rhdh-plugin-export-overlays --ref release-2.1
+     --repo redhat-developer/rhdh-plugin-export-overlays --ref "$branch"
    ```
 
-   ```bash
-   curl -X POST \
-     -H "Authorization: Bearer $GH_TOKEN" \
-     -H "Accept: application/vnd.github+json" \
-     https://api.github.com/repos/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml/dispatches \
-     -d '{"ref":"release-2.1"}'
-   ```
-
-2. Rebuild the downstream community index with the "update index" schedule:
+2. Rebuild the downstream community index with the "update index" pipeline:
    [pipeline schedules](https://gitlab.cee.redhat.com/rhidp/rhdh-plugin-catalog/-/pipeline_schedules)
 
    ```bash
-   glab api "projects/rhidp%2Frhdh-plugin-catalog/pipeline_schedules" |
-     jq '.[] | select(.description | test("update index"; "i")) | {id, description, ref}'
-   ```
-
-   ```bash
-   curl -X POST -H "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-     "https://gitlab.cee.redhat.com/api/v4/projects/rhidp%2Frhdh-plugin-catalog/pipeline_schedules/<SCHEDULE_ID>/play"
+   branch="release-2.1"
+   glab ci run -R rhidp/rhdh-plugin-catalog -b "$branch" \
+     --variables "PIPELINE_JOB:update-index,ALWAYS_CLONE:false,SEND_SLACK_NOTICE:on_failure,CATALOG_STRICT_VALIDATION:true,CATALOG_ALLOW_VERSION_REGRESSION:false,CATALOG_ALLOW_FALLBACK_TAGS:false"
    ```
 
 3. Regenerate the plugin tables from the rebuilt index:
    [generate-supported-plugins-pr.yml](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml)
 
    ```bash
+   branch="release-2.1"
    gh workflow run generate-supported-plugins-pr.yml \
      --repo redhat-developer/red-hat-developers-documentation-rhdh \
-     --ref release-2.1 -f branch=release-2.1
+     --ref "$branch" -f branch="$branch"
    ```
 
 Re-run this script after step 3 to confirm every pinned digest matches its tag.
