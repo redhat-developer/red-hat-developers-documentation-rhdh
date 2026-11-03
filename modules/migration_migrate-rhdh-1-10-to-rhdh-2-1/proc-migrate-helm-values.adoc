@@ -1,0 +1,88 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-helm-values_{context}"]
+= Migrating Helm values from the backstage chart
+
+[role="_abstract"]
+Migrate your {product-very-short} 1.y Helm values file to the {product} 2.1 +redhat-developer-hub+ chart structure before upgrading.
+
+.Prerequisites
+* You have the Helm CLI installed
+* You have access to your {product-very-short} 1.y Helm release
+* You have cluster administrator privileges
+
+.Procedure
+
+. Export your current Helm values:
++
+[source,terminal,subs="+quotes"]
+----
+$ helm get values _<release-name>_ -n _<namespace>_ -o yaml > old-values.yaml
+----
++
+Replace _<release-name>_ with your {product-very-short} release name and _<namespace>_ with your namespace.
+
+. Create a new values file for the +redhat-developer-hub+ chart:
++
+[source,terminal]
+----
+$ touch new-values.yaml
+----
+
+. Map configuration paths from the old chart to the new chart structure.
++
+Use the Helm values path mapping reference to identify path changes. Common mappings include:
++
+* +upstream.backstage.image.*+ → +image.*+
+* +global.host+ → +host+
+* +global.lightspeed.*+ → +intelligentAssistant.*+
+* +route.*+ → +openshift.route.*+
+* +global.dynamic.plugins+ → +dynamicPlugins.plugins+
+
+. Remove chart-managed system resources from +extra*+ fields.
++
+The new chart manages volumes, volume mounts, environment variables, and init containers automatically. Remove these from +extraVolumes+, +extraVolumeMounts+, +extraEnvVars+, and similar fields.
++
+Consult the chart-managed system resources reference for the complete list.
+
+. Update image references to use {product} 2.1 container images:
++
+[source,yaml]
+----
+image:
+  registry: quay.io
+  repository: rhdh/rhdh-hub-rhel10
+  tag: "2.1"
+----
++
+Container images rename from +*-rhel9+ to +*-rhel10+ suffixes.
+
+. (Optional) Address behavioral changes:
++
+* Set +intelligentAssistant.enabled: false+ if you previously disabled the AI assistant
+* Pin +postgresql.image.tag+ if you are not upgrading PostgreSQL
+* Define NetworkPolicy rules for external connectivity
+
+. Validate the migrated values using +helm template+:
++
+[source,terminal,subs="+quotes"]
+----
+$ helm template _<release-name>_ redhat-developer/redhat-developer-hub \
+    -f new-values.yaml \
+    --namespace _<namespace>_ > rendered.yaml
+----
++
+Review +rendered.yaml+ for configuration errors or unexpected values.
+
+. (Optional) Compare the rendered output with your current deployment:
++
+[source,terminal,subs="+quotes"]
+----
+$ helm get manifest _<release-name>_ -n _<namespace>_ > current.yaml
+$ diff current.yaml rendered.yaml
+----
+
+.Verification
+
+* Verify that the +helm template+ command succeeds without errors
+* Review the rendered manifests to confirm your configuration applies correctly

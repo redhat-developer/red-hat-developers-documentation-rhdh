@@ -1,0 +1,183 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-pre-upgrade-checklist-custom-plugins_{context}"]
+= Pre-upgrade checklist for custom plugins
+
+[role="_abstract"]
+Complete this checklist before upgrading to {product} 2.1 to verify that your custom plugins are ready for the new front-end system. All items must be completed to avoid deployment failures.
+
+[WARNING]
+====
+Custom front-end plugins that do not meet these requirements will fail to load in {product} 2.1. Complete all checklist items before upgrading.
+====
+
+== Plugin code migration
+
+[cols="1,3", options="header"]
+|===
+| Status | Requirement
+
+| ☐
+| All custom front-end plugins implement +createFrontendPlugin+ with extension blueprints
+
+| ☐
+| All custom plugins include an +/alpha+ export in +package.json+ exports field
+
+| ☐
+| Extension blueprints use appropriate types (+EntityCardBlueprint+, +EntityContentBlueprint+, +PageBlueprint+)
+
+| ☐
+| Plugin dependencies include +@backstage/frontend-plugin-api+ and +@backstage/plugin-catalog-react+ (if entity extensions)
+
+| ☐
+| Plugins export as dynamic plugins using +npx @red-hat-developer-hub/cli plugin export+
+
+| ☐
+| Plugin manifests (+plugin-manifest.yaml+) exist for all custom plugins
+|===
+
+== Configuration migration
+
+[cols="1,3", options="header"]
+|===
+| Status | Requirement
+
+| ☐
+| All +dynamicPlugins.frontend+ blocks converted to +app.extensions+ format
+
+| ☐
+| All +dynamicRoutes+ definitions removed (pages now auto-discovered)
+
+| ☐
+| All +mountPoints+ definitions removed (extension blueprints define placement)
+
+| ☐
+| All +entityTabs+ definitions removed (use +EntityContentBlueprint+)
+
+| ☐
+| All +appIcons+ definitions removed (use +IconBundleBlueprint+ in plugin code)
+
+| ☐
+| All +menuItems+ definitions removed (sidebar navigation inferred from pages)
+
+| ☐
+| All +routeBindings+ definitions removed or converted to +app.routes.bindings+ (most auto-resolve)
+
+| ☐
+| All +apiFactories+ definitions removed (use +ApiBlueprint+ in plugin code)
+
+| ☐
+| All +scaffolderFieldExtensions+ definitions removed (use +ScaffolderFieldExtensionBlueprint+)
+|===
+
+== Plugin distribution migration
+
+[cols="1,3", options="header"]
+|===
+| Status | Requirement
+
+| ☐
+| All +./dynamic-plugins/dist/+ references removed from configuration
+
+| ☐
+| All custom plugins published as OCI container images or available as file paths
+
+| ☐
+| Plugin references use OCI image format (+quay.io/<registry>/plugin-name:tag+) or absolute file paths
+
+| ☐
+| Required plugins explicitly listed in +global.dynamic.plugins+ or +dynamicPlugins.plugins+ configuration
+|===
+
+== Environment and build cleanup
+
+[cols="1,3", options="header"]
+|===
+| Status | Requirement
+
+| ☐
+| +APP_CONFIG_app_packageName+ environment variable removed from deployment templates
+
+| ☐
+| +ENABLE_STANDARD_MODULE_FEDERATION+ environment variable removed
+
+| ☐
+| +DISABLE_STANDARD_MODULE_FEDERATION+ environment variable removed
+
+| ☐
+| +dist-scalprum+ build output directories deleted from custom plugin builds
+
+| ☐
+| +scalprum.name+ field removed from all +package.json+ files
+
+| ☐
+| +scalprum.exposedModules+ field removed from all +package.json+ files
+|===
+
+== Local testing validation
+
+[cols="1,3", options="header"]
+|===
+| Status | Requirement
+
+| ☐
+| Custom plugins tested locally using +rhdh-local+ project
+
+| ☐
+| Plugins tested against {product} 2.1 release branch (+release-2.1+)
+
+| ☐
+| All plugin extensions appear in expected locations (entity pages, sidebar, etc.)
+
+| ☐
+| Conditional rendering (entity kind filters) works as expected
+
+| ☐
+| No console errors related to extension resolution or plugin loading
+
+| ☐
+| Browser console shows no +Skipping dynamic plugin remote module+ warnings
+|===
+
+== Staging deployment verification
+
+[cols="1,3", options="header"]
+|===
+| Status | Requirement
+
+| ☐
+| {product} 2.1 staging deployment boots successfully with migrated configuration
+
+| ☐
+| All custom plugins appear in the plugin registry (+/admin+ page)
+
+| ☐
+| Custom plugin functionality works in staging environment
+
+| ☐
+| Backend logs show no +Could not find manifest for frontend plugin+ errors
+
+| ☐
+| No +FrontendFeature+ export errors in browser console
+|===
+
+== Completion criteria
+
+[IMPORTANT]
+====
+All checklist items must be completed and verified before upgrading your production {product} deployment to version 2.1. Upgrading with incomplete plugin migration will cause deployment failures.
+====
+
+.Verification
+
+After completing all checklist items:
+
+. Export the checklist with completion timestamps
+. Attach to upgrade approval documentation
+. Verify with stakeholders before scheduling production upgrade
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:con-plugin-migration-workflow-overview_{context}[Plugin migration workflow overview]
+* xref:proc-test-custom-plugins-locally-before-upgrade_{context}[Test custom plugins locally before upgrading]
