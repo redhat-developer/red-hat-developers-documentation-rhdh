@@ -1,0 +1,64 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="migrate-ai-configuration-from-rhdh-1-10-to-2-1_{context}"]
+= Migrate AI configuration from {product-very-short} 1.10 to 2.1
+
+[role="_abstract"]
+Update your AI backend configuration to align with the {lcs-name} ({lcs-short}) conventions introduced in {product} ({product-very-short}) 2.1, which replaces the Llama Stack backend.
+
+.Prerequisites
+
+* You have a running {product-very-short} 1.10 instance with AI features enabled.
+* You have access to your deployment manifests, configuration files, and RBAC policy files.
+
+.Procedure
+
+. Update the backend container name in your deployment manifests by replacing `llama-stack` with `lightspeed-core`:
++
+[source,yaml]
+----
+containers:
+  - name: lightspeed-core
+----
+
+. Move your backend configuration from the Llama Stack `run.yaml` file to the `lightspeed-stack.yaml` file that {lcs-short} reads from a config map. Define your inference providers in the `inference.providers` section of `lightspeed-stack.yaml`, and do not edit the generated `run.yaml` file. For the supported providers and their requirements, see xref:large-language-model-llm-requirements_enable-ai-assistance-for-developers[Large language model (LLM) requirements].
+
+. Reconfigure safety validation. {product-very-short} 2.1 replaces the Llama Guard safety provider and `run.yaml` shield overrides with a question-validity shield that you enable through environment variables in the Kubernetes Secret that {lcs-short} reads. For the procedure, see xref:configure-safety-guards-in-rhdh_intelligent-assistant-ai-virtual-assistant-capabilities[Enable query validation to block off-topic AI responses].
+
+. If you persisted {ia-short} Notebook data on a Llama Stack path, point the `notebooks` vector store provider in `lightspeed-stack.yaml` at a persistent mount, such as `/var/lib/lightspeed-data`, backed by a Persistent Volume Claim (PVC). For the procedure, see xref:enable-data-persistence-for-intelligent-assistant-notebooks_build-a-private-knowledge-base-with-intelligent-assistant-notebooks[Enable data persistence for {ia-short} Notebooks].
+
+. Update your RBAC policies to use the new permission identifiers. {product-very-short} 2.1 replaces the `lightspeed.{asterisk}` permission namespace with `intelligent-assistant.{asterisk}` and `mcp.{asterisk}`. For the full mapping of old to new permission names, see xref:ai-feature-permissions_enable-ai-assistance-for-developers[AI feature permissions].
++
+For example, replace:
++
+[source,text]
+----
+p, role:default/<team>, lightspeed.chat.read, read, allow
+p, role:default/<team>, lightspeed.chat.create, create, allow
+----
++
+with:
++
+[source,text,subs="+quotes"]
+----
+p, role:default/_<team>_, intelligent-assistant.chat, use, allow
+----
+
+. Apply the updated configuration and restart your {product-very-short} deployment.
+
+.Verification
+
+. Verify that the `lightspeed-core` container starts without errors:
++
+[source,terminal]
+----
+$ oc logs deployment/<deployment_name> -c lightspeed-core
+----
+. Open the {ia-short} chat interface and verify that the assistant responds.
+. If you use Notebooks, verify that existing Notebooks are accessible from the *My Notebooks* dashboard.
+
+.Additional resources
+* xref:ai-feature-changes-in-rhdh-2-1_enable-ai-assistance-for-developers[AI feature changes in {product-very-short} 2.1]
+* xref:configure-safety-guards-in-rhdh_intelligent-assistant-ai-virtual-assistant-capabilities[Enable query validation to block off-topic AI responses]
+* xref:enable-data-persistence-for-intelligent-assistant-notebooks_build-a-private-knowledge-base-with-intelligent-assistant-notebooks[Enable data persistence for {ia-short} Notebooks]
+* xref:ai-feature-permissions_enable-ai-assistance-for-developers[AI feature permissions]
