@@ -4,13 +4,13 @@
 = Helm chart values mapping from 1.x to 2.1
 
 [role="_abstract"]
-The {product-very-short} 2.1 `redhat-developer-hub` chart is a clean break from the 1.x `backstage` chart. Values that lived under `upstream.backstage` and `global` paths are flattened to root-level keys, so you cannot reuse your 1.x values file. Use this reference to translate each value.
+The {product-very-short} 2.1 Helm chart no longer wraps the upstream `backstage` subchart. Values that lived under the `upstream.backstage` and `global` paths are flattened to root-level keys, so you cannot reuse your 1.x values file. Use this reference to translate each value.
 
 [NOTE]
 ====
 Fields that are not listed in the following tables keep the same path. Where a table shows a new path, use that path. If a field you use is not mentioned at all, carry it over as-is.
 
-This mapping is based on the upstream chart maintainers' link:https://github.com/redhat-developer/rhdh-chart/blob/release-2.1/charts/rhdh/docs/migration-from-backstage-chart.md[Migration guide: `backstage` chart to `redhat-developer-hub` chart], which you can consult for additional detail.
+This mapping is based on the upstream chart maintainers' link:https://github.com/redhat-developer/rhdh-chart/blob/release-2.1/charts/rhdh/docs/migration-from-backstage-chart.md[upstream Helm chart migration guide], which you can consult for additional detail.
 ====
 
 == Default changes to review before upgrading
@@ -18,7 +18,7 @@ This mapping is based on the upstream chart maintainers' link:https://github.com
 Before you translate your values, check these default changes:
 
 * *Intelligent Assistant* (formerly Lightspeed) remains enabled by default. If you explicitly disabled it in your 1.x chart, set `intelligentAssistant.enabled: false`.
-* *PostgreSQL image* defaults to `registry.redhat.io/rhel10/postgresql-18`, but PostgreSQL 15 remains supported. For an existing PostgreSQL 15 data directory, either upgrade the database during this migration or set `postgresql.image.repository: rhel10/postgresql-15` to keep PostgreSQL 15.
+* *PostgreSQL image* defaults to `registry.redhat.io/rhel10/postgresql-18`, but PostgreSQL 15 remains supported. For an existing PostgreSQL 15 data directory, either upgrade the database during this migration or set `postgresql.image.repository: rhel10/postgresql-15` to keep PostgreSQL 15. Because the default `postgresql.image.digest` reflects the PostgreSQL 18 image, you must also override this digest when you change the image reference. For the digest steps, see xref:proc-migrate-helm-chart-values-to-rhdh-2-1_{context}[Migrate your Helm chart values to {product} 2.1].
 * *Autoscaling* (`autoscaling.maxReplicas`) default changed from `100` to `3`.
 
 == Key structural changes
@@ -247,6 +247,26 @@ Before you translate your values, check these default changes:
 | `upstream.backstage.priorityClassName`
 | `priorityClassName`
 |
+
+| `upstream.backstage.revisionHistoryLimit`
+| `revisionHistoryLimit`
+|
+
+| `upstream.backstage.strategy`
+| `strategy`
+|
+
+| `upstream.backstage.hostAliases`
+| `hostAliases`
+|
+
+| `upstream.backstage.terminationGracePeriodSeconds`
+| `terminationGracePeriodSeconds`
+|
+
+| `upstream.backstage.lifecycleHooks`
+| `lifecycleHooks`
+|
 |===
 
 == Service account
@@ -265,6 +285,10 @@ Before you translate your values, check these default changes:
 
 | `upstream.serviceAccount.annotations`
 | `serviceAccount.annotations`
+|
+
+| `upstream.serviceAccount.labels`
+| `serviceAccount.labels`
 |
 
 | `upstream.serviceAccount.automountServiceAccountToken`
@@ -376,6 +400,38 @@ Before you translate your values, check these default changes:
 | `upstream.service.extraPorts`
 | `service.extraPorts`
 |
+
+| `upstream.service.clusterIP`
+| `service.clusterIP`
+|
+
+| `upstream.service.loadBalancerIP`
+| `service.loadBalancerIP`
+|
+
+| `upstream.service.loadBalancerSourceRanges`
+| `service.loadBalancerSourceRanges`
+|
+
+| `upstream.service.externalTrafficPolicy`
+| `service.externalTrafficPolicy`
+|
+
+| `upstream.service.sessionAffinity`
+| `service.sessionAffinity`
+|
+
+| `upstream.service.annotations`
+| `service.annotations`
+|
+
+| `upstream.service.ipFamilyPolicy`
+| `service.ipFamilyPolicy`
+|
+
+| `upstream.service.ipFamilies`
+| `service.ipFamilies`
+|
 |===
 
 == OpenShift Route
@@ -423,6 +479,10 @@ Before you translate your values, check these default changes:
 
 | `upstream.backstage.autoscaling.targetCPUUtilizationPercentage`
 | `autoscaling.targetCPUUtilizationPercentage`
+|
+
+| `upstream.backstage.autoscaling.targetMemoryUtilizationPercentage`
+| `autoscaling.targetMemoryUtilizationPercentage`
 |
 
 | `upstream.backstage.pdb.create`
@@ -504,7 +564,7 @@ Before you translate your values, check these default changes:
 
 | `upstream.postgresql.image.{asterisk}`
 | `postgresql.image.{asterisk}`
-| *Warning:* the default image changed from `fedora/postgresql-15` to `fedora/postgresql-18` (PostgreSQL 15 is still supported). For an existing PostgreSQL 15 data directory, upgrade the database or set `postgresql.image.repository: fedora/postgresql-15`.
+| *Warning:* the default image changed from `registry.redhat.io/rhel10/postgresql-15` to `registry.redhat.io/rhel10/postgresql-18` (PostgreSQL 15 is still supported). For an existing PostgreSQL 15 data directory, upgrade the database or set `postgresql.image.repository: rhel10/postgresql-15`. The default `postgresql.image.digest` reflects the PostgreSQL 18 image, so you must also override this digest when you change the image reference: either set `postgresql.image.digest: ""` (and optionally set `postgresql.image.tag`), or set `postgresql.image.digest` to the correct digest for your PostgreSQL 15 image.
 
 | `upstream.postgresql.auth.{asterisk}`
 | `postgresql.auth.{asterisk}`
@@ -545,7 +605,7 @@ Before you translate your values, check these default changes:
 
 | `upstream.networkPolicy.enabled`
 | _(removed)_
-| The 2.1 chart always deploys default-deny NetworkPolicies. If your deployment relies on additional connectivity, such as external APIs or cross-namespace services, you must add the corresponding NetworkPolicy rules or the connections are silently blocked.
+| In 2.1, default-deny NetworkPolicies are always deployed by both the Helm chart and the Operator; this key no longer toggles them. If your deployment relies on additional connectivity, such as external APIs or cross-namespace services, you must add the corresponding NetworkPolicy rules or the connections are silently blocked. For the deployed policies, see the link:https://github.com/redhat-developer/rhdh-chart/blob/release-2.1/charts/rhdh/templates/network-policies.yaml[`network-policies.yaml` template] in the `rhdh-chart` repository.
 
 | `upstream.networkPolicy.ingressRules.{asterisk}`
 | _(removed)_
@@ -607,6 +667,74 @@ Before you translate your values, check these default changes:
 ====
 The 1.x chart used flat `lightspeed.{asterisk}` paths and some settings are restructured rather than simply renamed. When migrating AI assistant configuration, map Helm values to `intelligentAssistant.{asterisk}` as shown in this table. The app-config renames from `lightspeed` to `intelligent-assistant` are a separate step. See xref:proc-migrate-ai-assistant-configuration_{context}[Migrate AI assistant configuration].
 ====
+
+== Orchestrator
+
+If you deploy the Orchestrator, the `orchestrator.sonataflowPlatform.{asterisk}` values are restructured in 2.1. The external database settings move under an `externalDB` object, the job and index image strings are split into structured `image` objects (`registry`, `repository`, and `tag`), and the database creation job settings are nested under `dbCreationJob`.
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `orchestrator.sonataflowPlatform.externalDBsecretRef`
+| `orchestrator.sonataflowPlatform.externalDB.existingSecret`
+| Restructured
+
+| `orchestrator.sonataflowPlatform.externalDBName`
+| `orchestrator.sonataflowPlatform.externalDB.name`
+|
+
+| `orchestrator.sonataflowPlatform.externalDBHost`
+| `orchestrator.sonataflowPlatform.externalDB.host`
+|
+
+| `orchestrator.sonataflowPlatform.externalDBPort`
+| `orchestrator.sonataflowPlatform.externalDB.port`
+|
+
+| `orchestrator.sonataflowPlatform.initContainerImage`
+| `orchestrator.sonataflowPlatform.dbCreationJob.image.{asterisk}`
+| Single image string split into structured `registry`, `repository`, and `tag` fields
+
+| `orchestrator.sonataflowPlatform.createDBJobImage`
+| `orchestrator.sonataflowPlatform.dbCreationJob.image.{asterisk}`
+| Merged with `initContainerImage`
+
+| `orchestrator.sonataflowPlatform.dataIndexImage`
+| `orchestrator.sonataflowPlatform.dataIndex.image.{asterisk}`
+| Single image string split into structured `registry`, `repository`, and `tag` fields
+
+| `orchestrator.sonataflowPlatform.jobServiceImage`
+| `orchestrator.sonataflowPlatform.jobService.image.{asterisk}`
+| Single image string split into structured `registry`, `repository`, and `tag` fields
+
+| `orchestrator.sonataflowPlatform.dbCreationJobBackoffLimit`
+| `orchestrator.sonataflowPlatform.dbCreationJob.backoffLimit`
+| Nested under `dbCreationJob`
+
+| `orchestrator.sonataflowPlatform.dbCreationJobTTLSecondsAfterFinished`
+| `orchestrator.sonataflowPlatform.dbCreationJob.ttlSecondsAfterFinished`
+| Nested under `dbCreationJob`
+
+| `orchestrator.sonataflowPlatform.dbCreationJobActiveDeadlineSeconds`
+| `orchestrator.sonataflowPlatform.dbCreationJob.activeDeadlineSeconds`
+| Nested under `dbCreationJob`
+|===
+
+== Test pod
+
+[options="header"]
+|===
+| 1.x key | 2.1 key | Notes
+
+| `test.image.tag`
+| `test.image.tag`
+| Default changed from `latest` to a pinned version
+
+| `test.injectTestNpmrcSecret`
+| _(removed)_
+| No longer needed
+|===
 
 == Removed values with no equivalent
 
