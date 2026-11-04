@@ -1,0 +1,45 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-migrating-from-rhdh-1-10-to-2-1_{context}"]
+= Migrating from {product-very-short} 1.10 to 2.1
+
+[role="_abstract"]
+{product-very-short} 2.1 introduces breaking changes to Helm charts, custom plugins, RBAC policies, AI assistant settings, container images, and plugin distribution. Some changes result in errors and others are ignored. Review the changes that apply to your deployment.
+
+== Breaking changes quick reference
+
+The following table summarizes the breaking changes in {product-very-short} 2.1 and links to the procedure that resolves each one. Use it to scope the work and confirm that you have addressed every change that applies to your deployment.
+
+[options="header"]
+|===
+| Breaking change | Impact | Action
+
+| Bundled plugin wrappers are removed
+| The {product-very-short} image no longer ships bundled plugin wrappers. A plugin that uses a local wrapper path, such as `package: ./dynamic-plugins/dist/<plugin-name>`, no longer resolves after the upgrade.
+| *Must fix.* Replace each local wrapper path with an OCI reference. See xref:proc-migrate-plugins-to-oci-references_{context}[Migrate plugin references to OCI format].
+
+| New Frontend System (NFS) hard cut-over
+| The Old Frontend System (OFS) is removed. Custom plugins that use OFS APIs fail to load after the upgrade. Red Hat supported plugins work with both systems, but if you customized them through `dynamicPlugins.frontend` (for example, routes, cards, or tabs), that configuration still needs to be migrated to the NFS `app.*` model.
+| *Must fix for custom plugins.* Add NFS support to your custom plugins before you upgrade; you do not need to rewrite them. See xref:proc-migrate-custom-plugins-to-nfs_{context}[Migrate custom plugins to the New Frontend System]. If you customized supported plugins through `dynamicPlugins.frontend`, migrate that configuration to the NFS `app.*` model.
+
+| Container images renamed
+| The RHEL 9 base images are replaced with RHEL 10 images, and the image names change. Disconnected environments that mirror by image name receive 404 errors.
+| *Must fix for disconnected environments.* Update your mirrored image references to the new names. See xref:ref-container-image-renames-rhel-9-to-rhel-10_{context}[Container image renames from RHEL 9 to RHEL 10].
+
+| RBAC permissions renamed
+| CRUD-style permission names are replaced with behavior-linked names. Old permission names fail silently, and users lose access with no error.
+| *Must fix.* Update your RBAC policies to the new permission names. See xref:proc-migrate-ai-assistant-configuration_{context}[Migrate AI assistant configuration] and xref:ref-ai-permissions-mapping-1-x-to-2-1_{context}[AI permissions mapping from 1.x to 2.1].
+
+| Lightspeed rebranded to the intelligent assistant
+| Plugin names, configuration keys, route paths, and permissions change. Any configuration that references `lightspeed` is silently ignored.
+| *Must fix.* Rename the affected configuration keys and permissions. See xref:proc-migrate-ai-assistant-configuration_{context}[Migrate AI assistant configuration].
+
+| Llama Stack removed
+| The Llama Stack integration is removed. {lcs-name} (LCORE) provides equivalent API gateway functionality.
+| *Must fix if you use Llama Stack.* Reconfigure your deployment to point to LCORE. See xref:proc-migrate-ai-assistant-configuration_{context}[Migrate AI assistant configuration].
+
+| Standalone Helm chart
+| The {product-very-short} 2.1 Helm chart is a standalone chart with a new, flattened `values.yaml` structure. The 1.x values file does not work unchanged.
+| *Must fix for Helm deployments.* Migrate your values file to the new structure, then upgrade the release in place with `helm upgrade`. You do not need to uninstall the 1.x release. See xref:proc-migrate-helm-chart-values-to-rhdh-2-1_{context}[Migrate Helm chart values to {product-very-short} 2.1].
+
+|===

@@ -1,0 +1,113 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-migrate-helm-chart-values-to-rhdh-2-1_{context}"]
+= Migrate Helm chart values to {product-very-short} 2.1
+
+[role="_abstract"]
+To migrate your Helm chart configuration to {product} 2.1, export your current Helm values, translate the configuration keys to the new format, and upgrade the release in place with the 2.1 chart.
+
+.Prerequisites
+
+* Your cluster meets the minimum version that {product-very-short} {product-version} requires: {ocp-brand-name} {ocp-version-min} or later, or Kubernetes {kubernetes-version} or later. If you are running an older cluster, upgrade it before you migrate.
+* You have completed the pre-upgrade checklist and created a backup of your database.
+* You have added New Frontend System (NFS) support to your custom plugins.
+
+[TIP]
+====
+In your Helm values files, only include fields you have customized. Omitting the defaults makes maintenance easier and reduces merge conflicts on future chart upgrades.
+====
+
+.Procedure
+
+. Locate your existing values file(s) (typically stored in your Git repo or elsewhere). If you don't have them, you can export your current Helm values from a deployed release:
++
+[source,terminal]
+----
+$ helm get values <release-name> -n <namespace> > values-1.x.yaml
+----
+
+. Translate your configuration keys using the xref:ref-helm-chart-values-mapping-1-x-to-2-1_{context}[Helm chart values mapping].
++
+--
+For example, in the 1.x chart, values are nested under the `upstream.backstage` and `global` paths:
+
+[source,yaml]
+----
+upstream:
+  backstage:
+    image:
+      registry: registry.redhat.io
+      repository: rhdh/rhdh-hub-rhel9
+      tag: "1.10"
+    appConfig:
+      backend:
+        baseUrl: https://my-rhdh.example.com
+    extraEnvVars:
+      - name: MY_CUSTOM_VAR
+        value: my-value
+    extraEnvVarsSecrets:
+      - my-rhdh-secrets
+route:
+  enabled: true
+  host: my-rhdh.example.com
+global:
+  lightspeed:
+    enabled: true
+----
+
+In the 2.1 chart, the same values move to root-level keys, `route` moves under `openshift`, and `lightspeed` is renamed to `intelligentAssistant`:
+
+[source,yaml]
+----
+image:
+  registry: registry.redhat.io
+  repository: rhdh/rhdh-hub-rhel10 # <1>
+  tag: "2.1"
+appConfig:
+  backend:
+    baseUrl: https://my-rhdh.example.com
+extraEnv:
+  - name: MY_CUSTOM_VAR
+    value: my-value
+extraEnvFrom:
+  - secretRef:
+      name: my-rhdh-secrets
+openshift:
+  route:
+    enabled: true
+    host: my-rhdh.example.com
+intelligentAssistant:
+  enabled: true
+----
+<1> The container image repository name also changes from the RHEL 9 name to the RHEL 10 name. See the next step.
+--
+
+. Decide how to handle PostgreSQL. The 2.1 chart changes the default PostgreSQL image from `registry.redhat.io/rhel10/postgresql-15` to `registry.redhat.io/rhel10/postgresql-18`, but PostgreSQL 15 remains supported. For an existing PostgreSQL 15 data directory, choose one of the following options:
++
+--
+* To keep PostgreSQL 15, set `postgresql.image.repository: rhel10/postgresql-15`. By default, the 2.1 chart ships a `postgresql.image.digest` value that reflects the default PostgreSQL 18 image, so you must also override this digest when you change the image reference to PostgreSQL 15. Do one of the following:
++
+** Set `postgresql.image.digest: ""` to clear the default digest, and optionally set `postgresql.image.tag` to the correct tag for your PostgreSQL 15 image.
+** Find the correct digest for your PostgreSQL 15 image and set `postgresql.image.digest` to that value.
+* To move to PostgreSQL 18, upgrade your existing database before you change the image. Pointing PostgreSQL 18 at a PostgreSQL 15 data directory does not perform an in-place upgrade.
+--
+
+. Update your container image references from RHEL 9 to RHEL 10 names using the xref:ref-container-image-renames-rhel-9-to-rhel-10_{context}[container image renames reference].
+
+. Upgrade the existing release in place with the 2.1 chart and your translated values:
++
+[source,terminal]
+----
+$ helm upgrade --install <release-name> <chart-repo>/redhat-developer-hub -n <namespace> -f values-2.1.yaml
+----
++
+[IMPORTANT]
+====
+You do not need to uninstall the 1.x release. The standalone 2.1 chart upgrades the existing release as long as your values file uses the new structure.
+====
+
+.Verification
+
+* Verify that the {product} platform starts without errors.
+
+// Export current values, translate keys, upgrade release in place with helm upgrade (no uninstall needed).

@@ -1,0 +1,62 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-migrate-plugins-to-oci-references_{context}"]
+= Migrate plugin references to OCI format
+
+[role="_abstract"]
+Because {product-very-short} 2.1 removes the bundled Dynamic Plugin Wrappers from the image, you must replace every local wrapper path in your plugin configuration with an Open Container Initiative (OCI) reference, by using either an `oci://` reference or a `ref://<plugin-name>` reference.
+
+.Prerequisites
+
+* You identified every plugin entry that uses a local Dynamic Plugin Wrapper path. These entries can appear in the `dynamic-plugins.yaml` file, in the `global.dynamic.plugins` values of your Helm chart configuration, or in the `dynamicPlugins` configuration of your Operator custom resource (CR).
+* You have the OCI artifact reference for each plugin. Use the reference that the plugin catalog or the generated plugin tables provide. Red Hat supported plugins for {product-very-short} 2.1 are published to `registry.redhat.io/rhdh/`. For the full list, see link:{dynamic-plugins-reference-book-link}[{dynamic-plugins-reference-book-title}].
+
+.Procedure
+
+. For each plugin that uses a local wrapper path (`./dynamic-plugins/dist/`), replace the `package` value with an OCI reference.
++
+--
+* To reference a plugin that is packaged as a pinned OCI image, use an `oci://` reference.
+* To reference a catalog plugin by using a stable, name-based reference, use a `ref://<plugin-name>` reference.
+--
++
+For example, the following plugin entry uses a local wrapper path, which is no longer valid in 2.1:
++
+[source,yaml]
+----
+plugins:
+  - package: ./dynamic-plugins/dist/<plugin-name>
+    disabled: false
+    pluginConfig: {}
+----
++
+To reference the same plugin as a pinned OCI image, use an `oci://` reference. Red Hat supported plugins are published to `registry.redhat.io/rhdh/`; custom or community plugin images can be in your own registry:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://registry.redhat.io/rhdh/<image-name>:<tag>!<plugin-name>
+    disabled: false
+    pluginConfig: {}
+----
++
+To reference the same plugin as a catalog plugin, use a `ref://<plugin-name>` reference:
++
+[source,yaml]
+----
+plugins:
+  - package: ref://<plugin-name>
+    disabled: false
+    pluginConfig: {}
+----
+
+. If your configuration still references plugins by an older community package name, replace each one with the OCI artifact for the equivalent {product-very-short} 2.1 plugin. For the reference formats, see xref:ref-plugin-wrapper-to-oci-mapping_{context}[Plugin wrapper to {product-very-short} 2.1 OCI reference mapping].
+
+. Apply the same change in every location that references plugins by a local path, including the `dynamic-plugins.yaml` file, the Helm chart values, and the Operator CR.
+
+. For disconnected environments, mirror the OCI artifacts to your internal registry and update your references to point to the mirrored location.
+
+.Verification
+
+. Start {product-very-short} and confirm that it starts without plugin resolution errors.
+. Confirm that all expected plugins are loaded. In the `install-dynamic-plugins` init container log, verify that each migrated plugin is installed and that no entry reports a missing local wrapper path.
