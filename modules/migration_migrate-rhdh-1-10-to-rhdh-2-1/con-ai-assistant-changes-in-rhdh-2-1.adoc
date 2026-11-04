@@ -4,9 +4,36 @@
 = AI assistant changes in {product-very-short} 2.1
 
 [role="_abstract"]
-{product} {product-version} renames the AI assistant from {rhdeveloper-name} Lightspeed for {product} to {ia-brand-name}. Configuration keys, RBAC permission names, and route paths all change. Llama Stack is removed and replaced by LCORE ({lcs-name}).
+{product} {product-version} renames the AI assistant to the {ia-brand-name}. Configuration keys, route paths, and RBAC permissions change, and the {lcs-name} replaces the Llama Stack backend. Configuration that still references `lightspeed` is silently ignored.
+
+== Rebrand to the {ia-short}
+
+The AI assistant is renamed from {rhdeveloper-name} Lightspeed for {product} to the {ia-brand-name}. The plugin name, the user interface label, and the associated configuration all change to use `intelligent-assistant` in place of `lightspeed`.
+
+== Configuration key changes
+
+The naming differs between the Helm chart and `app-config`, so you cannot apply a single find-and-replace across both:
+
+* In the Helm chart, the `global.lightspeed.{asterisk}` values move to the `intelligentAssistant.{asterisk}` structure, which uses camel case. Some settings are restructured rather than renamed.
+* In `app-config`, the keys use `intelligent-assistant` in place of `lightspeed`.
+
+== Route path change
+
+The route path for the AI assistant changes from `/lightspeed` to `/intelligent-assistant`. Update any references to the old route path, such as reverse proxy rules or bookmarks.
+
+== Llama Stack replaced by {lcs-short}
+
+The Llama Stack integration is removed. The {lcs-name} ({lcs-short}) replaces it as the intermediary layer between the {ia-short} and your AI backend. The {ia-short} connects only to {lcs-short}, which manages model inference, query validation, tool calling, and the vector store. Reconfigure any Llama Stack connection settings to point to {lcs-short} instead.
+
+== Permission model change
+
+The AI assistant RBAC permissions are renamed from `lightspeed.{asterisk}` to `intelligent-assistant.{asterisk}`, and the create, read, update, and delete (CRUD) action verbs are replaced with a single `use` action. Old permission names are silently ignored, so you must update your RBAC policies before you upgrade.
 
 [role="_additional-resources"]
 .Additional resources
 
-* For more information about configuring the {ia-brand-name}, see xref:enable-ai-assistance-for-developers_integrate[Enable AI assistance for developers].
+* xref:proc-migrate-ai-assistant-configuration_{context}[Migrate AI assistant configuration by using the Helm chart]
+* xref:ref-helm-chart-values-mapping-1-x-to-2-1_{context}[Helm chart values mapping from 1.x to 2.1]
+* xref:ref-ai-permissions-mapping-1-x-to-2-1_{context}[AI permissions mapping from 1.x to 2.1]
+* xref:con-permission-and-rbac-changes-in-rhdh-2-1_{context}[Permission and RBAC changes in {product-very-short} 2.1]
+* xref:enable-ai-assistance-for-developers_integrate[Enable AI assistance for developers]
