@@ -338,7 +338,7 @@ report_file="$TMP_DIR/report.md"
 
 ### Next steps
 
-1. Rebuild the community catalog index for the matching branch (`main` or `release-2.y`):
+1. In the overlays repo, rebuild the GH-built Supported Catalog index for the matching branch (`main` or `release-2.y`):
    [generate-catalog-index.yaml](https://github.com/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml)
 
    ```bash
@@ -347,7 +347,7 @@ report_file="$TMP_DIR/report.md"
      --repo redhat-developer/rhdh-plugin-export-overlays --ref "$branch"
    ```
 
-2. Rebuild the downstream community index with the "update index" pipeline:
+2. In the rhdh-plugin-catalog repo, rebuild the Konflux-built Supported Catalog index with the "update index" pipeline:
    [pipeline schedules](https://gitlab.cee.redhat.com/rhidp/rhdh-plugin-catalog/-/pipeline_schedules)
 
    ```bash
@@ -356,7 +356,7 @@ report_file="$TMP_DIR/report.md"
      --variables "PIPELINE_JOB:update-index,ALWAYS_CLONE:false,SEND_SLACK_NOTICE:on_failure,CATALOG_STRICT_VALIDATION:true,CATALOG_ALLOW_VERSION_REGRESSION:false,CATALOG_ALLOW_FALLBACK_TAGS:false"
    ```
 
-3. Regenerate the plugin tables from the rebuilt index:
+3. In the documentation repo, rebuild the plugin tables from the updates OCI artifacts:
    [generate-supported-plugins-pr.yml](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml)
 
    ```bash
