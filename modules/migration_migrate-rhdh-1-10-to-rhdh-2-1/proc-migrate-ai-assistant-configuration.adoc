@@ -1,10 +1,10 @@
 :_mod-docs-content-type: PROCEDURE
 
 [id="proc-migrate-ai-assistant-configuration_{context}"]
-= Migrate AI assistant configuration by using the Helm chart
+= Migrate the AI assistant configuration
 
 [role="_abstract"]
-In {product} {product-version}, the AI assistant is renamed from {rhdeveloper-name} Lightspeed for {product} to {ia-brand-name}. To migrate by using the Helm chart, update your Helm values, app-config keys, and RBAC policies, and reconfigure Llama Stack connections to LCORE.
+In {product} {product-version}, the AI assistant is renamed from {rhdeveloper-name} Lightspeed for {product} to {ia-brand-name}, and the {lcs-name} ({lcs-short}) replaces the Llama Stack backend. To migrate, update your Helm values or custom resource (CR), app-config keys, and RBAC policies.
 
 [IMPORTANT]
 ====
@@ -13,37 +13,69 @@ Helm values and app-config use different naming. In the Helm chart, the keys use
 
 .Prerequisites
 
-* You have completed the platform migration and installed the 2.1 Helm chart.
-* You have access to your {product} configuration files and RBAC policies.
+* You have completed the platform migration and installed the 2.1 Helm chart or Operator.
+* You have access to your {product} deployment manifests, configuration files, and RBAC policy files.
 
 .Procedure
 
-. Update your Helm values:
-.. Map the `global.lightspeed.{asterisk}` values to the `intelligentAssistant.{asterisk}` structure.
-.. Some settings are restructured, not just renamed. For the complete mapping, see the {ia-name} section of the xref:ref-helm-chart-values-mapping-1-x-to-2-1_{context}[Helm chart values mapping].
+. Update your Helm values or Operator custom resource:
+.. Map the `global.lightspeed.{asterisk}` values to the `intelligentAssistant.{asterisk}` structure. Some settings are restructured, not just renamed. For the complete mapping, see the {ia-name} section of the xref:ref-helm-chart-values-mapping-1-x-to-2-1_migrate-from-rhdh-1-10-to-2-1[Helm chart values mapping].
+.. If you use the Operator, change any explicit `lightspeed` flavor name to `intelligent-assistant`.
 
 . Rename AI assistant app-config keys:
 .. Replace `lightspeed` with `intelligent-assistant` in your `app-config` keys.
 .. Update route path references from `/lightspeed` to `/intelligent-assistant`.
 
-. Update RBAC policies:
-.. Replace old `lightspeed.{asterisk}` permission names with the {product} 2.1 permission names, for example `intelligent-assistant.chat`, and change the action to `use`.
-.. Refer to the xref:ref-ai-permissions-mapping-1-x-to-2-1_{context}[AI permissions mapping] for the complete list of permissions.
-.. For the full RBAC policy update procedure, including conditional policies, see xref:proc-update-rbac-policies-for-rhdh-2-1_{context}[Update RBAC policies for {product-very-short} 2.1].
+. If you persisted {ia-short} Notebook data in your 1.10 deployment, migrate it to a persistent volume so that existing Notebooks remain available after the upgrade. For the procedure, see xref:enable-data-persistence-for-intelligent-assistant-notebooks_build-a-private-knowledge-base-with-intelligent-assistant-notebooks[Enable data persistence for {ia-short} Notebooks].
 
-. Reconfigure Llama Stack connections:
-.. Update any Llama Stack connection settings to point to LCORE instead.
+. Update your RBAC policies to use the new permission identifiers. {product-very-short} 2.1 replaces the `lightspeed.{asterisk}` permission namespace with `intelligent-assistant.{asterisk}` and `mcp.{asterisk}`, and uses the single `use` action instead of the `read`, `create`, `update`, and `delete` actions. For the full mapping of old to new permission names, see xref:ref-ai-permissions-mapping-1-x-to-2-1_migrate-from-rhdh-1-10-to-2-1[AI permissions mapping from 1.x to 2.1].
++
+For example, the four chat permissions collapse to a single permission. Replace:
++
+[source,text,subs="+quotes"]
+----
+p, role:default/_<team>_, lightspeed.chat.read, read, allow
+p, role:default/_<team>_, lightspeed.chat.create, create, allow
+p, role:default/_<team>_, lightspeed.chat.update, update, allow
+p, role:default/_<team>_, lightspeed.chat.delete, delete, allow
+----
++
+with:
++
+[source,text,subs="+quotes"]
+----
+p, role:default/_<team>_, intelligent-assistant.chat, use, allow
+----
++
+[IMPORTANT]
+====
+The new permission grants full access to a feature. A role cannot keep partial access, such as read-only chat or create-without-delete chat. For each role with partial access, decide whether to grant full access or no access to the feature. A `deny` on a new permission blocks the entire feature, so review inherited roles and existing denies before you migrate.
+====
+
+. Update every source that configures RBAC policies, not only the policy CSV file:
+.. If you grant AI features through `permission.rbac.defaultPermissions.basicPermissions`, replace the old chat, Notebooks, and MCP entries with the new feature permissions and the `use` action. The default role applies to every authenticated user, so review previous partial grants before you consolidate them.
+.. If `permission.rbac.pluginsWithPermission` contains `lightspeed`, replace that entry with `intelligent-assistant` so that the RBAC UI can discover the new permissions. Keep the other entries.
+.. Update any conditional policy rules and automation scripts that reference `lightspeed.{asterisk}` identifiers.
++
+For the full RBAC update procedure, including conditional policies, see xref:proc-update-rbac-policies-for-rhdh-2-1_migrate-from-rhdh-1-10-to-2-1[Update RBAC policies for {product-very-short} 2.1]. To mount updated policy files during deployment, see xref:define-authorizations-in-external-files-by-using-helm_define-policies-in-external-files-to-provision-permissions-during-cluster-deployment[Define authorizations in external files by using Helm] or xref:define-authorizations-in-external-files-by-using-the-operator_define-policies-in-external-files-to-provision-permissions-during-cluster-deployment[Define authorizations in external files by using the Operator].
+
+. Apply the updated configuration and restart your {product-very-short} deployment. The `policyFileReload` setting reloads policy files only; changes to application configuration, such as `defaultPermissions`, require a workload rollout to take effect.
 
 .Verification
 
-. Verify that AI assistant features respond as expected.
-. Confirm that RBAC policies grant the correct access.
+. Open the {ia-short} chat interface and verify that the assistant responds.
+. If you use Notebooks, verify that existing Notebooks are accessible from the *My Notebooks* dashboard.
+. Using a fresh session for a non-administrator account that has the migrated chat permission, confirm that the chat entry points are available and that the user can send a prompt and reopen a conversation.
+. Using a non-administrator account that has no effective chat grant, confirm that the chat entry points are hidden and that an authenticated request to `GET /api/intelligent-assistant/v2/conversations` returns `HTTP 403`. An unauthenticated `HTTP 401` response does not verify the policy. Use non-administrator accounts, because administrator access can hide missing grants.
+. Review the {product-very-short} logs and confirm that no policy references an unrecognized `lightspeed.{asterisk}` identifier.
 
 [role="_additional-resources"]
 .Additional resources
 
-* xref:con-ai-assistant-changes-in-rhdh-2-1_{context}[AI assistant changes in {product-very-short} 2.1]
+* xref:con-ai-assistant-changes-in-rhdh-2-1_migrate-from-rhdh-1-10-to-2-1[AI assistant changes in {product-very-short} 2.1]
+* xref:ref-ai-permissions-mapping-1-x-to-2-1_migrate-from-rhdh-1-10-to-2-1[AI permissions mapping from 1.x to 2.1]
+* xref:ref-helm-chart-values-mapping-1-x-to-2-1_migrate-from-rhdh-1-10-to-2-1[Helm chart values mapping from 1.x to 2.1]
+* xref:proc-update-rbac-policies-for-rhdh-2-1_migrate-from-rhdh-1-10-to-2-1[Update RBAC policies for {product-very-short} 2.1]
+* xref:large-language-model-llm-requirements_enable-ai-assistance-for-developers[Large language model (LLM) requirements]
+* xref:enable-data-persistence-for-intelligent-assistant-notebooks_build-a-private-knowledge-base-with-intelligent-assistant-notebooks[Enable data persistence for {ia-short} Notebooks]
 * xref:enable-ai-assistance-for-developers_integrate[Enable AI assistance for developers]
-* xref:ref-helm-chart-values-mapping-1-x-to-2-1_{context}[Helm chart values mapping from 1.x to 2.1]
-* xref:ref-ai-permissions-mapping-1-x-to-2-1_{context}[AI permissions mapping from 1.x to 2.1]
-* xref:proc-update-rbac-policies-for-rhdh-2-1_{context}[Update RBAC policies for {product-very-short} 2.1]
