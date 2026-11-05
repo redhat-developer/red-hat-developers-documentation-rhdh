@@ -1,0 +1,80 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-the-gitlab-integration_{context}"]
+= Configure the GitLab integration
+
+[role="_abstract"]
+Configure {product} to connect to GitLab by creating a personal access token and adding the GitLab integration to your application configuration.
+
+The GitLab integration is required for the following features:
+
+* Discovering catalog entities by scanning GitLab repositories for `catalog-info.yaml` files.
+* Importing users and groups from GitLab into the {product-short} catalog.
+* Using GitLab scaffolder actions in software templates, such as creating repositories and merge requests.
+
+.Prerequisites
+* You have {configuring-book-link}[added a custom {product-short} application configuration], and have enough permissions to change it.
+
+.Procedure
+
+. Set up a link:https://docs.gitlab.com/user/profile/personal_access_tokens/[GitLab personal access token (PAT)] with `read_api` scope.
+Save the token value for the next step.
+
+. Add your GitLab credentials to {configuring-book-link}#provisioning-your-custom-configuration[your {product-very-short} secrets] using the following key/value pairs.
+Use these environment variables in your {product-very-short} configuration files.
++
+`GITLAB_HOST`::
+Enter your GitLab host: `<gitlab_host>`.
+
+`GITLAB_TOKEN`::
+Enter the saved *Personal access token*.
+
+. Add the GitLab integration to your {product-very-short} `{my-app-config-file}` configuration file:
++
+[source,yaml,subs="+quotes,+attributes"]
+----
+integrations:
+  gitlab:
+    - host: ${GITLAB_HOST}
+      token: ${GITLAB_TOKEN}
+----
+
+. Enable plugins for the features you need in your `dynamic-plugins.yaml` file.
++
+--
+Discover catalog entities from GitLab repositories::
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-gitlab-dynamic'
+    disabled: false
+----
+
+Import users and groups from GitLab::
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-catalog-backend-module-gitlab-org-dynamic'
+    disabled: false
+----
++
+For configuration details, see {authentication-book-link}#import-users-and-groups-from-gitlab_import-users-and-groups-from-your-identity-provider[Import users and groups from GitLab].
+
+GitLab scaffolder actions::
++
+include::{docdir}/artifacts/snip-technology-preview.adoc[]
++
+[source,yaml]
+----
+plugins:
+  - package: './dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-gitlab-dynamic'
+    disabled: false
+----
+--
++
+See {installing-and-viewing-plugins-book-link}[{installing-and-viewing-plugins-book-title}].
+
+.Verification
+* Verify that the secret key-value pairs are stored in your {product-short} secrets.
