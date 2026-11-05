@@ -27,6 +27,19 @@ To regenerate only the comparison from existing CSV files without fetching the c
 bash modules/extend_dynamic-plugins-reference/diff-previous.sh -b release-2.1 --diff-previous
 ```
 
+
+## Check pinned digests against published tags
+
+The generated tables pin an immutable `@sha256:` digest per plugin and name the artifact tag in the next column. `check-plugin-digests.sh` resolves each tag and reports rows whose pinned manifest digest or build time no longer matches the tag, which means the catalog index or the tables are stale. It requires `skopeo` and `jq`.
+
+```bash
+bash modules/extend_dynamic-plugins-reference/check-plugin-digests.sh
+```
+
+The report is a markdown table, printed and also saved to `report.md` (git-ignored) for opening in an editor. Use `-f` to check a single table, `--all` to include matching rows, `--output FILE` to write the report somewhere else, `--warn-only` to exit 0 on drift, and `--trigger` to dispatch the GitHub catalog index and documentation workflows. Run the script with `--help` for all options.
+
+NOTE: if the only images with digest drift are community plugins, this is acceptable. This is caused by the fact that https://github.com/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml is triggered for all commits to the main branch and the release-2.y branches alike, and when two plugins across 2 branches share the same BS version and NPM package version, they push to the same tag. Until the BS version is incremented, or the NPM package pushes a new update, this (probably harmless) conflict will occur.
+
 ## Run through GitHub Actions
 
 The [Generate update PR for the Dynamic Plugins tables workflow](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml) opens a pull request for generated changes. For a manual `release-2.1` run, select `release-2.1` as the workflow ref and enter `release-2.1` in the `branch` input. Scheduled `release-2.1` runs also need this matrix entry on the default branch, because GitHub schedules use that branch's workflow file.
