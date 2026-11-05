@@ -334,11 +334,17 @@ report_file="$TMP_DIR/report.md"
   ' "$result_file"
 
   if ((drift > 0)); then
-    cat <<'EOF'
+    community_drift=$(awk -F'\t' '$1 != "OK" && $9 ~ /^ghcr\.io\/redhat-developer\/rhdh-plugin-export-overlays\//' "$result_file" | wc -l)
+    supported_drift=$(awk -F'\t' '$1 != "OK" && $9 !~ /^ghcr\.io\/redhat-developer\/rhdh-plugin-export-overlays\//' "$result_file" | wc -l)
+    step=0
+    next_step() { ((++step)); echo; echo "$step. $1"; }
 
-### Next steps
+    echo
+    echo "### Next steps"
 
-1. In the overlays repo, rebuild the GH-built Supported Catalog index for the matching branch (`main` or `release-2.y`):
+    if ((community_drift > 0)); then
+      next_step "In the overlays repo, rebuild the GH-built community catalog index for the matching branch (\`main\` or \`release-2.y\`) - $community_drift drifted pin(s) come from it:"
+      cat <<'EOF'
    [generate-catalog-index.yaml](https://github.com/redhat-developer/rhdh-plugin-export-overlays/actions/workflows/generate-catalog-index.yaml)
 
    ```bash
@@ -346,8 +352,12 @@ report_file="$TMP_DIR/report.md"
    gh workflow run generate-catalog-index.yaml \
      --repo redhat-developer/rhdh-plugin-export-overlays --ref "$branch"
    ```
+EOF
+    fi
 
-2. In the rhdh-plugin-catalog repo, rebuild the Konflux-built Supported Catalog index with the "update index" pipeline:
+    if ((supported_drift > 0)); then
+      next_step "In the rhdh-plugin-catalog repo, rebuild the Konflux-built Supported Catalog index with the 'update index' pipeline - $supported_drift drifted pin(s) come from it:"
+      cat <<'EOF'
    [pipeline schedules](https://gitlab.cee.redhat.com/rhidp/rhdh-plugin-catalog/-/pipeline_schedules)
 
    ```bash
@@ -355,8 +365,11 @@ report_file="$TMP_DIR/report.md"
    glab ci run -R rhidp/rhdh-plugin-catalog -b "$branch" \
      --variables "PIPELINE_JOB:update-index,ALWAYS_CLONE:false,SEND_SLACK_NOTICE:on_failure,CATALOG_STRICT_VALIDATION:true,CATALOG_ALLOW_VERSION_REGRESSION:false,CATALOG_ALLOW_FALLBACK_TAGS:false"
    ```
+EOF
+    fi
 
-3. In the documentation repo, rebuild the plugin tables from the updates OCI artifacts:
+    next_step "In the documentation repo, rebuild the plugin tables from the updated OCI artifacts:"
+    cat <<'EOF'
    [generate-supported-plugins-pr.yml](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml)
 
    ```bash
@@ -365,9 +378,10 @@ report_file="$TMP_DIR/report.md"
      --repo redhat-developer/red-hat-developers-documentation-rhdh \
      --ref "$branch" -f branch="$branch"
    ```
-
-Re-run this script after step 3 to confirm every pinned digest matches its tag.
 EOF
+
+    echo
+    echo "Re-run this script after step $step to confirm every pinned digest matches its tag."
   fi
 } > "$report_file"
 
