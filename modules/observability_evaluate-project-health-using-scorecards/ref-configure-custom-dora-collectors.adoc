@@ -1,0 +1,105 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="ref-configure-custom-dora-collectors_{context}"]
+= Collector contract specifications
+
+[role="_abstract"]
+Contract specifications for custom DORA collectors including required properties, input parameters, and return types for deployment, deployment pull request, and incident collectors.
+
+== Deployment collector contract
+
+The deployment collector must return deployment records with the following properties:
+
+[cols="1,1,3", options="header"]
+|===
+| Property | Type | Description
+
+| `timestamp`
+| ISO 8601 datetime
+| When the deployment occurred
+
+| `sha`
+| String
+| Git commit SHA deployed
+
+| `environment`
+| String
+| Deployment environment name (case-insensitive matching against configured production environments)
+
+| `status`
+| String
+| Deployment status (`success`, `failure`, `pending`)
+|===
+
+The collector receives:
+* Component entity reference
+* Time range (start and end dates)
+
+The collector returns:
+* Array of deployment records
+
+== Deployment pull request collector contract
+
+The deployment pull request collector must return pull request records for commits between two deployment SHAs.
+
+[cols="1,1,3", options="header"]
+|===
+| Property | Type | Description
+
+| `number`
+| Integer
+| Pull request number
+
+| `createdAt`
+| ISO 8601 datetime
+| When the pull request was created
+
+| `mergedAt`
+| ISO 8601 datetime
+| When the pull request was merged
+
+| `commits`
+| Array of strings
+| Commit SHAs included in the pull request
+|===
+
+The collector receives:
+* Component entity reference
+* Base SHA (earlier deployment)
+* Head SHA (later deployment)
+
+The collector returns:
+* Array of pull request records
+
+== Incident collector contract
+
+The incident collector must return incident records with creation and resolution timestamps.
+
+[cols="1,1,3", options="header"]
+|===
+| Property | Type | Description
+
+| `key`
+| String
+| Unique incident identifier
+
+| `createdAt`
+| ISO 8601 datetime
+| When the incident was created
+
+| `resolvedAt`
+| ISO 8601 datetime
+| When the incident was resolved (null if unresolved)
+
+| `relatedDeploymentSha`
+| String (optional)
+| Git SHA of the deployment that caused the incident
+|===
+
+The collector receives:
+* Component entity reference
+* Time range (start and end dates)
+
+The collector returns:
+* Array of incident records
+
