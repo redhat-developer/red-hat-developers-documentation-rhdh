@@ -1,0 +1,29 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="using-node-built-in-proxy-support_{context}"]
+= Node.js built-in proxy support for backend network access
+
+[role="_abstract"]
+Enable Node.js built-in proxy support so the {product-very-short} backend honors standard proxy environment variables.
+
+In a network-restricted environment, the {product-very-short} backend is the component most likely to require proxy configuration. Browser or operating system proxy settings do not apply to backend outbound requests.
+
+Node.js provides built-in support for proxy environment variables. When enabled, native `fetch()`, `node:http`, and `node:https` respect the standard `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables without additional packages. For details, see the link:https://nodejs.org/en/learn/http/enterprise-network-configuration#proxy-configuration[Node.js enterprise network configuration documentation].
+
+To enable built-in proxy support, set `NODE_USE_ENV_PROXY` to `1` along with your proxy settings before starting {product-short}:
+
+[source,bash]
+----
+export NODE_USE_ENV_PROXY=1
+export HTTP_PROXY=http://username:password@proxy.example.net:8888
+export HTTPS_PROXY=http://username:password@proxy.example.net:8888
+export NO_PROXY=localhost,127.0.0.1,.internal.company.com
+----
+
+Set the same variables on every workload that makes outbound network requests, including the main backend container and the dynamic plugin installation init container.
+
+*Compatibility with third-party HTTP clients*
+
+Most {product-very-short} backend code uses native `fetch()`, which works with Node.js proxy settings when `NODE_USE_ENV_PROXY=1` is set. Some plugins still use `node-fetch` or `cross-fetch`. These libraries delegate to `node:http` and `node:https` and do not set a custom HTTP agent by default, so Node.js proxy settings apply to them as well.
+
+The exception is code that passes a custom `agent` to HTTP clients (for example, the Kubernetes plugins, which use TLS client certificates for cluster APIs). In those cases, the custom agent takes precedence and the built-in proxy is bypassed. This is usually desirable because those connections target specific cluster endpoints directly.
