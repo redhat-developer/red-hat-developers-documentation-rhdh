@@ -1,0 +1,173 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-dora-thresholds_{context}"]
+= DORA metric thresholds
+
+[role="_abstract"]
+DORA metrics use threshold values to categorize performance into elite, medium, and low tiers. The Scorecard plugin provides default thresholds based on DORA research and allows customization.
+
+== Default DORA thresholds
+
+The DORA backend module defines default thresholds for each metric that align with industry benchmarks from DORA research:
+
+[cols="1,1,1,1,1", options="header"]
+|===
+| Metric | Unit | Elite | Medium | Low
+
+| Deployment Frequency
+| deployments per week
+| ≥7
+| 1-7
+| <1
+
+| Lead Time for Changes
+| hours
+| <24
+| 24-168
+| >168
+
+| Time to Restore Service
+| hours
+| <1
+| 1-24
+| >24
+
+| Change Failure Rate
+| percentage
+| <5
+| 5-15
+| >15
+|===
+
+These thresholds determine the status indicator color and label displayed in the Scorecard UI:
+
+* *Elite* — Green status, indicates top-tier performance
+* *Medium* — Yellow status, indicates average performance
+* *Low* — Red status, indicates below-average performance
+
+[NOTE]
+====
+DORA research updates benchmark values periodically as industry practices evolve. The default thresholds in {product} may differ from the latest DORA report. You can customize thresholds to match your organization's goals or the latest research.
+====
+
+== How thresholds map to Scorecard status
+
+The Scorecard plugin evaluates metric values against configured thresholds to determine status:
+
+. The metric provider calculates the current value (for example, 12 deployments per week)
+. The system compares the value against threshold ranges
+. A status is assigned based on which range contains the value
+. The UI displays the status with the corresponding color
+
+For metrics where lower values are better (Lead Time, Time to Restore, Change Failure Rate), the threshold logic inverts:
+
+* Values below the elite threshold receive elite status
+* Values above the low threshold receive low status
+
+For metrics where higher values are better (Deployment Frequency):
+
+* Values above the elite threshold receive elite status
+* Values below the low threshold receive low status
+
+== Customizing DORA thresholds
+
+You can customize DORA metric thresholds to match your organization's performance goals. Threshold configuration uses the same mechanism as other Scorecard metrics.
+
+To customize thresholds, configure severity levels in your +{my-app-config-file}+ file:
+
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      deploymentFrequency:
+        thresholds:
+          - severity: elite
+            color: green
+            min: 10
+          - severity: medium
+            color: yellow
+            min: 3
+          - severity: low
+            color: red
+            max: 3
+      medianLeadTimeForChanges:
+        thresholds:
+          - severity: elite
+            color: green
+            max: 12
+          - severity: medium
+            color: yellow
+            max: 72
+          - severity: low
+            color: red
+            min: 72
+      medianTimeToRestore:
+        thresholds:
+          - severity: elite
+            color: green
+            max: 0.5
+          - severity: medium
+            color: yellow
+            max: 12
+          - severity: low
+            color: red
+            min: 12
+      changeFailureRate:
+        thresholds:
+          - severity: elite
+            color: green
+            max: 3
+          - severity: medium
+            color: yellow
+            max: 10
+          - severity: low
+            color: red
+            min: 10
+----
+
+[IMPORTANT]
+====
+Use consistent threshold values across your organization to ensure fair performance comparisons between teams and components.
+====
+
+== Threshold configuration guidelines
+
+When customizing DORA thresholds, consider:
+
+Organization maturity::
+Teams early in their DevOps journey may set less aggressive thresholds and increase them as capabilities improve.
+
+Industry benchmarks::
+Align with industry standards from DORA research or peers in your sector to understand relative performance.
+
+Team autonomy::
+Allow teams to set their own thresholds while maintaining organization-wide visibility into relative performance.
+
+Metric interdependencies::
+Optimizing one metric should not degrade others. For example, increasing deployment frequency should not significantly increase change failure rate.
+
+== Threshold examples by organization type
+
+Different organization types may adopt different threshold strategies:
+
+Startup or new team::
+* Deployment Frequency: Elite ≥3/week, Low <1/week
+* Lead Time: Elite <72h, Low >168h
+* Focus on establishing baseline practices
+
+Established product team::
+* Deployment Frequency: Elite ≥14/week, Low <3/week
+* Lead Time: Elite <12h, Low >72h
+* Focus on continuous improvement
+
+Enterprise with compliance requirements::
+* May prioritize Time to Restore and Change Failure Rate over Deployment Frequency
+* Thresholds balance speed with stability and risk management
+
+[role="_additional-resources"]
+.Additional resources
+
+* For information about customizing severity levels and colors, see the Scorecard metric thresholds documentation
+* xref:con-dora-overview_{context}[Understanding DORA metrics]
+* link:https://dora.dev/research/[DORA research and benchmarks]
