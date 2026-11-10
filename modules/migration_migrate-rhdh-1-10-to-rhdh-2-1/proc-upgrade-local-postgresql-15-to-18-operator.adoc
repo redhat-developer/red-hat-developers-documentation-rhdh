@@ -1,0 +1,125 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-upgrade-local-postgresql-15-to-18-operator_{context}"]
+= Upgrade the local PostgreSQL database for Operator deployments
+
+[role="_abstract"]
+To move the Operator-managed local database to the {product} 2.1 default of PostgreSQL 18, back up the current data and recreate the database volume after you approve the upgrade. An existing PostgreSQL 15 data directory does not start on PostgreSQL 18.
+
+[NOTE]
+====
+The Operator-managed local database is intended for evaluation and getting started, not for production. For production, use an external PostgreSQL database, which is not affected by this change. This procedure applies only to the local database.
+====
+
+Recreating the local database on PostgreSQL 18 is the recommended path, because {product} rebuilds most of its contents after startup. {product} re-ingests entities from the catalog locations defined in your `app-config`, but recreating discards data that exists only in the database, such as RBAC policies created through the UI or API, catalog locations registered through the UI, user settings, notifications, and scaffolder task history. If any of that data is irreplaceable, use one of these alternatives instead of the following procedure:
+
+* *Preserve all data:* follow the community-supported upstream procedure to dump the PostgreSQL 15 databases and restore them into PostgreSQL 18. See link:https://github.com/redhat-developer/rhdh-operator/blob/release-2.1/docs/db_migration.md#upgrade-postgresql-15-to-18[Local database migration] in the `rhdh-operator` repository and link:https://www.postgresql.org/docs/current/upgrading.html#UPGRADING-VIA-PGDUMPALL[Upgrading data through `pg_dumpall`] in the PostgreSQL documentation.
+* *Keep PostgreSQL 15:* {product} 2.1 continues to support PostgreSQL 15, so you can stay on this version. However, with the Operator you cannot keep PostgreSQL 15 for an individual instance, because the `RELATED_IMAGE_postgresql` environment variable overrides the image set in the custom resource. Before you approve the 2.1 `InstallPlan`, set `RELATED_IMAGE_postgresql` in the Operator Subscription `config.env` to the full PostgreSQL 15 image reference, including the digest, for example `registry.redhat.io/rhel9/postgresql-15@sha256:<1_10_digest>`. The repository alone resolves to the `latest` tag; read the 1.10 digest from the running StatefulSet:
++
+[source,terminal]
+----
+$ oc -n <your_namespace> get statefulset backstage-psql-<backstage_cr_name> -o jsonpath='{.spec.template.spec.containers[0].image}'
+----
++
+This setting is cluster-wide and takes effect immediately for every `{backstage}` custom resource in all namespaces, and reverting it has the same blast radius.
+
+.Prerequisites
+
+* You have a recent backup of your {product} database that is independent of this procedure, for example a volume snapshot.
+* You have `oc` or `kubectl` access to the namespace.
+* You have set the {product} Operator Subscription to manual `InstallPlan` approval and switched its update channel to `fast-2.1`. The 2.1 upgrade does not appear while the channel points to a 1.10 release, and with automatic approval the upgrade starts as soon as the channel changes, which leaves no window to back up the database.
+* You have identified every {product} instance that the Operator manages, because the `InstallPlan` is cluster-wide: approving it switches every instance to PostgreSQL 18 at the same time, across all namespaces. Coordinate downtime for all database clients.
+* You have not yet approved the 2.1 `InstallPlan` for the {product} Operator.
+
+.Procedure
+
+[NOTE]
+====
+If the Operator manages more than one {product} instance, the `InstallPlan` still applies to all of them at once, and you can approve it only once. Complete the backup and database-stop steps (steps 1 through 4) for every instance first. Then, approve the `InstallPlan` once (step 5), and complete the remaining steps for each instance.
+====
+
+. Set the resource names. The commands assume the default database resources:
++
+[source,terminal]
+----
+$ NAMESPACE=<your_namespace>
+$ BACKSTAGE_CR=<backstage_cr_name>
+$ DB_STATEFULSET="backstage-psql-${BACKSTAGE_CR}"
+$ DB_POD="${DB_STATEFULSET}-0"
+$ DB_PVC="data-${DB_POD}"
+----
++
+[NOTE]
+====
+The database credentials are in `backstage-psql-secret-<backstage_cr_name>`. Keep this Secret and a copy of the `{backstage}` custom resource until the upgrade is verified.
+====
+
+. Record the original replica count, then stop {product} through the custom resource so that reconciliation keeps it stopped:
++
+[source,terminal]
+----
+$ BACKSTAGE_REPLICAS=$(oc -n "$NAMESPACE" get deployment "backstage-${BACKSTAGE_CR}" -o jsonpath='{.spec.replicas}')
+$ oc -n "$NAMESPACE" get backstage "$BACKSTAGE_CR" -o yaml > backstage-before-migration.yaml
+$ oc -n "$NAMESPACE" patch backstage "$BACKSTAGE_CR" --type merge -p '{"spec":{"deployment":{"patch":{"spec":{"replicas":0}}}}}'
+$ oc -n "$NAMESPACE" wait --for=delete pod -l "rhdh.redhat.com/app=backstage-${BACKSTAGE_CR}" --timeout=5m
+----
+
+. Capture a logical backup that you can keep, in case you later decide to restore the data. Confirm that the dump file is nonempty before you continue, because a later step deletes the data:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" exec "$DB_POD" -- pg_dumpall -U postgres > postgresql-15.sql
+$ test -s postgresql-15.sql
+----
++
+[NOTE]
+====
+In disconnected installations, take the backup before you apply the 2.1 `rhdh-idms` `ImageDigestMirrorSet`, because the generated manifest replaces the 1.10 mirror configuration. Preserve the PostgreSQL 15 source-to-mirror mapping alongside the new PostgreSQL 18 mapping; without it, the mirrored PostgreSQL 15 image stops resolving once the 2.1 `ImageDigestMirrorSet` replaces the 1.10 image.
+====
+
+. Stop the database StatefulSet so that no pod holds the data volume during the upgrade. Scaling the StatefulSet to zero prevents the PostgreSQL 18 pod from entering `CrashLoopBackOff` on the retained PostgreSQL 15 volume, and lets you delete the volume without a pod mounting it:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" scale statefulset "$DB_STATEFULSET" --replicas=0
+$ oc -n "$NAMESPACE" wait --for=delete "pod/$DB_POD" --timeout=5m
+----
+
+. The backup is complete and the database is stopped. Approve the upgrade:
+.. Approve the 2.1 `InstallPlan` to upgrade the Operator from 1.10 to 2.1, as described in xref:approve-the-operator-installplan_upgrade-rhdh-to-apply-the-latest-features-and-security-patches[Approve the Operator InstallPlan]. The warning in that procedure refers to this migration; because you have already backed up and stopped the database, continue and approve the `InstallPlan`.
+.. After the upgrade, the Operator reconciles the database StatefulSet to the PostgreSQL 18 image while it stays scaled to zero, because the 2.1 template does not reset the replica count. Wait until the StatefulSet reports the PostgreSQL 18 image and zero replicas before you continue:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" get statefulset "$DB_STATEFULSET" -o jsonpath='{.spec.replicas}{" "}{.spec.template.spec.containers[0].image}{"\n"}'
+----
+
+. Delete the data volume and initialize PostgreSQL 18. Because the StatefulSet is scaled to zero, no pod mounts the volume and the deletion completes. Deleting the PVC removes the PostgreSQL 15 data, so keep the backup. Scaling the StatefulSet back to one replica creates a fresh PostgreSQL 18 database:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" delete pvc "$DB_PVC" --wait=true
+$ oc -n "$NAMESPACE" scale statefulset "$DB_STATEFULSET" --replicas=1
+$ oc -n "$NAMESPACE" rollout status "statefulset/$DB_STATEFULSET" --timeout=10m
+----
+
+. Restart {product} with the original replica count:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" patch backstage "$BACKSTAGE_CR" --type merge -p "{\"spec\":{\"deployment\":{\"patch\":{\"spec\":{\"replicas\":${BACKSTAGE_REPLICAS}}}}}}"
+$ oc -n "$NAMESPACE" rollout status "deployment/backstage-${BACKSTAGE_CR}" --timeout=15m
+----
+
+.Verification
+
+. Confirm that the database runs PostgreSQL 18. The command must report `18.x`:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" exec "$DB_POD" -- psql -X -U postgres -tAc 'SHOW server_version'
+----
+
+. Verify that {product} starts successfully and that the expected catalog data is present.
+
+// Recommended local-DB path: back up, scale DB StatefulSet to 0, approve upgrade, delete PVC, scale back to 1 for fresh PG18. Alternatives: upstream dump/restore to preserve data; RELATED_IMAGE override to keep PG15 (supported, cluster-wide).

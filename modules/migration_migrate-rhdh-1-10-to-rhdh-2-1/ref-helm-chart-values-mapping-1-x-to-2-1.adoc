@@ -18,7 +18,19 @@ This mapping is based on the upstream chart maintainers' link:https://github.com
 Before you translate your values, check these default changes:
 
 * *Intelligent Assistant* (formerly Lightspeed) remains enabled by default. If you explicitly disabled it in your 1.x chart, set `intelligentAssistant.enabled: false`.
-* *PostgreSQL image* defaults to `registry.redhat.io/rhel10/postgresql-18`, but PostgreSQL 15 remains supported. For an existing PostgreSQL 15 data directory, either upgrade the database during this migration or set `postgresql.image.repository: rhel10/postgresql-15` to keep PostgreSQL 15. Because the default `postgresql.image.digest` reflects the PostgreSQL 18 image, you must also override this digest when you change the image reference. For the digest steps, see xref:proc-migrate-helm-chart-values-to-rhdh-2-1_{context}[Migrate your Helm chart values to {product} 2.1].
+* *PostgreSQL image* defaults to `registry.redhat.io/rhel10/postgresql-18`, but PostgreSQL 15 remains supported on Helm. An existing PostgreSQL 15 data directory does not start on PostgreSQL 18, so you must choose one of the following paths:
++
+--
+** To upgrade the database to PostgreSQL 18, see xref:proc-upgrade-local-postgresql-15-to-18-helm_{context}[Upgrade the local PostgreSQL database for Helm deployments].
+** To keep PostgreSQL 15, set `postgresql.image.repository: rhel9/postgresql-15` (the 1.10 image; `rhel10/postgresql-15` does not exist). Because the default `postgresql.image.digest` reflects the PostgreSQL 18 image, you must also set `postgresql.image.digest` to the digest of the 1.10 PostgreSQL 15 image. Read that digest from the running database StatefulSet before you upgrade:
++
+[source,terminal]
+----
+$ oc -n <your_namespace> get statefulset <release_name>-postgresql -o jsonpath='{.spec.template.spec.containers[0].image}'
+----
++
+If you already upgraded with the PostgreSQL 18 default and the database is crash-looping, updating the values is not enough on its own: delete the stuck `<release_name>-postgresql-0` pod so that the StatefulSet recreates it with the PostgreSQL 15 image.
+--
 * *Autoscaling* (`autoscaling.maxReplicas`) default changed from `100` to `3`.
 
 == Key structural changes
@@ -28,12 +40,12 @@ Before you translate your values, check these default changes:
 | Aspect | 1.x chart | 2.1 chart
 
 | Template ownership
-| Delegates to the upstream Backstage subchart
+| Delegates to the upstream {backstage} subchart
 | Owns all templates directly
 
 | System volumes, mounts, and env vars
 | You listed them in full under `upstream.backstage.extraVolumes`, `extraVolumeMounts`, and `extraEnvVars`
-| Hardcoded in templates; the `extra{asterisk}` keys only add your custom values
+| Hard-coded in templates; the `extra{asterisk}` keys only add your custom values
 
 | Init containers
 | You specified the full init container array
@@ -145,11 +157,11 @@ Before you translate your values, check these default changes:
 
 | `upstream.backstage.appConfig.backend.database.connection.password`
 | `appConfig.backend.database.connection.password`
-| Env var changed from `POSTGRESQL_ADMIN_PASSWORD` to `POSTGRES_PASSWORD`
+| Environment variable changed from `POSTGRESQL_ADMIN_PASSWORD` to `POSTGRES_PASSWORD`
 
 | `upstream.backstage.appConfig.backend.database.connection.user`
 | `appConfig.backend.database.connection.user`
-| Env var changed from a hardcoded `postgres` to `POSTGRES_USER`
+| Environment variable changed from a hard-coded `postgres` to `POSTGRES_USER`
 |===
 
 == Authentication
@@ -331,11 +343,11 @@ Before you translate your values, check these default changes:
 
 | `upstream.backstage.extraVolumes`
 | `extraVolumes`
-| Only user additions; system volumes are hardcoded
+| Only user additions; system volumes are hard-coded
 
 | `upstream.backstage.extraVolumeMounts`
 | `extraVolumeMounts`
-| Only user additions; system mounts are hardcoded
+| Only user additions; system mounts are hard-coded
 
 | `upstream.backstage.initContainers`
 | `dynamicPlugins.initContainer.{asterisk}`
@@ -564,7 +576,7 @@ Before you translate your values, check these default changes:
 
 | `upstream.postgresql.image.{asterisk}`
 | `postgresql.image.{asterisk}`
-| *Warning:* the default image changed from `registry.redhat.io/rhel10/postgresql-15` to `registry.redhat.io/rhel10/postgresql-18` (PostgreSQL 15 is still supported). For an existing PostgreSQL 15 data directory, upgrade the database or set `postgresql.image.repository: rhel10/postgresql-15`. The default `postgresql.image.digest` reflects the PostgreSQL 18 image, so you must also override this digest when you change the image reference: either set `postgresql.image.digest: ""` (and optionally set `postgresql.image.tag`), or set `postgresql.image.digest` to the correct digest for your PostgreSQL 15 image.
+| *Warning:* the default image changed from `registry.redhat.io/rhel9/postgresql-15` to `registry.redhat.io/rhel10/postgresql-18` (PostgreSQL 15 is still supported on Helm). An existing PostgreSQL 15 data directory does not start on PostgreSQL 18. To upgrade the database, see xref:proc-upgrade-local-postgresql-15-to-18-helm_{context}[Upgrade the local PostgreSQL database for Helm deployments]. To keep PostgreSQL 15, set `postgresql.image.repository: rhel9/postgresql-15` (the 1.10 image; `rhel10/postgresql-15` does not exist) and set `postgresql.image.digest` to the digest of the 1.10 PostgreSQL 15 image, which you can read from the running `<release_name>-postgresql` StatefulSet before you upgrade. For the command to read the digest and the recovery step if the database is already crash-looping, see the *PostgreSQL image* entry under *Default changes to review before upgrading*.
 
 | `upstream.postgresql.auth.{asterisk}`
 | `postgresql.auth.{asterisk}`
@@ -652,7 +664,7 @@ Before you translate your values, check these default changes:
 
 | `global.lightspeed.runtimeVolume.{asterisk}`
 | `intelligentAssistant.runtimeVolume.{asterisk}`
-| Volume `name` and `mountPath` are now hardcoded
+| Volume `name` and `mountPath` are now hard-coded
 
 | `global.lightspeed.configMaps`
 | `intelligentAssistant.config.{stack,profile}.existingConfigMap`
@@ -743,10 +755,10 @@ If you deploy the Orchestrator, the `orchestrator.sonataflowPlatform.{asterisk}`
 | 1.x key | Notes
 
 | `upstream.backstage.installDir`
-| Hardcoded in the 2.1 chart
+| Hard-coded in the 2.1 chart
 
 | `upstream.backstage.containerPorts.backend`
-| Hardcoded to `7007`
+| Hard-coded to `7007`
 
 | `upstream.diagnosticMode.{asterisk}`
 | Not supported
