@@ -1,0 +1,87 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-upgrade-local-postgresql-15-to-18-helm_{context}"]
+= Upgrade the local PostgreSQL database for Helm deployments
+
+[role="_abstract"]
+To move the chart-managed local database to the {product} 2.1 default of PostgreSQL 18, back up the current data and recreate the database volume. An existing PostgreSQL 15 data directory does not start on PostgreSQL 18.
+
+[NOTE]
+====
+The chart-managed local database is intended for evaluation and getting started, not for production. For production, use an external PostgreSQL database, which is not affected by this change. This procedure applies only to the local database.
+====
+
+Recreating the local database on PostgreSQL 18 is the recommended path, because {product} rebuilds most of its contents after startup. {product} re-ingests entities from the catalog locations defined in your `app-config`, but recreating discards data that exists only in the database, such as RBAC policies created through the UI or API, catalog locations registered through the UI, user settings, notifications, and scaffolder task history. If any of that data is irreplaceable, use one of these alternatives instead of the following procedure:
+
+* *Preserve all data:* follow the community-supported upstream procedure to dump the PostgreSQL 15 databases and restore them into PostgreSQL 18. See link:https://github.com/redhat-developer/rhdh-chart/blob/release-2.1/docs/db-migration.md#upgrade-postgresql-15-to-18[Local database migration] in the `rhdh-chart` repository and link:https://www.postgresql.org/docs/current/upgrading.html#UPGRADING-VIA-PGDUMPALL[Upgrading data through `pg_dumpall`] in the PostgreSQL documentation.
+* *Keep PostgreSQL 15:* {product} 2.1 continues to support PostgreSQL 15, so you can stay on this version. Pin the image and digest as described in the xref:ref-helm-chart-values-mapping-1-x-to-2-1_{context}[Helm chart values mapping].
+
+.Prerequisites
+
+* You have a recent backup of your {product} database that is independent of this procedure, for example a volume snapshot.
+* You have `oc` or `kubectl` access to the namespace, and the `helm` CLI configured for your release.
+* You have translated your Helm values to the 2.1 format and saved them as `values-2.1.yaml`, as described in xref:proc-migrate-helm-chart-values-to-rhdh-2-1_{context}[Migrate Helm chart values to {product-very-short} 2.1].
+
+.Procedure
+
+. Set the resource names for your release. The commands assume the default database resources:
++
+[source,terminal]
+----
+$ NAMESPACE=<your_namespace>
+$ RELEASE=<release_name>
+$ BACKSTAGE_WORKLOAD=$(oc -n "$NAMESPACE" get deployment -l "app.kubernetes.io/instance=${RELEASE},app.kubernetes.io/component=backstage" -o name)
+$ DB_STATEFULSET="${RELEASE}-postgresql"
+$ DB_POD="${DB_STATEFULSET}-0"
+$ DB_PVC="data-${DB_POD}"
+----
+
+. Save the release values and stop {product} so that no client writes to the database:
++
+[source,terminal]
+----
+$ helm get values "$RELEASE" -n "$NAMESPACE" -o yaml > values-before-migration.yaml
+$ oc -n "$NAMESPACE" scale "$BACKSTAGE_WORKLOAD" --replicas=0
+$ oc -n "$NAMESPACE" wait --for=delete pod -l "app.kubernetes.io/instance=${RELEASE},app.kubernetes.io/component=backstage" --timeout=5m
+----
++
+Waiting for the pods to terminate ensures that no client writes to the database while you take the backup, because `oc scale` returns before the pods stop.
+
+. Capture a logical backup that you can keep, in case you later decide to restore the data. Confirm that the dump file is nonempty before you continue, because the next step deletes the data:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" exec "$DB_POD" -- pg_dumpall -U postgres > postgresql-15.sql
+$ test -s postgresql-15.sql
+----
+
+. Delete the database `StatefulSet` and its persistent volume claim. This removes the PostgreSQL 15 data, so keep the backup. The credentials Secret is not affected:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" delete statefulset "$DB_STATEFULSET" --wait=true
+$ oc -n "$NAMESPACE" delete pvc "$DB_PVC" --wait=true
+----
+
+. Upgrade the release to version 2.1 with your translated values. The chart initializes a fresh PostgreSQL 18 database:
++
+[source,terminal]
+----
+$ helm upgrade --install "$RELEASE" <chart_repo>/redhat-developer-hub -n "$NAMESPACE" -f values-2.1.yaml
+$ oc -n "$NAMESPACE" rollout status "$BACKSTAGE_WORKLOAD" --timeout=15m
+----
++
+This is the same `helm upgrade` command as the "Upgrade the existing release" step in xref:proc-migrate-helm-chart-values-to-rhdh-2-1_{context}[Migrate Helm chart values to {product-very-short} 2.1]. Run it here instead, because the database volume must be replaced first.
+
+.Verification
+
+. Confirm that the database runs PostgreSQL 18. The command must report `18.x`:
++
+[source,terminal]
+----
+$ oc -n "$NAMESPACE" exec "$DB_POD" -- psql -X -U postgres -tAc 'SHOW server_version'
+----
+
+. Verify that {product} starts successfully and that the expected catalog data is present.
+
+// Recommended local-DB path: back up, delete StatefulSet and PVC, upgrade to fresh PG18. Alternatives: upstream dump/restore to preserve data; pin image to keep PG15.

@@ -79,23 +79,35 @@ openshift:
 intelligentAssistant:
   enabled: true
 ----
-<1> The container image repository name also changes from the RHEL 9 name to the RHEL 10 name. See the next step.
+<1> The container image repository name also changes from the {rhel} (RHEL) 9 name to the RHEL 10 name. See the next step.
 --
 
-. Decide how to handle PostgreSQL. The 2.1 chart changes the default PostgreSQL image from `registry.redhat.io/rhel10/postgresql-15` to `registry.redhat.io/rhel10/postgresql-18`, but PostgreSQL 15 remains supported. For more information on database upgrade, see the link:https://www.postgresql.org/docs/current/upgrading.html#UPGRADING-VIA-PGDUMPALL[PostgreSQL documentation for the recommended upgrade method through `pg_dumpall`.].
+. Choose how to handle PostgreSQL. The 2.1 chart changes the default PostgreSQL image from `registry.redhat.io/rhel9/postgresql-15` to `registry.redhat.io/rhel10/postgresql-18`, but PostgreSQL 15 remains supported on Helm. An existing PostgreSQL 15 data directory does not start on PostgreSQL 18, so you must select one of the following paths:
++
+--
+* To move the local database to PostgreSQL 18, complete xref:proc-upgrade-local-postgresql-15-to-18-helm_{context}[Upgrade the local PostgreSQL database for Helm deployments] instead of the "Upgrade the existing release" step; it stops the application, replaces the data volume, and runs the `helm upgrade` command. If you run the standard `helm upgrade` with the PostgreSQL 15 volume still attached, the database fails to start and restarts repeatedly.
+* To keep PostgreSQL 15, pin the image and digest as described in the xref:ref-helm-chart-values-mapping-1-x-to-2-1_{context}[Helm chart values mapping]. In the next step, do not rename the PostgreSQL image: it is the exception to the RHEL 10 renames and must stay on `rhel9/postgresql-15`.
 
-. Update your container image references from RHEL 9 to RHEL 10 names using the xref:ref-container-image-renames-rhel-9-to-rhel-10_{context}[container image renames reference].
+If you use an external PostgreSQL 15 server instead of the chart-managed local database, no database migration is required.
+--
+
+. Update your container image references from RHEL 9 to RHEL 10 names using the xref:ref-container-image-renames-rhel-9-to-rhel-10_{context}[container image renames reference]. If you chose to keep PostgreSQL 15, leave the PostgreSQL image on `rhel9/postgresql-15`; it is the one image that does not move to a RHEL 10 name in that case.
 
 . Upgrade the existing release in place with the 2.1 chart and your translated values:
 +
+[NOTE]
+====
+Skip this step if you are upgrading the local database to PostgreSQL 18: the xref:proc-upgrade-local-postgresql-15-to-18-helm_{context}[PostgreSQL upgrade procedure] performs this `helm upgrade` at the correct point.
+====
++
 [source,terminal]
 ----
-$ helm upgrade --install <release-name> <chart-repo>/redhat-developer-hub -n <namespace> -f values-2.1.yaml
+$ helm upgrade --install <release-name> <chart_repo>/redhat-developer-hub -n <namespace> -f values-2.1.yaml
 ----
 +
 [IMPORTANT]
 ====
-You do not need to uninstall the 1.x release. The standalone 2.1 chart upgrades the existing release as long as your values file uses the new structure.
+You do not need to uninstall the 1.x release. The standalone 2.1 chart upgrades the existing release, provided that your values file uses the new structure.
 ====
 
 .Verification
