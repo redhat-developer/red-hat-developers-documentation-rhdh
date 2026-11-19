@@ -1,0 +1,87 @@
+:_mod-docs-content-type: REFERENCE
+
+[id="blueprint-lazy-loading-support-in-the-new-frontend-system_{context}"]
+= Blueprint lazy-loading support in the new front-end system
+
+[role="_abstract"]
+Blueprints differ in how much of their user interface you can defer to an asynchronous chunk. To choose how to defer each blueprint’s interface code, review which blueprints support lazy loading and which startup costs remain.
+
+The following table lists the lazy-loading support for each blueprint and the recommended approach:
+
+[cols="1,1,2",options="header"]
+|===
+| Blueprint or API | Lazy loading | Guidance
+
+| `PageBlueprint` `loader` parameter
+| Yes
+| Preferred approach for route content. Load the component with `import()` inside the `loader` parameter.
+
+| `PageBlueprint` `icon` parameter
+| Limited
+| The icon is evaluated at registration. Keep icons minimal and free of page dependencies.
+
+| `EntityContentBlueprint` `loader` parameter
+| Yes
+| Preferred approach for entity tab content. Load the component with `import()` inside the `loader` parameter.
+
+| `SignInPageBlueprint` `loader` parameter
+| Yes
+| Load the component from an `import()` call. Do not statically import the sign-in component in the same file.
+
+| `HomePageLayoutBlueprint` `loader` parameter
+| Yes
+| Load the layout with `import()` inside the `loader` parameter.
+
+| `HomePageWidgetBlueprint` `components` parameter
+| Yes
+| Call `import()` inside the `components` callback. Do not use `Promise.resolve`.
+
+| `NavItemBlueprint`
+| Limited
+| Prefer the page `title` and `icon` parameters. The icon must be a synchronous icon component.
+
+| `AppRootWrapperBlueprint`
+| Limited
+| Wrappers run at startup. Keep them thin and defer only their child contributions.
+
+| `AppDrawerContentBlueprint` and `AppRootElementBlueprint`
+| Partial
+| These blueprints take a synchronous `element` parameter. Use a thin `React.lazy` and `Suspense` shell.
+
+| `ApiBlueprint`
+| Partial
+| The factory is synchronous. Defer heavy modules with `import()` inside the API methods.
+
+| Custom header blueprints `loader` parameter
+| Yes
+| Prefer the `loader` parameter or data-driven parameters over a synchronous `component` parameter.
+|===
+
+Some parts of a plugin load at startup regardless of how you structure the entry point. The following table lists these limitations and the recommended approach:
+
+[cols="1,2",options="header"]
+|===
+| Limitation | Guidance
+
+| Navigation and page icons
+| Use minimal SVG files or small icon components. Full deferral might require upstream API changes.
+
+| Application shell wrappers
+| Wrappers must be available at startup. Defer only their child contributions.
+
+| Validation schemas in `configSchema`
+| Validation libraries can appear in synchronous chunks. Keep `configSchema` definitions minimal and load heavy validation logic with `import()` at the point where you run the validation.
+
+| Duplicate dependencies across remotes
+| Duplicate React or Material user interface copies are resolved by the Module Federation `shared` configuration, not by lazy loading alone. Declare shared dependencies in the plugin's Module Federation build configuration. For more information, see the link:https://module-federation.io/configure/shared[Module Federation `shared` configuration].
+
+| Peer plugin component graphs
+| Importing another plugin's building blocks pulls that user interface into your plugin's asynchronous chunk. Import the thin blueprint subpath and use a local stub when visual parity does not require the full building-block tree.
+|===
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:plugin-load-time-optimization-for-fast-page-loads_{context}[Plugin load-time optimization for fast page loads]
+* xref:plugin-optimization-patterns-for-faster-startup_{context}[Plugin optimization patterns for faster startup]
+* link:https://backstage.io/docs/frontend-system/architecture/plugins/[Upstream front-end plugins architecture]
