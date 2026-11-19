@@ -4,7 +4,7 @@
 = Blueprint lazy-loading support in the new front-end system
 
 [role="_abstract"]
-Blueprints differ in how much of their user interface you can defer to an asynchronous chunk. Use this reference to choose the correct lazy-loading approach for each blueprint and to understand which parts of a plugin you cannot fully optimize at the plugin level.
+Blueprints differ in how much of their user interface you can defer to an asynchronous chunk. To choose how to defer each blueprint’s interface code, review which blueprints support lazy loading and which startup costs remain.
 
 The following table lists the lazy-loading support for each blueprint and the recommended approach:
 
@@ -12,27 +12,27 @@ The following table lists the lazy-loading support for each blueprint and the re
 |===
 | Blueprint or API | Lazy loading | Guidance
 
-| `PageBlueprint` `loader`
+| `PageBlueprint` `loader` parameter
 | Yes
 | Preferred approach for route content. Load the component with `import()` inside the `loader` parameter.
 
-| `PageBlueprint` `icon`
+| `PageBlueprint` `icon` parameter
 | Limited
 | The icon is evaluated at registration. Keep icons minimal and free of page dependencies.
 
-| `EntityContentBlueprint` `loader`
+| `EntityContentBlueprint` `loader` parameter
 | Yes
 | Preferred approach for entity tab content. Load the component with `import()` inside the `loader` parameter.
 
-| `SignInPageBlueprint` `loader`
+| `SignInPageBlueprint` `loader` parameter
 | Yes
 | Load the component from an `import()` call. Do not statically import the sign-in component in the same file.
 
-| `HomePageLayoutBlueprint` `loader`
+| `HomePageLayoutBlueprint` `loader` parameter
 | Yes
 | Load the layout with `import()` inside the `loader` parameter.
 
-| `HomePageWidgetBlueprint` `components`
+| `HomePageWidgetBlueprint` `components` parameter
 | Yes
 | Call `import()` inside the `components` callback. Do not use `Promise.resolve`.
 
@@ -52,7 +52,7 @@ The following table lists the lazy-loading support for each blueprint and the re
 | Partial
 | The factory is synchronous. Defer heavy modules with `import()` inside the API methods.
 
-| Custom header blueprints `loader`
+| Custom header blueprints `loader` parameter
 | Yes
 | Prefer the `loader` parameter or data-driven parameters over a synchronous `component` parameter.
 |===
@@ -70,10 +70,10 @@ Some parts of a plugin load at startup regardless of how you structure the entry
 | Wrappers must be available at startup. Defer only their child contributions.
 
 | Validation schemas in `configSchema`
-| Validation libraries can appear in synchronous chunks. Shared Module Federation dependency configuration is a platform concern.
+| Validation libraries can appear in synchronous chunks. Keep `configSchema` definitions minimal and load heavy validation logic with `import()` at the point where you run the validation.
 
 | Duplicate dependencies across remotes
-| Duplicate React or Material UI copies are resolved by the Module Federation `shared` configuration, not by lazy loading alone.
+| Duplicate React or Material user interface copies are resolved by the Module Federation `shared` configuration, not by lazy loading alone. Declare shared dependencies in the plugin's Module Federation build configuration. For more information, see the link:https://module-federation.io/configure/shared[Module Federation `shared` configuration].
 
 | Peer plugin component graphs
 | Importing another plugin's building blocks pulls that user interface into your plugin's asynchronous chunk. Import the thin blueprint subpath and use a local stub when visual parity does not require the full building-block tree.

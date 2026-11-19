@@ -6,7 +6,9 @@
 [role="_abstract"]
 Apply these patterns when you develop or migrate a front-end plugin so that heavy interface code loads on-demand instead of at startup. Each pattern keeps the plugin entry point lightweight and reduces the synchronous chunk that {product} downloads before the plugin registers its extensions.
 
-Use the following patterns to keep the plugin entry point lightweight:
+Use the following patterns to keep the plugin entry point lightweight.
+
+== Defer extension interfaces behind blueprint loaders
 
 Lazy-load extension user interfaces through blueprint loaders:: Return the component from an `import()` call inside the blueprint `loader`, and do not statically import the component in the same file. The bundler then places the component in an asynchronous chunk.
 +
@@ -38,13 +40,12 @@ components: async () => {
 },
 ----
 
-Keep page routers and layouts out of entry files:: Import routers, layout components, and their child routes through `import()` inside a loader. A router that is statically imported pulls every route it references into the synchronous chunk.
-
 Use conditional `import()` for mutually exclusive user interfaces:: When a loader renders one of several components based on configuration, call `import()` inside each branch so that only the selected component loads.
 +
 [source,typescript]
 ----
 loader: async () => {
+  // layouts is provided by the extension configuration or inputs.
   if (layouts.length > 0) {
     const { LayoutSwitcher } = await import('../components/LayoutSwitcher');
     return <LayoutSwitcher layouts={layouts} />;
@@ -54,7 +55,9 @@ loader: async () => {
 },
 ----
 
-Prefer a blueprint loader over a synchronous component:: When a blueprint accepts both a `component` parameter and a `loader` parameter, use the `loader` parameter to keep the user interface out of the synchronous chunk. When a blueprint supports data-driven parameters, such as an icon name, a title, and a link, use those parameters instead of a custom React component.
+Prefer a blueprint loader over a synchronous component:: When a blueprint accepts both a `component` and a `loader` parameter, use `loader.` When a blueprint supports data-driven parameters, such as an icon name, a title, and a link, use those instead of a custom React component.
+
+== Defer blueprints that take a synchronous element or factory
 
 Defer heavy dependencies behind API factories:: `ApiBlueprint` registration is synchronous. When an API implementation depends on a large library, load the library inside the factory function with `import()` so that the dependency loads only when the API is first used. Cache the returned promise with the `??=` operator so that repeated calls reuse the same asynchronous chunk.
 +
@@ -65,9 +68,13 @@ this.contentPromise ??= import('./FormDecoratorContent');
 
 Use thin lazy shells when a blueprint requires a synchronous element:: Some blueprints, such as `AppDrawerContentBlueprint` and certain root element blueprints, take a synchronous `element` or `component` parameter rather than a `loader`. Wrap the heavy user interface in a small module that exports only a `React.lazy` and `Suspense` shell, and import that shell from the entry file instead of the real component tree.
 +
+The `lazyDrawerUi.tsx` file exports the lazy shell:
++
 [source,tsx]
 ----
 // lazyDrawerUi.tsx: the entry file imports only this shell.
+import { lazy, Suspense } from 'react';
+
 const LazyDrawerContent = lazy(() =>
   import('./DrawerContent').then(m => ({ default: m.DrawerContent })),
 );
@@ -77,10 +84,23 @@ export const DrawerContentElement = (
     <LazyDrawerContent />
   </Suspense>
 );
-
+----
++
+The `alpha.tsx` entry file imports the shell and passes it to the blueprint:
++
+[source,tsx]
+----
 // alpha.tsx
+import { DrawerContentElement } from './lazyDrawerUi';
+
+const MY_DRAWER_ID = 'my-plugin.drawer-content';
+
 params: { id: MY_DRAWER_ID, element: DrawerContentElement }
 ----
+
+== Keep entry files and shared code lightweight
+
+Keep page routers and layouts out of entry files:: Import routers, layout components, and their child routes through `import()` inside a loader. A router that is statically imported pulls every route it references into the synchronous chunk.
 
 Split reusable building blocks onto a separate entry:: Expose shared components and utilities through a dedicated Module Federation entry so that consuming plugins load them as separate asynchronous chunks instead of inflating a single synchronous chunk.
 
@@ -91,7 +111,7 @@ To confirm that an optimization reduces the synchronous chunk, complete the foll
 . Build the plugin with `yarn backstage-cli package bundle`.
 . Open the generated `bundle/dist/mf-manifest.json` file to see which assets load synchronously and asynchronously, and open `bundle/dist/mf-stats.json` to compare the byte sizes of those chunks before and after your change.
 . Confirm that the synchronous chunk is smaller and that the deferred code appears in an asynchronous chunk.
-. Load the plugin in {product} and smoke-test the affected pages, menus, icons, translations, and sign-in flow to confirm that extensions still render.
+. Load the plugin in {product} and test the affected pages, menus, icons, translations, and sign-in flow to confirm that extensions still render.
 
 To record the result, compare the synchronous and asynchronous chunk counts and sizes before and after your change, as in the following table:
 
