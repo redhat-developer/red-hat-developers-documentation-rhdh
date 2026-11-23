@@ -8,11 +8,6 @@ on:
         description: "Branch to update"
         required: true
         default: "main"
-      dry-run:
-        description: "Print the diff without committing changes"
-        required: false
-        default: false
-        type: boolean
   # Weekly: Friday 03:00 UTC, so the PR can be merged before the Monday
   # plugin-catalog-index update. Scheduled workflows use the default branch YAML.
   schedule:
@@ -185,29 +180,9 @@ jobs:
       - name: Run the update script
         env:
           TARGET_BRANCH: ${{ matrix.target_branch }}
-          DRY_RUN: ${{ github.event.inputs.dry-run }}
-        run: |
-          # OpenShift Serverless minor tracked by each stream; the z is
-          # computed from the ocp-serverless-tenant registry tags. All
-          # maintained streams track 1.37 today; add an explicit pattern
-          # before the catch-all when a stream moves to a new minor.
-          serverless_minor="1.37"
-          case "$TARGET_BRANCH" in
-            main|release-*) ;;
-            *)
-              echo "Unsupported branch $TARGET_BRANCH" >&2
-              exit 1
-              ;;
-          esac
-
-          args=(-b "$TARGET_BRANCH" --serverless-minor "$serverless_minor")
-          if [[ "$DRY_RUN" == "true" ]]; then
-            args+=(--dry-run)
-          fi
-          bash scripts/update-attributes-adoc.sh "${args[@]}"
+        run: bash scripts/update-attributes-adoc.sh -b "$TARGET_BRANCH"
 
       - name: Create Pull Request
-        if: github.event.inputs.dry-run != 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           commit-message: "chore(docs): [${{ matrix.target_branch }}] update attributes.adoc version attributes"

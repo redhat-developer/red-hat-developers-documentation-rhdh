@@ -23,7 +23,8 @@
 #                       max(rhdh-chart orchestrator-infra startingCSV,
 #                           rhdh-operator KN_CLI_URL pin)
 #   :rhoserverless-version:
-#                       --serverless-minor input + latest z from
+#                       minor from rhdh-operator docs/orchestrator.md Version
+#                       Compatibility, latest z from
 #                       quay.io/redhat-user-workloads/ocp-serverless-tenant tags
 #
 # Not touched (static, see comments in attributes.adoc): :keycloak-version:,
@@ -35,8 +36,6 @@
 set -euo pipefail
 
 BRANCH=""
-DRY_RUN=0
-SERVERLESS_MINOR="1.37"
 ATTRIBUTES_FILE="artifacts/attributes.adoc"
 
 RHDH_RAW="https://raw.githubusercontent.com/redhat-developer/rhdh"
@@ -48,21 +47,18 @@ SERVERLESS_BUNDLE_REPO_PREFIX="quay.io/redhat-user-workloads/ocp-serverless-tena
 
 usage() {
   cat <<EOF
-Usage: $0 -b <branch> [--dry-run] [--serverless-minor X.Y]
+Usage: $0 -b <branch>
 
-  -b <branch>             Docs branch to update: main or release-2.*
-  --dry-run               Print the diff, do not modify attributes.adoc
-  --serverless-minor X.Y  OpenShift Serverless minor tracked by this stream
-                          (default: $SERVERLESS_MINOR); the z is computed from
-                          the ocp-serverless-tenant registry tags
+  -b <branch>  Docs branch to update: main or release-X.Y
+
+Modifies $ATTRIBUTES_FILE in the working tree; review with git diff and
+revert with git checkout. The workflow, not this script, opens the PR.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -b|--ref-branch) BRANCH="$2"; shift 2 ;;
-    --dry-run) DRY_RUN=1; shift ;;
-    --serverless-minor) SERVERLESS_MINOR="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
@@ -78,14 +74,7 @@ done
   exit 1
 }
 
-# Snapshot before any edit so --dry-run restores uncommitted local changes too.
-original_attributes="$(mktemp)"
-cp "$ATTRIBUTES_FILE" "$original_attributes"
-restore_attributes() {
-  cp "$original_attributes" "$ATTRIBUTES_FILE"
-}
-trap 'rm -rf "$workdir" "$original_attributes"' EXIT
-
+trap 'rm -rf "$workdir"' EXIT
 # version_gt A B: true when A > B (semver-ish, numeric compare per segment)
 version_gt() {
   local a="$1" b="$2"
@@ -234,18 +223,22 @@ kn_cli_version="$(fetch \
 serverless_logic_version="$(printf '%s\n%s\n' "$chart_csv" "$kn_cli_version" | sort -V | tail -1)"
 
 # ---------------------------------------------------------------------------
-# OpenShift Serverless: static minor + latest z from the tenant registry
+# OpenShift Serverless: minor from the operator's Version Compatibility doc,
+# latest z from the tenant registry
 # ---------------------------------------------------------------------------
-[[ "$SERVERLESS_MINOR" =~ ^[0-9]+\.[0-9]+$ ]] || {
-  echo "Invalid --serverless-minor: $SERVERLESS_MINOR" >&2; exit 1;
+serverless_minor="$(fetch "$RHDH_OPERATOR_RAW/$BRANCH/docs/orchestrator.md" \
+  | sed -n 's/.*OpenShift Serverless version .\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | head -1)"
+[[ "$serverless_minor" =~ ^[0-9]+\.[0-9]+$ ]] || {
+  echo "Could not read the OpenShift Serverless minor from rhdh-operator $BRANCH docs/orchestrator.md" >&2
+  exit 1
 }
-serverless_minor_nodot="${SERVERLESS_MINOR//./}"
+serverless_minor_nodot="${serverless_minor//./}"
 serverless_version="$(skopeo list-tags \
   "docker://${SERVERLESS_BUNDLE_REPO_PREFIX}-${serverless_minor_nodot}/serverless-openshift-kn-operator" \
-  | jq -r '.Tags[]' | grep -E "^${SERVERLESS_MINOR//./\\.}" \
+  | jq -r '.Tags[]' | grep -E "^${serverless_minor//./\\.}" \
   | grep -v -E "[0-9]{10}|-source|sha256-|build-" | sort -V | tail -1)"
-[[ "$serverless_version" =~ ^${SERVERLESS_MINOR//./\\.}\.[0-9]+$ ]] || {
-  echo "Could not compute latest $SERVERLESS_MINOR.z from the serverless-operator registry tags" >&2
+[[ "$serverless_version" =~ ^${serverless_minor//./\\.}\.[0-9]+$ ]] || {
+  echo "Could not compute latest $serverless_minor.z from the serverless-operator registry tags" >&2
   exit 1
 }
 
@@ -267,7 +260,7 @@ guard_and_set ocp-version-min "$ocp_min"
 guard_and_set ocp-version "$ocp_max"
 guard_and_set kubernetes-version "$kubernetes_version"
 guard_and_set rhoserverless-version "$serverless_version"
-guard_and_set rhoserverless-version-major "$SERVERLESS_MINOR"
+guard_and_set rhoserverless-version-major "$serverless_minor"
 guard_and_set rhoserverless-logic-version "$serverless_logic_version"
 
 if [[ "$CHANGED" -eq 0 ]]; then
@@ -275,11 +268,5 @@ if [[ "$CHANGED" -eq 0 ]]; then
   exit 0
 fi
 
-if [[ "$DRY_RUN" -eq 1 ]]; then
-  git diff -- "$ATTRIBUTES_FILE"
-  restore_attributes
-  echo "Dry run: changes to $ATTRIBUTES_FILE reverted."
-else
-  git diff -- "$ATTRIBUTES_FILE"
-  echo "Updated $ATTRIBUTES_FILE for $BRANCH."
-fi
+git diff -- "$ATTRIBUTES_FILE"
+echo "Updated $ATTRIBUTES_FILE for $BRANCH."
