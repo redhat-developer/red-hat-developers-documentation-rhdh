@@ -1,0 +1,224 @@
+---
+name: Update artifacts/attributes.adoc version attributes
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to update"
+        required: true
+        default: "main"
+  # Weekly: Friday 03:00 UTC, so the PR can be merged before the Monday
+  # plugin-catalog-index update. Scheduled workflows use the default branch YAML.
+  schedule:
+    - cron: "0 3 * * 5"
+
+jobs:
+  discover-branches:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      branches: ${{ steps.discover.outputs.branches }}
+    steps:
+      # The default branch's copy of the discovery script, so fixes to it
+      # apply everywhere without backports.
+      - name: Checkout default branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Discover target branches
+        id: discover
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+          echo "branches=$(bash scripts/discover-supported-branches.sh)" >> "$GITHUB_OUTPUT"
+
+  update-attributes:
+    needs: discover-branches
+    runs-on: ubuntu-latest
+    permissions:
+      # Push the update branch and manage its pull request.
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target_branch: ${{ fromJSON(needs.discover-branches.outputs.branches) }}
+    steps:
+      - name: Resolve checkout ref
+        id: checkout-ref
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+
+          # When the update-attributes-<branch> PR branch already exists,
+          # check it out so the new commit lands on top of its history and
+          # the push is a fast-forward. Retry because GitHub has answered
+          # 503 to these requests before (RHIDP-18681, 2026-11-16 run);
+          # exit status 2 means the branch does not exist, not an error.
+          ref=""
+          for attempt in 1 2 3; do
+            set +e
+            git ls-remote --exit-code --heads \
+              "$REPOSITORY_URL" "refs/heads/update-attributes-$TARGET_BRANCH" >/dev/null
+            status=$?
+            set -e
+            if [[ $status -eq 0 ]]; then
+              ref="update-attributes-$TARGET_BRANCH"
+              break
+            fi
+            if [[ $status -eq 2 ]]; then
+              ref="$TARGET_BRANCH"
+              break
+            fi
+            echo "Attempt $attempt/3 to list update-attributes-$TARGET_BRANCH failed (exit $status); retrying in 30s." >&2
+            sleep 30
+          done
+          if [[ -z $ref ]]; then
+            echo "::error::Could not reach $REPOSITORY_URL after 3 attempts."
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ steps.checkout-ref.outputs.ref }}
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo jq
+          echo "Installed skopeo version: $(skopeo --version)"
+          echo "Installed jq version: $(jq --version)"
+
+      # Before the merge below, which fails with "Committer identity
+      # unknown" otherwise (RHIDP-18681, run 45245930982). github-actions[bot]
+      # matches the GITHUB_TOKEN this workflow pushes with.
+      - name: Set up Git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge the target branch into the existing update branch
+        if: steps.checkout-ref.outputs.ref != matrix.target_branch
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          set -euo pipefail
+
+          # Merge rather than rebase: a rebase rewrites history and
+          # force-pushes away commits pushed to the PR branch by others. A
+          # conflict fails this run loudly instead of leaving a conflicted
+          # pull request.
+          git fetch origin "$TARGET_BRANCH"
+          if ! git merge --no-edit "origin/$TARGET_BRANCH"; then
+            echo "::error::Conflicts merging $TARGET_BRANCH into update-attributes-$TARGET_BRANCH. Resolve the open pull request manually."
+            exit 1
+          fi
+
+      - name: Run the update script
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: bash scripts/update-attributes-adoc.sh -b "$TARGET_BRANCH"
+
+      - name: Create or update pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          set -euo pipefail
+
+          branch="update-attributes-$TARGET_BRANCH"
+          # Commit on top of the checked-out branch and push it: when the
+          # update branch exists it was checked out above, so this appends
+          # a commit and the push is a fast-forward.
+          # peter-evans/create-pull-request cannot be used here: it replays
+          # the update branch onto the base with cherry-pick -Xtheirs and
+          # force-pushes the result, which dies on the merge commits the
+          # step above creates and silently drops commits that conflict
+          # with the regenerated content (RHIDP-18681).
+          changed=0
+          if [[ -n "$(git status --porcelain)" ]]; then
+            # [skip ci]: pushes from github-actions[bot] leave pull_request
+            # workflows parked as "action_required" (approval required for
+            # non-collaborator actors), and a version-attribute bump needs
+            # no Vale or Sonar run.
+            git add -A
+            git commit -m "chore(docs): [$TARGET_BRANCH] update attributes.adoc version attributes [skip ci]"
+            git push origin "HEAD:refs/heads/$branch"
+            changed=1
+          else
+            echo "No changes for $TARGET_BRANCH."
+          fi
+
+          # A closed PR is assumed closed deliberately, so create a fresh
+          # one carrying the branch's unmerged commits; fall back to
+          # reopening only if GitHub refuses a second PR for the same head
+          # and base. Mirrors generate-supported-plugins-pr.yml.
+          create_pr() {
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --head "$branch" \
+              --base "$TARGET_BRANCH" \
+              --title "chore(docs): [$TARGET_BRANCH] update attributes.adoc version attributes" \
+              --body "Updates the version attributes in artifacts/attributes.adoc from upstream sources, per RHIDP-19177. Auto-generated by workflow: $GITHUB_WORKFLOW." || \
+              gh pr reopen "$branch" --repo "$GITHUB_REPOSITORY"
+          }
+          state=""
+          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" --json state --jq .state \
+              >/dev/null 2>&1; then
+            state="$(gh pr view "$branch" --repo "$GITHUB_REPOSITORY" --json state --jq .state)"
+          fi
+          case "$state" in
+            OPEN)
+              if [[ "$changed" -eq 1 ]]; then
+                echo "Updated the open pull request for $branch."
+              else
+                echo "Pull request for $branch is already open."
+              fi
+              ;;
+            CLOSED)
+              echo "Pull request for $branch was closed; creating a fresh one."
+              create_pr
+              ;;
+            MERGED)
+              echo "Pull request for $branch was merged; leaving it alone."
+              ;;
+            *)
+              if [[ "$changed" -eq 1 ]]; then
+                create_pr
+              else
+                echo "No changes and no pull request for $branch; nothing to do."
+              fi
+              ;;
+          esac
+
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.RHDH_GITHUB_APP_ID }}
+          private-key: ${{ secrets.RHDH_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Approve and enable automerge
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          set -euo pipefail
+
+          # Approve here because the pushes and gh calls above use
+          # GITHUB_TOKEN, which emits no pull_request_target events, so no
+          # event-driven approver ever sees this run's activity. An
+          # app-token approval by rhdh-gh-app[bot] counts toward the
+          # required review; a GITHUB_TOKEN approval would not.
+          bash scripts/approve-and-automerge.sh \
+            "update-attributes-$TARGET_BRANCH" \
+            "$TARGET_BRANCH" \
+            "Generated by the weekly attributes update workflow."
