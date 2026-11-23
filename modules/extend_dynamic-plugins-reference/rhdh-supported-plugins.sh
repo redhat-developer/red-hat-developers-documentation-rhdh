@@ -342,7 +342,7 @@ if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
     cp "$catalogindextmpdir/community/catalog-index/extend_dynamic-plugins-reference/$file" "$SCRIPT_DIR/$file" || exit 1
   done
 fi
-sync_product_bundle_version
+sync_product_bundle_version || exit 1
 
 # summary of changes since last time
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
