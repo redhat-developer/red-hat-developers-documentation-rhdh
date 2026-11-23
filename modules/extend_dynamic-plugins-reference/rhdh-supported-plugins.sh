@@ -274,35 +274,20 @@ cp "$catalogindextmpdir/manifest.json" "$MANIFEST" || exit 1
 
 # The upstream generator emits the enabled-by-default list in no fixed order,
 # so consecutive runs reshuffle the bullets and bury real changes in diff
-# noise. Sort the list for stable, reviewable diffs.
+# noise. Sort just that contiguous bullet block, by package name (the text
+# between the backticks, matching the upstream comparator), leaving the rest
+# of the file untouched.
 sort_preinstalled_list() {
   local file="$SCRIPT_DIR/con-preinstalled-dynamic-plugins.adoc"
-  [[ -f $file ]] || return 0
-  awk '
-    function flush(    i, j, key, pivot) {
-      for (i = 2; i <= n; i++) {
-        key = keys[i]
-        pivot = buf[i]
-        for (j = i - 1; j >= 1 && keys[j] > key; j--) {
-          buf[j + 1] = buf[j]
-          keys[j + 1] = keys[j]
-        }
-        buf[j + 1] = pivot
-        keys[j + 1] = key
-      }
-      for (i = 1; i <= n; i++) print buf[i]
-      n = 0
-    }
-    /^\* `/ {
-      buf[++n] = $0
-      keys[n] = $0
-      sub(/^\* `/, "", keys[n])
-      sub(/`$/, "", keys[n])
-      next
-    }
-    { if (n) flush(); print }
-    END { if (n) flush() }
-  ' "$file" > "$catalogindextmpdir/sorted.adoc" && \
+  local first count
+  first=$(grep -n -m1 '^\* `' "$file" | cut -d: -f1)
+  [[ -n $first ]] || return 0
+  count=$(grep -c '^\* `' "$file")
+  {
+    sed -n "1,$((first - 1))p" "$file"
+    sed -n "${first},$((first + count - 1))p" "$file" | sort -t'`' -k2,2
+    tail -n "+$((first + count))" "$file"
+  } > "$catalogindextmpdir/sorted.adoc" && \
     mv "$catalogindextmpdir/sorted.adoc" "$file"
 }
 
