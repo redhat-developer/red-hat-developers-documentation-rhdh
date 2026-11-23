@@ -307,8 +307,8 @@ sync_product_bundle_version() {
     return 0
   fi
   if [[ ! -f $csv ]]; then
-    echo "[WARN] Missing bundle/rhdh/manifests/backstage-operator.clusterserviceversion.yaml on rhdh-operator $BRANCH; :product-bundle-version: not synced." >&2
-    return 0
+    echo "[ERROR] Missing bundle/rhdh/manifests/backstage-operator.clusterserviceversion.yaml on rhdh-operator $BRANCH; :product-bundle-version: not synced." >&2
+    return 1
   fi
 
   operator_version=$(awk '/^  version:/{print $2; exit}' "$csv")
