@@ -44,6 +44,6 @@ NOTE: if the only images with digest drift are community plugins, this is accept
 
 ## Run through GitHub Actions
 
-The [Generate update PR for the Dynamic Plugins tables workflow](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml) opens a pull request for generated changes. For a manual run, enter a branch listed in the workflow matrix in the `branch` input. Scheduled runs use the workflow configuration on the default branch.
+The [Generate update PR for the Dynamic Plugins tables workflow](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml) opens a pull request for generated changes. For a manual run, enter a branch listed in the workflow matrix in the `branch` input. Scheduled runs use the workflow configuration on the default branch. Scheduled runs pick `main` plus the three newest `release-X.Y` branches, then drop any whose maintenance support has ended, using the [Product Life Cycles API](https://access.redhat.com/support/policy/updates/developerhub); a manual run can still target an end-of-life branch.
 
 Do not edit generated files here. Make source changes in [rhdh-plugin-export-overlays](https://github.com/redhat-developer/rhdh-plugin-export-overlays); its community catalog index publishes the community files, and the supported files are downstreamed into the Quay catalog index.
