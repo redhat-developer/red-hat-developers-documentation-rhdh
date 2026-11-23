@@ -6,7 +6,7 @@
 # Maintained branches: main and release-2.* only.
 #
 # Sources (read from the same-stream upstream branch as -b):
-#   :product-version:, :product-bundle-version:, :product-chart-version:
+#   :product-version:, :product-chart-version:
 #       rhdh            package.json "version"
 #   :product-version-next:
 #                       derived X.Y + 0.1
@@ -247,7 +247,11 @@ serverless_version="$(skopeo list-tags \
 # ---------------------------------------------------------------------------
 CHANGED=0
 guard_and_set product-version "$product_version"
-guard_and_set product-bundle-version "$pkg_version"
+# :product-bundle-version: is left to the plugin tables workflow
+# (rhdh-supported-plugins.sh), which syncs it from the rhdh-operator CSV.
+# The rhdh repo's package.json lags the operator CSV on release branches
+# (2.1.0 vs 2.1.1), so setting it here would fail the no-decrease guard
+# right after the Monday tables run bumped it.
 guard_and_set product-chart-version "$pkg_version"
 # The successor release is only computable on main: on a release branch the
 # next version is frozen history (1.10 was followed by 2.0, not 1.11).
