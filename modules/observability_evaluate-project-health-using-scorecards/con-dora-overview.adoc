@@ -1,0 +1,123 @@
+:_mod-docs-content-type: CONCEPT
+
+[id="con-dora-overview_{context}"]
+= Understanding DORA metrics
+
+[role="_abstract"]
+DORA metrics measure software delivery performance across four key indicators: deployment frequency, lead time for changes, time to restore service, and change failure rate.
+
+== What DORA metrics measure
+
+DevOps Research and Assessment (DORA) metrics provide standardized indicators of software delivery performance. The Scorecard plugin integrates DORA metrics to help teams measure and improve their delivery capabilities.
+
+The four DORA metrics are:
+
+Deployment Frequency::
+How often your team successfully deploys code to production. Elite performers deploy multiple times per day, while low performers deploy less than once per week.
+
+Lead Time for Changes::
+The time from when a code change is committed to when it is successfully running in production. Elite performers achieve lead times under one day, while low performers require more than one week.
+
+Time to Restore Service::
+How long it takes to restore service after a production incident or service degradation. Elite performers restore service in under one hour, while low performers require more than one day.
+
+Change Failure Rate::
+The percentage of deployments that result in degraded service or require remediation. Elite performers maintain failure rates below 5%, while low performers exceed 15%.
+
+== How DORA metrics work in Scorecard
+
+DORA metrics in Scorecard use a composite metric provider architecture that combines data from multiple sources:
+
+* *Deployment data* — Tracks when code deploys to production
+* *Pull request data* — Measures time from first commit to deployment
+* *Incident data* — Identifies service degradations and their resolution times
+
+The DORA backend module aggregates this data and calculates the four metrics according to DORA research methodology. Each metric appears on component Scorecard pages with trend visualization and threshold-based status indicators.
+
+== Default data source implementations
+
+{product} provides default collector implementations for GitHub and Jira:
+
+GitHub collectors::
+* `github:doraDeployments` — Uses GitHub Deployment events
+* `github:doraDeploymentWorkflowRuns` — Uses GitHub Actions workflow runs
+* `github:doraDeploymentPullRequests` — Resolves pull requests between deployments
+
+Jira collectors::
+* `jira:doraIncidents` — Tracks incidents from Jira issues
+
+These default implementations support common workflows without custom configuration. Organizations can also implement custom collectors for other systems such as GitLab, PagerDuty, or proprietary deployment platforms.
+
+== Custom collector extensibility
+
+The DORA backend module defines collector contracts that allow administrators to replace default implementations with custom collectors for their specific tools and workflows. Each collector type has a defined interface:
+
+* *Deployment collector* — Identifies production deployments
+* *Deployment pull request collector* — Links deployments to code changes
+* *Incident collector* — Tracks service degradations
+
+Custom collectors must implement the appropriate contract and follow the data format requirements. This extensibility enables DORA metrics for any deployment pipeline or incident management system.
+
+For details on implementing custom collectors, see the collector contract documentation.
+
+== Metric dependencies and coverage
+
+Different DORA metrics require different data sources:
+
+[cols="1,2,2", options="header"]
+|===
+| Metric | Required collectors | Data sources
+
+| Deployment Frequency
+| Deployment
+| GitHub deployments or workflow runs
+
+| Lead Time for Changes
+| Deployment + Deployment pull request
+| GitHub deployments and pull requests
+
+| Change Failure Rate
+| Deployment + Incident
+| GitHub deployments + Jira incidents
+
+| Time to Restore Service
+| Incident
+| Jira incidents
+|===
+
+[IMPORTANT]
+====
+If you configure only GitHub collectors, Change Failure Rate and Time to Restore Service will display errors because they require incident data from Jira or a custom incident collector.
+====
+
+== Access control and permissions
+
+DORA metrics use the same Scorecard permissions as all other metrics. No DORA-specific permissions exist.
+
+To view DORA metrics, users need:
+
+* `scorecard.metric.read` permission for the specific metrics
+* Component ownership for aggregation views
+
+RBAC configuration for Scorecards is covered in the general Scorecard setup documentation. Component ownership configuration is documented in the collective health monitoring section.
+
+== Visualization and trends
+
+DORA metrics appear in two locations:
+
+Component Scorecard pages::
+Individual component pages display DORA metrics with trend charts showing performance over time. Users can see how their team's delivery performance evolves.
+
+Homepage aggregation cards::
+Aggregation cards on the homepage show DORA metrics across multiple components using sparkline visualizations. These cards help engineering leaders monitor organization-wide delivery performance.
+
+Trend visualization is currently available for DORA metrics and may expand to other metric types in future releases.
+
+[role="_additional-resources"]
+.Additional resources
+
+* xref:install-configure-dora-backend-module_{context}[Install and configure the DORA backend module]
+* xref:proc-configure-github-dora-datasource_{context}[Configure GitHub data collection for DORA]
+* xref:proc-configure-jira-dora-datasource_{context}[Configure Jira data collection for DORA]
+* xref:ref-configure-custom-dora-collectors_{context}[Custom data collectors for DORA]
+* link:https://dora.dev/[DORA research program]

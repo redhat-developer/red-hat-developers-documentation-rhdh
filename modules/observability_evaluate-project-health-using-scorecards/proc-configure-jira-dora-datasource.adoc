@@ -1,0 +1,206 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-configure-jira-dora-datasource_{context}"]
+= Configure Jira data collection for DORA
+
+[role="_abstract"]
+Configure Jira collectors to track production incidents for DORA metrics. Jira incident data enables Change Failure Rate and Time to Restore Service calculations.
+
+.Prerequisites
+
+* You have xref:install-configure-dora-backend-module_{context}[installed and configured the DORA backend module].
+* You have xref:integrate-jira-health-metrics-using-scorecards_{context}[installed the Scorecard backend module for Jira]:
++
+[source,yaml]
+----
+plugins:
+  - package: oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/red-hat-developer-hub-backstage-plugin-scorecard-backend-module-jira:<tag>
+    enabled: true
+----
+
+* You have configured a deployment collector (GitHub or custom) to provide deployment data for Change Failure Rate calculations.
+* Your Jira integration has the following permissions:
+** *Browse projects* — Read issues from configured projects
+** *View issues* — Read issue details, created/resolved timestamps, and custom fields
+
+.Procedure
+
+. Configure the Jira incident collector in your +{my-app-config-file}+ file.
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      collectors:
+        incidents:
+          id: jira:doraIncidents
+          input:
+            project: MYPROJECT
+            issueTypes:
+              - Incident
+              - Bug
+            productionLabels:
+              - production
+              - prod
+----
++
+Where:
++
+`project`:: The Jira project key containing incident issues. **Required**.
+`issueTypes`:: Issue types that represent production incidents. Defaults to `["Incident"]` if not specified.
+`productionLabels`:: Jira labels that indicate production impact. Only issues with these labels count toward DORA incident metrics. Defaults to `["production"]` if not specified.
+
+. (Optional) Configure incident status mapping.
++
+By default, the collector treats issues as resolved when their status is `Done` or `Resolved`. To map different statuses:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      collectors:
+        incidents:
+          id: jira:doraIncidents
+          input:
+            project: MYPROJECT
+            issueTypes:
+              - Incident
+            productionLabels:
+              - production
+            resolvedStatuses:
+              - Closed
+              - Fixed
+              - Resolved
+----
+
+. (Optional) Link incidents to deployment SHAs.
++
+For accurate Change Failure Rate calculation, link Jira incidents to the deployment that caused them. The collector checks for commit SHAs in these fields (in priority order):
++
+--
+. Custom field named `Deployment SHA` or `deployment_sha`
+. Issue description (searches for SHA patterns like `SHA: abc123def456`)
+. Issue comments (searches for SHA references)
+--
++
+To configure a custom field:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      collectors:
+        incidents:
+          id: jira:doraIncidents
+          input:
+            project: MYPROJECT
+            issueTypes:
+              - Incident
+            productionLabels:
+              - production
+            deploymentShaField: customfield_10050
+----
++
+Where `deploymentShaField` is the Jira custom field ID that contains the deployment commit SHA.
+
+. Add required annotations to component catalog entities.
++
+[IMPORTANT]
+====
+These annotations are **REQUIRED**. DORA incident metrics will not calculate without them.
+====
++
+[source,yaml]
+----
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    jira/project-key: MYPROJECT
+    scorecard.io/dora: "true"
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+----
++
+Where:
++
+`jira/project-key`:: Links the component to a Jira project. **Required** by the Jira incident collector.
+`scorecard.io/dora`:: Enables DORA metric collection for this component. **Required** for DORA metrics to calculate.
+
+. (Optional) Configure metric calculation schedules.
++
+DORA metrics use the Scorecard provider schedule, which runs hourly by default. To configure a different schedule:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      changeFailureRate:
+        schedule:
+          frequency: { minutes: 30 }
+          timeout: { minutes: 10 }
+      medianTimeToRestore:
+        schedule:
+          frequency: { minutes: 30 }
+          timeout: { minutes: 10 }
+----
++
+For more information about scheduling metrics, see the collective health monitoring documentation.
+
+.Verification
+
+. Navigate to a component page in your {product-very-short} catalog and select the *Scorecard* tab.
+
+. Verify that DORA metrics appear on the scorecard.
++
+[NOTE]
+====
+Jira incident data provides the following DORA metrics:
+
+. *Deployment Frequency* — ❌ **Requires deployment collector** (GitHub or custom)
+. *Lead Time for Changes* — ❌ **Requires deployment and pull request collectors** (GitHub or custom)
+. *Change Failure Rate* — ✅ Full support (requires deployment collector for deployment data)
+. *Time to Restore Service* — ✅ Full support
+
+If you configure only the Jira incident collector without a deployment collector, Change Failure Rate will display an error because it requires deployment data to calculate the failure rate.
+====
+
+. Check the DORA backend logs for metric calculation:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc logs _<rhdh_pod_name>_ | grep "Completed metric pull for dora."
+----
++
+Successful metric calculation produces log entries for each DORA metric.
+
+.Troubleshooting
+
+Change Failure Rate shows ERROR:::
+Verify that you have configured a deployment collector (GitHub or custom). The Jira incident collector alone cannot calculate Change Failure Rate — it requires deployment data to determine the failure rate.
+
+Time to Restore Service shows zero or no data:::
+. Verify that your Jira project contains issues matching the configured `issueTypes` and `productionLabels`
+. Check that incidents have both created and resolved timestamps
+. Verify that the configured `resolvedStatuses` match your Jira workflow
+
+Incidents not linked to deployments:::
+Verify that your incident tracking process includes commit SHA references. Add the deployment SHA to Jira issue descriptions, comments, or custom fields when creating production incidents.
+
+Rate limit errors in logs:::
+Jira API rate limits may affect data collection frequency. Consider configuring metric schedules or increasing the calculation interval. See the collective health monitoring documentation for information about scheduling metrics.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/scorecard/plugins/scorecard-backend-module-jira/README.md#collectors[Jira collector implementations]
+* link:https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/scorecard/plugins/scorecard-backend-module-dora/docs/dora-collectors.md[DORA collector contracts]
+* xref:proc-configure-github-dora-datasource_{context}[Configure GitHub data collection for DORA]
+* xref:con-dora-overview_{context}[Understanding DORA metrics]

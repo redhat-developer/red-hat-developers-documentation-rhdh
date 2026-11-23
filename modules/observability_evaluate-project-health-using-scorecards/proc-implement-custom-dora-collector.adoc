@@ -1,0 +1,220 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="proc-implement-custom-dora-collector_{context}"]
+= Implement a custom DORA collector
+
+[role="_abstract"]
+Create custom DORA collectors to integrate deployment and incident data from systems like GitLab, PagerDuty, Azure DevOps, or proprietary platforms.
+
+.Prerequisites
+
+* You have TypeScript and Node.js development environment configured
+* You have access to the API or data source for your deployment or incident system
+* You understand the data model of your system
+
+.Procedure
+
+. Create a new collector plugin module:
++
+[source,terminal]
+----
+$ npx @backstage/create-app
+----
++
+Follow the prompts to create a backend plugin module.
+
+. Define your collector implementation:
++
+[source,typescript]
+----
+import { DoraCollector } from '@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-dora';
+
+export class GitLabDeploymentCollector implements DoraCollector {
+  async collect(entity, timeRange) {
+    const deployments = await this.gitlabClient.getDeployments({
+      projectId: entity.metadata.annotations['gitlab.com/project-id'],
+      startDate: timeRange.start,
+      endDate: timeRange.end
+    });
+
+    return deployments.map(d => ({
+      timestamp: d.finished_at,
+      sha: d.sha,
+      environment: d.environment.name,
+      status: d.status === 'success' ? 'success' : 'failure'
+    }));
+  }
+}
+----
+
+. Register your collector with the DORA backend module:
++
+[source,typescript]
+----
+import { createBackendModule } from '@backstage/backend-plugin-api';
+
+export const gitlabDoraModule = createBackendModule({
+  pluginId: 'scorecard',
+  moduleId: 'dora-gitlab',
+  register(env) {
+    env.registerInit({
+      deps: {
+        dora: doraCollectorExtensionPoint,
+      },
+      async init({ dora }) {
+        dora.addDeploymentCollector({
+          id: 'gitlab:doraDeployments',
+          collector: new GitLabDeploymentCollector(),
+        });
+      },
+    });
+  },
+});
+----
+
+. Configure your custom collector in +{my-app-config-file}+:
++
+[source,yaml]
+----
+scorecard:
+  plugins:
+    dora:
+      collectors:
+        deployments:
+          id: gitlab:doraDeployments
+          input:
+            apiToken: ${GITLAB_TOKEN}
+        incidents:
+          id: pagerduty:doraIncidents
+          input:
+            apiKey: ${PAGERDUTY_API_KEY}
+----
+
+. Add required entity annotations:
++
+[source,yaml]
+----
+metadata:
+  annotations:
+    gitlab.com/project-id: "12345"
+    pagerduty.com/service-id: "PABCDEF"
+    scorecard.io/dora: "true"
+----
+
+.Verification
+
+. Verify that your collector registers successfully:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc logs _<rhdh_pod_name>_ | grep "Registered DORA collector"
+----
+
+. Check that metrics calculate for annotated components:
++
+[source,terminal,subs="+quotes"]
+----
+$ oc logs _<rhdh_pod_name>_ | grep "Completed metric pull for dora."
+----
+
+. Navigate to a component Scorecard page and verify that DORA metrics display.
+
+== Example: GitLab deployment collector
+
+This example implements a deployment collector for GitLab deployments:
+
+[source,typescript]
+----
+import { DoraDeploymentCollector } from '@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-dora';
+import { Entity } from '@backstage/catalog-model';
+
+export class GitLabDeploymentCollector implements DoraDeploymentCollector {
+  constructor(private gitlabClient: GitLabClient) {}
+
+  async collect(
+    entity: Entity,
+    timeRange: { start: Date; end: Date }
+  ) {
+    const projectId = entity.metadata.annotations?.['gitlab.com/project-id'];
+    if (!projectId) {
+      throw new Error('Missing gitlab.com/project-id annotation');
+    }
+
+    const deployments = await this.gitlabClient.listDeployments({
+      projectId,
+      createdAfter: timeRange.start,
+      createdBefore: timeRange.end,
+      status: 'success'
+    });
+
+    return deployments.map(deployment => ({
+      timestamp: deployment.finished_at,
+      sha: deployment.sha,
+      environment: deployment.environment.name,
+      status: 'success'
+    }));
+  }
+}
+----
+
+== Example: PagerDuty incident collector
+
+This example implements an incident collector for PagerDuty:
+
+[source,typescript]
+----
+import { DoraIncidentCollector } from '@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-dora';
+import { Entity } from '@backstage/catalog-model';
+
+export class PagerDutyIncidentCollector implements DoraIncidentCollector {
+  constructor(private pdClient: PagerDutyClient) {}
+
+  async collect(
+    entity: Entity,
+    timeRange: { start: Date; end: Date }
+  ) {
+    const serviceId = entity.metadata.annotations?.['pagerduty.com/service-id'];
+    if (!serviceId) {
+      throw new Error('Missing pagerduty.com/service-id annotation');
+    }
+
+    const incidents = await this.pdClient.listIncidents({
+      serviceId,
+      since: timeRange.start,
+      until: timeRange.end
+    });
+
+    return incidents.map(incident => ({
+      key: incident.id,
+      createdAt: incident.created_at,
+      resolvedAt: incident.resolved_at,
+      relatedDeploymentSha: this.extractShaFromIncident(incident)
+    }));
+  }
+
+  private extractShaFromIncident(incident: any): string | undefined {
+    // Extract deployment SHA from incident description or custom fields
+    const match = incident.description?.match(/SHA:\s*([a-f0-9]{40})/i);
+    return match?.[1];
+  }
+}
+----
+
+.Troubleshooting
+
+Collector not registering::
+Verify that your backend module is included in the backend package dependencies and loaded at startup. Check backend logs for module initialization errors.
+
+No data returned::
+Verify API credentials and permissions for your external system. Check that the component entity has the required annotations for your collector.
+
+Incorrect metric calculations::
+Verify that your collector returns data in the exact format specified by the contract. Check for timezone issues, null values, or missing required fields.
+
+[role="_additional-resources"]
+.Additional resources
+
+* link:https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/scorecard/plugins/scorecard-backend-module-dora/docs/dora-collectors.md[DORA collector contracts documentation]
+* link:https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/scorecard/plugins/scorecard-backend-module-github/README.md#collectors[GitHub collector implementations]
+* link:https://github.com/redhat-developer/rhdh-plugins/blob/main/workspaces/scorecard/plugins/scorecard-backend-module-jira/README.md#collectors[Jira collector implementations]
+* xref:con-dora-overview_{context}[Understanding DORA metrics]
