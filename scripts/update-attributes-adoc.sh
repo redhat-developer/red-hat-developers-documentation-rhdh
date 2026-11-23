@@ -91,6 +91,11 @@ version_gt() {
   [[ "$1" != "$2" ]] && [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" == "$1" ]]
 }
 
+# curl wrapper: enforce HTTPS when following redirects (SonarCloud S4423).
+fetch() {
+  curl --proto '=https' --tlsv1.2 -fsSL "$@"
+}
+
 current_value() {
   awk -v key=":$1:" '$1 == key { print $2; exit }' "$ATTRIBUTES_FILE"
 }
@@ -118,7 +123,7 @@ guard_and_set() {
 # ---------------------------------------------------------------------------
 # rhdh product versions
 # ---------------------------------------------------------------------------
-pkg_version="$(curl -fsSL "$RHDH_RAW/$BRANCH/package.json" | jq -r .version)"
+pkg_version="$(fetch "$RHDH_RAW/$BRANCH/package.json" | jq -r .version)"
 [[ "$pkg_version" =~ ^([0-9]+)\.([0-9]+)\.[0-9]+$ ]] || {
   echo "Unparseable rhdh package.json version: $pkg_version" >&2; exit 1;
 }
@@ -127,7 +132,7 @@ product_minor="${BASH_REMATCH[2]}"
 product_version="${product_major}.${product_minor}"
 product_version_next="${product_major}.$((10#${product_minor} + 1))"
 
-backstage_version="$(curl -fsSL "$RHDH_RAW/$BRANCH/backstage.json" | jq -r .version)"
+backstage_version="$(fetch "$RHDH_RAW/$BRANCH/backstage.json" | jq -r .version)"
 [[ "$backstage_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
   echo "Unparseable backstage.json version: $backstage_version" >&2; exit 1;
 }
@@ -169,7 +174,7 @@ done
 # ---------------------------------------------------------------------------
 ocp_min="" ocp_max=""
 lifecycle_html_file="$workdir/lifecycle.html"
-curl -fsSL "$LIFECYCLE_URL" -o "$lifecycle_html_file"
+fetch "$LIFECYCLE_URL" -o "$lifecycle_html_file"
 ocp_out="$(python3 - "$product_version" "$lifecycle_html_file" <<'PY'
 import re
 import sys
@@ -212,10 +217,10 @@ esac
 # ---------------------------------------------------------------------------
 # OpenShift Serverless Logic: greater of chart startingCSV and operator KN_CLI pin
 # ---------------------------------------------------------------------------
-chart_csv="$(curl -fsSL \
+chart_csv="$(fetch \
   "$RHDH_CHART_RAW/$BRANCH/charts/orchestrator-infra/values.yaml" \
   | sed -n 's/.*startingCSV: logic-operator\.v\([0-9.]*\).*/\1/p' | head -1)"
-kn_cli_version="$(curl -fsSL \
+kn_cli_version="$(fetch \
   "$RHDH_OPERATOR_RAW/$BRANCH/bundle/rhdh/manifests/rhdh-plugin-deps_v1_configmap.yaml" \
   | sed -n 's#.*serverless-logic/\([0-9.]*\)/kn-workflow.*#\1#p' | head -1)"
 [[ "$chart_csv" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
