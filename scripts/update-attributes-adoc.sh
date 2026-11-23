@@ -68,8 +68,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ "$BRANCH" =~ ^(main|release-2\.[0-9]+)$ ]] || {
-  echo "Branch must be main or release-2.*, got: ${BRANCH:-empty}" >&2
+[[ "$BRANCH" =~ ^(main|release-[0-9]+\.[0-9]+)$ ]] || {
+  echo "Branch must be main or release-X.Y, got: ${BRANCH:-empty}" >&2
   exit 1
 }
 
@@ -88,7 +88,8 @@ trap 'rm -rf "$workdir" "$original_attributes"' EXIT
 
 # version_gt A B: true when A > B (semver-ish, numeric compare per segment)
 version_gt() {
-  [[ "$1" != "$2" ]] && [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" == "$1" ]]
+  local a="$1" b="$2"
+  [[ "$a" != "$b" ]] && [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -1)" == "$a" ]]
 }
 
 # curl wrapper: enforce HTTPS when following redirects (SonarCloud S4423).
@@ -97,7 +98,8 @@ fetch() {
 }
 
 current_value() {
-  awk -v key=":$1:" '$1 == key { print $2; exit }' "$ATTRIBUTES_FILE"
+  local key="$1"
+  awk -v key=":${key}:" '$1 == key { print $2; exit }' "$ATTRIBUTES_FILE"
 }
 
 set_value() {
@@ -254,7 +256,11 @@ CHANGED=0
 guard_and_set product-version "$product_version"
 guard_and_set product-bundle-version "$pkg_version"
 guard_and_set product-chart-version "$pkg_version"
-guard_and_set product-version-next "$product_version_next"
+# The successor release is only computable on main: on a release branch the
+# next version is frozen history (1.10 was followed by 2.0, not 1.11).
+if [[ "$BRANCH" == "main" ]]; then
+  guard_and_set product-version-next "$product_version_next"
+fi
 guard_and_set product-backstage-version "$backstage_version"
 guard_and_set orchestrator-plugin-version "$orchestrator_version"
 guard_and_set ocp-version-min "$ocp_min"
