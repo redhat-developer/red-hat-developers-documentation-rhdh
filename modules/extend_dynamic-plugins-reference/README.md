@@ -7,6 +7,8 @@
 
 For `release-X.Y`, the script reads the `:X.Y` tag from each image; for `main`, it reads `:next`. It checks that the images have matching RHDH major and minor versions, then records their image digests and versions in `catalog-index-sources.json` for tracking.
 
+After copying the generated files, the script syncs `:product-bundle-version:` in `artifacts/attributes.adoc` with the CSV version of the same-named `rhdh-operator` branch (same major.minor only, never a downgrade).
+
 ## Run locally
 
 Run the script from a checkout of the matching documentation branch. It requires `skopeo`, `jq` 1.6 or later, `tar`, Git, and Node.js.
@@ -17,7 +19,7 @@ bash modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh -b relea
 
 The script updates both sources by default. Use `--skip-supported-tables` or `--skip-community-table` to update only one source. Run the script with `--help` for all options.
 
-Use `--diff-previous` to also generate a file such as `ref-dynamic-plugin-changes-1-10-6-to-2-1-0.adoc`, using each ref's `product-bundle-version` with periods replaced by hyphens. For a `release-X.Y` branch, the script sorts the available release branches with `sort -V` and compares against the preceding release. For `main`, it compares against the latest stable release branch. Use `--diff TAG` to select a specific tag or Git ref instead - this allows comparing the tip of the release-2.1 branch (2.1.2) against an older tag (2.1.1).
+Use `--diff-previous` to also generate a file such as `ref-dynamic-plugin-changes-1-10-6-to-2-1-0.adoc`, using each ref's `product-bundle-version` with periods replaced by hyphens. For a `release-X.Y` branch, the script sorts the available release branches with `sort -V` and compares against the preceding release. For `main`, it compares against the latest stable release branch. Use `--diff TAG` to select a specific tag or Git ref instead - this allows comparing the tip of a release branch against an older tag.
 
 When `--diff-previous` compares two different series, it also writes `ref-preinstalled-dynamic-plugin-changes-<previous>-to-<current>.adoc` from `con-preinstalled-dynamic-plugins.adoc` at both refs. The table lists only the plugins that are enabled by default in one release but not the other, and its summary sentence counts them. A patch comparison such as 2.1.2 against 2.1.1 keeps the existing file, because being enabled by default does not change within a series.
 
@@ -42,6 +44,6 @@ NOTE: if the only images with digest drift are community plugins, this is accept
 
 ## Run through GitHub Actions
 
-The [Generate update PR for the Dynamic Plugins tables workflow](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml) opens a pull request for generated changes. For a manual `release-2.1` run, select `release-2.1` as the workflow ref and enter `release-2.1` in the `branch` input. Scheduled `release-2.1` runs also need this matrix entry on the default branch, because GitHub schedules use that branch's workflow file.
+The [Generate update PR for the Dynamic Plugins tables workflow](https://github.com/redhat-developer/red-hat-developers-documentation-rhdh/actions/workflows/generate-supported-plugins-pr.yml) opens a pull request for generated changes. For a manual run, enter a branch listed in the workflow matrix in the `branch` input. Scheduled runs use the workflow configuration on the default branch. Scheduled runs pick `main` plus the three newest `release-X.Y` branches, then drop any whose maintenance support has ended, using the [Product Life Cycles API](https://access.redhat.com/support/policy/updates/developerhub); a manual run can still target an end-of-life branch.
 
 Do not edit generated files here. Make source changes in [rhdh-plugin-export-overlays](https://github.com/redhat-developer/rhdh-plugin-export-overlays); its community catalog index publishes the community files, and the supported files are downstreamed into the Quay catalog index.

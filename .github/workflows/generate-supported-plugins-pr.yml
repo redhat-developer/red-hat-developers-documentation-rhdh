@@ -40,7 +40,46 @@ jobs:
               echo "No release-X.Y branches found" >&2
               exit 1
             }
-            branches=(main "${releases[@]}")
+
+            # A release leaves its maintenance window - goes EOL - about when
+            # the second newer minor GA's: with 2.1 live, 1.9 is EOL. Ask the
+            # Product Life Cycles API (the data behind
+            # https://access.redhat.com/support/policy/updates/developerhub)
+            # for each branch's maintenance-support end date and drop the ones
+            # past it, so EOL releases stop getting automated update PRs.
+            lifecycle_json="$(
+              curl -sf --retry 3 --retry-delay 30 \
+                "https://access.redhat.com/product-life-cycles/api/v1/products?name=Red+Hat+Developer+Hub"
+            )" || {
+              echo "[WARN] Product Life Cycles API unreachable; keeping the three newest branches." >&2
+              lifecycle_json=""
+            }
+            today="$(date -u +%F)"
+            supported=()
+            for branch in "${releases[@]}"; do
+              version="${branch#release-}"
+              eol=""
+              if [[ -n "$lifecycle_json" ]]; then
+                eol="$(
+                  jq -er --arg version "$version" '
+                    .data[0].versions[] | select(.name == $version) | .phases[]
+                    | select(.name == "Maintenance support") | .date | split("T")[0]
+                  ' <<<"$lifecycle_json" 2>/dev/null
+                )" || eol=""
+              fi
+              # Unknown version (not in the API yet) stays: only a confirmed
+              # past maintenance-support date drops a branch.
+              if [[ -n "$eol" && "$today" > "$eol" ]]; then
+                echo "Skipping $branch: maintenance support ended $eol (EOL)."
+                continue
+              fi
+              supported+=("$branch")
+            done
+            ((${#supported[@]} > 0)) || {
+              echo "No supported release-X.Y branches found" >&2
+              exit 1
+            }
+            branches=(main "${supported[@]}")
           else
             [[ "$INPUT_BRANCH" =~ ^(main|release-[0-9]+\.[0-9]+)$ ]] || {
               echo "Invalid branch: $INPUT_BRANCH" >&2
@@ -61,15 +100,59 @@ jobs:
   run-script:
     needs: discover-branches
     runs-on: ubuntu-latest
+    permissions:
+      # Push the update branch and open/reopen its pull request.
+      contents: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
         target_branch: ${{ fromJSON(needs.discover-branches.outputs.branches) }}
     steps:
+      - name: Resolve checkout ref
+        id: checkout-ref
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+
+          # When the update-<branch> PR branch already exists, check it out so
+          # the new commit lands on top of its history and the push is a
+          # fast-forward. Checking out the base branch instead would build the
+          # commit from the base, and pushing that to the PR branch would
+          # force-push away commits pushed to it by others.
+          # Retry because GitHub has answered 503 to these requests before
+          # (RHIDP-18681, 2026-11-16 run, main branch only); exit status 2
+          # means the update branch does not exist, which is not an error.
+          ref=""
+          for attempt in 1 2 3; do
+            set +e
+            git ls-remote --exit-code --heads \
+              "$REPOSITORY_URL" "refs/heads/update-$TARGET_BRANCH" >/dev/null
+            status=$?
+            set -e
+            if [[ $status -eq 0 ]]; then
+              ref="update-$TARGET_BRANCH"
+              break
+            fi
+            if [[ $status -eq 2 ]]; then
+              ref="$TARGET_BRANCH"
+              break
+            fi
+            echo "Attempt $attempt/3 to list update-$TARGET_BRANCH failed (exit $status); retrying in 30s." >&2
+            sleep 30
+          done
+          if [[ -z $ref ]]; then
+            echo "::error::Could not reach $REPOSITORY_URL after 3 attempts."
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ matrix.target_branch }}
+          ref: ${{ steps.checkout-ref.outputs.ref }}
           fetch-depth: 0
 
       - name: Install dependencies
@@ -86,6 +169,24 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge the target branch into the existing update branch
+        if: steps.checkout-ref.outputs.ref != matrix.target_branch
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          set -euo pipefail
+
+          # Keep the PR branch current with its base by merging rather than
+          # rebasing: a rebase rewrites history and force-pushes away commits
+          # pushed to the PR branch by others. The merge commit keeps the
+          # eventual push append-only, and a conflict fails this run loudly
+          # instead of leaving a conflicted pull request for a human to find.
+          git fetch origin "$TARGET_BRANCH"
+          if ! git merge --no-edit "origin/$TARGET_BRANCH"; then
+            echo "::error::Conflicts merging $TARGET_BRANCH into update-$TARGET_BRANCH. Resolve the open pull request manually."
+            exit 1
+          fi
 
       - name: Run the script on branch
         run: bash modules/extend_dynamic-plugins-reference/rhdh-supported-plugins.sh -b ${{ matrix.target_branch }}
@@ -127,12 +228,66 @@ jobs:
             echo "Tag $previous_tag does not exist; skipping patch comparison."
           fi
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+      - name: Create or update pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          set -euo pipefail
+
+          branch="update-$TARGET_BRANCH"
+          # Commit on top of the checked-out branch and push it. When the
+          # update branch exists it was checked out above, so this appends a
+          # commit and the push is a fast-forward. peter-evans/create-pull-request
+          # cannot be used here: it replays the update branch onto the base with
+          # cherry-pick -Xtheirs and force-pushes the result, which dies on merge
+          # commits and silently drops commits that conflict with the
+          # regenerated tables (the Nov 23 loss of manual edits on #2728/#2740).
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "No changes for $TARGET_BRANCH; nothing to commit."
+            exit 0
+          fi
+          # [skip ci]: pushes from github-actions[bot] leave pull_request
+          # workflows such as style-guide.yml parked as "action_required"
+          # (the repo requires approval for non-collaborator actors), and the
+          # generated tables do not need Vale or Sonar runs anyway.
+          git add -A
+          git commit -m "chore: automated update of dynamic plugin tables [skip ci]"
+          git push origin "HEAD:refs/heads/$branch"
+
+          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" --json number >/dev/null 2>&1; then
+            if [[ "$(gh pr view "$branch" --repo "$GITHUB_REPOSITORY" --json state --jq .state)" == "OPEN" ]]; then
+              echo "Updated the existing pull request for $branch."
+            else
+              gh pr reopen "$branch" --repo "$GITHUB_REPOSITORY"
+            fi
+          else
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --head "$branch" \
+              --base "$TARGET_BRANCH" \
+              --title "Automated update of dynamic plugin tables for $TARGET_BRANCH" \
+              --body "This PR was automatically generated by running rhdh-supported-plugins.sh."
+          fi
+
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         with:
-          commit-message: "chore: automated update of dynamic plugin tables"
-          title: "Automated update of dynamic plugin tables for ${{ matrix.target_branch }}"
-          body: "This PR was automatically generated by running rhdh-supported-plugins.sh."
-          # Fixed branch makes subsequent runs update the existing PR.
-          branch: "update-${{ matrix.target_branch }}"
-          base: ${{ matrix.target_branch }}
+          app-id: ${{ secrets.RHDH_GITHUB_APP_ID }}
+          private-key: ${{ secrets.RHDH_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Approve and enable automerge
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          set -euo pipefail
+
+          # Approve here because the pushes and gh calls above use GITHUB_TOKEN,
+          # which emits no pull_request_target events, so no event-driven
+          # approver ever sees this run's activity.
+          bash scripts/approve-and-automerge.sh \
+            "update-$TARGET_BRANCH" \
+            "$TARGET_BRANCH" \
+            "Generated by the weekly plugin tables workflow."
