@@ -3,7 +3,8 @@
 # Update version attributes in artifacts/attributes.adoc from upstream sources.
 # See RHIDP-19177 for the source-per-attribute design.
 #
-# Maintained branches: main and release-2.* only.
+# Maintained branches: main, release-2.1 and release-1.10 (the branches
+# scripts/discover-supported-branches.sh targets).
 #
 # Sources (read from the same-stream upstream branch as -b):
 #   :product-version:, :product-chart-version:
