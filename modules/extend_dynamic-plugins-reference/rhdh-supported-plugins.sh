@@ -59,11 +59,11 @@ Options:
 
 Examples:
 
-  $0 -b main                                  # Fetch both supported and community tables (default behavior)
-  $0 -b main --skip-community-table           # Skip fetching community table
-  $0 -b main --skip-supported-tables          # Skip fetching supported tables
-  $0 -b main --diff-previous                  # Also compare with the previous release branch
-  $0 -b main --diff 2.1.0                     # Also compare with the 2.1.0 tag
+  $0 -b release-2.1                                  # Fetch both supported and community tables (default behavior)
+  $0 -b release-2.1 --skip-community-table           # Skip fetching community table
+  $0 -b main        --skip-supported-tables          # Skip fetching supported tables
+  $0 -b release-2.1 --diff-previous                  # Also compare with the previous release branch
+  $0 -b release-2.1 --diff 1.10.5                    # Also compare with the 1.10.5 tag
 
 EOF
 }
