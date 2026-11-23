@@ -117,11 +117,63 @@ jobs:
       matrix:
         target_branch: ${{ fromJSON(needs.discover-branches.outputs.branches) }}
     steps:
+      - name: Resolve checkout ref
+        id: checkout-ref
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+
+          # When the update PR branch already exists, check it out so that
+          # create-pull-request appends a commit on top of its history;
+          # checking out the base branch instead makes the action reset the PR
+          # branch, which force-pushes away commits pushed to it by others.
+          # Exit status 2 means the branch does not exist, which is not an
+          # error.
+          ref=""
+          git ls-remote --exit-code --heads \
+            "$REPOSITORY_URL" "refs/heads/chore/automated-update-attributes-$TARGET_BRANCH" >/dev/null
+          status=$?
+          if [[ $status -eq 0 ]]; then
+            ref="chore/automated-update-attributes-$TARGET_BRANCH"
+          elif [[ $status -eq 2 ]]; then
+            ref="$TARGET_BRANCH"
+          else
+            echo "::error::Could not list chore/automated-update-attributes-$TARGET_BRANCH (exit $status)."
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ matrix.target_branch }}
+          ref: ${{ steps.checkout-ref.outputs.ref }}
           fetch-depth: 0
+
+      # Set the git identity before any step that can create commits: the
+      # merge below fails with "Committer identity unknown" otherwise.
+      - name: Set up Git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge the target branch into the existing update branch
+        if: steps.checkout-ref.outputs.ref != matrix.target_branch
+        env:
+          TARGET_BRANCH: ${{ matrix.target_branch }}
+        run: |
+          set -euo pipefail
+
+          # Keep the PR branch current with its base by merging rather than
+          # rebasing: a rebase rewrites history and force-pushes away commits
+          # pushed to the PR branch by others. A conflict fails this run
+          # loudly instead of leaving a conflicted pull request.
+          git fetch origin "$TARGET_BRANCH"
+          if ! git merge --no-edit "origin/$TARGET_BRANCH"; then
+            echo "::error::Conflicts merging $TARGET_BRANCH into chore/automated-update-attributes-$TARGET_BRANCH. Resolve the open pull request manually."
+            exit 1
+          fi
 
       - name: Install dependencies
         run: |
@@ -129,11 +181,6 @@ jobs:
           sudo apt-get install -y skopeo jq
           echo "Installed skopeo version: $(skopeo --version)"
           echo "Installed jq version: $(jq --version)"
-
-      - name: Set up Git user
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run the update script
         env:
