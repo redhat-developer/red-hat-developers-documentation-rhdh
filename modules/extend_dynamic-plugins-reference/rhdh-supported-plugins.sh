@@ -272,25 +272,6 @@ jq -n \
 
 cp "$catalogindextmpdir/manifest.json" "$MANIFEST" || exit 1
 
-# The upstream generator emits the enabled-by-default list in no fixed order,
-# so consecutive runs reshuffle the bullets and bury real changes in diff
-# noise. Sort just that contiguous bullet block, by package name (the text
-# between the backticks, matching the upstream comparator), leaving the rest
-# of the file untouched.
-sort_preinstalled_list() {
-  local file="$SCRIPT_DIR/con-preinstalled-dynamic-plugins.adoc"
-  local first count
-  first=$(grep -n -m1 '^\* `' "$file" | cut -d: -f1)
-  [[ -n $first ]] || return 0
-  count=$(grep -c '^\* `' "$file")
-  {
-    sed -n "1,$((first - 1))p" "$file"
-    sed -n "${first},$((first + count - 1))p" "$file" | sort -t'`' -k2,2
-    tail -n "+$((first + count))" "$file"
-  } > "$catalogindextmpdir/sorted.adoc" && \
-    mv "$catalogindextmpdir/sorted.adoc" "$file"
-}
-
 # Sync :product-bundle-version: in artifacts/attributes.adoc with the CSV
 # version of the same-named rhdh-operator branch. Without this, a patch
 # release such as 2.1.1 never reaches the docs of its release branch, and the
@@ -335,7 +316,6 @@ if [[ $SKIP_SUPPORTED_TABLES -eq 0 ]]; then
   for file in "${SUPPORTED_FILES[@]}"; do
     cp "$catalogindextmpdir/supported/catalog-index/extend_dynamic-plugins-reference/$file" "$SCRIPT_DIR/$file" || exit 1
   done
-  sort_preinstalled_list
 fi
 if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
   for file in "${COMMUNITY_FILES[@]}"; do

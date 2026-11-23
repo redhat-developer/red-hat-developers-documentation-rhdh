@@ -7,7 +7,7 @@
 
 For `release-X.Y`, the script reads the `:X.Y` tag from each image; for `main`, it reads `:next`. It checks that the images have matching RHDH major and minor versions, then records their image digests and versions in `catalog-index-sources.json` for tracking.
 
-After copying the generated files, the script sorts the enabled-by-default list in `con-preinstalled-dynamic-plugins.adoc`, which the upstream generator emits in no fixed order, and syncs `:product-bundle-version:` in `artifacts/attributes.adoc` with the CSV version of the same-named `rhdh-operator` branch (same major.minor only, never a downgrade).
+After copying the generated files, the script syncs `:product-bundle-version:` in `artifacts/attributes.adoc` with the CSV version of the same-named `rhdh-operator` branch (same major.minor only, never a downgrade).
 
 ## Run locally
 
