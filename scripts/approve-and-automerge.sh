@@ -41,6 +41,14 @@ gh pr review "$branch" --repo "$GITHUB_REPOSITORY" --approve \
 # Explicit subject and body keep any [skip ci] in the branch's commit
 # messages out of the squash commit on the target branch, so the target
 # branch's push-triggered workflows still run.
-gh pr merge "$branch" --repo "$GITHUB_REPOSITORY" --auto --squash \
+# Auto-merge only exists for protected branches - GitHub rejects
+# enablePullRequestAutoMerge on an unprotected base branch - so fall back
+# to merging directly (run 45267387335, release-2.1).
+if ! gh pr merge "$branch" --repo "$GITHUB_REPOSITORY" --auto --squash \
   --subject "${title} (#${number})" \
-  --body "$body"
+  --body "$body"; then
+  echo "Auto-merge unavailable; merging directly."
+  gh pr merge "$branch" --repo "$GITHUB_REPOSITORY" --squash \
+    --subject "${title} (#${number})" \
+    --body "$body"
+fi
