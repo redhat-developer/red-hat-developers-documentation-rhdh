@@ -85,6 +85,22 @@ for tool in git awk sort mktemp; do
   command -v "$tool" >/dev/null 2>&1 || { echo "[ERROR] $tool is required. Must install it to proceed." >&2; exit 1; }
 done
 
+# Retry transient network failures. GitHub has answered 503 to these
+# clones before (RHIDP-18681, 2026-11-16 run, main branch only).
+retry() {
+  local attempts=$1 delay=$2
+  shift 2
+  local attempt
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    if "$@"; then
+      return 0
+    fi
+    echo "[WARN] Attempt $attempt/$attempts failed: $*" >&2
+    sleep "$delay"
+  done
+  return 1
+}
+
 product_bundle_version() {
   local repo_root=$1
   awk '$1 == ":product-bundle-version:" { print $2; exit }' "$repo_root/artifacts/attributes.adoc"
@@ -103,7 +119,8 @@ comparisontmpdir=$(mktemp -d) || exit 1
 trap 'rm -rf "$comparisontmpdir"' EXIT
 
 if [[ $DIFF_PREVIOUS -eq 1 ]]; then
-  if ! git ls-remote --heads "$REMOTE_URL" 'refs/heads/release-*' > "$comparisontmpdir/release-refs"; then
+  if ! retry 3 30 git ls-remote --heads "$REMOTE_URL" 'refs/heads/release-*' \
+      > "$comparisontmpdir/release-refs"; then
     echo -e "${red}[ERROR] Cannot list release branches from origin.${norm}" >&2
     exit 1
   fi
@@ -143,8 +160,12 @@ else
 fi
 
 echo -e "${green}Comparing $BRANCH with $PREVIOUS_REF...${norm}"
-if ! git clone --quiet --depth 1 --single-branch --branch "$PREVIOUS_REF" \
-  "$REMOTE_URL" "$comparisontmpdir/previous"; then
+clone_previous() {
+  rm -rf "$comparisontmpdir/previous"
+  git clone --quiet --depth 1 --single-branch --branch "$PREVIOUS_REF" \
+    "$REMOTE_URL" "$comparisontmpdir/previous"
+}
+if ! retry 3 30 clone_previous; then
   echo -e "${red}[ERROR] Cannot create a shallow checkout for $PREVIOUS_REF.${norm}" >&2
   exit 1
 fi
