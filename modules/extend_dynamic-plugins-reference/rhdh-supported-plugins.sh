@@ -107,6 +107,22 @@ for tool in skopeo jq tar; do
   command -v "$tool" >/dev/null 2>&1 || { echo "[ERROR] $tool is required. Must install it to proceed. " >&2; exit 1; }
 done
 
+# Retry transient network failures. GitHub has answered 503 to git requests
+# from these workflows before (RHIDP-18681, 2026-11-16 run).
+retry() {
+  local attempts=$1 delay=$2
+  shift 2
+  local attempt
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    if "$@"; then
+      return 0
+    fi
+    echo "[WARN] Attempt $attempt/$attempts failed: $*" >&2
+    sleep "$delay"
+  done
+  return 1
+}
+
 catalogindextmpdir=$(mktemp -d) || exit 1
 trap 'rm -rf "$catalogindextmpdir"' EXIT
 # x.y only as upstream doesn't generate x.y.z tags
@@ -254,6 +270,48 @@ jq -n \
   }' \
   > "$catalogindextmpdir/manifest.json" || exit 1
 
+cp "$catalogindextmpdir/manifest.json" "$MANIFEST" || exit 1
+
+# Sync :product-bundle-version: in artifacts/attributes.adoc with the CSV
+# version of the same-named rhdh-operator branch. Without this, a patch
+# release such as 2.1.1 never reaches the docs of its release branch, and the
+# generated comparisons keep citing the old version. Only bumps within the
+# same major.minor, and never downgrades.
+sync_product_bundle_version() {
+  local repo_root attributes current operator_version
+  local clone="$catalogindextmpdir/rhdh-operator"
+  local csv="$clone/bundle/rhdh/manifests/backstage-operator.clusterserviceversion.yaml"
+
+  if ! retry 3 30 git clone --quiet --depth 1 --single-branch --branch "$BRANCH" \
+      https://github.com/redhat-developer/rhdh-operator.git "$clone"; then
+    echo "[WARN] Cannot clone rhdh-operator branch $BRANCH; :product-bundle-version: not synced." >&2
+    return 0
+  fi
+  if [[ ! -f $csv ]]; then
+    echo "[ERROR] Missing bundle/rhdh/manifests/backstage-operator.clusterserviceversion.yaml on rhdh-operator $BRANCH; :product-bundle-version: not synced." >&2
+    return 1
+  fi
+
+  operator_version=$(awk '/^  version:/{print $2; exit}' "$csv")
+  repo_root=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel) || return 1
+  attributes="$repo_root/artifacts/attributes.adoc"
+  current=$(awk '$1 == ":product-bundle-version:" {print $2; exit}' "$attributes")
+
+  if [[ ! $operator_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || ! $current =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "[WARN] Cannot compare :product-bundle-version: ${current:-empty} with rhdh-operator version ${operator_version:-empty}; not synced." >&2
+    return 0
+  fi
+  if [[ ${operator_version%.*} != "${current%.*}" ]]; then
+    echo "rhdh-operator $BRANCH ships $operator_version; docs stay on $current (different major.minor)."
+    return 0
+  fi
+  if (( 10#${operator_version##*.} > 10#${current##*.} )); then
+    sed -i.bak "s/^:product-bundle-version: .*/:product-bundle-version: $operator_version/" "$attributes" && \
+      rm -f "$attributes.bak"
+    echo "Bumped :product-bundle-version: $current -> $operator_version (from rhdh-operator $BRANCH)."
+  fi
+}
+
 if [[ $SKIP_SUPPORTED_TABLES -eq 0 ]]; then
   for file in "${SUPPORTED_FILES[@]}"; do
     cp "$catalogindextmpdir/supported/catalog-index/extend_dynamic-plugins-reference/$file" "$SCRIPT_DIR/$file" || exit 1
@@ -264,7 +322,7 @@ if [[ $SKIP_COMMUNITY_TABLE -eq 0 ]]; then
     cp "$catalogindextmpdir/community/catalog-index/extend_dynamic-plugins-reference/$file" "$SCRIPT_DIR/$file" || exit 1
   done
 fi
-cp "$catalogindextmpdir/manifest.json" "$MANIFEST" || exit 1
+sync_product_bundle_version || exit 1
 
 # summary of changes since last time
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)

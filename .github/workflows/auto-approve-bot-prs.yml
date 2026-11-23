@@ -1,0 +1,63 @@
+name: Auto-approve and automerge bot PRs
+
+# The weekly "Generate update PR for the Dynamic Plugins tables" workflow opens
+# PRs on update-main / update-release-X.Y head branches as github-actions[bot].
+# Branch protection requires one approving review, so without this workflow
+# those PRs sit open until a human approves them by hand.
+#
+# pull_request_target runs this file from the base branch. It never checks out
+# the PR head and only uses secrets in token-minting steps, so a fork PR cannot
+# exfiltrate secrets through it. The head branch allowlist below stays the only
+# filter for what may be auto-approved.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+concurrency:
+  group: auto-approve-bot-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto-approve:
+    name: Auto-approve and enable automerge
+    runs-on: ubuntu-latest
+
+    # Only PRs the plugin-tables workflow opens: authored by github-actions[bot]
+    # on a fixed update-* head branch, not a draft. The approver is
+    # rhdh-gh-app[bot], a different identity, so the approval counts toward the
+    # required review (a GITHUB_TOKEN approval would not).
+    if: >-
+      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      startsWith(github.event.pull_request.head.ref, 'update-') &&
+      !github.event.pull_request.draft
+
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.RHDH_GITHUB_APP_ID }}
+          private-key: ${{ secrets.RHDH_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Approve and enable automerge
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr review "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --approve \
+            --body "**Auto-approved**
+
+          This PR was automatically approved because it only updates generated
+          dynamic plugin tables. See RHIDP-18681."
+
+          # Merges by squash once the required checks pass.
+          gh pr merge "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --auto --squash
