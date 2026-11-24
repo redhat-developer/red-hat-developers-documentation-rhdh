@@ -1,0 +1,90 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-additional-dynamic-plugins-in-an-air-gapped-environment_{context}"]
+= Configure additional dynamic plugins in an air-gapped environment
+
+[role="_abstract"]
+To add dynamic plugins to an air-gapped deployment, mirror the plugin OCI artifacts to your internal registry and enable the plugins in your dynamic plugins configuration.
+
+.Prerequisites
+
+* You have installed {product} in an air-gapped environment. See xref:install-in-an-air-gapped-environment_install-on-microsoft-azure-kubernetes-service-using-the-operator[Install in an air-gapped environment].
+* Your internal registry is reachable from the cluster and either contains the plugin OCI artifacts or can receive them.
+* You have access to the dynamic plugins configuration for your {product} instance.
+
+.Procedure
+
+. Identify the OCI artifact references for the plugins that you want to add.
++
+For {product} plugins, find the package references in the `dynamic-plugins.default.yaml` file inside the plugin catalog index image. For third-party plugins, see the plugin vendor documentation.
++
+[NOTE]
+====
+If you mirrored the full plugin catalog index during installation, the plugin artifacts are already available in your internal registry. Skip to the step that adds the plugins to your dynamic plugins configuration.
+
+Supported {product} plugins, including the Orchestrator plugins, are distributed as OCI artifacts. Configure a custom NPM registry only for plugins that are distributed as NPM packages.
+====
+
+. If the plugin artifacts are not available in your internal registry, download the plugin mirroring script:
++
+[source,terminal,subs="+attributes,+quotes"]
+----
+$ curl -sSLO https://raw.githubusercontent.com/redhat-developer/rhdh-operator/refs/heads/release-{product-version}/.rhdh/scripts/mirror-plugins.sh
+----
+
+. Mirror the plugin artifacts to your internal registry:
++
+[source,terminal,subs="+quotes,+attributes"]
+----
+$ bash mirror-plugins.sh \
+    --plugins oci://registry.access.redhat.com/rhdh/_<plugin_name>_:<tag> \
+    --to-registry _<my.registry.example.com>_
+----
++
+where:
++
+`_<plugin_name>_`:: Enter the name of the plugin OCI artifact.
+`_<my.registry.example.com>_`:: Enter the URL of your internal registry.
++
+For more information, see xref:mirror-specific-plugins-by-direct-reference_mirror-dynamic-plugins-in-disconnected-environments[Mirror specific plugins].
+
+. Add the mirrored plugins to your dynamic plugins configuration.
++
+For an Operator deployment, add the plugins to the `dynamic-plugins.yaml` key in the ConfigMap that your `{product-custom-resource-type}` custom resource references in `spec.application.dynamicPluginsConfigMapName`:
++
+[source,yaml,subs="+attributes,+quotes"]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynamic-plugins-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: oci://_<my.registry.example.com>_/rhdh/_<plugin_name>_:<tag>
+        enabled: true
+----
++
+For a Helm deployment, add the plugins to the `dynamicPlugins.plugins` field in your Helm values file:
++
+[source,yaml,subs="+quotes"]
+----
+dynamicPlugins:
+  plugins:
+    - package: oci://_<my.registry.example.com>_/rhdh/_<plugin_name>_:<tag>
+      enabled: true
+----
+
+. If the plugin requires dependencies or plugin-specific configuration, add the `dependencies` and `pluginConfig` fields to the plugin entry.
++
+For example, the Orchestrator plugins require the `sonataflow` dependency and additional configuration. For more information, see xref:install-orchestrator-in-an-air-gapped-environment_install-orchestrator-helm-charts[Install Orchestrator in an air-gapped environment].
+
+. Apply the configuration.
++
+For an Operator deployment, apply the updated ConfigMap and restart the {product-short} Pod. For a Helm deployment, upgrade the release by running the `helm upgrade` command with the updated values file.
+
+.Verification
+
+* Append `/api/dynamic-plugins-info/loaded-plugins` to your {product-short} root URL and confirm that the plugin is listed.
