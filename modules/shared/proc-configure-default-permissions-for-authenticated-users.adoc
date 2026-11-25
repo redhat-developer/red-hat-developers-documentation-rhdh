@@ -1,0 +1,56 @@
+:_mod-docs-content-type: PROCEDURE
+
+[id="configure-default-permissions-for-authenticated-users_{context}"]
+= Configure default permissions for authenticated users
+
+[role="_abstract"]
+To give every authenticated user a baseline set of permissions, define a default role in the {product-short} RBAC configuration.
+
+You can define a default role for all authenticated users by using the `permission.rbac.defaultPermissions` configuration in the `{my-app-config-file}` file.
+The default role is configuration-sourced: you manage it only by editing the configuration file.
+You cannot manage the default role by using the CSV file, the Web UI, or the REST API.
+
+The default role supports only basic permission policies.
+Conditional policies are not supported for the default role.
+
+If a role with the same name as the `defaultRole` exists in the CSV file, the Web UI, or the REST API, the RBAC plugin fails to start and logs an error because the role sources are incompatible.
+
+[NOTE]
+====
+Removing the `defaultPermissions` configuration removes the default role and its permissions. Users who relied on the default role lose the permissions that it granted.
+====
+
+.Prerequisites
+* You have xref:enable-and-give-access-to-the-role-based-access-control-rbac-feature_authorization-in-rhdh[enabled the RBAC plugin].
+* The `defaultRole` does not overlap with a role from the CSV file, the Web UI, or the REST API.
+
+.Procedure
+. Add the `permission.rbac.defaultPermissions` configuration to the `{my-app-config-file}` file:
++
+.`{my-app-config-file}` fragment
+[source,yaml]
+----
+permission:
+  enabled: true
+  rbac:
+    defaultPermissions:
+      defaultRole: role:default/authenticated-users
+      basicPermissions:
+        - permission: catalog.entity.read
+          action: read
+        - permission: catalog.entity.refresh
+          action: update
+----
+. Set `defaultRole` to the entity reference of the default role.
+The role must not already exist as a role from the CSV file, the Web UI, or the REST API.
+. Add at least one entry to `basicPermissions`.
+Each entry requires a `permission`, which can be either a permission name (for example `catalog.entity.read`) or a resource type (for example `catalog-entity`), and supports an optional `action`.
+The `action` value can be `create`, `read`, `update`, `delete`, or `use`, and defaults to `use` when omitted.
++
+{product-short} applies all default permissions with the `allow` effect.
+. Apply the updated configuration and roll out the {product-short} workload.
+`defaultPermissions` changes take effect only after you roll out the workload.
+
+.Verification
+. Sign in as a non-administrator authenticated user and verify that you can perform an action that the default role grants.
+. In the RBAC UI, confirm that the list of roles includes the default role.
